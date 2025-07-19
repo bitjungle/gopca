@@ -47,7 +47,7 @@ func TestLoadCSV(t *testing.T) {
 		{4.0, 5.0, 6.0},
 		{7.0, 8.0, 9.0},
 	}
-	
+
 	for i := range expected {
 		for j := range expected[i] {
 			if data[i][j] != expected[i][j] {
@@ -216,7 +216,7 @@ func TestSaveCSV(t *testing.T) {
 	headers := []string{"col1", "col2", "col3"}
 
 	tmpfile := filepath.Join(t.TempDir(), "output.csv")
-	
+
 	err := SaveCSV(tmpfile, data, headers, DefaultCSVOptions())
 	if err != nil {
 		t.Fatalf("SaveCSV failed: %v", err)
@@ -282,7 +282,7 @@ func TestInspectCSV(t *testing.T) {
 	// Check inferred types
 	expectedTypes := []string{"integer", "float", "string"}
 	if !reflect.DeepEqual(info.DataTypes, expectedTypes) {
-		t.Errorf("Type inference mismatch: got %v, expected %v", 
+		t.Errorf("Type inference mismatch: got %v, expected %v",
 			info.DataTypes, expectedTypes)
 	}
 }
@@ -413,7 +413,7 @@ func TestWriteCSV(t *testing.T) {
 
 	expected := "x,y\n1,2\n3,4\n"
 	if buf.String() != expected {
-		t.Errorf("CSV output mismatch:\ngot:\n%s\nexpected:\n%s", 
+		t.Errorf("CSV output mismatch:\ngot:\n%s\nexpected:\n%s",
 			buf.String(), expected)
 	}
 }

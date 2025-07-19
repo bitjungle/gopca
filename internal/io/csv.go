@@ -14,13 +14,13 @@ import (
 
 // CSVOptions contains configuration for CSV reading/writing
 type CSVOptions struct {
-	Delimiter      rune
-	HasHeader      bool
-	SkipRows       int
-	MaxRows        int // 0 for unlimited
-	Columns        []int // Specific columns to read, empty for all
-	NullValues     []string // Strings to treat as NaN
-	StreamingMode  bool // For large files
+	Delimiter     rune
+	HasHeader     bool
+	SkipRows      int
+	MaxRows       int      // 0 for unlimited
+	Columns       []int    // Specific columns to read, empty for all
+	NullValues    []string // Strings to treat as NaN
+	StreamingMode bool     // For large files
 }
 
 // DefaultCSVOptions returns default CSV options
@@ -110,7 +110,7 @@ func ReadCSV(r io.Reader, options CSVOptions) (types.Matrix, []string, error) {
 	cols := len(data[0])
 	for i, row := range data {
 		if len(row) != cols {
-			return nil, nil, fmt.Errorf("inconsistent columns at row %d: expected %d, got %d", 
+			return nil, nil, fmt.Errorf("inconsistent columns at row %d: expected %d, got %d",
 				i+1, cols, len(row))
 		}
 	}
@@ -151,7 +151,7 @@ func parseRow(record []string, columns []int, nullMap map[string]bool) ([]float6
 		}
 
 		val := strings.TrimSpace(record[col])
-		
+
 		// Check for null values
 		if nullMap[val] {
 			row[i] = math.NaN()
@@ -216,7 +216,7 @@ func WriteCSV(w io.Writer, data types.Matrix, headers []string, options CSVOptio
 				record[j] = strconv.FormatFloat(val, 'g', -1, 64)
 			}
 		}
-		
+
 		if err := writer.Write(record); err != nil {
 			return fmt.Errorf("failed to write row %d: %w", i+1, err)
 		}
@@ -227,12 +227,12 @@ func WriteCSV(w io.Writer, data types.Matrix, headers []string, options CSVOptio
 
 // DataInfo provides information about a dataset
 type DataInfo struct {
-	Rows        int
-	Columns     int
-	Headers     []string
-	HasMissing  bool
+	Rows         int
+	Columns      int
+	Headers      []string
+	HasMissing   bool
 	MissingCount int
-	DataTypes   []string // inferred types per column
+	DataTypes    []string // inferred types per column
 }
 
 // InspectCSV provides information about a CSV file without loading all data
@@ -249,9 +249,9 @@ func InspectCSV(filename string, options CSVOptions) (*DataInfo, error) {
 	reader.TrimLeadingSpace = true
 
 	info := &DataInfo{
-		Rows:     0,
-		Columns:  0,
-		Headers:  nil,
+		Rows:      0,
+		Columns:   0,
+		Headers:   nil,
 		DataTypes: nil,
 	}
 
@@ -293,7 +293,7 @@ func InspectCSV(filename string, options CSVOptions) (*DataInfo, error) {
 		}
 
 		info.Rows++
-		
+
 		// Collect sample for type inference
 		if len(sampleRows) < sampleSize {
 			sampleCopy := make([]string, len(record))

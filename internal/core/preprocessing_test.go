@@ -14,14 +14,14 @@ func TestPreprocessorFitTransform(t *testing.T) {
 		{4.0, 5.0, 6.0},
 		{7.0, 8.0, 9.0},
 	}
-	
+
 	// Test mean centering
 	prep := NewPreprocessor(true, false, false)
 	transformed, err := prep.FitTransform(data)
 	if err != nil {
 		t.Fatalf("FitTransform failed: %v", err)
 	}
-	
+
 	// Check that each column has zero mean
 	for j := 0; j < len(transformed[0]); j++ {
 		sum := 0.0
@@ -43,13 +43,13 @@ func TestStandardScaling(t *testing.T) {
 		{3.0, 30.0},
 		{4.0, 40.0},
 	}
-	
+
 	prep := NewPreprocessor(true, true, false)
 	transformed, err := prep.FitTransform(data)
 	if err != nil {
 		t.Fatalf("FitTransform failed: %v", err)
 	}
-	
+
 	// Check that each column has unit variance
 	for j := 0; j < len(transformed[0]); j++ {
 		sumSq := 0.0
@@ -73,13 +73,13 @@ func TestRobustScaling(t *testing.T) {
 		{100.0, 5.0}, // Outlier in first column
 		{4.0, 6.0},
 	}
-	
+
 	prep := NewPreprocessor(false, false, true)
 	transformed, err := prep.FitTransform(data)
 	if err != nil {
 		t.Fatalf("FitTransform failed: %v", err)
 	}
-	
+
 	// Check that outlier is scaled but not dominating
 	if math.Abs(transformed[3][0]) < 2.0 {
 		t.Error("Outlier not properly scaled")
@@ -93,19 +93,19 @@ func TestInverseTransform(t *testing.T) {
 		{3.0, 4.0},
 		{5.0, 6.0},
 	}
-	
+
 	prep := NewPreprocessor(true, true, false)
 	transformed, err := prep.FitTransform(data)
 	if err != nil {
 		t.Fatalf("FitTransform failed: %v", err)
 	}
-	
+
 	// Inverse transform
 	inversed, err := prep.InverseTransform(transformed)
 	if err != nil {
 		t.Fatalf("InverseTransform failed: %v", err)
 	}
-	
+
 	// Check that we get back original data
 	for i := 0; i < len(data); i++ {
 		for j := 0; j < len(data[0]); j++ {
@@ -125,13 +125,13 @@ func TestImputeMissing(t *testing.T) {
 		{3.0, 4.0},
 		{4.0, math.NaN()},
 	}
-	
+
 	// Test mean imputation
 	imputed, err := ImputeMissing(data, MissingMean)
 	if err != nil {
 		t.Fatalf("ImputeMissing failed: %v", err)
 	}
-	
+
 	// Check that NaN values are replaced
 	if math.IsNaN(imputed[1][0]) {
 		t.Error("NaN not replaced at [1,0]")
@@ -139,7 +139,7 @@ func TestImputeMissing(t *testing.T) {
 	if math.IsNaN(imputed[3][1]) {
 		t.Error("NaN not replaced at [3,1]")
 	}
-	
+
 	// Check imputed values
 	expectedMean0 := (1.0 + 3.0 + 4.0) / 3.0
 	if math.Abs(imputed[1][0]-expectedMean0) > 1e-10 {
@@ -155,22 +155,22 @@ func TestSelectRowsColumns(t *testing.T) {
 		{7.0, 8.0, 9.0},
 		{10.0, 11.0, 12.0},
 	}
-	
+
 	subset, err := SelectRowsColumns(data, []int{0, 2}, []int{1, 2})
 	if err != nil {
 		t.Fatalf("SelectRowsColumns failed: %v", err)
 	}
-	
+
 	expected := types.Matrix{
 		{2.0, 3.0},
 		{8.0, 9.0},
 	}
-	
+
 	if len(subset) != len(expected) || len(subset[0]) != len(expected[0]) {
 		t.Errorf("Wrong subset dimensions: got %dx%d, expected %dx%d",
 			len(subset), len(subset[0]), len(expected), len(expected[0]))
 	}
-	
+
 	for i := 0; i < len(expected); i++ {
 		for j := 0; j < len(expected[0]); j++ {
 			if subset[i][j] != expected[i][j] {
@@ -190,17 +190,17 @@ func TestRemoveOutliers(t *testing.T) {
 		{100.0, 5.0}, // Outlier in first column
 		{4.0, 6.0},
 	}
-	
+
 	// Use a lower threshold to ensure outlier detection
 	cleaned, keepRows, err := RemoveOutliers(data, 1.5) // 1.5 standard deviations
 	if err != nil {
 		t.Fatalf("RemoveOutliers failed: %v", err)
 	}
-	
+
 	// Should remove the outlier row
 	if len(cleaned) >= len(data) {
 		t.Errorf("Outlier not removed: original %d rows, cleaned %d rows", len(data), len(cleaned))
-		
+
 		// Debug: print z-scores
 		n, m := len(data), len(data[0])
 		for j := 0; j < m; j++ {
@@ -213,13 +213,13 @@ func TestRemoveOutliers(t *testing.T) {
 				mean += v
 			}
 			mean /= float64(n)
-			
+
 			sumSq := 0.0
 			for _, v := range col {
 				sumSq += (v - mean) * (v - mean)
 			}
 			stdDev := math.Sqrt(sumSq / float64(n-1))
-			
+
 			t.Logf("Column %d: mean=%.2f, stdDev=%.2f", j, mean, stdDev)
 			for i := 0; i < n; i++ {
 				zScore := math.Abs((data[i][j] - mean) / stdDev)
@@ -227,7 +227,7 @@ func TestRemoveOutliers(t *testing.T) {
 			}
 		}
 	}
-	
+
 	// Check that outlier row (index 3) is not in keepRows
 	for _, idx := range keepRows {
 		if idx == 3 {
@@ -243,13 +243,13 @@ func TestApplyTransform(t *testing.T) {
 		{2.0, 9.0},
 		{3.0, 16.0},
 	}
-	
+
 	// Test square root transformation
 	transformed, err := ApplyTransform(data, []int{1}, TransformSqrt)
 	if err != nil {
 		t.Fatalf("ApplyTransform failed: %v", err)
 	}
-	
+
 	// Check transformed values
 	expected := []float64{2.0, 3.0, 4.0}
 	for i := 0; i < len(transformed); i++ {
@@ -258,7 +258,7 @@ func TestApplyTransform(t *testing.T) {
 				i, transformed[i][1], expected[i])
 		}
 	}
-	
+
 	// First column should be unchanged
 	for i := 0; i < len(data); i++ {
 		if transformed[i][0] != data[i][0] {
@@ -275,17 +275,17 @@ func TestGetVarianceByColumn(t *testing.T) {
 		{3.0, 10.0},
 		{4.0, 10.0},
 	}
-	
+
 	variances, err := GetVarianceByColumn(data)
 	if err != nil {
 		t.Fatalf("GetVarianceByColumn failed: %v", err)
 	}
-	
+
 	// First column should have non-zero variance
 	if variances[0] <= 0 {
 		t.Error("First column should have positive variance")
 	}
-	
+
 	// Second column should have zero variance
 	if variances[1] != 0 {
 		t.Errorf("Second column should have zero variance, got %f", variances[1])
@@ -300,12 +300,12 @@ func TestGetColumnRanks(t *testing.T) {
 		{0.9, 30.0, 4.9},
 		{1.0, 40.0, 5.0},
 	}
-	
+
 	ranks, err := GetColumnRanks(data)
 	if err != nil {
 		t.Fatalf("GetColumnRanks failed: %v", err)
 	}
-	
+
 	// Column 1 should have highest variance, then 2, then 0
 	if ranks[0] != 1 {
 		t.Errorf("Expected column 1 to rank first, got column %d", ranks[0])
