@@ -41,5 +41,8 @@ docs_tmp/
 build/
 results/
 
+# Node modules
+node_modules/
+
 # Data files
 data/iris_metrics*

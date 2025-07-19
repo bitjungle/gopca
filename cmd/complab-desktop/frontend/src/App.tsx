@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import './App.css';
-import { ParseCSV, RunPCA, LoadIrisDataset } from "../wailsjs/go/main/App";
+import { ParseCSV, RunPCA } from "../wailsjs/go/main/App";
 import { DataTable } from './components/DataTable';
 import { FileData, PCARequest, PCAResponse } from './types';
 
@@ -38,20 +38,6 @@ function App() {
         }
     };
     
-    const loadIrisData = async () => {
-        setLoading(true);
-        setError(null);
-        
-        try {
-            const result = await LoadIrisDataset();
-            setFileData(result);
-            setPcaResponse(null);
-        } catch (err) {
-            setError(`Failed to load iris dataset: ${err}`);
-        } finally {
-            setLoading(false);
-        }
-    };
     
     const runPCA = async () => {
         if (!fileData) return;
@@ -88,31 +74,21 @@ function App() {
                     {/* File Upload Section */}
                     <div className="bg-gray-800 rounded-lg p-6 shadow-lg">
                         <h2 className="text-xl font-semibold mb-4">Step 1: Load Data</h2>
-                        <div className="flex gap-4">
-                            <div>
-                                <label className="block text-sm font-medium mb-2">
-                                    Upload CSV File
-                                </label>
-                                <input
-                                    type="file"
-                                    accept=".csv"
-                                    onChange={handleFileUpload}
-                                    className="block w-full text-sm text-gray-300
-                                        file:mr-4 file:py-2 file:px-4
-                                        file:rounded-full file:border-0
-                                        file:text-sm file:font-semibold
-                                        file:bg-blue-600 file:text-white
-                                        hover:file:bg-blue-700"
-                                />
-                            </div>
-                            <div className="flex items-end">
-                                <button
-                                    onClick={loadIrisData}
-                                    className="px-4 py-2 bg-green-600 hover:bg-green-700 rounded-lg font-medium"
-                                >
-                                    Load Iris Dataset
-                                </button>
-                            </div>
+                        <div>
+                            <label className="block text-sm font-medium mb-2">
+                                Upload CSV File
+                            </label>
+                            <input
+                                type="file"
+                                accept=".csv"
+                                onChange={handleFileUpload}
+                                className="block w-full text-sm text-gray-300
+                                    file:mr-4 file:py-2 file:px-4
+                                    file:rounded-full file:border-0
+                                    file:text-sm file:font-semibold
+                                    file:bg-blue-600 file:text-white
+                                    hover:file:bg-blue-700"
+                            />
                         </div>
                     </div>
                     

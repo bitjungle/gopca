@@ -8,7 +8,6 @@ import (
 	"strings"
 
 	"github.com/bitjungle/complab/internal/core"
-	csvio "github.com/bitjungle/complab/internal/io"
 	"github.com/bitjungle/complab/pkg/types"
 )
 
@@ -149,29 +148,3 @@ func (a *App) RunPCA(request PCARequest) PCAResponse {
 	}
 }
 
-// LoadIrisDataset loads the built-in iris dataset
-func (a *App) LoadIrisDataset() (*FileData, error) {
-	// Use the CSV reader to load iris data
-	options := csvio.DefaultCSVOptions()
-	
-	// Read the iris dataset
-	// For the packaged app, we need a more reliable path
-	data, headers, err := csvio.LoadCSV("/Users/runema/Development/complab/data/iris_data.csv", options)
-	if err != nil {
-		return nil, fmt.Errorf("failed to load iris dataset: %w", err)
-	}
-	
-	// For iris dataset, we know the structure
-	// First 4 columns are features, last column is species label
-	// We'll extract row names from the data
-	var rowNames []string
-	for i := range data {
-		rowNames = append(rowNames, fmt.Sprintf("Sample_%d", i+1))
-	}
-	
-	return &FileData{
-		Headers:  headers[:4], // Only the feature columns
-		RowNames: rowNames,
-		Data:     data,
-	}, nil
-}
