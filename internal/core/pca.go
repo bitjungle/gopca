@@ -229,9 +229,47 @@ func (p *PCAImpl) nipalsAlgorithm(X *mat.Dense, nComponents int) (*mat.Dense, *m
 	return T, P, nil
 }
 
-// svdAlgorithm implements SVD-based PCA (placeholder for now)
+// svdAlgorithm implements SVD-based PCA
 func (p *PCAImpl) svdAlgorithm(X *mat.Dense, nComponents int) (*mat.Dense, *mat.Dense, error) {
-	return nil, nil, fmt.Errorf("SVD algorithm not yet implemented")
+	n, m := X.Dims()
+	
+	// Perform SVD: X = U * Σ * V^T
+	var svd mat.SVD
+	ok := svd.Factorize(X, mat.SVDThin)
+	if !ok {
+		return nil, nil, fmt.Errorf("SVD factorization failed")
+	}
+	
+	// Get U and V matrices
+	var u, v mat.Dense
+	svd.UTo(&u)
+	svd.VTo(&v)
+	
+	// Get singular values
+	s := svd.Values(nil)
+	
+	// Check if we have enough components
+	actualComponents := nComponents
+	if len(s) < nComponents {
+		actualComponents = len(s)
+	}
+	
+	// Truncate to requested number of components
+	uTrunc := u.Slice(0, n, 0, actualComponents).(*mat.Dense)
+	vTrunc := v.Slice(0, m, 0, actualComponents).(*mat.Dense)
+	
+	// Create diagonal matrix with singular values
+	sigma := mat.NewDiagDense(actualComponents, s[:actualComponents])
+	
+	// Scores = U * Σ
+	scores := mat.NewDense(n, actualComponents, nil)
+	scores.Mul(uTrunc, sigma)
+	
+	// Loadings = V (columns are the principal components)
+	loadings := mat.NewDense(m, actualComponents, nil)
+	loadings.Copy(vTrunc)
+	
+	return scores, loadings, nil
 }
 
 // preprocess applies mean centering and/or standard scaling

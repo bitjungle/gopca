@@ -185,6 +185,91 @@ func TestTransform(t *testing.T) {
 	}
 }
 
+// Test SVD-based PCA
+func TestPCASVD(t *testing.T) {
+	data := createTestMatrix()
+	engine := NewPCAEngine()
+	
+	config := types.PCAConfig{
+		Components:    2,
+		MeanCenter:    true,
+		StandardScale: false,
+		Method:        "svd",
+	}
+	
+	result, err := engine.Fit(data, config)
+	if err != nil {
+		t.Fatalf("PCA SVD fit failed: %v", err)
+	}
+	
+	// Check dimensions
+	if len(result.Scores) != len(data) {
+		t.Errorf("Expected %d score rows, got %d", len(data), len(result.Scores))
+	}
+	
+	if len(result.Scores[0]) != config.Components {
+		t.Errorf("Expected %d score columns, got %d", config.Components, len(result.Scores[0]))
+	}
+	
+	// Check that explained variance sums to ~100%
+	totalVar := result.CumulativeVar[len(result.CumulativeVar)-1]
+	if math.Abs(totalVar-100.0) > 5.0 {
+		t.Errorf("Total explained variance should be ~100%%, got %.2f%%", totalVar)
+	}
+}
+
+// Compare NIPALS and SVD results
+func TestNIPALSvsSVD(t *testing.T) {
+	data := createTestMatrix()
+	engine := NewPCAEngine()
+	
+	// Run NIPALS
+	configNIPALS := types.PCAConfig{
+		Components:    2,
+		MeanCenter:    true,
+		StandardScale: false,
+		Method:        "nipals",
+	}
+	resultNIPALS, err := engine.Fit(data, configNIPALS)
+	if err != nil {
+		t.Fatalf("NIPALS fit failed: %v", err)
+	}
+	
+	// Run SVD
+	configSVD := types.PCAConfig{
+		Components:    2,
+		MeanCenter:    true,
+		StandardScale: false,
+		Method:        "svd",
+	}
+	resultSVD, err := engine.Fit(data, configSVD)
+	if err != nil {
+		t.Fatalf("SVD fit failed: %v", err)
+	}
+	
+	// Compare explained variance (should be very close)
+	for i := 0; i < len(resultNIPALS.ExplainedVar); i++ {
+		diff := math.Abs(resultNIPALS.ExplainedVar[i] - resultSVD.ExplainedVar[i])
+		if diff > 0.1 { // Allow 0.1% difference
+			t.Errorf("Explained variance differs at component %d: NIPALS=%.2f%%, SVD=%.2f%%", 
+				i, resultNIPALS.ExplainedVar[i], resultSVD.ExplainedVar[i])
+		}
+	}
+	
+	// Check that absolute values of scores are similar (sign may differ)
+	for i := 0; i < len(data); i++ {
+		for j := 0; j < 2; j++ {
+			nipalsAbs := math.Abs(resultNIPALS.Scores[i][j])
+			svdAbs := math.Abs(resultSVD.Scores[i][j])
+			diff := math.Abs(nipalsAbs - svdAbs)
+			if diff > 0.01 {
+				t.Errorf("Score magnitudes differ at [%d,%d]: NIPALS=%.4f, SVD=%.4f", 
+					i, j, nipalsAbs, svdAbs)
+			}
+		}
+	}
+}
+
 // Test error cases
 func TestPCAErrors(t *testing.T) {
 	engine := NewPCAEngine()
@@ -279,6 +364,38 @@ func BenchmarkNIPALS(b *testing.B) {
 		MeanCenter:    true,
 		StandardScale: false,
 		Method:        "nipals",
+	}
+	
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		_, err := engine.Fit(data, config)
+		if err != nil {
+			b.Fatalf("PCA fit failed: %v", err)
+		}
+	}
+}
+
+// Benchmark SVD performance
+func BenchmarkSVD(b *testing.B) {
+	// Create smaller test matrix for benchmarking
+	n, m := 100, 20
+	data := make(types.Matrix, n)
+	
+	// Generate structured data
+	for i := 0; i < n; i++ {
+		data[i] = make([]float64, m)
+		for j := 0; j < m; j++ {
+			data[i][j] = math.Sin(float64(i)/10.0) * math.Cos(float64(j)/5.0) + 
+				0.1*float64(i*j)/float64(n*m)
+		}
+	}
+	
+	engine := NewPCAEngine()
+	config := types.PCAConfig{
+		Components:    5,
+		MeanCenter:    true,
+		StandardScale: false,
+		Method:        "svd",
 	}
 	
 	b.ResetTimer()
