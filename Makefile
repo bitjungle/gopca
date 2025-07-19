@@ -4,7 +4,6 @@
 # Variables
 BINARY_NAME := complab-cli
 BUILD_DIR := build
-RESULTS_DIR := results
 CLI_PATH := cmd/complab-cli/main.go
 COVERAGE_FILE := coverage.out
 
@@ -75,18 +74,17 @@ endif
 ## run-pca-iris: Execute PCA analysis on iris dataset
 run-pca-iris: build
 	@echo "Running PCA analysis on iris dataset..."
-	@mkdir -p $(RESULTS_DIR)
-	$(BUILD_DIR)/$(BINARY_NAME) pca \
-		--input data/iris_data.csv \
-		--components 2 \
-		--output $(RESULTS_DIR)/iris_pca.csv
-	@echo "PCA analysis complete: $(RESULTS_DIR)/iris_pca.csv"
+	@echo "Note: The CLI PCA command is not yet implemented."
+	@echo "This target will execute:"
+	@echo "  $(BUILD_DIR)/$(BINARY_NAME) pca --input data/iris_data.csv --components 2 --output data/iris_pca_results.csv"
+	@echo ""
+	@echo "Current CLI output:"
+	-@$(BUILD_DIR)/$(BINARY_NAME) pca --input data/iris_data.csv --components 2 --output data/iris_pca_results.csv 2>&1 || true
 
 ## clean: Remove build artifacts and generated files
 clean:
 	@echo "Cleaning build artifacts..."
 	@rm -rf $(BUILD_DIR)
-	@rm -rf $(RESULTS_DIR)
 	@rm -f $(COVERAGE_FILE) coverage.html
 	@echo "Clean complete"
 
