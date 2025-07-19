@@ -1,0 +1,177 @@
+package main
+
+import (
+	"context"
+	"encoding/csv"
+	"fmt"
+	"strconv"
+	"strings"
+
+	"github.com/bitjungle/complab/internal/core"
+	csvio "github.com/bitjungle/complab/internal/io"
+	"github.com/bitjungle/complab/pkg/types"
+)
+
+// App struct
+type App struct {
+	ctx context.Context
+}
+
+// NewApp creates a new App application struct
+func NewApp() *App {
+	return &App{}
+}
+
+// startup is called when the app starts. The context is saved
+// so we can call the runtime methods
+func (a *App) startup(ctx context.Context) {
+	a.ctx = ctx
+}
+
+// FileData represents the structure of CSV data for the frontend
+type FileData struct {
+	Headers  []string    `json:"headers"`
+	RowNames []string    `json:"rowNames"`
+	Data     [][]float64 `json:"data"`
+}
+
+// PCARequest represents a PCA analysis request from the frontend
+type PCARequest struct {
+	Data          [][]float64 `json:"data"`
+	Headers       []string    `json:"headers"`
+	RowNames      []string    `json:"rowNames"`
+	Components    int         `json:"components"`
+	MeanCenter    bool        `json:"meanCenter"`
+	StandardScale bool        `json:"standardScale"`
+	RobustScale   bool        `json:"robustScale"`
+	Method        string      `json:"method"`
+}
+
+// PCAResponse represents the PCA analysis results
+type PCAResponse struct {
+	Success bool             `json:"success"`
+	Error   string           `json:"error,omitempty"`
+	Result  *types.PCAResult `json:"result,omitempty"`
+}
+
+// ParseCSV parses CSV content and returns data matrix and headers
+func (a *App) ParseCSV(content string) (*FileData, error) {
+	reader := csv.NewReader(strings.NewReader(content))
+	
+	// Read all records
+	records, err := reader.ReadAll()
+	if err != nil {
+		return nil, fmt.Errorf("failed to read CSV: %w", err)
+	}
+	
+	if len(records) < 2 {
+		return nil, fmt.Errorf("CSV file must have at least a header row and one data row")
+	}
+	
+	// First row is headers
+	headers := records[0]
+	
+	// Check if first column contains row names
+	hasRowNames := false
+	firstValue := records[1][0]
+	if _, err := strconv.ParseFloat(firstValue, 64); err != nil {
+		// First column is not numeric, likely row names
+		hasRowNames = true
+		headers = headers[1:] // Remove first header
+	}
+	
+	// Parse data
+	var data [][]float64
+	var rowNames []string
+	
+	for i := 1; i < len(records); i++ {
+		record := records[i]
+		startIdx := 0
+		
+		if hasRowNames {
+			rowNames = append(rowNames, record[0])
+			startIdx = 1
+		}
+		
+		row := make([]float64, len(record)-startIdx)
+		for j := startIdx; j < len(record); j++ {
+			val, err := strconv.ParseFloat(record[j], 64)
+			if err != nil {
+				return nil, fmt.Errorf("invalid number at row %d, col %d: %s", i, j, record[j])
+			}
+			row[j-startIdx] = val
+		}
+		data = append(data, row)
+	}
+	
+	return &FileData{
+		Headers:  headers,
+		RowNames: rowNames,
+		Data:     data,
+	}, nil
+}
+
+// RunPCA performs PCA analysis on the provided data
+func (a *App) RunPCA(request PCARequest) PCAResponse {
+	// Validate request
+	if len(request.Data) == 0 {
+		return PCAResponse{
+			Success: false,
+			Error:   "No data provided",
+		}
+	}
+	
+	if request.Components <= 0 {
+		request.Components = 2 // Default to 2 components
+	}
+	
+	// Create PCA configuration
+	config := types.PCAConfig{
+		Components:    request.Components,
+		MeanCenter:    request.MeanCenter,
+		StandardScale: request.StandardScale,
+		Method:        strings.ToLower(request.Method),
+	}
+	
+	// Perform PCA
+	engine := core.NewPCAEngine()
+	result, err := engine.Fit(request.Data, config)
+	if err != nil {
+		return PCAResponse{
+			Success: false,
+			Error:   fmt.Sprintf("PCA fit failed: %v", err),
+		}
+	}
+	
+	return PCAResponse{
+		Success: true,
+		Result:  result,
+	}
+}
+
+// LoadIrisDataset loads the built-in iris dataset
+func (a *App) LoadIrisDataset() (*FileData, error) {
+	// Use the CSV reader to load iris data
+	options := csvio.DefaultCSVOptions()
+	
+	// Read the iris dataset
+	// For the packaged app, we need a more reliable path
+	data, headers, err := csvio.LoadCSV("/Users/runema/Development/complab/data/iris_data.csv", options)
+	if err != nil {
+		return nil, fmt.Errorf("failed to load iris dataset: %w", err)
+	}
+	
+	// For iris dataset, we know the structure
+	// First 4 columns are features, last column is species label
+	// We'll extract row names from the data
+	var rowNames []string
+	for i := range data {
+		rowNames = append(rowNames, fmt.Sprintf("Sample_%d", i+1))
+	}
+	
+	return &FileData{
+		Headers:  headers[:4], // Only the feature columns
+		RowNames: rowNames,
+		Data:     data,
+	}, nil
+}

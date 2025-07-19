@@ -1,0 +1,15 @@
+# Dependencies
+node_modules/
+
+# Build outputs  
+dist/
+
+# Wails
+wailsjs/
+
+# Logs
+*.log
+
+# IDE
+.vscode/
+.idea/

@@ -40,3 +40,6 @@ docs_tmp/
 # Build artifacts
 build/
 results/
+
+# Data files
+data/iris_metrics*
