@@ -237,19 +237,35 @@ func calculateResiduals(result *types.PCAResult, data types.Matrix, nComponents 
 		}
 	}
 	
+	// Ensure we don't exceed available components
+	// Loadings are stored as variables×components
+	if len(result.Loadings) > 0 {
+		actualComponents := len(result.Loadings[0])
+		if nComponents > actualComponents {
+			nComponents = actualComponents
+		}
+	}
+	
 	// Extract scores and loadings for the specified components
 	scores := mat.NewDense(nSamples, nComponents, nil)
 	loadings := mat.NewDense(nComponents, nVariables, nil)
 	
 	for i := 0; i < nSamples; i++ {
 		for j := 0; j < nComponents; j++ {
-			scores.Set(i, j, result.Scores[i][j])
+			if j < len(result.Scores[i]) {
+				scores.Set(i, j, result.Scores[i][j])
+			}
 		}
 	}
 	
-	for i := 0; i < nComponents; i++ {
-		for j := 0; j < nVariables; j++ {
-			loadings.Set(i, j, result.Loadings[i][j])
+	// Transpose loadings from variables×components to components×variables for multiplication
+	for i := 0; i < nVariables; i++ {
+		if i < len(result.Loadings) {
+			for j := 0; j < nComponents; j++ {
+				if j < len(result.Loadings[i]) {
+					loadings.Set(j, i, result.Loadings[i][j])
+				}
+			}
 		}
 	}
 	
@@ -304,7 +320,8 @@ func detectOutliersFromT2(t2Stats []float64, nSamples, nComponents int, signific
 	fCritical := fDist.Quantile(1 - significance)
 	
 	// Scale factor for T² distribution
-	scale := (df1 * float64(nSamples-1)) / (float64(nSamples) * df2)
+	// The correct formula is: T² ~ p(n-1)/(n-p) * F(p, n-p)
+	scale := (df1 * float64(nSamples-1)) / df2
 	t2Threshold := scale * fCritical
 	
 	// Detect outliers
@@ -339,8 +356,12 @@ func (mc *metricsCalculator) CalculateContributions(result *types.PCAResult, dat
 		return nil
 	}
 	
-	nComponents := len(result.Loadings)
-	nVariables := len(result.Loadings[0])
+	// Loadings are stored as variables×components
+	nVariables := len(result.Loadings)
+	if nVariables == 0 {
+		return nil
+	}
+	nComponents := len(result.Loadings[0])
 	
 	// Calculate contributions as squared loadings normalized by component
 	contributions := make([][]float64, nVariables)
@@ -352,13 +373,13 @@ func (mc *metricsCalculator) CalculateContributions(result *types.PCAResult, dat
 		sumSquares := 0.0
 		// Calculate sum of squared loadings for this component
 		for i := 0; i < nVariables; i++ {
-			sumSquares += result.Loadings[j][i] * result.Loadings[j][i]
+			sumSquares += result.Loadings[i][j] * result.Loadings[i][j]
 		}
 		
 		// Normalize to get contributions
 		if sumSquares > 0 {
 			for i := 0; i < nVariables; i++ {
-				contributions[i][j] = (result.Loadings[j][i] * result.Loadings[j][i]) / sumSquares
+				contributions[i][j] = (result.Loadings[i][j] * result.Loadings[i][j]) / sumSquares
 			}
 		}
 	}
