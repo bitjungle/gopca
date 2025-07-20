@@ -43,13 +43,13 @@ For detailed help on any command, use: complab-cli <command> --help`,
 		Before: func(c *cli.Context) error {
 			// If no command is provided, show help
 			if c.NArg() == 0 && c.Command.Name == "" {
-				cli.ShowAppHelp(c)
+				_ = cli.ShowAppHelp(c)
 				os.Exit(0)
 			}
 			return nil
 		},
 		CommandNotFound: func(c *cli.Context, command string) {
-			fmt.Fprintf(c.App.Writer, "Unknown command '%s'. Try '%s help'\n", command, c.App.Name)
+			_, _ = fmt.Fprintf(c.App.Writer, "Unknown command '%s'. Try '%s help'\n", command, c.App.Name)
 		},
 	}
 

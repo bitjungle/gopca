@@ -45,7 +45,7 @@ func ParseCSV(filename string, options CSVParseOptions) (*CSVData, error) {
 	if err != nil {
 		return nil, fmt.Errorf("failed to open file: %w", err)
 	}
-	defer file.Close()
+	defer func() { _ = file.Close() }()
 
 	return ParseCSVReader(file, options)
 }
@@ -149,9 +149,10 @@ func ParseCSVReader(r io.Reader, options CSVParseOptions) (*CSVData, error) {
 				}
 				
 				// Check for special float values
-				if value == "Inf" || value == "+Inf" {
+				switch value {
+				case "Inf", "+Inf":
 					val = math.Inf(1)
-				} else if value == "-Inf" {
+				case "-Inf":
 					val = math.Inf(-1)
 				}
 				

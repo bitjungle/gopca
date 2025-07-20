@@ -312,7 +312,7 @@ func writeSamplesCSV(data *types.PCAOutputData, filename string, includeMetrics 
 	if err != nil {
 		return fmt.Errorf("failed to create samples file: %w", err)
 	}
-	defer file.Close()
+	defer func() { _ = file.Close() }()
 	
 	writer := csv.NewWriter(file)
 	defer writer.Flush()
@@ -371,16 +371,14 @@ func writeFeaturesCSV(data *types.PCAOutputData, filename string) error {
 	if err != nil {
 		return fmt.Errorf("failed to create features file: %w", err)
 	}
-	defer file.Close()
+	defer func() { _ = file.Close() }()
 	
 	writer := csv.NewWriter(file)
 	defer writer.Flush()
 	
 	// Write header with feature names
 	headers := []string{""} // Index column
-	for _, name := range data.Features.Names {
-		headers = append(headers, name)
-	}
+	headers = append(headers, data.Features.Names...)
 	
 	if err := writer.Write(headers); err != nil {
 		return fmt.Errorf("failed to write CSV header: %w", err)
