@@ -3,6 +3,7 @@ import './App.css';
 import { ParseCSV, RunPCA } from "../wailsjs/go/main/App";
 import { DataTable } from './components/DataTable';
 import { FileData, PCARequest, PCAResponse } from './types';
+import logo from './assets/images/GoPCA-logo-1024.png';
 
 function App() {
     const [fileData, setFileData] = useState<FileData | null>(null);
@@ -92,7 +93,7 @@ function App() {
     return (
         <div className="flex flex-col h-screen bg-gray-900 text-white">
             <header className="bg-gray-800 p-4 shadow-lg">
-                <h1 className="text-2xl font-bold text-center">GoPCA Desktop</h1>
+                <img src={logo} alt="GoPCA - Principal Component Analysis Tool" className="h-12 mx-auto" />
             </header>
             
             <main className="flex-1 overflow-auto p-6">
