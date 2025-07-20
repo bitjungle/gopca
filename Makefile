@@ -23,8 +23,8 @@ LDFLAGS := -ldflags="-s -w"
 # Check if golangci-lint is installed
 GOLINT := $(shell which golangci-lint 2> /dev/null)
 
-# Check if wails is installed
-WAILS := $(shell which wails 2> /dev/null)
+# Check if wails is installed - check in PATH and common locations
+WAILS := $(shell which wails 2> /dev/null || echo "$${HOME}/go/bin/wails")
 
 # Default target
 .DEFAULT_GOAL := all
@@ -44,26 +44,26 @@ build:
 
 ## gui-dev: Run GUI in development mode with hot reload
 gui-dev:
-ifdef WAILS
-	@echo "Starting GUI in development mode..."
-	@cd $(DESKTOP_PATH) && wails dev
-else
-	@echo "Wails not found. Install it with:"
-	@echo "  go install github.com/wailsapp/wails/v2/cmd/wails@latest"
-	@exit 1
-endif
+	@if [ -x "$(WAILS)" ]; then \
+		echo "Starting GUI in development mode..."; \
+		cd $(DESKTOP_PATH) && $(WAILS) dev; \
+	else \
+		echo "Wails not found. Install it with:"; \
+		echo "  go install github.com/wailsapp/wails/v2/cmd/wails@latest"; \
+		exit 1; \
+	fi
 
 ## gui-build: Build GUI application for production
 gui-build:
-ifdef WAILS
-	@echo "Building GUI application..."
-	@cd $(DESKTOP_PATH) && wails build
-	@echo "GUI build complete. Check $(DESKTOP_PATH)/build/bin/"
-else
-	@echo "Wails not found. Install it with:"
-	@echo "  go install github.com/wailsapp/wails/v2/cmd/wails@latest"
-	@exit 1
-endif
+	@if [ -x "$(WAILS)" ]; then \
+		echo "Building GUI application..."; \
+		cd $(DESKTOP_PATH) && $(WAILS) build; \
+		echo "GUI build complete. Check $(DESKTOP_PATH)/build/bin/"; \
+	else \
+		echo "Wails not found. Install it with:"; \
+		echo "  go install github.com/wailsapp/wails/v2/cmd/wails@latest"; \
+		exit 1; \
+	fi
 
 ## gui-deps: Install frontend dependencies for GUI
 gui-deps:
