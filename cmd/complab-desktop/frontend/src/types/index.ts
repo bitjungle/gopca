@@ -13,6 +13,8 @@ export interface PCARequest {
   standardScale: boolean;
   robustScale: boolean;
   method: string;
+  excludedRows?: number[];
+  excludedColumns?: number[];
 }
 
 export interface PCAResult {

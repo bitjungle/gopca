@@ -10,6 +10,10 @@ function App() {
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState<string | null>(null);
     
+    // Selection state
+    const [excludedRows, setExcludedRows] = useState<number[]>([]);
+    const [excludedColumns, setExcludedColumns] = useState<number[]>([]);
+    
     // PCA configuration
     const [config, setConfig] = useState({
         components: 2,
@@ -31,6 +35,9 @@ function App() {
             const result = await ParseCSV(content);
             setFileData(result);
             setPcaResponse(null);
+            // Reset exclusions when loading new data
+            setExcludedRows([]);
+            setExcludedColumns([]);
         } catch (err) {
             setError(`Failed to parse CSV: ${err}`);
         } finally {
@@ -38,6 +45,23 @@ function App() {
         }
     };
     
+    const handleRowSelectionChange = (selectedRows: number[]) => {
+        // Convert selected indices to excluded indices
+        if (fileData) {
+            const allIndices = Array.from({ length: fileData.data.length }, (_, i) => i);
+            const excluded = allIndices.filter(i => !selectedRows.includes(i));
+            setExcludedRows(excluded);
+        }
+    };
+    
+    const handleColumnSelectionChange = (selectedColumns: number[]) => {
+        // Convert selected indices to excluded indices
+        if (fileData) {
+            const allIndices = Array.from({ length: fileData.headers.length }, (_, i) => i);
+            const excluded = allIndices.filter(i => !selectedColumns.includes(i));
+            setExcludedColumns(excluded);
+        }
+    };
     
     const runPCA = async () => {
         if (!fileData) return;
@@ -48,7 +72,9 @@ function App() {
         try {
             const request: PCARequest = {
                 ...fileData,
-                ...config
+                ...config,
+                excludedRows,
+                excludedColumns
             };
             const result = await RunPCA(request);
             if (result.success) {
@@ -101,6 +127,10 @@ function App() {
                                 rowNames={fileData.rowNames}
                                 data={fileData.data}
                                 title="Input Data"
+                                enableRowSelection={true}
+                                enableColumnSelection={true}
+                                onRowSelectionChange={handleRowSelectionChange}
+                                onColumnSelectionChange={handleColumnSelectionChange}
                             />
                         </div>
                     )}
