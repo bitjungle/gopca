@@ -74,7 +74,7 @@ endif
 ## run-pca-iris: Execute PCA analysis on iris dataset
 run-pca-iris: build
 	@echo "Running PCA analysis on iris dataset..."
-	$(BUILD_DIR)/$(BINARY_NAME) analyze -f csv -o data/iris_pca_results.csv --output-all data/iris_data.csv
+	$(BUILD_DIR)/$(BINARY_NAME) analyze -f csv --output-all --include-metrics data/iris_data.csv
 
 ## clean: Remove build artifacts and generated files
 clean:
