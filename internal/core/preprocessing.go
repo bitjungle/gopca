@@ -422,6 +422,22 @@ func ApplyTransform(data types.Matrix, columns []int, transform TransformType) (
 	return result, nil
 }
 
+// GetMeans returns the fitted mean values
+func (p *Preprocessor) GetMeans() []float64 {
+	if !p.fitted {
+		return nil
+	}
+	return p.mean
+}
+
+// GetStdDevs returns the fitted standard deviation values
+func (p *Preprocessor) GetStdDevs() []float64 {
+	if !p.fitted {
+		return nil
+	}
+	return p.scale
+}
+
 // GetVarianceByColumn calculates variance for each column
 func GetVarianceByColumn(data types.Matrix) ([]float64, error) {
 	if len(data) == 0 || len(data[0]) == 0 {

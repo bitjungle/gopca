@@ -58,9 +58,9 @@ The analysis includes:
 			
 			// Output flags
 			&cli.StringFlag{
-				Name:    "output",
+				Name:    "output-dir",
 				Aliases: []string{"o"},
-				Usage:   "Output file path (default: stdout)",
+				Usage:   "Output directory (default: same as input file)",
 			},
 			&cli.StringFlag{
 				Name:    "format",
@@ -280,6 +280,10 @@ func runAnalyze(c *cli.Context) error {
 		return fmt.Errorf("PCA analysis failed: %w", err)
 	}
 	
+	// Add preprocessing statistics to the result
+	result.Means = preprocessor.GetMeans()
+	result.StdDevs = preprocessor.GetStdDevs()
+	
 	if verbose {
 		fmt.Println("\n✓ PCA analysis completed successfully")
 		fmt.Printf("  - Explained variance: %.1f%% (PC1), %.1f%% (PC2)\n", 
@@ -290,12 +294,12 @@ func runAnalyze(c *cli.Context) error {
 	
 	// Prepare output
 	outputFormat := c.String("format")
-	outputFile := c.String("output")
+	outputDir := c.String("output-dir")
 	
 	if verbose {
 		fmt.Printf("\nOutput configuration:\n")
 		fmt.Printf("  Format: %s\n", outputFormat)
-		fmt.Printf("  File: %s\n", outputFile)
+		fmt.Printf("  Output dir: %s\n", outputDir)
 	}
 	
 	// Handle output options
@@ -313,11 +317,11 @@ func runAnalyze(c *cli.Context) error {
 		}
 	case "csv":
 		// CSV output is different - don't show table
-		err = outputCSVFormat(result, data, outputFile, outputScores, outputLoadings, 
+		err = outputCSVFormat(result, data, inputFile, outputDir, outputScores, outputLoadings, 
 			outputVariance, includeMetrics)
 	case "json":
 		// JSON output is different - don't show table
-		err = outputJSONFormat(result, data, outputFile, outputScores, outputLoadings, 
+		err = outputJSONFormat(result, data, inputFile, outputDir, outputScores, outputLoadings, 
 			outputVariance, includeMetrics)
 	default:
 		return fmt.Errorf("unsupported output format: %s", outputFormat)
@@ -325,11 +329,6 @@ func runAnalyze(c *cli.Context) error {
 	
 	if err != nil {
 		return fmt.Errorf("output failed: %w", err)
-	}
-	
-	// Success message for file output
-	if outputFile != "" && outputFormat != "table" {
-		fmt.Printf("\nResults saved to: %s\n", outputFile)
 	}
 	
 	return nil

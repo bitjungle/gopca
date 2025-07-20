@@ -4,9 +4,10 @@ import (
 	"encoding/csv"
 	"encoding/json"
 	"fmt"
-	"io"
 	"os"
+	"path/filepath"
 	"strconv"
+	"strings"
 
 	"github.com/bitjungle/complab/pkg/types"
 )
@@ -46,6 +47,92 @@ type OutputSummary struct {
 	ExplainedVariance   []float64         `json:"explained_variance,omitempty"`
 	CumulativeVariance  []float64         `json:"cumulative_variance,omitempty"`
 	Loadings            map[string][]float64 `json:"loadings,omitempty"`
+}
+
+// generateOutputPaths creates output file paths based on input file and format
+func generateOutputPaths(inputFile, outputDir, format string) map[string]string {
+	paths := make(map[string]string)
+	
+	// Get the directory and base name of the input file
+	dir := filepath.Dir(inputFile)
+	base := filepath.Base(inputFile)
+	
+	// Remove extension to get the base name
+	ext := filepath.Ext(base)
+	baseName := strings.TrimSuffix(base, ext)
+	
+	// Use output directory if specified, otherwise use input directory
+	if outputDir != "" {
+		dir = outputDir
+	}
+	
+	// Generate paths based on format
+	switch format {
+	case "csv":
+		paths["samples"] = filepath.Join(dir, baseName+"_pca_samples.csv")
+		paths["features"] = filepath.Join(dir, baseName+"_pca_features.csv")
+	case "json":
+		paths["output"] = filepath.Join(dir, baseName+"_pca.json")
+	}
+	
+	return paths
+}
+
+// convertToPCAOutputData converts PCAResult and CSVData to PCAOutputData
+func convertToPCAOutputData(result *types.PCAResult, data *CSVData, includeMetrics bool) *types.PCAOutputData {
+	// Create sample data
+	sampleData := types.SampleData{
+		Names:  data.RowNames,
+		Scores: result.Scores,
+	}
+	
+	// Add metrics if requested (placeholder for now)
+	if includeMetrics {
+		sampleData.Metrics = make([]types.SampleMetrics, len(result.Scores))
+		// TODO: Calculate actual metrics
+		for i := range sampleData.Metrics {
+			sampleData.Metrics[i] = types.SampleMetrics{
+				HotellingT2: 0.0,
+				Mahalanobis: 0.0,
+				RSS:         0.0,
+				IsOutlier:   false,
+			}
+		}
+	}
+	
+	// Create feature data
+	featureData := types.FeatureData{
+		Names:    data.ColumnNames,
+		Loadings: result.Loadings,
+		Means:    result.Means,
+		StdDevs:  result.StdDevs,
+	}
+	
+	// Determine preprocessing type
+	preprocessing := "none"
+	if len(result.Means) > 0 {
+		preprocessing = "mean_centered"
+		if len(result.StdDevs) > 0 {
+			preprocessing = "standard_scaled"
+		}
+	}
+	
+	// Create metadata
+	metadata := types.PCAMetadata{
+		NSamples:           data.Rows,
+		NFeatures:          data.Columns,
+		NComponents:        len(result.ComponentLabels),
+		Method:             "svd", // TODO: Get from config
+		Preprocessing:      preprocessing,
+		ExplainedVariance:  result.ExplainedVar,
+		CumulativeVariance: result.CumulativeVar,
+	}
+	
+	return &types.PCAOutputData{
+		Samples:  sampleData,
+		Features: featureData,
+		Metadata: metadata,
+	}
 }
 
 // outputTableFormat outputs results in table format to stdout
@@ -161,37 +248,54 @@ func outputTableFormat(result *types.PCAResult, data *CSVData,
 }
 
 // outputCSVFormat outputs results in CSV format
-func outputCSVFormat(result *types.PCAResult, data *CSVData, outputFile string,
+func outputCSVFormat(result *types.PCAResult, data *CSVData, inputFile, outputDir string,
 	outputScores, outputLoadings, outputVariance, includeMetrics bool) error {
 	
-	// Skip if nothing to output
-	if !outputScores && !outputLoadings && !outputVariance {
-		return fmt.Errorf("no output requested: use --output-scores, --output-loadings, or --output-variance")
-	}
+	// Convert to PCAOutputData
+	outputData := convertToPCAOutputData(result, data, includeMetrics)
 	
-	// For now, only handle scores output
-	if !outputScores {
-		return fmt.Errorf("CSV format currently only supports scores output")
-	}
+	// Generate output paths
+	paths := generateOutputPaths(inputFile, outputDir, "csv")
 	
-	// Determine output writer
-	var w io.Writer = os.Stdout
-	if outputFile != "" {
-		file, err := os.Create(outputFile)
-		if err != nil {
-			return fmt.Errorf("failed to create output file: %w", err)
+	// Create output directory if needed
+	if outputDir != "" {
+		if err := os.MkdirAll(outputDir, 0755); err != nil {
+			return fmt.Errorf("failed to create output directory: %w", err)
 		}
-		defer file.Close()
-		w = file
 	}
 	
-	writer := csv.NewWriter(w)
+	// Write samples CSV
+	if err := writeSamplesCSV(outputData, paths["samples"], includeMetrics); err != nil {
+		return err
+	}
+	
+	// Write features CSV
+	if err := writeFeaturesCSV(outputData, paths["features"]); err != nil {
+		return err
+	}
+	
+	fmt.Printf("\nResults saved to:\n")
+	fmt.Printf("  Samples: %s\n", paths["samples"])
+	fmt.Printf("  Features: %s\n", paths["features"])
+	
+	return nil
+}
+
+// writeSamplesCSV writes the samples data to a CSV file
+func writeSamplesCSV(data *types.PCAOutputData, filename string, includeMetrics bool) error {
+	file, err := os.Create(filename)
+	if err != nil {
+		return fmt.Errorf("failed to create samples file: %w", err)
+	}
+	defer file.Close()
+	
+	writer := csv.NewWriter(file)
 	defer writer.Flush()
 	
 	// Write header
-	headers := []string{""}  // Index column
-	for i := 0; i < len(result.ComponentLabels); i++ {
-		headers = append(headers, result.ComponentLabels[i])
+	headers := []string{""} // Index column
+	for i := 0; i < data.Metadata.NComponents; i++ {
+		headers = append(headers, fmt.Sprintf("PC%d", i+1))
 	}
 	if includeMetrics {
 		headers = append(headers, "hotelling_t2", "mahalanobis_distances", 
@@ -203,25 +307,29 @@ func outputCSVFormat(result *types.PCAResult, data *CSVData, outputFile string,
 	}
 	
 	// Write data rows
-	for i := 0; i < len(result.Scores); i++ {
+	for i := 0; i < len(data.Samples.Scores); i++ {
 		row := []string{}
 		
-		// Row name/index
-		if i < len(data.RowNames) {
-			row = append(row, data.RowNames[i])
+		// Sample name
+		if i < len(data.Samples.Names) && data.Samples.Names[i] != "" {
+			row = append(row, data.Samples.Names[i])
 		} else {
-			row = append(row, strconv.Itoa(i))
+			row = append(row, fmt.Sprintf("Sample_%d", i+1))
 		}
 		
 		// PC scores
-		for j := 0; j < len(result.ComponentLabels); j++ {
-			row = append(row, strconv.FormatFloat(result.Scores[i][j], 'f', -1, 64))
+		for j := 0; j < data.Metadata.NComponents; j++ {
+			row = append(row, strconv.FormatFloat(data.Samples.Scores[i][j], 'f', -1, 64))
 		}
 		
-		// Metrics (placeholder for now)
-		if includeMetrics {
-			// TODO: Calculate actual metrics
-			row = append(row, "0.0", "0.0", "0.0", "False")
+		// Metrics
+		if includeMetrics && data.Samples.Metrics != nil {
+			metrics := data.Samples.Metrics[i]
+			row = append(row, 
+				strconv.FormatFloat(metrics.HotellingT2, 'f', -1, 64),
+				strconv.FormatFloat(metrics.Mahalanobis, 'f', -1, 64),
+				strconv.FormatFloat(metrics.RSS, 'f', -1, 64),
+				strconv.FormatBool(metrics.IsOutlier))
 		}
 		
 		if err := writer.Write(row); err != nil {
@@ -232,86 +340,95 @@ func outputCSVFormat(result *types.PCAResult, data *CSVData, outputFile string,
 	return nil
 }
 
-// outputJSONFormat outputs results in JSON format
-func outputJSONFormat(result *types.PCAResult, data *CSVData, outputFile string,
-	outputScores, outputLoadings, outputVariance, includeMetrics bool) error {
+// writeFeaturesCSV writes the features data to a CSV file
+func writeFeaturesCSV(data *types.PCAOutputData, filename string) error {
+	file, err := os.Create(filename)
+	if err != nil {
+		return fmt.Errorf("failed to create features file: %w", err)
+	}
+	defer file.Close()
 	
-	// Prepare output data
-	output := OutputData{
-		Metadata: OutputMetadata{
-			NSamples:      data.Rows,
-			NFeatures:     data.Columns,
-			NComponents:   len(result.ComponentLabels),
-			Preprocessing: "standard", // TODO: Get from actual config
-		},
-		Results: []SampleResult{},
-		Summary: OutputSummary{},
+	writer := csv.NewWriter(file)
+	defer writer.Flush()
+	
+	// Write header with feature names
+	headers := []string{""} // Index column
+	for _, name := range data.Features.Names {
+		headers = append(headers, name)
 	}
 	
-	// Add sample results
-	if outputScores {
-		for i := 0; i < len(result.Scores); i++ {
-			sampleID := fmt.Sprintf("Sample_%d", i+1)
-			if i < len(data.RowNames) {
-				sampleID = data.RowNames[i]
-			}
-			
-			scores := make(map[string]float64)
-			for j := 0; j < len(result.ComponentLabels); j++ {
-				scores[result.ComponentLabels[j]] = result.Scores[i][j]
-			}
-			
-			sample := SampleResult{
-				ID:     sampleID,
-				Scores: scores,
-			}
-			
-			if includeMetrics {
-				// TODO: Calculate actual metrics
-				sample.Metrics = &SampleMetrics{
-					HotellingT2:         0.0,
-					MahalanobisDistance: 0.0,
-					RSS:                 0.0,
-					IsOutlier:           false,
-				}
-			}
-			
-			output.Results = append(output.Results, sample)
+	if err := writer.Write(headers); err != nil {
+		return fmt.Errorf("failed to write CSV header: %w", err)
+	}
+	
+	// Write loadings for each PC
+	for i := 0; i < data.Metadata.NComponents; i++ {
+		row := []string{fmt.Sprintf("PC%d", i+1)}
+		
+		for j := 0; j < data.Metadata.NFeatures; j++ {
+			row = append(row, strconv.FormatFloat(data.Features.Loadings[j][i], 'f', -1, 64))
+		}
+		
+		if err := writer.Write(row); err != nil {
+			return fmt.Errorf("failed to write loadings row: %w", err)
 		}
 	}
 	
-	// Add summary data
-	if outputVariance {
-		output.Summary.ExplainedVariance = result.ExplainedVar
-		output.Summary.CumulativeVariance = result.CumulativeVar
+	// Write mean row
+	if len(data.Features.Means) > 0 {
+		row := []string{"mean"}
+		for _, mean := range data.Features.Means {
+			row = append(row, strconv.FormatFloat(mean, 'f', -1, 64))
+		}
+		if err := writer.Write(row); err != nil {
+			return fmt.Errorf("failed to write mean row: %w", err)
+		}
 	}
 	
-	if outputLoadings {
-		output.Summary.Loadings = make(map[string][]float64)
-		for i, varName := range data.ColumnNames {
-			loadings := make([]float64, len(result.ComponentLabels))
-			for j := range result.ComponentLabels {
-				loadings[j] = result.Loadings[i][j]
-			}
-			output.Summary.Loadings[varName] = loadings
+	// Write stdev row
+	if len(data.Features.StdDevs) > 0 {
+		row := []string{"stdev"}
+		for _, stdev := range data.Features.StdDevs {
+			row = append(row, strconv.FormatFloat(stdev, 'f', -1, 64))
+		}
+		if err := writer.Write(row); err != nil {
+			return fmt.Errorf("failed to write stdev row: %w", err)
+		}
+	}
+	
+	return nil
+}
+
+// outputJSONFormat outputs results in JSON format
+func outputJSONFormat(result *types.PCAResult, data *CSVData, inputFile, outputDir string,
+	outputScores, outputLoadings, outputVariance, includeMetrics bool) error {
+	
+	// Convert to PCAOutputData
+	outputData := convertToPCAOutputData(result, data, includeMetrics)
+	
+	// Generate output paths
+	paths := generateOutputPaths(inputFile, outputDir, "json")
+	outputFile := paths["output"]
+	
+	// Create output directory if needed
+	if outputDir != "" {
+		if err := os.MkdirAll(outputDir, 0755); err != nil {
+			return fmt.Errorf("failed to create output directory: %w", err)
 		}
 	}
 	
 	// Marshal JSON
-	jsonData, err := json.MarshalIndent(output, "", "  ")
+	jsonData, err := json.MarshalIndent(outputData, "", "  ")
 	if err != nil {
 		return fmt.Errorf("failed to marshal JSON: %w", err)
 	}
 	
 	// Write output
-	if outputFile != "" {
-		if err := os.WriteFile(outputFile, jsonData, 0644); err != nil {
-			return fmt.Errorf("failed to write JSON file: %w", err)
-		}
-		fmt.Printf("Results saved to: %s\n", outputFile)
-	} else {
-		fmt.Println(string(jsonData))
+	if err := os.WriteFile(outputFile, jsonData, 0644); err != nil {
+		return fmt.Errorf("failed to write JSON file: %w", err)
 	}
+	
+	fmt.Printf("\nResults saved to: %s\n", outputFile)
 	
 	return nil
 }
