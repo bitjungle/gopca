@@ -5,7 +5,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/bitjungle/complab/pkg/types"
+	"github.com/bitjungle/gopca/pkg/types"
 )
 
 // Helper function to create test data

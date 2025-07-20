@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"math"
 
-	"github.com/bitjungle/complab/pkg/types"
+	"github.com/bitjungle/gopca/pkg/types"
 	"gonum.org/v1/gonum/mat"
 	"gonum.org/v1/gonum/stat/distuv"
 )

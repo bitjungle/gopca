@@ -10,7 +10,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/bitjungle/complab/pkg/types"
+	"github.com/bitjungle/gopca/pkg/types"
 )
 
 // Test basic CSV loading

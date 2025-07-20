@@ -1,12 +1,12 @@
-# Makefile for complab - A professional-grade PCA toolkit
+# Makefile for gopca - A professional-grade PCA toolkit
 # This Makefile provides common development tasks for building, testing, and running the PCA toolkit
 
 # Variables
-BINARY_NAME := complab-cli
-DESKTOP_NAME := complab-desktop
+BINARY_NAME := gopca-cli
+DESKTOP_NAME := gopca-desktop
 BUILD_DIR := build
-CLI_PATH := cmd/complab-cli/main.go
-DESKTOP_PATH := cmd/complab-desktop
+CLI_PATH := cmd/gopca-cli/main.go
+DESKTOP_PATH := cmd/gopca-desktop
 COVERAGE_FILE := coverage.out
 
 # Go commands
@@ -67,12 +67,12 @@ gui-build:
 
 ## gui-run: Run the built GUI application
 gui-run:
-	@if [ -f "$(DESKTOP_PATH)/build/bin/complab-desktop.app/Contents/MacOS/complab-desktop" ]; then \
+	@if [ -f "$(DESKTOP_PATH)/build/bin/gopca-desktop.app/Contents/MacOS/gopca-desktop" ]; then \
 		echo "Running GUI application..."; \
-		open $(DESKTOP_PATH)/build/bin/complab-desktop.app; \
-	elif [ -f "$(DESKTOP_PATH)/build/bin/complab-desktop" ]; then \
+		open $(DESKTOP_PATH)/build/bin/gopca-desktop.app; \
+	elif [ -f "$(DESKTOP_PATH)/build/bin/gopca-desktop" ]; then \
 		echo "Running GUI application..."; \
-		$(DESKTOP_PATH)/build/bin/complab-desktop; \
+		$(DESKTOP_PATH)/build/bin/gopca-desktop; \
 	else \
 		echo "GUI application not found. Build it first with 'make gui-build'"; \
 		exit 1; \
