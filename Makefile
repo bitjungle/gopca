@@ -30,7 +30,7 @@ WAILS := $(shell which wails 2> /dev/null || echo "$${HOME}/go/bin/wails")
 .DEFAULT_GOAL := all
 
 # Phony targets
-.PHONY: all build gui-dev gui-build gui-deps test test-verbose test-coverage fmt lint run-pca-iris clean install deps help
+.PHONY: all build gui-dev gui-build gui-run gui-deps test test-verbose test-coverage fmt lint run-pca-iris clean install deps help
 
 ## all: Build the binary and run tests
 all: build test
@@ -62,6 +62,19 @@ gui-build:
 	else \
 		echo "Wails not found. Install it with:"; \
 		echo "  go install github.com/wailsapp/wails/v2/cmd/wails@latest"; \
+		exit 1; \
+	fi
+
+## gui-run: Run the built GUI application
+gui-run:
+	@if [ -f "$(DESKTOP_PATH)/build/bin/complab-desktop.app/Contents/MacOS/complab-desktop" ]; then \
+		echo "Running GUI application..."; \
+		open $(DESKTOP_PATH)/build/bin/complab-desktop.app; \
+	elif [ -f "$(DESKTOP_PATH)/build/bin/complab-desktop" ]; then \
+		echo "Running GUI application..."; \
+		$(DESKTOP_PATH)/build/bin/complab-desktop; \
+	else \
+		echo "GUI application not found. Build it first with 'make gui-build'"; \
 		exit 1; \
 	fi
 
@@ -146,6 +159,7 @@ help:
 	@echo "  make gui-deps     # Install GUI dependencies (first time)"
 	@echo "  make gui-dev      # Run GUI in development mode"
 	@echo "  make gui-build    # Build GUI for production"
+	@echo "  make gui-run      # Run the built GUI application"
 	@echo "  make test         # Run tests with coverage"
 	@echo "  make run-pca-iris # Run PCA on iris dataset"
 	@echo "  make clean        # Clean all artifacts"
