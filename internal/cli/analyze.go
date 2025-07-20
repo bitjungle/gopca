@@ -4,6 +4,8 @@ import (
 	"fmt"
 	"strings"
 
+	"github.com/bitjungle/complab/internal/core"
+	"github.com/bitjungle/complab/pkg/types"
 	"github.com/urfave/cli/v2"
 )
 
@@ -207,16 +209,100 @@ func runAnalyze(c *cli.Context) error {
 		fmt.Print(GetDataSummary(data))
 	}
 	
-	// TODO: Implement PCA analysis
+	// Configure PCA
+	pcaConfig := types.PCAConfig{
+		Components:    c.Int("components"),
+		MeanCenter:    !c.Bool("no-mean-centering"),
+		StandardScale: c.String("scale") == "standard",
+		Method:        c.String("method"),
+	}
 	
-	// For now, show what we loaded
-	if !quiet {
-		fmt.Printf("\nSuccessfully loaded data: %d rows × %d columns\n", data.Rows, data.Columns)
-		fmt.Printf("Analysis configuration:\n")
-		fmt.Printf("  Components: %d\n", c.Int("components"))
-		fmt.Printf("  Method: %s\n", c.String("method"))
-		fmt.Printf("  Scaling: %s\n", c.String("scale"))
-		fmt.Printf("  Mean centering: %v\n", !c.Bool("no-mean-centering"))
+	// Check if requested components exceed available dimensions
+	maxComponents := min(data.Rows-1, data.Columns)
+	if pcaConfig.Components > maxComponents {
+		return fmt.Errorf("requested %d components but data only supports maximum %d components", 
+			pcaConfig.Components, maxComponents)
+	}
+	
+	// Apply preprocessing if needed
+	preprocessor := core.NewPreprocessor(
+		pcaConfig.MeanCenter,
+		pcaConfig.StandardScale,
+		c.String("scale") == "robust",
+	)
+	
+	if verbose {
+		fmt.Println("\nPreprocessing data...")
+		if pcaConfig.MeanCenter {
+			fmt.Println("  - Mean centering")
+		}
+		if c.String("scale") != "none" {
+			fmt.Printf("  - Applying %s scaling\n", c.String("scale"))
+		}
+	}
+	
+	// Preprocess data
+	processedData, err := preprocessor.FitTransform(data.Matrix)
+	if err != nil {
+		return fmt.Errorf("preprocessing failed: %w", err)
+	}
+	
+	// Run PCA
+	if verbose {
+		fmt.Printf("\nRunning PCA analysis using %s method...\n", pcaConfig.Method)
+	}
+	
+	engine := core.NewPCAEngine()
+	result, err := engine.Fit(processedData, pcaConfig)
+	if err != nil {
+		return fmt.Errorf("PCA analysis failed: %w", err)
+	}
+	
+	if verbose {
+		fmt.Println("\n✓ PCA analysis completed successfully")
+		fmt.Printf("  - Explained variance: %.1f%% (PC1), %.1f%% (PC2)\n", 
+			result.ExplainedVar[0], result.ExplainedVar[1])
+		fmt.Printf("  - Cumulative variance: %.1f%%\n", 
+			result.CumulativeVar[len(result.CumulativeVar)-1])
+	}
+	
+	// Prepare output
+	outputFormat := c.String("format")
+	outputFile := c.String("output")
+	
+	if verbose {
+		fmt.Printf("\nOutput configuration:\n")
+		fmt.Printf("  Format: %s\n", outputFormat)
+		fmt.Printf("  File: %s\n", outputFile)
+	}
+	
+	// Handle output options
+	outputScores := c.Bool("output-scores") || c.Bool("output-all")
+	outputLoadings := c.Bool("output-loadings") || c.Bool("output-all")
+	outputVariance := c.Bool("output-variance") || c.Bool("output-all")
+	includeMetrics := c.Bool("include-metrics")
+	
+	// Format and output results
+	switch outputFormat {
+	case "table":
+		if !quiet {
+			err = outputTableFormat(result, data, outputScores, outputLoadings, 
+				outputVariance, includeMetrics)
+		}
+	case "csv":
+		// CSV output is different - don't show table
+		err = outputCSVFormat(result, data, outputFile, outputScores, outputLoadings, 
+			outputVariance, includeMetrics)
+	case "json":
+		// JSON output is different - don't show table
+		err = outputJSONFormat(result, data, outputFile, outputScores, outputLoadings, 
+			outputVariance, includeMetrics)
+	default:
+		return fmt.Errorf("unsupported output format: %s", outputFormat)
+	}
+	
+	if err != nil {
+		return fmt.Errorf("output failed: %w", err)
 	}
 	
 	return nil
