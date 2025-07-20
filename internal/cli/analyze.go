@@ -2,6 +2,7 @@ package cli
 
 import (
 	"fmt"
+	"strings"
 
 	"github.com/urfave/cli/v2"
 )
@@ -168,15 +169,55 @@ func validateAnalyzeFlags(c *cli.Context) error {
 }
 
 func runAnalyze(c *cli.Context) error {
-	// TODO: Implement the actual analysis
 	inputFile := c.Args().First()
+	verbose := c.Bool("verbose")
+	quiet := c.Bool("quiet")
 	
-	// For now, just print what we would do
-	fmt.Printf("Analyzing file: %s\n", inputFile)
-	fmt.Printf("Components: %d\n", c.Int("components"))
-	fmt.Printf("Method: %s\n", c.String("method"))
-	fmt.Printf("Scaling: %s\n", c.String("scale"))
-	fmt.Printf("Output format: %s\n", c.String("format"))
+	// Parse CSV options
+	parseOpts := NewCSVParseOptions()
+	parseOpts.HasHeaders = !c.Bool("no-headers")
+	parseOpts.HasIndex = !c.Bool("no-index")
+	parseOpts.Delimiter = rune(c.String("delimiter")[0])
+	
+	// Parse NA values
+	if naValues := c.String("na-values"); naValues != "" {
+		parseOpts.NullValues = strings.Split(naValues, ",")
+		for i := range parseOpts.NullValues {
+			parseOpts.NullValues[i] = strings.TrimSpace(parseOpts.NullValues[i])
+		}
+	}
+	
+	// Load CSV data
+	if verbose {
+		fmt.Printf("Loading data from %s...\n", inputFile)
+	}
+	
+	data, err := ParseCSV(inputFile, parseOpts)
+	if err != nil {
+		return fmt.Errorf("failed to parse CSV: %w", err)
+	}
+	
+	// Validate data
+	if err := ValidateCSVData(data); err != nil {
+		return fmt.Errorf("data validation failed: %w", err)
+	}
+	
+	if verbose {
+		fmt.Println("\nData summary:")
+		fmt.Print(GetDataSummary(data))
+	}
+	
+	// TODO: Implement PCA analysis
+	
+	// For now, show what we loaded
+	if !quiet {
+		fmt.Printf("\nSuccessfully loaded data: %d rows × %d columns\n", data.Rows, data.Columns)
+		fmt.Printf("Analysis configuration:\n")
+		fmt.Printf("  Components: %d\n", c.Int("components"))
+		fmt.Printf("  Method: %s\n", c.String("method"))
+		fmt.Printf("  Scaling: %s\n", c.String("scale"))
+		fmt.Printf("  Mean centering: %v\n", !c.Bool("no-mean-centering"))
+	}
 	
 	return nil
 }
