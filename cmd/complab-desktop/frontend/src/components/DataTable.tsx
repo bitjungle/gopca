@@ -4,6 +4,7 @@ import {
   getCoreRowModel,
   flexRender,
   ColumnDef,
+  RowSelectionState,
 } from '@tanstack/react-table';
 
 interface DataTableProps {
@@ -11,14 +12,105 @@ interface DataTableProps {
   rowNames: string[];
   data: number[][];
   title?: string;
+  enableRowSelection?: boolean;
+  enableColumnSelection?: boolean;
+  onRowSelectionChange?: (selectedRows: number[]) => void;
+  onColumnSelectionChange?: (selectedColumns: number[]) => void;
 }
 
-export const DataTable: React.FC<DataTableProps> = ({ headers, rowNames, data, title }) => {
+export const DataTable: React.FC<DataTableProps> = ({ 
+  headers, 
+  rowNames, 
+  data, 
+  title,
+  enableRowSelection = false,
+  enableColumnSelection = false,
+  onRowSelectionChange,
+  onColumnSelectionChange,
+}) => {
   const hasRowNames = rowNames && rowNames.length > 0;
+  const [rowSelection, setRowSelection] = React.useState<RowSelectionState>({});
+  const [columnSelection, setColumnSelection] = React.useState<Record<string, boolean>>({});
+  
+  // Initialize row selection state (all selected by default)
+  React.useEffect(() => {
+    if (enableRowSelection && data.length > 0) {
+      const initialRowSelection: RowSelectionState = {};
+      data.forEach((_, index) => {
+        initialRowSelection[index] = true;
+      });
+      setRowSelection(initialRowSelection);
+    }
+  }, [data, enableRowSelection]);
+  
+  // Initialize column selection state (all selected by default)
+  React.useEffect(() => {
+    if (enableColumnSelection) {
+      const initialSelection: Record<string, boolean> = {};
+      headers.forEach((_, index) => {
+        initialSelection[`col${index}`] = true;
+      });
+      setColumnSelection(initialSelection);
+    }
+  }, [headers, enableColumnSelection]);
+  
+  // Notify parent of row selection changes
+  React.useEffect(() => {
+    if (onRowSelectionChange) {
+      const selectedIndices = Object.keys(rowSelection)
+        .filter(key => rowSelection[key])
+        .map(key => parseInt(key));
+      onRowSelectionChange(selectedIndices);
+    }
+  }, [rowSelection, onRowSelectionChange]);
+  
+  // Notify parent of column selection changes
+  React.useEffect(() => {
+    if (onColumnSelectionChange) {
+      const selectedIndices = headers
+        .map((_, index) => index)
+        .filter(index => columnSelection[`col${index}`] !== false);
+      onColumnSelectionChange(selectedIndices);
+    }
+  }, [columnSelection, headers, onColumnSelectionChange]);
   
   // Create columns
   const columns: ColumnDef<any>[] = React.useMemo(() => {
     const cols: ColumnDef<any>[] = [];
+    
+    // Add selection column if enabled
+    if (enableRowSelection) {
+      cols.push({
+        id: 'select',
+        header: ({ table }) => {
+          const checkboxRef = React.useRef<HTMLInputElement>(null);
+          React.useEffect(() => {
+            if (checkboxRef.current) {
+              checkboxRef.current.indeterminate = table.getIsSomeRowsSelected();
+            }
+          });
+          
+          return (
+            <input
+              ref={checkboxRef}
+              type="checkbox"
+              checked={table.getIsAllRowsSelected()}
+              onChange={table.getToggleAllRowsSelectedHandler()}
+              className="w-4 h-4 text-blue-600 bg-gray-700 border-gray-600 rounded focus:ring-blue-500"
+            />
+          );
+        },
+        cell: ({ row }) => (
+          <input
+            type="checkbox"
+            checked={row.getIsSelected()}
+            onChange={row.getToggleSelectedHandler()}
+            className="w-4 h-4 text-blue-600 bg-gray-700 border-gray-600 rounded focus:ring-blue-500"
+          />
+        ),
+        size: 40,
+      });
+    }
     
     if (hasRowNames) {
       cols.push({
@@ -29,9 +121,25 @@ export const DataTable: React.FC<DataTableProps> = ({ headers, rowNames, data, t
     }
     
     headers.forEach((header, index) => {
+      const colId = `col${index}`;
       cols.push({
-        accessorKey: `col${index}`,
-        header: header,
+        accessorKey: colId,
+        header: enableColumnSelection ? () => (
+          <div className="flex flex-col items-center space-y-1">
+            <input
+              type="checkbox"
+              checked={columnSelection[colId] !== false}
+              onChange={(e) => {
+                setColumnSelection(prev => ({
+                  ...prev,
+                  [colId]: e.target.checked
+                }));
+              }}
+              className="w-4 h-4 text-blue-600 bg-gray-700 border-gray-600 rounded focus:ring-blue-500"
+            />
+            <span>{header}</span>
+          </div>
+        ) : header,
         cell: info => {
           const value = info.getValue() as number;
           return <div className="text-right">{value?.toFixed(4) || ''}</div>;
@@ -40,7 +148,7 @@ export const DataTable: React.FC<DataTableProps> = ({ headers, rowNames, data, t
     });
     
     return cols;
-  }, [headers, hasRowNames]);
+  }, [headers, hasRowNames, enableRowSelection, enableColumnSelection, columnSelection]);
   
   // Transform data for table
   const tableData = React.useMemo(() => {
@@ -60,7 +168,16 @@ export const DataTable: React.FC<DataTableProps> = ({ headers, rowNames, data, t
     data: tableData,
     columns,
     getCoreRowModel: getCoreRowModel(),
+    enableRowSelection: enableRowSelection,
+    onRowSelectionChange: setRowSelection,
+    state: {
+      rowSelection,
+    },
   });
+  
+  // Calculate selected counts
+  const selectedRowCount = Object.keys(rowSelection).filter(key => rowSelection[key]).length;
+  const selectedColCount = headers.filter((_, index) => columnSelection[`col${index}`] !== false).length;
   
   return (
     <div className="flex flex-col space-y-2">
@@ -97,7 +214,18 @@ export const DataTable: React.FC<DataTableProps> = ({ headers, rowNames, data, t
         </table>
       </div>
       <div className="text-sm text-gray-400">
-        Showing {data.length} rows × {headers.length} columns
+        {enableRowSelection || enableColumnSelection ? (
+          <div className="flex justify-between">
+            <span>Showing {data.length} rows × {headers.length} columns</span>
+            <span>
+              {enableRowSelection && `Selected: ${selectedRowCount} rows`}
+              {enableRowSelection && enableColumnSelection && ', '}
+              {enableColumnSelection && `${selectedColCount} columns`}
+            </span>
+          </div>
+        ) : (
+          <span>Showing {data.length} rows × {headers.length} columns</span>
+        )}
       </div>
     </div>
   );

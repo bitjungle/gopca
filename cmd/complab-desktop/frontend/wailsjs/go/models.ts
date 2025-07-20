@@ -25,6 +25,8 @@ export namespace main {
 	    standardScale: boolean;
 	    robustScale: boolean;
 	    method: string;
+	    excludedRows?: number[];
+	    excludedColumns?: number[];
 	
 	    static createFrom(source: any = {}) {
 	        return new PCARequest(source);
@@ -40,6 +42,8 @@ export namespace main {
 	        this.standardScale = source["standardScale"];
 	        this.robustScale = source["robustScale"];
 	        this.method = source["method"];
+	        this.excludedRows = source["excludedRows"];
+	        this.excludedColumns = source["excludedColumns"];
 	    }
 	}
 	export class PCAResponse {

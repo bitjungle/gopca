@@ -8,6 +8,7 @@ import (
 	"strings"
 
 	"github.com/bitjungle/complab/internal/core"
+	"github.com/bitjungle/complab/internal/utils"
 	"github.com/bitjungle/complab/pkg/types"
 )
 
@@ -36,14 +37,16 @@ type FileData struct {
 
 // PCARequest represents a PCA analysis request from the frontend
 type PCARequest struct {
-	Data          [][]float64 `json:"data"`
-	Headers       []string    `json:"headers"`
-	RowNames      []string    `json:"rowNames"`
-	Components    int         `json:"components"`
-	MeanCenter    bool        `json:"meanCenter"`
-	StandardScale bool        `json:"standardScale"`
-	RobustScale   bool        `json:"robustScale"`
-	Method        string      `json:"method"`
+	Data            [][]float64 `json:"data"`
+	Headers         []string    `json:"headers"`
+	RowNames        []string    `json:"rowNames"`
+	Components      int         `json:"components"`
+	MeanCenter      bool        `json:"meanCenter"`
+	StandardScale   bool        `json:"standardScale"`
+	RobustScale     bool        `json:"robustScale"`
+	Method          string      `json:"method"`
+	ExcludedRows    []int       `json:"excludedRows,omitempty"`
+	ExcludedColumns []int       `json:"excludedColumns,omitempty"`
 }
 
 // PCAResponse represents the PCA analysis results
@@ -124,21 +127,49 @@ func (a *App) RunPCA(request PCARequest) PCAResponse {
 		request.Components = 2 // Default to 2 components
 	}
 	
+	// Filter data if exclusions are provided
+	dataToAnalyze := request.Data
+	
+	if len(request.ExcludedRows) > 0 || len(request.ExcludedColumns) > 0 {
+		// Filter the data matrix
+		filteredData, err := utils.FilterMatrix(request.Data, request.ExcludedRows, request.ExcludedColumns)
+		if err != nil {
+			return PCAResponse{
+				Success: false,
+				Error:   fmt.Sprintf("Failed to filter data: %v", err),
+			}
+		}
+		dataToAnalyze = filteredData
+		
+		// Note: We don't need to filter headers and row names for PCA computation
+		// The frontend handles the display of selected data
+	}
+	
 	// Create PCA configuration
 	config := types.PCAConfig{
-		Components:    request.Components,
-		MeanCenter:    request.MeanCenter,
-		StandardScale: request.StandardScale,
-		Method:        strings.ToLower(request.Method),
+		Components:      request.Components,
+		MeanCenter:      request.MeanCenter,
+		StandardScale:   request.StandardScale,
+		Method:          strings.ToLower(request.Method),
+		ExcludedRows:    request.ExcludedRows,
+		ExcludedColumns: request.ExcludedColumns,
 	}
 	
 	// Perform PCA
 	engine := core.NewPCAEngine()
-	result, err := engine.Fit(request.Data, config)
+	result, err := engine.Fit(dataToAnalyze, config)
 	if err != nil {
 		return PCAResponse{
 			Success: false,
 			Error:   fmt.Sprintf("PCA fit failed: %v", err),
+		}
+	}
+	
+	// Update component labels to use filtered headers if needed
+	if len(result.ComponentLabels) == 0 {
+		result.ComponentLabels = make([]string, request.Components)
+		for i := 0; i < request.Components; i++ {
+			result.ComponentLabels[i] = fmt.Sprintf("PC%d", i+1)
 		}
 	}
 	

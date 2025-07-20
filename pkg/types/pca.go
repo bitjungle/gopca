@@ -5,10 +5,12 @@ type Matrix [][]float64
 
 // PCAConfig holds configuration for PCA analysis
 type PCAConfig struct {
-	Components    int    `json:"components"`
-	MeanCenter    bool   `json:"mean_center"`
-	StandardScale bool   `json:"standard_scale"`
-	Method        string `json:"method"` // "svd" or "eigen"
+	Components      int    `json:"components"`
+	MeanCenter      bool   `json:"mean_center"`
+	StandardScale   bool   `json:"standard_scale"`
+	Method          string `json:"method"` // "svd" or "eigen"
+	ExcludedRows    []int  `json:"excluded_rows,omitempty"`    // 0-based indices of rows to exclude
+	ExcludedColumns []int  `json:"excluded_columns,omitempty"` // 0-based indices of columns to exclude
 }
 
 // PCAResult contains the results of PCA analysis

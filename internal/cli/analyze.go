@@ -5,6 +5,7 @@ import (
 	"strings"
 
 	"github.com/bitjungle/complab/internal/core"
+	"github.com/bitjungle/complab/internal/utils"
 	"github.com/bitjungle/complab/pkg/types"
 	"github.com/urfave/cli/v2"
 )
@@ -37,6 +38,9 @@ EXAMPLES:
 
   # Quiet mode for scripting (CSV to stdout)
   complab-cli analyze -f csv --quiet data/iris_data.csv
+
+  # Exclude specific rows and columns
+  complab-cli analyze --exclude-rows 1,5-10 --exclude-cols 3,4 data/iris_data.csv
 
 The analysis includes:
   - Data preprocessing (mean centering, scaling)
@@ -135,6 +139,16 @@ The analysis includes:
 				Name:  "include-metrics",
 				Usage: "Include advanced metrics (Hotelling's T², Mahalanobis, RSS)",
 			},
+			
+			// Data filtering
+			&cli.StringFlag{
+				Name:  "exclude-rows",
+				Usage: "Exclude rows by index (1-based, e.g., '1,3,5-7')",
+			},
+			&cli.StringFlag{
+				Name:  "exclude-cols",
+				Usage: "Exclude columns by index (1-based, e.g., '2,4-6,8')",
+			},
 		},
 		Action: runAnalyze,
 		Before: validateAnalyzeFlags,
@@ -231,12 +245,78 @@ func runAnalyze(c *cli.Context) error {
 		fmt.Print(GetDataSummary(data))
 	}
 	
+	// Parse exclusion flags
+	var excludedRows, excludedCols []int
+	
+	if excludeRowsStr := c.String("exclude-rows"); excludeRowsStr != "" {
+		excludedRows, err = utils.ParseRanges(excludeRowsStr)
+		if err != nil {
+			return fmt.Errorf("invalid exclude-rows format: %w", err)
+		}
+		if verbose && len(excludedRows) > 0 {
+			fmt.Printf("\nExcluding %d rows: %v\n", len(excludedRows), excludedRows)
+		}
+	}
+	
+	if excludeColsStr := c.String("exclude-cols"); excludeColsStr != "" {
+		excludedCols, err = utils.ParseRanges(excludeColsStr)
+		if err != nil {
+			return fmt.Errorf("invalid exclude-cols format: %w", err)
+		}
+		if verbose && len(excludedCols) > 0 {
+			fmt.Printf("Excluding %d columns: %v\n", len(excludedCols), excludedCols)
+		}
+	}
+	
+	// Apply exclusions to data if needed
+	if len(excludedRows) > 0 || len(excludedCols) > 0 {
+		// Filter the data matrix
+		filteredData, err := utils.FilterMatrix(data.Matrix, excludedRows, excludedCols)
+		if err != nil {
+			return fmt.Errorf("failed to filter data: %w", err)
+		}
+		data.Matrix = filteredData
+		
+		// Filter row names
+		if len(excludedRows) > 0 && len(data.RowNames) > 0 {
+			filteredRowNames, err := utils.FilterStringSlice(data.RowNames, excludedRows)
+			if err != nil {
+				return fmt.Errorf("failed to filter row names: %w", err)
+			}
+			data.RowNames = filteredRowNames
+		}
+		
+		// Filter column names
+		if len(excludedCols) > 0 && len(data.ColumnNames) > 0 {
+			filteredHeaders, err := utils.FilterStringSlice(data.ColumnNames, excludedCols)
+			if err != nil {
+				return fmt.Errorf("failed to filter column names: %w", err)
+			}
+			data.ColumnNames = filteredHeaders
+		}
+		
+		// Update dimensions
+		data.Rows = len(data.Matrix)
+		if data.Rows > 0 {
+			data.Columns = len(data.Matrix[0])
+		} else {
+			data.Columns = 0
+		}
+		
+		if verbose {
+			fmt.Printf("\nData after filtering:")
+			fmt.Print(GetDataSummary(data))
+		}
+	}
+	
 	// Configure PCA
 	pcaConfig := types.PCAConfig{
-		Components:    c.Int("components"),
-		MeanCenter:    !c.Bool("no-mean-centering"),
-		StandardScale: c.String("scale") == "standard",
-		Method:        c.String("method"),
+		Components:      c.Int("components"),
+		MeanCenter:      !c.Bool("no-mean-centering"),
+		StandardScale:   c.String("scale") == "standard",
+		Method:          c.String("method"),
+		ExcludedRows:    excludedRows,
+		ExcludedColumns: excludedCols,
 	}
 	
 	// Check if requested components exceed available dimensions
