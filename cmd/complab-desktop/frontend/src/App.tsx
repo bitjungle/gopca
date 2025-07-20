@@ -92,6 +92,19 @@ function App() {
                         </div>
                     </div>
                     
+                    {/* Data Display */}
+                    {fileData && (
+                        <div className="bg-gray-800 rounded-lg p-6 shadow-lg">
+                            <h2 className="text-xl font-semibold mb-4">Loaded Data</h2>
+                            <DataTable
+                                headers={fileData.headers}
+                                rowNames={fileData.rowNames}
+                                data={fileData.data}
+                                title="Input Data"
+                            />
+                        </div>
+                    )}
+                    
                     {/* Configuration Section */}
                     {fileData && (
                         <div className="bg-gray-800 rounded-lg p-6 shadow-lg">
@@ -167,19 +180,6 @@ function App() {
                     {error && (
                         <div className="bg-red-800 border border-red-600 rounded-lg p-4">
                             <p className="text-red-200">{error}</p>
-                        </div>
-                    )}
-                    
-                    {/* Data Display */}
-                    {fileData && (
-                        <div className="bg-gray-800 rounded-lg p-6 shadow-lg">
-                            <h2 className="text-xl font-semibold mb-4">Loaded Data</h2>
-                            <DataTable
-                                headers={fileData.headers}
-                                rowNames={fileData.rowNames}
-                                data={fileData.data}
-                                title="Input Data"
-                            />
                         </div>
                     )}
                     
