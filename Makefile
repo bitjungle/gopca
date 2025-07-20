@@ -3,10 +3,10 @@
 
 # Variables
 BINARY_NAME := complab-cli
-METRICS_BINARY := metrics
+DESKTOP_NAME := complab-desktop
 BUILD_DIR := build
 CLI_PATH := cmd/complab-cli/main.go
-METRICS_PATH := cmd/metrics/main.go
+DESKTOP_PATH := cmd/complab-desktop
 COVERAGE_FILE := coverage.out
 
 # Go commands
@@ -23,11 +23,14 @@ LDFLAGS := -ldflags="-s -w"
 # Check if golangci-lint is installed
 GOLINT := $(shell which golangci-lint 2> /dev/null)
 
+# Check if wails is installed
+WAILS := $(shell which wails 2> /dev/null)
+
 # Default target
 .DEFAULT_GOAL := all
 
 # Phony targets
-.PHONY: all build build-metrics test test-verbose test-coverage fmt lint run-pca-iris run-metrics-iris clean install deps help
+.PHONY: all build gui-dev gui-build gui-deps test test-verbose test-coverage fmt lint run-pca-iris clean install deps help
 
 ## all: Build the binary and run tests
 all: build test
@@ -39,12 +42,34 @@ build:
 	$(GOBUILD) $(LDFLAGS) -o $(BUILD_DIR)/$(BINARY_NAME) $(CLI_PATH)
 	@echo "Build complete: $(BUILD_DIR)/$(BINARY_NAME)"
 
-## build-metrics: Build the metrics binary
-build-metrics:
-	@echo "Building $(METRICS_BINARY)..."
-	@mkdir -p $(BUILD_DIR)
-	$(GOBUILD) $(LDFLAGS) -o $(BUILD_DIR)/$(METRICS_BINARY) $(METRICS_PATH)
-	@echo "Build complete: $(BUILD_DIR)/$(METRICS_BINARY)"
+## gui-dev: Run GUI in development mode with hot reload
+gui-dev:
+ifdef WAILS
+	@echo "Starting GUI in development mode..."
+	@cd $(DESKTOP_PATH) && wails dev
+else
+	@echo "Wails not found. Install it with:"
+	@echo "  go install github.com/wailsapp/wails/v2/cmd/wails@latest"
+	@exit 1
+endif
+
+## gui-build: Build GUI application for production
+gui-build:
+ifdef WAILS
+	@echo "Building GUI application..."
+	@cd $(DESKTOP_PATH) && wails build
+	@echo "GUI build complete. Check $(DESKTOP_PATH)/build/bin/"
+else
+	@echo "Wails not found. Install it with:"
+	@echo "  go install github.com/wailsapp/wails/v2/cmd/wails@latest"
+	@exit 1
+endif
+
+## gui-deps: Install frontend dependencies for GUI
+gui-deps:
+	@echo "Installing GUI frontend dependencies..."
+	@cd $(DESKTOP_PATH)/frontend && npm install
+	@echo "GUI dependencies installed"
 
 ## test: Run all tests with coverage
 test:
@@ -85,19 +110,12 @@ run-pca-iris: build
 	@echo "Running PCA analysis on iris dataset..."
 	$(BUILD_DIR)/$(BINARY_NAME) analyze -f csv --output-all --include-metrics data/iris_data.csv
 
-## run-metrics-iris: Calculate PCA metrics for iris dataset
-run-metrics-iris: build-metrics
-	@echo "Calculating PCA metrics for iris dataset..."
-	$(BUILD_DIR)/$(METRICS_BINARY) \
-		-input data/iris_data.csv \
-		-output data/iris_metrics.json \
-		-components 3 \
-		-significance 0.01
 
 ## clean: Remove build artifacts and generated files
 clean:
 	@echo "Cleaning build artifacts..."
 	@rm -rf $(BUILD_DIR)
+	@rm -rf $(DESKTOP_PATH)/build/bin
 	@rm -f $(COVERAGE_FILE) coverage.html
 	@echo "Clean complete"
 
@@ -123,8 +141,11 @@ help:
 	@echo "Usage: make [target]"
 	@echo ""
 	@echo "Example workflows:"
-	@echo "  make              # Build and test (default)"
-	@echo "  make build        # Just build the binary"
+	@echo "  make              # Build CLI and test (default)"
+	@echo "  make build        # Build the CLI binary"
+	@echo "  make gui-deps     # Install GUI dependencies (first time)"
+	@echo "  make gui-dev      # Run GUI in development mode"
+	@echo "  make gui-build    # Build GUI for production"
 	@echo "  make test         # Run tests with coverage"
 	@echo "  make run-pca-iris # Run PCA on iris dataset"
 	@echo "  make clean        # Clean all artifacts"
