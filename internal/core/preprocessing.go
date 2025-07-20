@@ -17,11 +17,12 @@ type Preprocessor struct {
 	RobustScale   bool
 
 	// Fitted parameters
-	mean   []float64
-	scale  []float64
-	median []float64
-	mad    []float64
-	fitted bool
+	mean         []float64
+	scale        []float64
+	originalStd  []float64 // Original standard deviations before scaling
+	median       []float64
+	mad          []float64
+	fitted       bool
 }
 
 // NewPreprocessor creates a new preprocessor instance
@@ -52,6 +53,7 @@ func (p *Preprocessor) Fit(data types.Matrix) error {
 	// Initialize parameter arrays
 	p.mean = make([]float64, m)
 	p.scale = make([]float64, m)
+	p.originalStd = make([]float64, m)
 	p.median = make([]float64, m)
 	p.mad = make([]float64, m)
 
@@ -65,9 +67,12 @@ func (p *Preprocessor) Fit(data types.Matrix) error {
 		// Mean
 		p.mean[j] = stat.Mean(col, nil)
 
-		// Standard deviation
+		// Always calculate original standard deviation
+		p.originalStd[j] = stat.StdDev(col, nil)
+
+		// Standard deviation for scaling
 		if p.StandardScale {
-			p.scale[j] = stat.StdDev(col, nil)
+			p.scale[j] = p.originalStd[j]
 			if p.scale[j] < 1e-8 {
 				p.scale[j] = 1.0 // Avoid division by zero
 			}
@@ -420,6 +425,22 @@ func ApplyTransform(data types.Matrix, columns []int, transform TransformType) (
 	}
 
 	return result, nil
+}
+
+// GetMeans returns the fitted mean values
+func (p *Preprocessor) GetMeans() []float64 {
+	if !p.fitted {
+		return nil
+	}
+	return p.mean
+}
+
+// GetStdDevs returns the fitted standard deviation values (original, before scaling)
+func (p *Preprocessor) GetStdDevs() []float64 {
+	if !p.fitted {
+		return nil
+	}
+	return p.originalStd
 }
 
 // GetVarianceByColumn calculates variance for each column

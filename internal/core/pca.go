@@ -80,6 +80,8 @@ func (p *PCAImpl) Fit(data types.Matrix, config types.PCAConfig) (*types.PCAResu
 		ExplainedVar:    explainedVar,
 		CumulativeVar:   cumulativeVar,
 		ComponentLabels: componentLabels,
+		Means:           p.mean,
+		StdDevs:         p.stdDev,
 	}, nil
 }
 
@@ -150,7 +152,7 @@ func (p *PCAImpl) nipalsAlgorithm(X *mat.Dense, nComponents int) (*mat.Dense, *m
 		// Check if remaining variance is too small
 		if maxVar < tolerance {
 			// No more meaningful components, reduce number of components
-			nComponents = k
+			nComponents = k //nolint:ineffassign // Used in the return statement
 			T = T.Slice(0, n, 0, k).(*mat.Dense)
 			P = P.Slice(0, m, 0, k).(*mat.Dense)
 			break

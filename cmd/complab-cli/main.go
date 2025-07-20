@@ -1,9 +1,9 @@
 package main
 
 import (
-	"github.com/bitjungle/complab/cmd/complab-cli/cmd"
+	"github.com/bitjungle/complab/internal/cli"
 )
 
 func main() {
-	cmd.Execute()
+	cli.RunWithOSExit()
 }

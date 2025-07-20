@@ -83,11 +83,7 @@ endif
 ## run-pca-iris: Execute PCA analysis on iris dataset
 run-pca-iris: build
 	@echo "Running PCA analysis on iris dataset..."
-	$(BUILD_DIR)/$(BINARY_NAME) analyze \
-		--input data/iris_data.csv \
-		--components 2 \
-		--output data/iris_pca_results.csv
-	@echo "PCA analysis complete: data/iris_pca_results.csv"
+	$(BUILD_DIR)/$(BINARY_NAME) analyze -f csv --output-all --include-metrics data/iris_data.csv
 
 ## run-metrics-iris: Calculate PCA metrics for iris dataset
 run-metrics-iris: build-metrics

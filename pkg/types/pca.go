@@ -18,6 +18,9 @@ type PCAResult struct {
 	ExplainedVar    []float64 `json:"explained_variance"`
 	CumulativeVar   []float64 `json:"cumulative_variance"`
 	ComponentLabels []string  `json:"component_labels"`
+	// Preprocessing statistics
+	Means   []float64 `json:"means,omitempty"`   // Original feature means
+	StdDevs []float64 `json:"stddevs,omitempty"` // Original feature std devs
 }
 
 // PCAEngine defines the interface for PCA computation
@@ -25,4 +28,45 @@ type PCAEngine interface {
 	Fit(data Matrix, config PCAConfig) (*PCAResult, error)
 	Transform(data Matrix) (Matrix, error)
 	FitTransform(data Matrix, config PCAConfig) (*PCAResult, error)
+}
+
+// PCAOutputData represents complete PCA results for output
+type PCAOutputData struct {
+	Samples  SampleData  `json:"samples"`
+	Features FeatureData `json:"features"`
+	Metadata PCAMetadata `json:"metadata"`
+}
+
+// SampleData contains sample-space results
+type SampleData struct {
+	Names   []string       `json:"names"`   // Sample names from input
+	Scores  Matrix         `json:"scores"`  // PC scores (n × c)
+	Metrics []SampleMetrics `json:"metrics"` // Advanced metrics per sample
+}
+
+// FeatureData contains feature-space results
+type FeatureData struct {
+	Names    []string  `json:"names"`    // Feature names from input
+	Loadings Matrix    `json:"loadings"` // Loadings (c × k)
+	Means    []float64 `json:"means"`    // Original means (k)
+	StdDevs  []float64 `json:"stddevs"`  // Original std devs (k)
+}
+
+// SampleMetrics contains advanced metrics for a sample
+type SampleMetrics struct {
+	HotellingT2 float64 `json:"hotelling_t2"`
+	Mahalanobis float64 `json:"mahalanobis"`
+	RSS         float64 `json:"rss"`
+	IsOutlier   bool    `json:"is_outlier"`
+}
+
+// PCAMetadata contains analysis metadata
+type PCAMetadata struct {
+	NSamples            int       `json:"n_samples"`
+	NFeatures           int       `json:"n_features"`
+	NComponents         int       `json:"n_components"`
+	Method              string    `json:"method"`
+	Preprocessing       string    `json:"preprocessing"`
+	ExplainedVariance   []float64 `json:"explained_variance"`
+	CumulativeVariance  []float64 `json:"cumulative_variance"`
 }

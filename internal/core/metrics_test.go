@@ -5,277 +5,207 @@ import (
 	"testing"
 
 	"github.com/bitjungle/complab/pkg/types"
+	"gonum.org/v1/gonum/mat"
 )
 
-func TestCalculateMahalanobisDistances(t *testing.T) {
-	tests := []struct {
-		name    string
-		data    [][]float64
-		wantErr bool
-	}{
-		{
-			name: "2D data",
-			data: [][]float64{
-				{1.0, 2.5},
-				{2.0, 3.2},
-				{3.0, 3.8},
-				{4.0, 5.1},
-			},
-			wantErr: false,
-		},
-		{
-			name: "1D data",
-			data: [][]float64{
-				{1.0},
-				{2.0},
-				{3.0},
-				{4.0},
-			},
-			wantErr: false,
-		},
+func TestPCAMetricsCalculator(t *testing.T) {
+	// Create test data - simple 2D data
+	scores := mat.NewDense(4, 2, []float64{
+		1.0, 0.5,
+		-1.0, 0.5,
+		0.5, -1.0,
+		-0.5, -0.5,
+	})
+
+	loadings := mat.NewDense(3, 2, []float64{
+		0.7, 0.3,
+		0.6, -0.5,
+		0.4, 0.8,
+	})
+
+	mean := []float64{5.0, 3.0, 2.0}
+	stdDev := []float64{1.5, 0.8, 1.2}
+
+	// Original data (before preprocessing)
+	originalData := types.Matrix{
+		{6.0, 3.5, 2.8},
+		{4.0, 2.5, 1.2},
+		{5.5, 2.2, 2.5},
+		{4.5, 2.8, 1.5},
 	}
 
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			scores := extractScoresMatrix(tt.data, len(tt.data[0]))
-			distances, err := calculateMahalanobisDistances(scores)
-			
-			if (err != nil) != tt.wantErr {
-				t.Errorf("calculateMahalanobisDistances() error = %v, wantErr %v", err, tt.wantErr)
-				return
-			}
-			
-			if !tt.wantErr {
-				// Check that distances are non-negative
-				for i, d := range distances {
-					if d < 0 || math.IsNaN(d) || math.IsInf(d, 0) {
-						t.Errorf("Invalid distance at index %d: %v", i, d)
-					}
-				}
-				
-				// Check correct number of distances
-				if len(distances) != len(tt.data) {
-					t.Errorf("Expected %d distances, got %d", len(tt.data), len(distances))
-				}
-			}
-		})
-	}
-}
+	// Create calculator
+	calc := NewPCAMetricsCalculator(scores, loadings, mean, stdDev)
 
-func TestCalculateHotellingT2(t *testing.T) {
-	tests := []struct {
-		name     string
-		data     [][]float64
-		nSamples int
-		wantErr  bool
-	}{
-		{
-			name: "2D data",
-			data: [][]float64{
-				{1.0, 2.5},
-				{2.0, 3.2},
-				{3.0, 3.8},
-				{4.0, 5.1},
-			},
-			nSamples: 4,
-			wantErr:  false,
-		},
-		{
-			name: "1D data",
-			data: [][]float64{
-				{1.0},
-				{2.0},
-				{3.0},
-				{4.0},
-			},
-			nSamples: 4,
-			wantErr:  false,
-		},
+	// Calculate metrics
+	metrics, err := calc.CalculateMetrics(originalData)
+	if err != nil {
+		t.Fatalf("Failed to calculate metrics: %v", err)
 	}
 
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			scores := extractScoresMatrix(tt.data, len(tt.data[0]))
-			t2Stats, err := calculateHotellingT2(scores, tt.nSamples)
-			
-			if (err != nil) != tt.wantErr {
-				t.Errorf("calculateHotellingT2() error = %v, wantErr %v", err, tt.wantErr)
-				return
-			}
-			
-			if !tt.wantErr {
-				// Check that T² statistics are non-negative
-				for i, t2 := range t2Stats {
-					if t2 < 0 || math.IsNaN(t2) || math.IsInf(t2, 0) {
-						t.Errorf("Invalid T² statistic at index %d: %v", i, t2)
-					}
-				}
-				
-				// Check correct number of statistics
-				if len(t2Stats) != len(tt.data) {
-					t.Errorf("Expected %d T² statistics, got %d", len(tt.data), len(t2Stats))
-				}
-			}
-		})
+	// Check that we got metrics for all samples
+	if len(metrics) != 4 {
+		t.Errorf("Expected 4 metrics, got %d", len(metrics))
+	}
+
+	// Check that metrics are reasonable (non-negative, finite)
+	for i, m := range metrics {
+		if m.HotellingT2 < 0 || math.IsNaN(m.HotellingT2) || math.IsInf(m.HotellingT2, 0) {
+			t.Errorf("Invalid Hotelling T² for sample %d: %f", i, m.HotellingT2)
+		}
+		if m.Mahalanobis < 0 || math.IsNaN(m.Mahalanobis) || math.IsInf(m.Mahalanobis, 0) {
+			t.Errorf("Invalid Mahalanobis distance for sample %d: %f", i, m.Mahalanobis)
+		}
+		if m.RSS < 0 || math.IsNaN(m.RSS) || math.IsInf(m.RSS, 0) {
+			t.Errorf("Invalid RSS for sample %d: %f", i, m.RSS)
+		}
 	}
 }
 
-func TestDetectOutliersFromT2(t *testing.T) {
-	tests := []struct {
-		name         string
-		t2Stats      []float64
-		nSamples     int
-		nComponents  int
-		significance float64
-		expectedSum  int // Expected number of outliers (approximate)
-	}{
-		{
-			name:         "No outliers",
-			t2Stats:      []float64{0.1, 0.2, 0.3, 0.4, 0.5},
-			nSamples:     5,
-			nComponents:  2,
-			significance: 0.01,
-			expectedSum:  0,
-		},
-		{
-			name:         "Some outliers",
-			t2Stats:      []float64{0.1, 0.2, 50.0, 0.4, 100.0},
-			nSamples:     20,
-			nComponents:  2,
-			significance: 0.01,
-			expectedSum:  2,
-		},
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			outliers := detectOutliersFromT2(tt.t2Stats, tt.nSamples, tt.nComponents, tt.significance)
-			
-			// Check correct length
-			if len(outliers) != len(tt.t2Stats) {
-				t.Errorf("Expected %d outlier flags, got %d", len(tt.t2Stats), len(outliers))
-			}
-			
-			// Count outliers
-			sum := 0
-			for _, o := range outliers {
-				if o {
-					sum++
-				}
-			}
-			
-			// For "Some outliers" test, check that we detected at least some
-			if tt.expectedSum > 0 && sum == 0 {
-				t.Errorf("Expected to detect outliers but found none")
-			}
-		})
-	}
-}
-
-func TestNewMetricsCalculator(t *testing.T) {
-	mc := NewMetricsCalculator()
-	if mc == nil {
-		t.Error("NewMetricsCalculator() returned nil")
-	}
-}
-
-func TestCalculateMetrics(t *testing.T) {
-	mc := NewMetricsCalculator()
-	
+func TestCalculateMetricsFromPCAResult(t *testing.T) {
 	// Create a simple PCA result
 	result := &types.PCAResult{
-		Scores: [][]float64{
-			{-2.0, 0.5},
-			{-1.0, -0.5},
-			{1.0, -0.5},
-			{2.0, 0.5},
+		Scores: types.Matrix{
+			{2.0, 1.0},
+			{-2.0, 1.0},
+			{1.0, -2.0},
+			{-1.0, -1.0},
 		},
-		Loadings: [][]float64{
-			{0.7, 0.7},
-			{-0.7, 0.7},
+		Loadings: types.Matrix{
+			{0.8, 0.2},
+			{0.6, -0.6},
+			{0.3, 0.9},
 		},
-		ExplainedVar: []float64{0.8, 0.2},
+		ExplainedVar:    []float64{65.0, 25.0},
+		CumulativeVar:   []float64{65.0, 90.0},
+		ComponentLabels: []string{"PC1", "PC2"},
+		Means:           []float64{5.5, 3.2, 2.1},
+		StdDevs:         []float64{1.2, 0.9, 1.0},
 	}
-	
-	// Create simple data
-	data := types.Matrix{
-		{4.0, 4.0},
-		{4.5, 5.5},
-		{5.5, 4.5},
-		{6.0, 6.0},
+
+	// Original data
+	originalData := types.Matrix{
+		{6.5, 3.8, 3.0},
+		{3.5, 2.8, 1.2},
+		{6.0, 2.5, 2.8},
+		{4.8, 3.0, 1.8},
 	}
-	
-	config := types.MetricsConfig{
-		NumComponents:             2,
-		SignificanceLevel:        0.01,
-		CalculateContributions:   true,
-		CalculateConfidenceEllipse: true,
-	}
-	
-	metrics, err := mc.CalculateMetrics(result, data, config)
+
+	// Calculate metrics
+	metrics, err := CalculateMetricsFromPCAResult(result, originalData)
 	if err != nil {
-		t.Fatalf("CalculateMetrics() error = %v", err)
+		t.Fatalf("Failed to calculate metrics from PCA result: %v", err)
 	}
-	
-	// Verify all fields are populated
-	if len(metrics.MahalanobisDistances) != len(data) {
-		t.Errorf("Expected %d Mahalanobis distances, got %d", len(data), len(metrics.MahalanobisDistances))
+
+	// Verify we got the right number of metrics
+	if len(metrics) != len(result.Scores) {
+		t.Errorf("Expected %d metrics, got %d", len(result.Scores), len(metrics))
 	}
-	
-	if len(metrics.HotellingT2) != len(data) {
-		t.Errorf("Expected %d Hotelling T² values, got %d", len(data), len(metrics.HotellingT2))
-	}
-	
-	if len(metrics.RSS) != len(data) {
-		t.Errorf("Expected %d RSS values, got %d", len(data), len(metrics.RSS))
-	}
-	
-	if len(metrics.OutlierMask) != len(data) {
-		t.Errorf("Expected %d outlier flags, got %d", len(data), len(metrics.OutlierMask))
-	}
-	
-	if metrics.ContributionScores == nil {
-		t.Error("Expected contribution scores to be calculated")
+
+	// Basic sanity checks
+	for i, m := range metrics {
+		if m.HotellingT2 < 0 {
+			t.Errorf("Negative Hotelling T² for sample %d: %f", i, m.HotellingT2)
+		}
+		if m.Mahalanobis < 0 {
+			t.Errorf("Negative Mahalanobis distance for sample %d: %f", i, m.Mahalanobis)
+		}
+		if m.RSS < 0 {
+			t.Errorf("Negative RSS for sample %d: %f", i, m.RSS)
+		}
 	}
 }
 
-func TestCalculateContributions(t *testing.T) {
-	mc := NewMetricsCalculator()
-	
-	result := &types.PCAResult{
-		Loadings: [][]float64{
-			{0.6, 0.8},  // First PC
-			{-0.8, 0.6}, // Second PC
-		},
+func TestOutlierDetection(t *testing.T) {
+	// Create test data with one clear outlier
+	scores := mat.NewDense(10, 2, []float64{
+		0.1, 0.1,
+		-0.1, 0.2,
+		0.2, -0.1,
+		-0.2, -0.2,
+		0.15, 0.05,
+		-0.05, 0.15,
+		0.0, -0.1,
+		-0.1, 0.0,
+		5.0, 5.0, // Clear outlier
+		0.1, -0.15,
+	})
+
+	loadings := mat.NewDense(2, 2, []float64{
+		0.7, 0.7,
+		0.7, -0.7,
+	})
+
+	calc := NewPCAMetricsCalculator(scores, loadings, nil, nil)
+
+	// Calculate covariance and check outlier detection
+	cov, err := calc.calculateScoresCovariance()
+	if err != nil {
+		t.Fatalf("Failed to calculate covariance: %v", err)
 	}
-	
-	data := types.Matrix{{1, 2}, {3, 4}} // Data not used in contribution calculation
-	
-	contributions := mc.CalculateContributions(result, data)
-	
-	if contributions == nil {
-		t.Fatal("CalculateContributions() returned nil")
+
+	var covInv mat.Dense
+	err = covInv.Inverse(cov)
+	if err != nil {
+		t.Fatalf("Failed to invert covariance: %v", err)
 	}
-	
-	// Check dimensions
-	if len(contributions) != 2 { // 2 variables
-		t.Errorf("Expected 2 variables, got %d", len(contributions))
+
+	// Calculate Hotelling T² for the outlier
+	outlierScore := mat.NewVecDense(2, []float64{5.0, 5.0})
+	means := []float64{0.0, 0.0} // Approximate mean
+	t2 := calc.calculateHotellingT2(outlierScore, means, &covInv)
+
+	// The outlier should have a much higher T² value
+	normalScore := mat.NewVecDense(2, []float64{0.1, 0.1})
+	t2Normal := calc.calculateHotellingT2(normalScore, means, &covInv)
+
+	if t2 <= t2Normal {
+		t.Errorf("Outlier T² (%f) should be greater than normal T² (%f)", t2, t2Normal)
 	}
-	
-	for i, contrib := range contributions {
-		if len(contrib) != 2 { // 2 components
-			t.Errorf("Expected 2 components for variable %d, got %d", i, len(contrib))
-		}
-		
-		// Check that contributions sum to 1 for each component
-		for j := range contrib {
-			sum := 0.0
-			for k := range contributions {
-				sum += contributions[k][j]
-			}
-			if math.Abs(sum-1.0) > 1e-10 {
-				t.Errorf("Contributions for component %d don't sum to 1: %v", j, sum)
-			}
-		}
+}
+
+func TestRSSCalculation(t *testing.T) {
+	// Simple test case where we can verify RSS manually
+	scores := mat.NewDense(2, 1, []float64{
+		1.0,
+		-1.0,
+	})
+
+	loadings := mat.NewDense(2, 1, []float64{
+		0.8,
+		0.6,
+	})
+
+	mean := []float64{5.0, 3.0}
+	stdDev := []float64{1.0, 1.0}
+
+	// Original data
+	originalData := types.Matrix{
+		{5.8, 3.6}, // Should reconstruct to approximately these values
+		{4.2, 2.4},
 	}
+
+	calc := NewPCAMetricsCalculator(scores, loadings, mean, stdDev)
+
+	// Calculate RSS for first sample
+	rss0, err := calc.calculateRSS(0, originalData)
+	if err != nil {
+		t.Fatalf("Failed to calculate RSS: %v", err)
+	}
+
+	// Calculate RSS for second sample
+	rss1, err := calc.calculateRSS(1, originalData)
+	if err != nil {
+		t.Fatalf("Failed to calculate RSS: %v", err)
+	}
+
+	// RSS should be non-negative
+	if rss0 < 0 || rss1 < 0 {
+		t.Errorf("RSS should be non-negative, got %f and %f", rss0, rss1)
+	}
+
+	// For perfect reconstruction, RSS should be close to 0
+	// In this case, we're using only 1 component, so there will be some RSS
+	// But due to numerical precision, very small RSS values are acceptable
+	t.Logf("RSS values: sample 0 = %f, sample 1 = %f", rss0, rss1)
 }

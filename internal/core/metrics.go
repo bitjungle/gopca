@@ -6,449 +6,254 @@ import (
 
 	"github.com/bitjungle/complab/pkg/types"
 	"gonum.org/v1/gonum/mat"
-	"gonum.org/v1/gonum/stat"
 	"gonum.org/v1/gonum/stat/distuv"
 )
 
-// metricsCalculator implements the MetricsCalculator interface
-type metricsCalculator struct{}
-
-// NewMetricsCalculator creates a new instance of MetricsCalculator
-func NewMetricsCalculator() types.MetricsCalculator {
-	return &metricsCalculator{}
+// PCAMetricsCalculator calculates advanced metrics for PCA results
+type PCAMetricsCalculator struct {
+	// PCA model parameters
+	scores          *mat.Dense
+	loadings        *mat.Dense
+	mean            []float64
+	stdDev          []float64
+	nComponents     int
+	nSamples        int
+	nFeatures       int
+	
+	// Regularization for numerical stability
+	regularization  float64
 }
 
-// CalculateMetrics computes all diagnostic metrics for the given PCA result
-func (mc *metricsCalculator) CalculateMetrics(result *types.PCAResult, data types.Matrix, config types.MetricsConfig) (*types.PCAMetrics, error) {
-	if result == nil {
-		return nil, fmt.Errorf("PCA result cannot be nil")
-	}
-	if len(data) == 0 || len(data[0]) == 0 {
-		return nil, fmt.Errorf("data matrix cannot be empty")
-	}
-
-	// Determine number of components to use
-	nComponents := config.NumComponents
-	if nComponents == 0 || nComponents > len(result.ExplainedVar) {
-		nComponents = len(result.ExplainedVar)
-	}
-
-	// Extract scores for the specified number of components
-	scores := extractScoresMatrix(result.Scores, nComponents)
+// NewPCAMetricsCalculator creates a new metrics calculator
+func NewPCAMetricsCalculator(scores, loadings *mat.Dense, mean, stdDev []float64) *PCAMetricsCalculator {
+	nSamples, nComponents := scores.Dims()
+	nFeatures, _ := loadings.Dims()
 	
-	// Calculate Mahalanobis distances
-	mahalanobis, err := calculateMahalanobisDistances(scores)
+	return &PCAMetricsCalculator{
+		scores:         scores,
+		loadings:       loadings,
+		mean:           mean,
+		stdDev:         stdDev,
+		nComponents:    nComponents,
+		nSamples:       nSamples,
+		nFeatures:      nFeatures,
+		regularization: 1e-8,
+	}
+}
+
+// CalculateMetrics computes all metrics for each sample
+func (m *PCAMetricsCalculator) CalculateMetrics(originalData types.Matrix) ([]types.SampleMetrics, error) {
+	metrics := make([]types.SampleMetrics, m.nSamples)
+	
+	// Calculate covariance matrix of scores (regularized)
+	scoresCov, err := m.calculateScoresCovariance()
 	if err != nil {
-		return nil, fmt.Errorf("failed to calculate Mahalanobis distances: %w", err)
+		return nil, fmt.Errorf("failed to calculate scores covariance: %w", err)
 	}
-
-	// Calculate Hotelling's T² statistics
-	hotelling, err := calculateHotellingT2(scores, len(data))
+	
+	// Calculate inverse of regularized covariance matrix
+	var scoresCovInv mat.Dense
+	err = scoresCovInv.Inverse(scoresCov)
 	if err != nil {
-		return nil, fmt.Errorf("failed to calculate Hotelling's T²: %w", err)
+		return nil, fmt.Errorf("failed to invert covariance matrix: %w", err)
 	}
-
-	// Calculate residuals
-	rss, qResiduals, err := calculateResiduals(result, data, nComponents)
-	if err != nil {
-		return nil, fmt.Errorf("failed to calculate residuals: %w", err)
+	
+	// Calculate mean of scores (should be close to zero for centered data)
+	scoreMeans := make([]float64, m.nComponents)
+	for j := 0; j < m.nComponents; j++ {
+		col := mat.Col(nil, j, m.scores)
+		sum := 0.0
+		for _, v := range col {
+			sum += v
+		}
+		scoreMeans[j] = sum / float64(m.nSamples)
 	}
-
-	// Detect outliers
-	significance := config.SignificanceLevel
-	if significance == 0 {
-		significance = 0.01 // Default 1% significance level
+	
+	// Calculate metrics for each sample
+	for i := 0; i < m.nSamples; i++ {
+		// Get score vector for this sample
+		scoreVec := mat.NewVecDense(m.nComponents, nil)
+		for j := 0; j < m.nComponents; j++ {
+			scoreVec.SetVec(j, m.scores.At(i, j))
+		}
+		
+		// Calculate Hotelling's T²
+		hotellingT2 := m.calculateHotellingT2(scoreVec, scoreMeans, &scoresCovInv)
+		
+		// Calculate Mahalanobis distance
+		mahalanobis := m.calculateMahalanobisDistance(scoreVec, scoreMeans, &scoresCovInv)
+		
+		// Calculate Residual Sum of Squares (RSS)
+		rss, err := m.calculateRSS(i, originalData)
+		if err != nil {
+			return nil, fmt.Errorf("failed to calculate RSS for sample %d: %w", i, err)
+		}
+		
+		// Determine if sample is an outlier based on Hotelling's T²
+		isOutlier := m.isOutlier(hotellingT2)
+		
+		metrics[i] = types.SampleMetrics{
+			HotellingT2: hotellingT2,
+			Mahalanobis: mahalanobis,
+			RSS:         rss,
+			IsOutlier:   isOutlier,
+		}
 	}
-	outlierMask := detectOutliersFromT2(hotelling, len(data), nComponents, significance)
-
-	metrics := &types.PCAMetrics{
-		MahalanobisDistances: mahalanobis,
-		HotellingT2:         hotelling,
-		RSS:                 rss,
-		QResiduals:          qResiduals,
-		OutlierMask:         outlierMask,
-	}
-
-	// Calculate contributions if requested
-	if config.CalculateContributions {
-		metrics.ContributionScores = mc.CalculateContributions(result, data)
-	}
-
-	// Calculate confidence ellipse parameters if requested
-	if config.CalculateConfidenceEllipse && nComponents >= 2 {
-		metrics.ConfidenceEllipse = calculateConfidenceEllipse(scores, significance)
-	}
-
+	
 	return metrics, nil
 }
 
-// extractScoresMatrix extracts the first n components from the scores
-func extractScoresMatrix(scores types.Matrix, nComponents int) *mat.Dense {
-	nSamples := len(scores)
-	scoresMatrix := mat.NewDense(nSamples, nComponents, nil)
+// calculateScoresCovariance computes the regularized covariance matrix of scores
+func (m *PCAMetricsCalculator) calculateScoresCovariance() (*mat.Dense, error) {
+	// Create covariance matrix
+	cov := mat.NewDense(m.nComponents, m.nComponents, nil)
 	
-	for i := 0; i < nSamples; i++ {
-		for j := 0; j < nComponents; j++ {
-			scoresMatrix.Set(i, j, scores[i][j])
+	// Calculate mean-centered scores
+	centeredScores := mat.NewDense(m.nSamples, m.nComponents, nil)
+	for j := 0; j < m.nComponents; j++ {
+		col := mat.Col(nil, j, m.scores)
+		mean := 0.0
+		for _, v := range col {
+			mean += v
+		}
+		mean /= float64(m.nSamples)
+		
+		for i := 0; i < m.nSamples; i++ {
+			centeredScores.Set(i, j, m.scores.At(i, j)-mean)
 		}
 	}
 	
-	return scoresMatrix
+	// Calculate covariance: (1/(n-1)) * X^T * X
+	var temp mat.Dense
+	temp.Mul(centeredScores.T(), centeredScores)
+	cov.Scale(1.0/float64(m.nSamples-1), &temp)
+	
+	// Add regularization to diagonal
+	for i := 0; i < m.nComponents; i++ {
+		cov.Set(i, i, cov.At(i, i)+m.regularization)
+	}
+	
+	return cov, nil
 }
 
-// calculateMahalanobisDistances computes Mahalanobis distances for each observation
-func calculateMahalanobisDistances(scores *mat.Dense) ([]float64, error) {
-	nSamples, nComponents := scores.Dims()
-	
-	// Calculate mean vector
-	meanVec := make([]float64, nComponents)
-	for j := 0; j < nComponents; j++ {
-		col := mat.Col(nil, j, scores)
-		meanVec[j] = stat.Mean(col, nil)
+// calculateHotellingT2 computes Hotelling's T² statistic
+func (m *PCAMetricsCalculator) calculateHotellingT2(scoreVec *mat.VecDense, means []float64, covInv *mat.Dense) float64 {
+	// Calculate difference from mean
+	diff := mat.NewVecDense(m.nComponents, nil)
+	for i := 0; i < m.nComponents; i++ {
+		diff.SetVec(i, scoreVec.AtVec(i)-means[i])
 	}
 	
-	// Center the data
-	centered := mat.NewDense(nSamples, nComponents, nil)
-	for i := 0; i < nSamples; i++ {
-		for j := 0; j < nComponents; j++ {
-			centered.Set(i, j, scores.At(i, j)-meanVec[j])
-		}
-	}
+	// T² = (x - μ)^T * Σ^(-1) * (x - μ)
+	var temp mat.VecDense
+	temp.MulVec(covInv, diff)
+	t2 := mat.Dot(diff, &temp)
 	
-	// Special case for single component
-	if nComponents == 1 {
-		distances := make([]float64, nSamples)
-		variance := stat.Variance(mat.Col(nil, 0, scores), nil)
-		if variance == 0 {
-			return nil, fmt.Errorf("variance is zero, cannot calculate Mahalanobis distance")
-		}
-		
-		for i := 0; i < nSamples; i++ {
-			diff := scores.At(i, 0) - meanVec[0]
-			distances[i] = math.Sqrt(diff * diff / variance)
-		}
-		return distances, nil
-	}
-	
-	// Calculate covariance matrix
-	var cov mat.SymDense
-	stat.CovarianceMatrix(&cov, centered, nil)
-	
-	// Invert covariance matrix
-	var invCov mat.Dense
-	err := invCov.Inverse(&cov)
-	if err != nil {
-		return nil, fmt.Errorf("failed to invert covariance matrix: %w", err)
-	}
-	
-	// Calculate Mahalanobis distances
-	distances := make([]float64, nSamples)
-	diff := mat.NewVecDense(nComponents, nil)
-	temp := mat.NewVecDense(nComponents, nil)
-	
-	for i := 0; i < nSamples; i++ {
-		// Get the difference from mean
-		for j := 0; j < nComponents; j++ {
-			diff.SetVec(j, centered.At(i, j))
-		}
-		
-		// Calculate (x-μ)ᵀ * Σ⁻¹ * (x-μ)
-		temp.MulVec(&invCov, diff)
-		distances[i] = math.Sqrt(mat.Dot(diff, temp))
-	}
-	
-	return distances, nil
+	return t2
 }
 
-// calculateHotellingT2 computes Hotelling's T-squared statistics
-func calculateHotellingT2(scores *mat.Dense, nSamples int) ([]float64, error) {
-	nRows, nComponents := scores.Dims()
-	
-	// Calculate mean vector
-	meanVec := make([]float64, nComponents)
-	for j := 0; j < nComponents; j++ {
-		col := mat.Col(nil, j, scores)
-		meanVec[j] = stat.Mean(col, nil)
+// calculateMahalanobisDistance computes the Mahalanobis distance
+func (m *PCAMetricsCalculator) calculateMahalanobisDistance(scoreVec *mat.VecDense, means []float64, covInv *mat.Dense) float64 {
+	// Calculate difference from mean
+	diff := mat.NewVecDense(m.nComponents, nil)
+	for i := 0; i < m.nComponents; i++ {
+		diff.SetVec(i, scoreVec.AtVec(i)-means[i])
 	}
 	
-	// Center the data
-	centered := mat.NewDense(nRows, nComponents, nil)
-	for i := 0; i < nRows; i++ {
-		for j := 0; j < nComponents; j++ {
-			centered.Set(i, j, scores.At(i, j)-meanVec[j])
-		}
-	}
+	// D² = (x - μ)^T * Σ^(-1) * (x - μ)
+	var temp mat.VecDense
+	temp.MulVec(covInv, diff)
+	d2 := mat.Dot(diff, &temp)
 	
-	// Special case for single component
-	if nComponents == 1 {
-		t2Stats := make([]float64, nRows)
-		variance := stat.Variance(mat.Col(nil, 0, scores), nil)
-		if variance == 0 {
-			return nil, fmt.Errorf("variance is zero, cannot calculate Hotelling's T²")
-		}
-		
-		for i := 0; i < nRows; i++ {
-			diff := scores.At(i, 0) - meanVec[0]
-			t2Stats[i] = diff * diff / variance
-		}
-		return t2Stats, nil
-	}
-	
-	// Calculate covariance matrix
-	var cov mat.SymDense
-	stat.CovarianceMatrix(&cov, centered, nil)
-	
-	// Invert covariance matrix
-	var invCov mat.Dense
-	err := invCov.Inverse(&cov)
-	if err != nil {
-		return nil, fmt.Errorf("failed to invert covariance matrix: %w", err)
-	}
-	
-	// Calculate Hotelling's T² statistics
-	t2Stats := make([]float64, nRows)
-	diff := mat.NewVecDense(nComponents, nil)
-	temp := mat.NewVecDense(nComponents, nil)
-	
-	for i := 0; i < nRows; i++ {
-		// Get the difference from mean
-		for j := 0; j < nComponents; j++ {
-			diff.SetVec(j, centered.At(i, j))
-		}
-		
-		// Calculate (x-μ)ᵀ * Σ⁻¹ * (x-μ)
-		temp.MulVec(&invCov, diff)
-		t2Stats[i] = mat.Dot(diff, temp)
-	}
-	
-	return t2Stats, nil
+	// Return the distance (not squared)
+	return math.Sqrt(d2)
 }
 
-// calculateResiduals computes RSS and Q-residuals for each observation
-func calculateResiduals(result *types.PCAResult, data types.Matrix, nComponents int) ([]float64, []float64, error) {
-	nSamples := len(data)
-	nVariables := len(data[0])
+// calculateRSS computes the Residual Sum of Squares
+func (m *PCAMetricsCalculator) calculateRSS(sampleIdx int, originalData types.Matrix) (float64, error) {
+	// RSS is calculated as the squared difference between the centered/scaled data
+	// and its reconstruction in the transformed space
 	
-	// Convert data to matrix
-	dataMatrix := mat.NewDense(nSamples, nVariables, nil)
-	for i := 0; i < nSamples; i++ {
-		for j := 0; j < nVariables; j++ {
-			dataMatrix.Set(i, j, data[i][j])
-		}
+	// Get the score vector for this sample
+	scoreVec := mat.NewVecDense(m.nComponents, nil)
+	for j := 0; j < m.nComponents; j++ {
+		scoreVec.SetVec(j, m.scores.At(sampleIdx, j))
 	}
 	
-	// Ensure we don't exceed available components
-	// Loadings are stored as variables×components
-	if len(result.Loadings) > 0 {
-		actualComponents := len(result.Loadings[0])
-		if nComponents > actualComponents {
-			nComponents = actualComponents
+	// Calculate reconstructed values in the transformed space
+	reconstructed := make([]float64, m.nFeatures)
+	for j := 0; j < m.nFeatures; j++ {
+		val := 0.0
+		for k := 0; k < m.nComponents; k++ {
+			val += scoreVec.AtVec(k) * m.loadings.At(j, k)
 		}
+		reconstructed[j] = val
 	}
 	
-	// Extract scores and loadings for the specified components
-	scores := mat.NewDense(nSamples, nComponents, nil)
-	loadings := mat.NewDense(nComponents, nVariables, nil)
-	
-	for i := 0; i < nSamples; i++ {
-		for j := 0; j < nComponents; j++ {
-			if j < len(result.Scores[i]) {
-				scores.Set(i, j, result.Scores[i][j])
-			}
+	// Calculate the centered/scaled version of the original data point
+	centeredData := make([]float64, m.nFeatures)
+	for j := 0; j < m.nFeatures; j++ {
+		val := originalData[sampleIdx][j]
+		
+		// Apply the same preprocessing as was used for PCA
+		if len(m.mean) > 0 {
+			val -= m.mean[j]
 		}
+		
+		if len(m.stdDev) > 0 && m.stdDev[j] > 0 {
+			val /= m.stdDev[j]
+		}
+		
+		centeredData[j] = val
 	}
 	
-	// Transpose loadings from variables×components to components×variables for multiplication
-	for i := 0; i < nVariables; i++ {
-		if i < len(result.Loadings) {
-			for j := 0; j < nComponents; j++ {
-				if j < len(result.Loadings[i]) {
-					loadings.Set(j, i, result.Loadings[i][j])
-				}
-			}
-		}
+	// Calculate sum of squared residuals between centered data and reconstruction
+	rss := 0.0
+	for j := 0; j < m.nFeatures; j++ {
+		residual := centeredData[j] - reconstructed[j]
+		rss += residual * residual
 	}
 	
-	// Reconstruct data: X_reconstructed = scores * loadings + mean
-	var reconstructed mat.Dense
-	reconstructed.Mul(scores, loadings)
-	
-	// Note: In the current implementation, mean centering is handled internally
-	// during PCA fit, so we don't add it back here. The residuals are calculated
-	// from the centered data.
-	
-	// Calculate residuals
-	rss := make([]float64, nSamples)
-	qResiduals := make([]float64, nSamples)
-	
-	for i := 0; i < nSamples; i++ {
-		sumSquares := 0.0
-		for j := 0; j < nVariables; j++ {
-			diff := dataMatrix.At(i, j) - reconstructed.At(i, j)
-			sumSquares += diff * diff
-		}
-		rss[i] = sumSquares
-		qResiduals[i] = sumSquares // Q-residuals are the same as RSS in this context
-	}
-	
-	return rss, qResiduals, nil
+	return rss, nil
 }
 
-// detectOutliersFromT2 identifies outliers based on Hotelling's T² statistics
-func detectOutliersFromT2(t2Stats []float64, nSamples, nComponents int, significance float64) []bool {
-	// Calculate F-distribution threshold
-	// T² follows an F-distribution scaled by a factor
-	// T² ~ (p(n-1)/(n-p)) * F(p, n-p)
-	// where p = number of components, n = number of samples
+// isOutlier determines if a sample is an outlier based on Hotelling's T²
+func (m *PCAMetricsCalculator) isOutlier(hotellingT2 float64) bool {
+	// Calculate critical value using F-distribution
+	// T²_critical = p(n-1)/(n-p) * F_{p,n-p}(1-α)
+	// where p = number of components, n = number of samples, α = significance level
 	
-	df1 := float64(nComponents)
-	df2 := float64(nSamples - nComponents)
+	alpha := 0.001 // 99.9% confidence level - less sensitive to outliers
+	p := float64(m.nComponents)
+	n := float64(m.nSamples)
 	
-	if df2 <= 0 {
-		// Not enough degrees of freedom for F-distribution
-		// Return no outliers
-		return make([]bool, len(t2Stats))
+	if n <= p {
+		// Cannot calculate threshold with insufficient samples
+		return false
 	}
 	
 	// Create F-distribution
 	fDist := distuv.F{
-		D1: df1,
-		D2: df2,
+		D1: p,
+		D2: n - p,
 	}
 	
 	// Calculate critical value
-	fCritical := fDist.Quantile(1 - significance)
+	fCritical := fDist.Quantile(1 - alpha)
+	t2Critical := p * (n - 1) / (n - p) * fCritical
 	
-	// Scale factor for T² distribution
-	// The correct formula is: T² ~ p(n-1)/(n-p) * F(p, n-p)
-	scale := (df1 * float64(nSamples-1)) / df2
-	t2Threshold := scale * fCritical
-	
-	// Detect outliers
-	outliers := make([]bool, len(t2Stats))
-	for i, t2 := range t2Stats {
-		outliers[i] = t2 > t2Threshold
-	}
-	
-	return outliers
+	return hotellingT2 > t2Critical
 }
 
-// DetectOutliers identifies outliers based on Hotelling's T² statistic
-func (mc *metricsCalculator) DetectOutliers(metrics *types.PCAMetrics, significance float64) []bool {
-	if metrics == nil || len(metrics.HotellingT2) == 0 {
-		return []bool{}
-	}
+// CalculateMetricsFromPCAResult is a convenience function that calculates metrics directly from PCAResult
+func CalculateMetricsFromPCAResult(result *types.PCAResult, originalData types.Matrix) ([]types.SampleMetrics, error) {
+	// Convert result matrices to gonum matrices
+	scores := matrixToDense(result.Scores)
+	loadings := matrixToDense(result.Loadings)
 	
-	// Estimate number of samples from the data
-	// This is a simplified version - in practice, you'd pass this information
-	nSamples := len(metrics.HotellingT2)
+	// Create metrics calculator
+	calculator := NewPCAMetricsCalculator(scores, loadings, result.Means, result.StdDevs)
 	
-	// Estimate number of components (this is approximate)
-	// In practice, this should be passed as a parameter
-	nComponents := 2 // Default assumption
-	
-	return detectOutliersFromT2(metrics.HotellingT2, nSamples, nComponents, significance)
-}
-
-// CalculateContributions computes variable contributions to each PC
-func (mc *metricsCalculator) CalculateContributions(result *types.PCAResult, data types.Matrix) [][]float64 {
-	if result == nil || len(result.Loadings) == 0 {
-		return nil
-	}
-	
-	// Loadings are stored as variables×components
-	nVariables := len(result.Loadings)
-	if nVariables == 0 {
-		return nil
-	}
-	nComponents := len(result.Loadings[0])
-	
-	// Calculate contributions as squared loadings normalized by component
-	contributions := make([][]float64, nVariables)
-	for i := 0; i < nVariables; i++ {
-		contributions[i] = make([]float64, nComponents)
-	}
-	
-	for j := 0; j < nComponents; j++ {
-		sumSquares := 0.0
-		// Calculate sum of squared loadings for this component
-		for i := 0; i < nVariables; i++ {
-			sumSquares += result.Loadings[i][j] * result.Loadings[i][j]
-		}
-		
-		// Normalize to get contributions
-		if sumSquares > 0 {
-			for i := 0; i < nVariables; i++ {
-				contributions[i][j] = (result.Loadings[i][j] * result.Loadings[i][j]) / sumSquares
-			}
-		}
-	}
-	
-	return contributions
-}
-
-// calculateConfidenceEllipse computes parameters for confidence ellipse visualization
-func calculateConfidenceEllipse(scores *mat.Dense, significance float64) types.EllipseParams {
-	nSamples, _ := scores.Dims()
-	
-	// Calculate means for first two components
-	col1 := mat.Col(nil, 0, scores)
-	col2 := mat.Col(nil, 1, scores)
-	
-	meanX := stat.Mean(col1, nil)
-	meanY := stat.Mean(col2, nil)
-	
-	// Calculate covariance for first two components
-	data2D := mat.NewDense(nSamples, 2, nil)
-	for i := 0; i < nSamples; i++ {
-		data2D.Set(i, 0, scores.At(i, 0))
-		data2D.Set(i, 1, scores.At(i, 1))
-	}
-	
-	var cov mat.SymDense
-	stat.CovarianceMatrix(&cov, data2D, nil)
-	
-	// Eigendecomposition of 2x2 covariance matrix
-	var eig mat.EigenSym
-	ok := eig.Factorize(&cov, true)
-	if !ok {
-		// Return default ellipse if factorization fails
-		return types.EllipseParams{
-			CenterX:         meanX,
-			CenterY:         meanY,
-			MajorAxis:       1.0,
-			MinorAxis:       1.0,
-			Angle:           0.0,
-			ConfidenceLevel: 1 - significance,
-		}
-	}
-	
-	values := eig.Values(nil)
-	vectors := mat.NewDense(2, 2, nil)
-	eig.VectorsTo(vectors)
-	
-	// Chi-squared value for confidence level
-	chiSquared := distuv.ChiSquared{K: 2}
-	chiValue := chiSquared.Quantile(1 - significance)
-	
-	// Calculate ellipse parameters
-	majorAxis := 2 * math.Sqrt(chiValue*math.Max(values[0], values[1]))
-	minorAxis := 2 * math.Sqrt(chiValue*math.Min(values[0], values[1]))
-	
-	// Angle is determined by the eigenvector corresponding to the largest eigenvalue
-	var angle float64
-	if values[0] > values[1] {
-		angle = math.Atan2(vectors.At(1, 0), vectors.At(0, 0))
-	} else {
-		angle = math.Atan2(vectors.At(1, 1), vectors.At(0, 1))
-	}
-	
-	return types.EllipseParams{
-		CenterX:         meanX,
-		CenterY:         meanY,
-		MajorAxis:       majorAxis,
-		MinorAxis:       minorAxis,
-		Angle:           angle,
-		ConfidenceLevel: 1 - significance,
-	}
+	// Calculate metrics
+	return calculator.CalculateMetrics(originalData)
 }

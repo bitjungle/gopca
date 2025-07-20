@@ -22,7 +22,7 @@ func TestLoadCSV(t *testing.T) {
 7.0,8.0,9.0`
 
 	tmpfile := createTempCSV(t, content)
-	defer os.Remove(tmpfile)
+	defer func() { _ = os.Remove(tmpfile) }()
 
 	// Load the CSV
 	data, headers, err := LoadCSV(tmpfile, DefaultCSVOptions())
@@ -65,7 +65,7 @@ func TestLoadCSVWithDelimiter(t *testing.T) {
 4.0;5.0;6.0`
 
 	tmpfile := createTempCSV(t, content)
-	defer os.Remove(tmpfile)
+	defer func() { _ = os.Remove(tmpfile) }()
 
 	options := DefaultCSVOptions()
 	options.Delimiter = ';'
@@ -92,7 +92,7 @@ func TestLoadCSVWithMissing(t *testing.T) {
 7.0,8.0,`
 
 	tmpfile := createTempCSV(t, content)
-	defer os.Remove(tmpfile)
+	defer func() { _ = os.Remove(tmpfile) }()
 
 	data, _, err := LoadCSV(tmpfile, DefaultCSVOptions())
 	if err != nil {
@@ -116,7 +116,7 @@ func TestLoadCSVWithColumnSelection(t *testing.T) {
 6,7,8,9,10`
 
 	tmpfile := createTempCSV(t, content)
-	defer os.Remove(tmpfile)
+	defer func() { _ = os.Remove(tmpfile) }()
 
 	options := DefaultCSVOptions()
 	options.Columns = []int{0, 2, 4} // Select columns a, c, e
@@ -162,7 +162,7 @@ x,y
 3,4`
 
 	tmpfile := createTempCSV(t, content)
-	defer os.Remove(tmpfile)
+	defer func() { _ = os.Remove(tmpfile) }()
 
 	options := DefaultCSVOptions()
 	options.SkipRows = 2
@@ -191,7 +191,7 @@ func TestLoadCSVMaxRows(t *testing.T) {
 9,10`
 
 	tmpfile := createTempCSV(t, content)
-	defer os.Remove(tmpfile)
+	defer func() { _ = os.Remove(tmpfile) }()
 
 	options := DefaultCSVOptions()
 	options.MaxRows = 3
@@ -256,7 +256,7 @@ func TestInspectCSV(t *testing.T) {
 5,NA,test`
 
 	tmpfile := createTempCSV(t, content)
-	defer os.Remove(tmpfile)
+	defer func() { _ = os.Remove(tmpfile) }()
 
 	info, err := InspectCSV(tmpfile, DefaultCSVOptions())
 	if err != nil {
@@ -295,13 +295,13 @@ func TestStreamingReader(t *testing.T) {
 7,8,9`
 
 	tmpfile := createTempCSV(t, content)
-	defer os.Remove(tmpfile)
+	defer func() { _ = os.Remove(tmpfile) }()
 
 	reader, err := NewStreamingReader(tmpfile, DefaultCSVOptions())
 	if err != nil {
 		t.Fatalf("NewStreamingReader failed: %v", err)
 	}
-	defer reader.Close()
+	defer func() { _ = reader.Close() }()
 
 	// Check headers
 	headers := reader.Headers()
@@ -348,7 +348,7 @@ func TestLoadCSVErrors(t *testing.T) {
 4,5` // Missing value in second row
 
 	tmpfile := createTempCSV(t, content)
-	defer os.Remove(tmpfile)
+	defer func() { _ = os.Remove(tmpfile) }()
 
 	_, _, err = LoadCSV(tmpfile, DefaultCSVOptions())
 	if err == nil {
@@ -361,7 +361,7 @@ func TestLoadCSVErrors(t *testing.T) {
 three,4`
 
 	tmpfile2 := createTempCSV(t, content2)
-	defer os.Remove(tmpfile2)
+	defer func() { _ = os.Remove(tmpfile2) }()
 
 	_, _, err = LoadCSV(tmpfile2, DefaultCSVOptions())
 	if err == nil {
@@ -376,7 +376,7 @@ func TestSpecialFloatValues(t *testing.T) {
 2.0,Infinity,-Infinity`
 
 	tmpfile := createTempCSV(t, content)
-	defer os.Remove(tmpfile)
+	defer func() { _ = os.Remove(tmpfile) }()
 
 	data, _, err := LoadCSV(tmpfile, DefaultCSVOptions())
 	if err != nil {
@@ -446,7 +446,7 @@ func BenchmarkLoadCSV(b *testing.B) {
 	}
 
 	tmpfile := createTempCSV(&testing.T{}, buf.String())
-	defer os.Remove(tmpfile)
+	defer func() { _ = os.Remove(tmpfile) }()
 
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {

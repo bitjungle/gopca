@@ -46,3 +46,5 @@ node_modules/
 
 # Data files
 data/iris_metrics*
+data/*_pca_*.csv
+data/*_pca.json

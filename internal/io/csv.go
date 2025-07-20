@@ -41,7 +41,7 @@ func LoadCSV(filename string, options CSVOptions) (types.Matrix, []string, error
 	if err != nil {
 		return nil, nil, fmt.Errorf("failed to open file: %w", err)
 	}
-	defer file.Close()
+	defer func() { _ = file.Close() }()
 
 	return ReadCSV(file, options)
 }
@@ -184,7 +184,7 @@ func SaveCSV(filename string, data types.Matrix, headers []string, options CSVOp
 	if err != nil {
 		return fmt.Errorf("failed to create file: %w", err)
 	}
-	defer file.Close()
+	defer func() { _ = file.Close() }()
 
 	return WriteCSV(file, data, headers, options)
 }
@@ -241,7 +241,7 @@ func InspectCSV(filename string, options CSVOptions) (*DataInfo, error) {
 	if err != nil {
 		return nil, fmt.Errorf("failed to open file: %w", err)
 	}
-	defer file.Close()
+	defer func() { _ = file.Close() }()
 
 	reader := csv.NewReader(file)
 	reader.Comma = options.Delimiter
@@ -408,7 +408,7 @@ func NewStreamingReader(filename string, options CSVOptions) (*StreamingReader, 
 	// Skip initial rows and read header if needed
 	for i := 0; i < options.SkipRows; i++ {
 		if _, err := reader.Read(); err != nil {
-			file.Close()
+			_ = file.Close()
 			return nil, fmt.Errorf("error skipping rows: %w", err)
 		}
 	}
@@ -416,7 +416,7 @@ func NewStreamingReader(filename string, options CSVOptions) (*StreamingReader, 
 	if options.HasHeader {
 		record, err := reader.Read()
 		if err != nil {
-			file.Close()
+			_ = file.Close()
 			return nil, fmt.Errorf("error reading header: %w", err)
 		}
 		sr.headers = make([]string, len(record))
