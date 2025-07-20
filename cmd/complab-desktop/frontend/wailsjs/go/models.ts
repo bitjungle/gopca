@@ -87,6 +87,8 @@ export namespace types {
 	    explained_variance: number[];
 	    cumulative_variance: number[];
 	    component_labels: string[];
+	    means?: number[];
+	    stddevs?: number[];
 	
 	    static createFrom(source: any = {}) {
 	        return new PCAResult(source);
@@ -99,6 +101,8 @@ export namespace types {
 	        this.explained_variance = source["explained_variance"];
 	        this.cumulative_variance = source["cumulative_variance"];
 	        this.component_labels = source["component_labels"];
+	        this.means = source["means"];
+	        this.stddevs = source["stddevs"];
 	    }
 	}
 
