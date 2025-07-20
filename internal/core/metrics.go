@@ -171,8 +171,8 @@ func (m *PCAMetricsCalculator) calculateMahalanobisDistance(scoreVec *mat.VecDen
 
 // calculateRSS computes the Residual Sum of Squares
 func (m *PCAMetricsCalculator) calculateRSS(sampleIdx int, originalData types.Matrix) (float64, error) {
-	// Reconstruct the sample from scores and loadings
-	// X_reconstructed = scores * loadings^T
+	// RSS is calculated as the squared difference between the centered/scaled data
+	// and its reconstruction in the transformed space
 	
 	// Get the score vector for this sample
 	scoreVec := mat.NewVecDense(m.nComponents, nil)
@@ -180,31 +180,37 @@ func (m *PCAMetricsCalculator) calculateRSS(sampleIdx int, originalData types.Ma
 		scoreVec.SetVec(j, m.scores.At(sampleIdx, j))
 	}
 	
-	// Calculate reconstructed values
+	// Calculate reconstructed values in the transformed space
 	reconstructed := make([]float64, m.nFeatures)
 	for j := 0; j < m.nFeatures; j++ {
 		val := 0.0
 		for k := 0; k < m.nComponents; k++ {
 			val += scoreVec.AtVec(k) * m.loadings.At(j, k)
 		}
-		
-		// Add back mean if data was centered
-		if len(m.mean) > 0 {
-			val += m.mean[j]
-		}
-		
-		// Scale back if data was standardized
-		if len(m.stdDev) > 0 && m.stdDev[j] > 0 {
-			val *= m.stdDev[j]
-		}
-		
 		reconstructed[j] = val
 	}
 	
-	// Calculate sum of squared residuals
+	// Calculate the centered/scaled version of the original data point
+	centeredData := make([]float64, m.nFeatures)
+	for j := 0; j < m.nFeatures; j++ {
+		val := originalData[sampleIdx][j]
+		
+		// Apply the same preprocessing as was used for PCA
+		if len(m.mean) > 0 {
+			val -= m.mean[j]
+		}
+		
+		if len(m.stdDev) > 0 && m.stdDev[j] > 0 {
+			val /= m.stdDev[j]
+		}
+		
+		centeredData[j] = val
+	}
+	
+	// Calculate sum of squared residuals between centered data and reconstruction
 	rss := 0.0
 	for j := 0; j < m.nFeatures; j++ {
-		residual := originalData[sampleIdx][j] - reconstructed[j]
+		residual := centeredData[j] - reconstructed[j]
 		rss += residual * residual
 	}
 	
