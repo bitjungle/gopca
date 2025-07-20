@@ -229,10 +229,6 @@ func outputCSVFormat(result *types.PCAResult, data *CSVData, outputFile string,
 		}
 	}
 	
-	if outputFile != "" {
-		fmt.Printf("\nResults saved to: %s\n", outputFile)
-	}
-	
 	return nil
 }
 

@@ -305,5 +305,10 @@ func runAnalyze(c *cli.Context) error {
 		return fmt.Errorf("output failed: %w", err)
 	}
 	
+	// Success message for file output
+	if outputFile != "" && outputFormat != "table" {
+		fmt.Printf("\nResults saved to: %s\n", outputFile)
+	}
+	
 	return nil
 }
