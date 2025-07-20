@@ -18,6 +18,7 @@ complab/
 │   ├── core/
 │   │   ├── pca.go                  # Core PCA algorithms (NIPALS & SVD)
 │   │   ├── preprocessing.go        # Data preprocessing
+│   │   ├── metrics.go              # PCA metrics and diagnostics (planned)
 │   │   ├── pca_test.go            # PCA tests (93.2% coverage)
 │   │   └── preprocessing_test.go   # Preprocessing tests
 │   └── io/
@@ -25,7 +26,8 @@ complab/
 │       └── csv_test.go             # CSV I/O tests
 ├── pkg/
 │   └── types/
-│       └── pca.go                  # Public types and interfaces
+│       ├── pca.go                  # Public types and interfaces
+│       └── metrics.go              # Metrics types and interfaces (planned)
 ├── data/
 │   ├── iris_data.csv              # Sample dataset
 │   └── iris_pca_results.csv       # Example output
@@ -130,90 +132,3 @@ complab-cli info -i data.csv
 - ✅ Makefile integration working
 - ✅ Error handling tests
 
-## Phase 3: Frontend Development (Planned)
-
-### 3.1 Technology Stack
-- **Framework**: React (recommended for ecosystem)
-- **Data Grid**: AG-Grid Community or Tanstack Table
-- **Plotting**: Plotly.js for interactive visualizations
-- **UI Components**: Tailwind CSS + Headless UI
-- **State Management**: Context API or Zustand
-
-### 3.2 Key Components (To Be Implemented)
-
-**DataTable Component**
-- Virtual scrolling for large datasets
-- Column sorting and filtering
-- Row/column selection with visual feedback
-- Export functionality
-
-**PlotViewer Component**
-- Scores plot (scatter plot with PC combinations)
-- Loadings plot (biplot, vector plot)
-- Scree plot (explained variance)
-- Interactive features: zoom, pan, selection
-
-**PreprocessingPanel**
-- Checkboxes for preprocessing options
-- Parameter inputs with validation
-- Preview of preprocessing effects
-
-## Phase 4: Wails Integration (Planned)
-
-### 4.1 Wails App Structure
-- Backend API exposure to frontend
-- File dialog integration
-- Progress callbacks for long operations
-- Cross-platform desktop application
-
-## Development Achievements
-
-### Code Quality
-- ✅ Go fmt applied to all code
-- ✅ Test coverage >85% for core modules
-- ✅ Clear error messages with context
-- ✅ Modular architecture with clean separation
-
-### Performance
-- ✅ 10,000×100 matrices process in <50ms
-- ✅ Memory-efficient CSV streaming
-- ✅ Optimized NIPALS implementation
-
-### Build Automation
-- ✅ Comprehensive Makefile with all targets
-- ✅ Automated testing and coverage
-- ✅ Easy build process
-
-## Current Status
-
-### Completed
-- ✅ Phase 1: Core PCA Engine (100%)
-- ✅ Phase 2: CLI Implementation (100%)
-- ✅ Sample data and examples
-- ✅ Documentation (CLAUDE.md, README.md)
-
-### In Progress
-- 🔄 PR #5: Phase 2 CLI Implementation (under review)
-- 🔄 PR #4: Makefile addition (under review)
-
-### Pending
-- ⏳ Phase 3: Frontend Development
-- ⏳ Phase 4: Wails Integration
-- ⏳ Phase 5: Advanced Features
-
-## Next Steps
-
-1. Merge pending pull requests
-2. Begin Phase 3: Frontend development
-3. Set up React project structure
-4. Implement data visualization components
-5. Integrate with existing Go backend
-
-## Success Metrics Achieved
-
-- ✅ CLI processes datasets efficiently
-- ✅ Cross-platform CLI works identically
-- ✅ Comprehensive test coverage (>85%)
-- ✅ User-friendly error messages
-- ✅ Professional CLI interface
-- ✅ Sample data processing works perfectly
