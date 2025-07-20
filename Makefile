@@ -74,12 +74,7 @@ endif
 ## run-pca-iris: Execute PCA analysis on iris dataset
 run-pca-iris: build
 	@echo "Running PCA analysis on iris dataset..."
-	@echo "Note: The CLI PCA command is not yet implemented."
-	@echo "This target will execute:"
-	@echo "  $(BUILD_DIR)/$(BINARY_NAME) pca --input data/iris_data.csv --components 2 --output data/iris_pca_results.csv"
-	@echo ""
-	@echo "Current CLI output:"
-	-@$(BUILD_DIR)/$(BINARY_NAME) pca --input data/iris_data.csv --components 2 --output data/iris_pca_results.csv 2>&1 || true
+	$(BUILD_DIR)/$(BINARY_NAME) analyze -f csv -o data/iris_pca_results.csv --output-all data/iris_data.csv
 
 ## clean: Remove build artifacts and generated files
 clean:

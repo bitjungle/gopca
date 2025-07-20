@@ -14,8 +14,30 @@ func analyzeCommand() *cli.Command {
 		Name:      "analyze",
 		Usage:     "Perform PCA analysis on input data",
 		ArgsUsage: "<input.csv>",
-		Description: `Analyze performs Principal Component Analysis on the input CSV file.
-		
+		Description: `The analyze command performs Principal Component Analysis on the input CSV file.
+
+USAGE:
+  complab-cli analyze [OPTIONS] <input.csv>
+
+  The input CSV file should be specified as the last argument.
+  All options must come BEFORE the filename.
+
+EXAMPLES:
+  # Basic analysis with default settings (2 components, table output)
+  complab-cli analyze data/iris_data.csv
+
+  # Standard scaling with 3 components
+  complab-cli analyze --scale standard -c 3 data/iris_data.csv
+
+  # Save results to CSV file
+  complab-cli analyze -f csv -o results.csv data/iris_data.csv
+
+  # JSON output with all results
+  complab-cli analyze -f json --output-all data/iris_data.csv
+
+  # Quiet mode for scripting (CSV to stdout)
+  complab-cli analyze -f csv --quiet data/iris_data.csv
+
 The analysis includes:
   - Data preprocessing (mean centering, scaling)
   - PCA computation using SVD or NIPALS algorithm

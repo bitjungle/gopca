@@ -27,7 +27,15 @@ func NewApp() *cli.App {
 		Description: `CompLab is the definitive Principal Component Analysis (PCA) application.
 A focused, professional-grade tool that excels at one thing: PCA analysis.
 
-This CLI tool provides fast, scriptable PCA for power users and automation.`,
+This CLI tool provides fast, scriptable PCA for power users and automation.
+
+QUICK START:
+  Analyze a CSV file:     complab-cli analyze data.csv
+  With options:           complab-cli analyze --scale standard -c 3 data.csv
+  Save results:           complab-cli analyze -f csv -o results.csv data.csv
+  Validate data first:    complab-cli validate data.csv
+
+For detailed help on any command, use: complab-cli <command> --help`,
 		Commands: []*cli.Command{
 			analyzeCommand(),
 			validateCommand(),
