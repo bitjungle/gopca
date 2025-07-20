@@ -1,4 +1,4 @@
-module github.com/bitjungle/complab
+module github.com/bitjungle/gopca
 
 go 1.24.5
 

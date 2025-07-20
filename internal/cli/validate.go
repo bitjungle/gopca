@@ -16,17 +16,17 @@ func validateCommand() *cli.Command {
 		Description: `The validate command checks the input CSV file for common issues before PCA analysis.
 
 USAGE:
-  complab-cli validate [OPTIONS] <input.csv>
+  gopca-cli validate [OPTIONS] <input.csv>
 
 EXAMPLES:
   # Basic validation
-  complab-cli validate data/iris_data.csv
+  gopca-cli validate data/iris_data.csv
 
   # Show detailed summary
-  complab-cli validate --summary data/iris_data.csv
+  gopca-cli validate --summary data/iris_data.csv
 
   # Strict mode (fail on warnings)
-  complab-cli validate --strict data/iris_data.csv
+  gopca-cli validate --strict data/iris_data.csv
 
 The validation includes:
   - File format and structure

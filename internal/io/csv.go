@@ -9,7 +9,7 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/bitjungle/complab/pkg/types"
+	"github.com/bitjungle/gopca/pkg/types"
 )
 
 // CSVOptions contains configuration for CSV reading/writing

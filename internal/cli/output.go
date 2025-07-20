@@ -9,8 +9,8 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/bitjungle/complab/internal/core"
-	"github.com/bitjungle/complab/pkg/types"
+	"github.com/bitjungle/gopca/internal/core"
+	"github.com/bitjungle/gopca/pkg/types"
 )
 
 // OutputData represents the complete output data structure

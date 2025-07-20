@@ -1,4 +1,4 @@
-# CompLab - Professional PCA Toolkit
+# GoPCA - Professional PCA Toolkit
 
 A focused, high-quality Principal Component Analysis application with both CLI and GUI interfaces.
 
@@ -13,7 +13,7 @@ A focused, high-quality Principal Component Analysis application with both CLI a
 
 ```bash
 # CLI usage
-complab-cli analyze data.csv --components 3 --mean-center
+gopca-cli analyze data.csv --components 3 --mean-center
 
 # GUI (coming soon)
-complab-gui
+gopca-gui
