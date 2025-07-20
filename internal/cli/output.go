@@ -9,6 +9,7 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/bitjungle/complab/internal/core"
 	"github.com/bitjungle/complab/pkg/types"
 )
 
@@ -86,17 +87,24 @@ func convertToPCAOutputData(result *types.PCAResult, data *CSVData, includeMetri
 		Scores: result.Scores,
 	}
 	
-	// Add metrics if requested (placeholder for now)
+	// Add metrics if requested
 	if includeMetrics {
-		sampleData.Metrics = make([]types.SampleMetrics, len(result.Scores))
-		// TODO: Calculate actual metrics
-		for i := range sampleData.Metrics {
-			sampleData.Metrics[i] = types.SampleMetrics{
-				HotellingT2: 0.0,
-				Mahalanobis: 0.0,
-				RSS:         0.0,
-				IsOutlier:   false,
+		// Calculate actual metrics using the metrics calculator
+		metrics, err := core.CalculateMetricsFromPCAResult(result, data.Matrix)
+		if err != nil {
+			// If metrics calculation fails, use zero values
+			fmt.Fprintf(os.Stderr, "Warning: Failed to calculate metrics: %v\n", err)
+			sampleData.Metrics = make([]types.SampleMetrics, len(result.Scores))
+			for i := range sampleData.Metrics {
+				sampleData.Metrics[i] = types.SampleMetrics{
+					HotellingT2: 0.0,
+					Mahalanobis: 0.0,
+					RSS:         0.0,
+					IsOutlier:   false,
+				}
 			}
+		} else {
+			sampleData.Metrics = metrics
 		}
 	}
 	
@@ -138,6 +146,18 @@ func convertToPCAOutputData(result *types.PCAResult, data *CSVData, includeMetri
 // outputTableFormat outputs results in table format to stdout
 func outputTableFormat(result *types.PCAResult, data *CSVData, 
 	outputScores, outputLoadings, outputVariance, includeMetrics bool) error {
+	
+	// Calculate metrics if requested
+	var metrics []types.SampleMetrics
+	if includeMetrics && outputScores {
+		var err error
+		metrics, err = core.CalculateMetricsFromPCAResult(result, data.Matrix)
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "Warning: Failed to calculate metrics: %v\n", err)
+			// Create placeholder metrics
+			metrics = make([]types.SampleMetrics, len(result.Scores))
+		}
+	}
 	
 	// Output scores table
 	if outputScores {
@@ -192,10 +212,15 @@ func outputTableFormat(result *types.PCAResult, data *CSVData,
 				fmt.Printf("%12.4f", result.Scores[rowIdx][j])
 			}
 			
-			// Metrics (placeholder for now)
-			if includeMetrics {
-				// TODO: Calculate actual metrics
-				fmt.Printf("%15s%18s%10s%10s", "N/A", "N/A", "N/A", "False")
+			// Metrics
+			if includeMetrics && metrics != nil {
+				metric := metrics[rowIdx]
+				outlierStr := "False"
+				if metric.IsOutlier {
+					outlierStr = "True"
+				}
+				fmt.Printf("%15.4f%18.4f%10.4f%10s", 
+					metric.HotellingT2, metric.Mahalanobis, metric.RSS, outlierStr)
 			}
 			
 			fmt.Println()

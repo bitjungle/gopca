@@ -80,6 +80,8 @@ func (p *PCAImpl) Fit(data types.Matrix, config types.PCAConfig) (*types.PCAResu
 		ExplainedVar:    explainedVar,
 		CumulativeVar:   cumulativeVar,
 		ComponentLabels: componentLabels,
+		Means:           p.mean,
+		StdDevs:         p.stdDev,
 	}, nil
 }
 
