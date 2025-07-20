@@ -3,8 +3,10 @@
 
 # Variables
 BINARY_NAME := complab-cli
+METRICS_BINARY := metrics
 BUILD_DIR := build
 CLI_PATH := cmd/complab-cli/main.go
+METRICS_PATH := cmd/metrics/main.go
 COVERAGE_FILE := coverage.out
 
 # Go commands
@@ -25,7 +27,7 @@ GOLINT := $(shell which golangci-lint 2> /dev/null)
 .DEFAULT_GOAL := all
 
 # Phony targets
-.PHONY: all build test test-verbose test-coverage fmt lint run-pca-iris clean install deps help
+.PHONY: all build build-metrics test test-verbose test-coverage fmt lint run-pca-iris run-metrics-iris clean install deps help
 
 ## all: Build the binary and run tests
 all: build test
@@ -36,6 +38,13 @@ build:
 	@mkdir -p $(BUILD_DIR)
 	$(GOBUILD) $(LDFLAGS) -o $(BUILD_DIR)/$(BINARY_NAME) $(CLI_PATH)
 	@echo "Build complete: $(BUILD_DIR)/$(BINARY_NAME)"
+
+## build-metrics: Build the metrics binary
+build-metrics:
+	@echo "Building $(METRICS_BINARY)..."
+	@mkdir -p $(BUILD_DIR)
+	$(GOBUILD) $(LDFLAGS) -o $(BUILD_DIR)/$(METRICS_BINARY) $(METRICS_PATH)
+	@echo "Build complete: $(BUILD_DIR)/$(METRICS_BINARY)"
 
 ## test: Run all tests with coverage
 test:
@@ -75,6 +84,15 @@ endif
 run-pca-iris: build
 	@echo "Running PCA analysis on iris dataset..."
 	$(BUILD_DIR)/$(BINARY_NAME) analyze -f csv --output-all --include-metrics data/iris_data.csv
+
+## run-metrics-iris: Calculate PCA metrics for iris dataset
+run-metrics-iris: build-metrics
+	@echo "Calculating PCA metrics for iris dataset..."
+	$(BUILD_DIR)/$(METRICS_BINARY) \
+		-input data/iris_data.csv \
+		-output data/iris_metrics.json \
+		-components 3 \
+		-significance 0.01
 
 ## clean: Remove build artifacts and generated files
 clean:
