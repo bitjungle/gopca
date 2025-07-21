@@ -42,36 +42,32 @@ type FileData struct {
 	CategoricalColumns  map[string][]string    `json:"categoricalColumns,omitempty"`
 }
 
+// NaNSentinel is a special value used to represent NaN in JSON transport
+const NaNSentinel = -999999.0
+
 // MarshalJSON implements custom JSON marshaling to handle NaN values
 func (f *FileData) MarshalJSON() ([]byte, error) {
-	// Create a type alias to avoid infinite recursion
-	type Alias FileData
-	
-	// Convert the data to handle NaN values
-	jsonData := make([][]interface{}, len(f.Data))
+	// Create a copy of the data with NaN replaced by sentinel value
+	jsonData := make([][]float64, len(f.Data))
 	for i, row := range f.Data {
-		jsonRow := make([]interface{}, len(row))
+		jsonData[i] = make([]float64, len(row))
 		for j, val := range row {
 			if math.IsNaN(val) {
-				jsonRow[j] = nil // JSON null for NaN
+				jsonData[i][j] = NaNSentinel
 			} else {
-				jsonRow[j] = val
+				jsonData[i][j] = val
 			}
 		}
-		jsonData[i] = jsonRow
 	}
 	
-	// Create a temporary struct with the converted data
+	// Use a type alias to avoid infinite recursion
+	type Alias FileData
 	return json.Marshal(&struct {
-		Headers            []string               `json:"headers"`
-		RowNames           []string               `json:"rowNames"`
-		Data               [][]interface{}        `json:"data"`
-		CategoricalColumns map[string][]string    `json:"categoricalColumns,omitempty"`
+		*Alias
+		Data [][]float64 `json:"data"`
 	}{
-		Headers:            f.Headers,
-		RowNames:           f.RowNames,
-		Data:               jsonData,
-		CategoricalColumns: f.CategoricalColumns,
+		Alias: (*Alias)(f),
+		Data:  jsonData,
 	})
 }
 
@@ -210,60 +206,10 @@ func (a *App) ParseCSV(content string) (*FileData, error) {
 		numericHeaders = append(numericHeaders, headers[j-startIdx])
 	}
 	
-	// Filter out rows with NaN values (missing data)
-	// This is necessary because:
-	// 1. JSON cannot represent NaN values
-	// 2. PCA requires complete data (no missing values)
-	cleanData := [][]float64{}
-	cleanRowNames := []string{}
-	skippedRows := 0
-	for i, row := range data {
-		hasNaN := false
-		for _, val := range row {
-			if math.IsNaN(val) {
-				hasNaN = true
-				break
-			}
-		}
-		if !hasNaN {
-			cleanData = append(cleanData, row)
-			if hasRowNames && i < len(rowNames) {
-				cleanRowNames = append(cleanRowNames, rowNames[i])
-			}
-		} else {
-			skippedRows++
-		}
-	}
-	
-	// Log info about skipped rows (would appear in console during development)
-	if skippedRows > 0 {
-		fmt.Printf("Info: Skipped %d rows containing missing values (marked as 'm')\n", skippedRows)
-	}
-	
-	// Update categorical data to match filtered rows
-	if len(categoricalData) > 0 {
-		for colName, values := range categoricalData {
-			cleanValues := []string{}
-			for i := range data {
-				hasNaN := false
-				for _, val := range data[i] {
-					if math.IsNaN(val) {
-						hasNaN = true
-						break
-					}
-				}
-				if !hasNaN && i < len(values) {
-					cleanValues = append(cleanValues, values[i])
-				}
-			}
-			categoricalData[colName] = cleanValues
-		}
-	}
-	
 	result := &FileData{
 		Headers:  numericHeaders,
-		RowNames: cleanRowNames,
-		Data:     cleanData,
+		RowNames: rowNames,
+		Data:     data,
 	}
 	
 	// Only add categorical columns if there are any
@@ -288,12 +234,25 @@ func (a *App) RunPCA(request PCARequest) PCAResponse {
 		request.Components = 2 // Default to 2 components
 	}
 	
+	// Convert sentinel values back to NaN
+	floatData := make([][]float64, len(request.Data))
+	for i, row := range request.Data {
+		floatData[i] = make([]float64, len(row))
+		for j, val := range row {
+			if val == NaNSentinel {
+				floatData[i][j] = math.NaN()
+			} else {
+				floatData[i][j] = val
+			}
+		}
+	}
+	
 	// Filter data if exclusions are provided
-	dataToAnalyze := request.Data
+	dataToAnalyze := floatData
 	
 	if len(request.ExcludedRows) > 0 || len(request.ExcludedColumns) > 0 {
 		// Filter the data matrix
-		filteredData, err := utils.FilterMatrix(request.Data, request.ExcludedRows, request.ExcludedColumns)
+		filteredData, err := utils.FilterMatrix(floatData, request.ExcludedRows, request.ExcludedColumns)
 		if err != nil {
 			return PCAResponse{
 				Success: false,
@@ -326,6 +285,25 @@ func (a *App) RunPCA(request PCARequest) PCAResponse {
 		// Skip standard preprocessing for kernel PCA
 		config.MeanCenter = false
 		config.StandardScale = false
+	}
+	
+	// Check for NaN values in the data to analyze
+	hasNaN := false
+	nanCount := 0
+	for _, row := range dataToAnalyze {
+		for _, val := range row {
+			if math.IsNaN(val) {
+				hasNaN = true
+				nanCount++
+			}
+		}
+	}
+	
+	if hasNaN {
+		return PCAResponse{
+			Success: false,
+			Error:   fmt.Sprintf("Cannot perform PCA: data contains %d missing values. Please exclude columns with missing values or handle them before analysis.", nanCount),
+		}
 	}
 	
 	// Perform PCA

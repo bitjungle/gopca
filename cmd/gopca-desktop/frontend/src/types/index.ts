@@ -1,7 +1,10 @@
+// Sentinel value used to represent NaN in JSON transport
+export const NaN_SENTINEL = -999999.0;
+
 export interface FileData {
   headers: string[];
   rowNames: string[];
-  data: (number | null)[][];  // null represents NaN values
+  data: number[][];  // NaN represented as NaN_SENTINEL
   categoricalColumns?: {
     [columnName: string]: string[];  // Column name -> array of values for each row
   };

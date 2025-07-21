@@ -6,11 +6,12 @@ import {
   ColumnDef,
   RowSelectionState,
 } from '@tanstack/react-table';
+import { NaN_SENTINEL } from '../types';
 
 interface DataTableProps {
   headers: string[];
   rowNames: string[];
-  data: (number | null)[][];
+  data: number[][];
   title?: string;
   enableRowSelection?: boolean;
   enableColumnSelection?: boolean;
@@ -150,7 +151,7 @@ export const DataTable: React.FC<DataTableProps> = ({
         cell: info => {
           const value = info.getValue() as number;
           return <div className="text-right">
-            {value === null ? 'NaN' : value?.toFixed(4) || ''}
+            {value === NaN_SENTINEL ? 'NaN' : value?.toFixed(4) || ''}
           </div>;
         },
       });

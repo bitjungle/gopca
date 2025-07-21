@@ -3,7 +3,7 @@ import './App.css';
 import { ParseCSV, RunPCA, LoadIrisDataset } from "../wailsjs/go/main/App";
 import { DataTable, ThemeToggle } from './components';
 import { ScoresPlot, ScreePlot, LoadingsPlot, Biplot } from './components/visualizations';
-import { FileData, PCARequest, PCAResponse } from './types';
+import { FileData, PCARequest, PCAResponse, NaN_SENTINEL } from './types';
 import { ThemeProvider } from './contexts/ThemeContext';
 import logo from './assets/images/GoPCA-logo-1024-transp.png';
 
