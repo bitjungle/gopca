@@ -3,6 +3,20 @@ package types
 // Matrix represents a 2D data matrix
 type Matrix [][]float64
 
+// MissingValueStrategy defines how to handle missing values
+type MissingValueStrategy string
+
+const (
+	// MissingError returns an error when missing values are found
+	MissingError MissingValueStrategy = "error"
+	// MissingDrop removes rows containing missing values
+	MissingDrop MissingValueStrategy = "drop"
+	// MissingMean replaces missing values with column mean
+	MissingMean MissingValueStrategy = "mean"
+	// MissingMedian replaces missing values with column median
+	MissingMedian MissingValueStrategy = "median"
+)
+
 // PCAConfig holds configuration for PCA analysis
 type PCAConfig struct {
 	Components      int     `json:"components"`
@@ -11,6 +25,8 @@ type PCAConfig struct {
 	Method          string  `json:"method"` // "svd", "eigen", "nipals", or "kernel"
 	ExcludedRows    []int   `json:"excluded_rows,omitempty"`    // 0-based indices of rows to exclude
 	ExcludedColumns []int   `json:"excluded_columns,omitempty"` // 0-based indices of columns to exclude
+	// Missing value handling
+	MissingStrategy MissingValueStrategy `json:"missing_strategy,omitempty"` // How to handle missing values
 	// Kernel PCA specific parameters
 	KernelType   string  `json:"kernel_type,omitempty"`   // "rbf", "linear", "poly"
 	KernelGamma  float64 `json:"kernel_gamma,omitempty"`  // RBF/Poly parameter

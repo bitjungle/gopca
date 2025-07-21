@@ -3,11 +3,10 @@ package main
 import (
 	"context"
 	"encoding/base64"
-	"encoding/csv"
 	"fmt"
+	"math"
 	"net/url"
 	"os"
-	"strconv"
 	"strings"
 
 	"github.com/bitjungle/gopca/internal/core"
@@ -66,115 +65,6 @@ type PCAResponse struct {
 	Result  *types.PCAResult `json:"result,omitempty"`
 }
 
-// ParseCSV parses CSV content and returns data matrix and headers
-func (a *App) ParseCSV(content string) (*FileData, error) {
-	reader := csv.NewReader(strings.NewReader(content))
-	
-	// Read all records
-	records, err := reader.ReadAll()
-	if err != nil {
-		return nil, fmt.Errorf("failed to read CSV: %w", err)
-	}
-	
-	if len(records) < 2 {
-		return nil, fmt.Errorf("CSV file must have at least a header row and one data row")
-	}
-	
-	// First row is headers
-	headers := records[0]
-	
-	// Check if first column contains row names
-	hasRowNames := false
-	firstValue := records[1][0]
-	if _, err := strconv.ParseFloat(firstValue, 64); err != nil {
-		// First column is not numeric, likely row names
-		hasRowNames = true
-		headers = headers[1:] // Remove first header
-	}
-	
-	// Detect which columns are categorical vs numeric
-	startIdx := 0
-	if hasRowNames {
-		startIdx = 1
-	}
-	
-	numericCols := []int{}
-	categoricalCols := []int{}
-	categoricalData := make(map[string][]string)
-	
-	// Check each column to see if it's numeric or categorical
-	for j := startIdx; j < len(records[0]); j++ {
-		isNumeric := true
-		// Check first 10 rows or all rows if less than 10
-		checkRows := 10
-		if len(records)-1 < checkRows {
-			checkRows = len(records) - 1
-		}
-		
-		for i := 1; i <= checkRows; i++ {
-			if _, err := strconv.ParseFloat(records[i][j], 64); err != nil {
-				isNumeric = false
-				break
-			}
-		}
-		
-		if isNumeric {
-			numericCols = append(numericCols, j)
-		} else {
-			categoricalCols = append(categoricalCols, j)
-			colName := headers[j-startIdx]
-			categoricalData[colName] = []string{}
-		}
-	}
-	
-	// Parse data
-	var data [][]float64
-	var rowNames []string
-	var numericHeaders []string
-	
-	for i := 1; i < len(records); i++ {
-		record := records[i]
-		
-		if hasRowNames {
-			rowNames = append(rowNames, record[0])
-		}
-		
-		// Extract numeric data
-		row := make([]float64, len(numericCols))
-		for idx, j := range numericCols {
-			val, err := strconv.ParseFloat(record[j], 64)
-			if err != nil {
-				return nil, fmt.Errorf("invalid number at row %d, col %d: %s", i, j, record[j])
-			}
-			row[idx] = val
-		}
-		data = append(data, row)
-		
-		// Extract categorical data
-		for _, j := range categoricalCols {
-			colName := headers[j-startIdx]
-			categoricalData[colName] = append(categoricalData[colName], record[j])
-		}
-	}
-	
-	// Build numeric headers
-	for _, j := range numericCols {
-		numericHeaders = append(numericHeaders, headers[j-startIdx])
-	}
-	
-	result := &FileData{
-		Headers:  numericHeaders,
-		RowNames: rowNames,
-		Data:     data,
-	}
-	
-	// Only add categorical columns if there are any
-	if len(categoricalData) > 0 {
-		result.CategoricalColumns = categoricalData
-	}
-	
-	return result, nil
-}
 
 // RunPCA performs PCA analysis on the provided data
 func (a *App) RunPCA(request PCARequest) PCAResponse {
@@ -206,6 +96,19 @@ func (a *App) RunPCA(request PCARequest) PCAResponse {
 		
 		// Note: We don't need to filter headers and row names for PCA computation
 		// The frontend handles the display of selected data
+	}
+	
+	// Check for missing values in the data to analyze
+	// For GUI, we'll use a simple validation approach since the user can't specify strategy yet
+	for i := 0; i < len(dataToAnalyze); i++ {
+		for j := 0; j < len(dataToAnalyze[i]); j++ {
+			if math.IsNaN(dataToAnalyze[i][j]) {
+				return PCAResponse{
+					Success: false,
+					Error:   fmt.Sprintf("Missing values (NaN) detected at row %d, column %d. Please clean your data before running PCA.", i+1, j+1),
+				}
+			}
+		}
 	}
 	
 	// Create PCA configuration

@@ -136,8 +136,8 @@ func runValidate(c *cli.Context) error {
 			
 			if variance < 1e-10 {
 				colName := fmt.Sprintf("column %d", j+1)
-				if j < len(data.ColumnNames) {
-					colName = data.ColumnNames[j]
+				if j < len(data.Headers) {
+					colName = data.Headers[j]
 				}
 				warnings = append(warnings, fmt.Sprintf("%s has near-zero variance", colName))
 			}
@@ -156,8 +156,8 @@ func runValidate(c *cli.Context) error {
 		missingPercent := float64(missingCount) / float64(data.Rows) * 100
 		if missingPercent > 50 {
 			colName := fmt.Sprintf("column %d", j+1)
-			if j < len(data.ColumnNames) {
-				colName = data.ColumnNames[j]
+			if j < len(data.Headers) {
+				colName = data.Headers[j]
 			}
 			warnings = append(warnings, fmt.Sprintf("%s has %.1f%% missing values", colName, missingPercent))
 		}

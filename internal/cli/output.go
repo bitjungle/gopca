@@ -110,7 +110,7 @@ func convertToPCAOutputData(result *types.PCAResult, data *CSVData, includeMetri
 	
 	// Create feature data
 	featureData := types.FeatureData{
-		Names:    data.ColumnNames,
+		Names:    data.Headers,
 		Loadings: result.Loadings,
 		Means:    result.Means,
 		StdDevs:  result.StdDevs,
@@ -245,8 +245,8 @@ func outputTableFormat(result *types.PCAResult, data *CSVData,
 		fmt.Println("──────────────────────────────────────────────────────────────")
 		
 		// Add loading rows
-		for i := 0; i < len(data.ColumnNames); i++ {
-			fmt.Printf("%-25s", data.ColumnNames[i])
+		for i := 0; i < len(data.Headers); i++ {
+			fmt.Printf("%-25s", data.Headers[i])
 			for j := 0; j < len(result.ComponentLabels); j++ {
 				fmt.Printf("%12.4f", result.Loadings[i][j])
 			}
