@@ -1,7 +1,8 @@
-import { useState } from 'react';
+import React, { useState } from 'react';
 import './App.css';
 import { ParseCSV, RunPCA } from "../wailsjs/go/main/App";
 import { DataTable } from './components/DataTable';
+import { ScoresPlot } from './components/visualizations';
 import { FileData, PCARequest, PCAResponse } from './types';
 import logo from './assets/images/GoPCA-logo-1024.png';
 
@@ -46,23 +47,23 @@ function App() {
         }
     };
     
-    const handleRowSelectionChange = (selectedRows: number[]) => {
+    const handleRowSelectionChange = React.useCallback((selectedRows: number[]) => {
         // Convert selected indices to excluded indices
         if (fileData) {
             const allIndices = Array.from({ length: fileData.data.length }, (_, i) => i);
             const excluded = allIndices.filter(i => !selectedRows.includes(i));
             setExcludedRows(excluded);
         }
-    };
+    }, [fileData]);
     
-    const handleColumnSelectionChange = (selectedColumns: number[]) => {
+    const handleColumnSelectionChange = React.useCallback((selectedColumns: number[]) => {
         // Convert selected indices to excluded indices
         if (fileData) {
             const allIndices = Array.from({ length: fileData.headers.length }, (_, i) => i);
             const excluded = allIndices.filter(i => !selectedColumns.includes(i));
             setExcludedColumns(excluded);
         }
-    };
+    }, [fileData]);
     
     const runPCA = async () => {
         if (!fileData) return;
@@ -234,7 +235,7 @@ function App() {
                                 <h3 className="text-lg font-semibold mb-2">Explained Variance</h3>
                                 <div className="space-y-2">
                                     {pcaResponse.result.explained_variance.map((variance, i) => {
-                                        const percentage = variance * 100;
+                                        const percentage = variance;
                                         return (
                                             <div key={i} className="flex justify-between">
                                                 <span>{pcaResponse.result?.component_labels?.[i] || `PC${i+1}`}:</span>
@@ -246,12 +247,26 @@ function App() {
                                         <div className="flex justify-between">
                                             <span>Cumulative:</span>
                                             <span>
-                                                {(pcaResponse.result.cumulative_variance[pcaResponse.result.cumulative_variance.length - 1] * 100).toFixed(2)}%
+                                                {pcaResponse.result.cumulative_variance[pcaResponse.result.cumulative_variance.length - 1].toFixed(2)}%
                                             </span>
                                         </div>
                                     </div>
                                 </div>
                             </div>
+                            
+                            {/* Scores Plot */}
+                            {pcaResponse.result.scores.length > 0 && pcaResponse.result.scores[0].length >= 2 && (
+                                <div className="mt-6">
+                                    <h3 className="text-lg font-semibold mb-4">Scores Plot</h3>
+                                    <div className="bg-gray-700 rounded-lg p-4" style={{ height: '500px' }}>
+                                        <ScoresPlot
+                                            pcaResult={pcaResponse.result}
+                                            rowNames={fileData?.rowNames || []}
+                                        />
+                                    </div>
+                                </div>
+                            )}
+                            
                         </div>
                     )}
                 </div>
