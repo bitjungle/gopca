@@ -5,6 +5,7 @@ import (
 	"encoding/base64"
 	"encoding/csv"
 	"fmt"
+	"math"
 	"net/url"
 	"os"
 	"strconv"
@@ -69,6 +70,9 @@ type PCAResponse struct {
 // ParseCSV parses CSV content and returns data matrix and headers
 func (a *App) ParseCSV(content string) (*FileData, error) {
 	reader := csv.NewReader(strings.NewReader(content))
+	reader.FieldsPerRecord = -1 // Allow variable number of fields
+	reader.LazyQuotes = true    // Allow lazy quotes
+	reader.TrimLeadingSpace = true // Trim leading space
 	
 	// Read all records
 	records, err := reader.ReadAll()
@@ -112,9 +116,13 @@ func (a *App) ParseCSV(content string) (*FileData, error) {
 		}
 		
 		for i := 1; i <= checkRows; i++ {
-			if _, err := strconv.ParseFloat(records[i][j], 64); err != nil {
-				isNumeric = false
-				break
+			val := strings.TrimSpace(records[i][j])
+			// Treat 'm' as a missing value (numeric)
+			if val != "m" {
+				if _, err := strconv.ParseFloat(val, 64); err != nil {
+					isNumeric = false
+					break
+				}
 			}
 		}
 		
@@ -142,11 +150,17 @@ func (a *App) ParseCSV(content string) (*FileData, error) {
 		// Extract numeric data
 		row := make([]float64, len(numericCols))
 		for idx, j := range numericCols {
-			val, err := strconv.ParseFloat(record[j], 64)
-			if err != nil {
-				return nil, fmt.Errorf("invalid number at row %d, col %d: %s", i, j, record[j])
+			valStr := strings.TrimSpace(record[j])
+			// Handle missing value indicator 'm'
+			if valStr == "m" {
+				row[idx] = math.NaN()
+			} else {
+				val, err := strconv.ParseFloat(valStr, 64)
+				if err != nil {
+					return nil, fmt.Errorf("invalid number at row %d, col %d: %s", i, j, record[j])
+				}
+				row[idx] = val
 			}
-			row[idx] = val
 		}
 		data = append(data, row)
 		
