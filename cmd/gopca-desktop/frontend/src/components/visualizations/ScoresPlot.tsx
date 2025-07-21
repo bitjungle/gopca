@@ -1,6 +1,7 @@
-import React from 'react';
+import React, { useRef } from 'react';
 import { ScatterChart, Scatter, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, ReferenceLine } from 'recharts';
 import { PCAResult } from '../../types';
+import { ExportButton } from '../ExportButton';
 
 interface ScoresPlotProps {
   pcaResult: PCAResult;
@@ -15,6 +16,8 @@ export const ScoresPlot: React.FC<ScoresPlotProps> = ({
   xComponent = 0, 
   yComponent = 1 
 }) => {
+  const chartRef = useRef<HTMLDivElement>(null);
+  const containerRef = useRef<HTMLDivElement>(null);
   // Transform scores data for Recharts
   const data = pcaResult.scores.map((row, index) => {
     const xVal = row[xComponent] || 0;
@@ -64,7 +67,14 @@ export const ScoresPlot: React.FC<ScoresPlotProps> = ({
 
   return (
     <div className="w-full h-full">
-      <ResponsiveContainer width="100%" height="100%">
+      <div className="flex justify-end mb-2">
+        <ExportButton 
+          chartRef={containerRef} 
+          fileName={`scores-plot-PC${xComponent + 1}-vs-PC${yComponent + 1}`}
+        />
+      </div>
+      <div ref={containerRef} className="w-full" style={{ height: 'calc(100% - 40px)' }}>
+        <ResponsiveContainer width="100%" height="100%">
         <ScatterChart
           data={data}
           margin={{ top: 20, right: 20, bottom: 60, left: 80 }}
@@ -118,7 +128,8 @@ export const ScoresPlot: React.FC<ScoresPlotProps> = ({
             stroke="#1E40AF"
           />
         </ScatterChart>
-      </ResponsiveContainer>
+        </ResponsiveContainer>
+      </div>
     </div>
   );
 };

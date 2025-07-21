@@ -2,14 +2,18 @@ package main
 
 import (
 	"context"
+	"encoding/base64"
 	"encoding/csv"
 	"fmt"
+	"net/url"
+	"os"
 	"strconv"
 	"strings"
 
 	"github.com/bitjungle/gopca/internal/core"
 	"github.com/bitjungle/gopca/internal/utils"
 	"github.com/bitjungle/gopca/pkg/types"
+	"github.com/wailsapp/wails/v2/pkg/runtime"
 )
 
 // App struct
@@ -196,5 +200,64 @@ func contains(slice []int, val int) bool {
 		}
 	}
 	return false
+}
+
+// SaveFile handles saving exported plot data
+func (a *App) SaveFile(fileName string, dataURL string) error {
+	// Show save dialog
+	filePath, err := runtime.SaveFileDialog(a.ctx, runtime.SaveDialogOptions{
+		DefaultFilename: fileName,
+		Title:          "Save Plot",
+		Filters: []runtime.FileFilter{
+			{
+				DisplayName: "PNG Image",
+				Pattern:     "*.png",
+			},
+			{
+				DisplayName: "SVG Image",
+				Pattern:     "*.svg",
+			},
+		},
+	})
+	
+	if err != nil {
+		return fmt.Errorf("failed to open save dialog: %v", err)
+	}
+	
+	// User cancelled
+	if filePath == "" {
+		return nil
+	}
+	
+	// Parse the data URL
+	parts := strings.SplitN(dataURL, ",", 2)
+	if len(parts) != 2 {
+		return fmt.Errorf("invalid data URL format")
+	}
+	
+	// Decode based on format
+	var data []byte
+	if strings.Contains(parts[0], "base64") {
+		// PNG format (base64 encoded)
+		data, err = base64.StdEncoding.DecodeString(parts[1])
+		if err != nil {
+			return fmt.Errorf("failed to decode base64 data: %v", err)
+		}
+	} else {
+		// SVG format (URL encoded)
+		decodedSVG, err := url.QueryUnescape(parts[1])
+		if err != nil {
+			return fmt.Errorf("failed to decode SVG data: %v", err)
+		}
+		data = []byte(decodedSVG)
+	}
+	
+	// Write to file
+	err = os.WriteFile(filePath, data, 0644)
+	if err != nil {
+		return fmt.Errorf("failed to write file: %v", err)
+	}
+	
+	return nil
 }
 

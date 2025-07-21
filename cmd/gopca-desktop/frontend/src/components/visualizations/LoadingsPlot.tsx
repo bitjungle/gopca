@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { 
   BarChart, 
   Bar, 
@@ -13,6 +13,7 @@ import {
   Cell
 } from 'recharts';
 import { PCAResult } from '../../types';
+import { ExportButton } from '../ExportButton';
 
 interface LoadingsPlotProps {
   pcaResult: PCAResult;
@@ -25,6 +26,7 @@ export const LoadingsPlot: React.FC<LoadingsPlotProps> = ({
   selectedComponent = 0,
   variableThreshold = 50
 }) => {
+  const chartRef = useRef<HTMLDivElement>(null);
   // Auto-detect plot type based on number of variables
   const numVariables = pcaResult.loadings[0]?.length || 0;
   const autoPlotType = numVariables > variableThreshold ? 'line' : 'bar';
@@ -89,25 +91,31 @@ export const LoadingsPlot: React.FC<LoadingsPlotProps> = ({
   };
 
   return (
-    <div className="w-full h-full">
-      {/* Header with plot type selector */}
+    <div className="w-full h-full" ref={chartRef}>
+      {/* Header with plot type selector and export button */}
       <div className="flex items-center justify-between mb-4">
         <h4 className="text-md font-medium text-gray-300">
           {componentLabel} Loadings ({variance}% variance)
         </h4>
-        <div className="flex items-center gap-2">
-          <span className="text-sm text-gray-400">Plot type:</span>
-          <select
-            value={plotType}
-            onChange={(e) => setPlotType(e.target.value as 'bar' | 'line')}
-            className="px-2 py-1 bg-gray-700 rounded text-sm"
-          >
-            <option value="bar">Bar Chart</option>
-            <option value="line">Line Chart</option>
-          </select>
-          {plotType !== autoPlotType && (
-            <span className="text-xs text-yellow-500">(manual)</span>
-          )}
+        <div className="flex items-center gap-4">
+          <div className="flex items-center gap-2">
+            <span className="text-sm text-gray-400">Plot type:</span>
+            <select
+              value={plotType}
+              onChange={(e) => setPlotType(e.target.value as 'bar' | 'line')}
+              className="px-2 py-1 bg-gray-700 rounded text-sm"
+            >
+              <option value="bar">Bar Chart</option>
+              <option value="line">Line Chart</option>
+            </select>
+            {plotType !== autoPlotType && (
+              <span className="text-xs text-yellow-500">(manual)</span>
+            )}
+          </div>
+          <ExportButton 
+            chartRef={chartRef} 
+            fileName={`loadings-plot-${componentLabel}`}
+          />
         </div>
       </div>
 

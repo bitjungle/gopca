@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useRef } from 'react';
 import { 
   ComposedChart, 
   Bar, 
@@ -12,6 +12,7 @@ import {
   ReferenceLine
 } from 'recharts';
 import { PCAResult } from '../../types';
+import { ExportButton } from '../ExportButton';
 
 interface ScreePlotProps {
   pcaResult: PCAResult;
@@ -24,6 +25,8 @@ export const ScreePlot: React.FC<ScreePlotProps> = ({
   showCumulative = true,
   elbowThreshold = 80 
 }) => {
+  const chartRef = useRef<HTMLDivElement>(null);
+  const containerRef = useRef<HTMLDivElement>(null);
   // Transform variance data for Recharts
   const data = pcaResult.explained_variance.map((variance, index) => ({
     component: pcaResult.component_labels?.[index] || `PC${index + 1}`,
@@ -47,7 +50,14 @@ export const ScreePlot: React.FC<ScreePlotProps> = ({
 
   return (
     <div className="w-full h-full">
-      <ResponsiveContainer width="100%" height="100%">
+      <div className="flex justify-end mb-2">
+        <ExportButton 
+          chartRef={containerRef} 
+          fileName="scree-plot"
+        />
+      </div>
+      <div ref={containerRef} className="w-full" style={{ height: 'calc(100% - 40px)' }}>
+        <ResponsiveContainer width="100%" height="100%">
         <ComposedChart 
           data={data} 
           margin={{ top: 20, right: 20, bottom: 60, left: 80 }}
@@ -166,7 +176,8 @@ export const ScreePlot: React.FC<ScreePlotProps> = ({
             />
           )}
         </ComposedChart>
-      </ResponsiveContainer>
+        </ResponsiveContainer>
+      </div>
     </div>
   );
 };

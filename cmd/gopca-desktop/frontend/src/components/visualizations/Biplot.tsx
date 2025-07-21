@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useRef } from 'react';
 import { 
   ScatterChart, 
   Scatter, 
@@ -10,6 +10,7 @@ import {
   ReferenceLine
 } from 'recharts';
 import { PCAResult } from '../../types';
+import { ExportButton } from '../ExportButton';
 
 interface BiplotProps {
   pcaResult: PCAResult;
@@ -27,6 +28,8 @@ export const Biplot: React.FC<BiplotProps> = ({
   showLoadingLabels = true
 }) => {
   const [hoveredVariable, setHoveredVariable] = useState<number | null>(null);
+  const chartRef = useRef<HTMLDivElement>(null);
+  const containerRef = useRef<HTMLDivElement>(null);
 
   // Transform scores data
   const scoresData = pcaResult.scores.map((row, index) => ({
@@ -215,22 +218,29 @@ export const Biplot: React.FC<BiplotProps> = ({
         <h4 className="text-md font-medium text-gray-300">
           Biplot: {xLabel} vs {yLabel}
         </h4>
-        <div className="flex items-center gap-4 text-sm text-gray-400">
-          <span className="flex items-center gap-2">
-            <span className="w-3 h-3 bg-blue-500 rounded-full"></span>
-            Scores
-          </span>
-          <span className="flex items-center gap-2">
-            <svg width="20" height="12">
-              <line x1="0" y1="6" x2="15" y2="6" stroke="#10B981" strokeWidth="2" />
-              <path d="M 15 6 L 12 3 L 12 9 Z" fill="#10B981" />
-            </svg>
-            Loadings
-          </span>
+        <div className="flex items-center gap-4">
+          <div className="flex items-center gap-4 text-sm text-gray-400">
+            <span className="flex items-center gap-2">
+              <span className="w-3 h-3 bg-blue-500 rounded-full"></span>
+              Scores
+            </span>
+            <span className="flex items-center gap-2">
+              <svg width="20" height="12">
+                <line x1="0" y1="6" x2="15" y2="6" stroke="#10B981" strokeWidth="2" />
+                <path d="M 15 6 L 12 3 L 12 9 Z" fill="#10B981" />
+              </svg>
+              Loadings
+            </span>
+          </div>
+          <ExportButton 
+            chartRef={containerRef} 
+            fileName={`biplot-PC${xComponent + 1}-vs-PC${yComponent + 1}`}
+          />
         </div>
       </div>
       
-      <ResponsiveContainer width="100%" height="95%">
+      <div ref={containerRef} className="w-full" style={{ height: 'calc(100% - 40px)' }}>
+        <ResponsiveContainer width="100%" height="100%">
         <ScatterChart
           margin={{ top: 20, right: 20, bottom: 60, left: 80 }}
         >
@@ -309,7 +319,8 @@ export const Biplot: React.FC<BiplotProps> = ({
             shape={<LoadingEndpoint />}
           />
         </ScatterChart>
-      </ResponsiveContainer>
+        </ResponsiveContainer>
+      </div>
     </div>
   );
 };
