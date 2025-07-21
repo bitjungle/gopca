@@ -43,6 +43,15 @@ export const Biplot: React.FC<BiplotProps> = ({
   
   const [isFullscreen, setIsFullscreen] = useState(false);
   const chartTheme = useChartTheme();
+  
+  // Check if loadings are available (not available for Kernel PCA)
+  if (!pcaResult.loadings || pcaResult.loadings.length === 0) {
+    return (
+      <div className="w-full h-full flex items-center justify-center text-gray-400">
+        <p>Biplot is not available for this PCA method (loadings required)</p>
+      </div>
+    );
+  }
 
   // Create color map for groups
   const groupColorMap = useMemo(() => {

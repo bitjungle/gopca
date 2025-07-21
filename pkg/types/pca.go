@@ -5,22 +5,31 @@ type Matrix [][]float64
 
 // PCAConfig holds configuration for PCA analysis
 type PCAConfig struct {
-	Components      int    `json:"components"`
-	MeanCenter      bool   `json:"mean_center"`
-	StandardScale   bool   `json:"standard_scale"`
-	Method          string `json:"method"` // "svd" or "eigen"
-	ExcludedRows    []int  `json:"excluded_rows,omitempty"`    // 0-based indices of rows to exclude
-	ExcludedColumns []int  `json:"excluded_columns,omitempty"` // 0-based indices of columns to exclude
+	Components      int     `json:"components"`
+	MeanCenter      bool    `json:"mean_center"`
+	StandardScale   bool    `json:"standard_scale"`
+	Method          string  `json:"method"` // "svd", "eigen", "nipals", or "kernel"
+	ExcludedRows    []int   `json:"excluded_rows,omitempty"`    // 0-based indices of rows to exclude
+	ExcludedColumns []int   `json:"excluded_columns,omitempty"` // 0-based indices of columns to exclude
+	// Kernel PCA specific parameters
+	KernelType   string  `json:"kernel_type,omitempty"`   // "rbf", "linear", "poly"
+	KernelGamma  float64 `json:"kernel_gamma,omitempty"`  // RBF/Poly parameter
+	KernelDegree int     `json:"kernel_degree,omitempty"` // Poly parameter
+	KernelCoef0  float64 `json:"kernel_coef0,omitempty"`  // Poly parameter
 }
 
 // PCAResult contains the results of PCA analysis
 type PCAResult struct {
-	Scores          Matrix    `json:"scores"`
-	Loadings        Matrix    `json:"loadings"`
-	ExplainedVar    []float64 `json:"explained_variance"`
-	CumulativeVar   []float64 `json:"cumulative_variance"`
-	ComponentLabels []string  `json:"component_labels"`
-	VariableLabels  []string  `json:"variable_labels,omitempty"` // Original variable names
+	Scores               Matrix    `json:"scores"`
+	Loadings             Matrix    `json:"loadings"`
+	ExplainedVar         []float64 `json:"explained_variance"`
+	ExplainedVarRatio    []float64 `json:"explained_variance_ratio"` // Percentage of variance explained
+	CumulativeVar        []float64 `json:"cumulative_variance"`
+	ComponentLabels      []string  `json:"component_labels"`
+	VariableLabels       []string  `json:"variable_labels,omitempty"` // Original variable names
+	ComponentsComputed   int       `json:"components_computed"`       // Number of components actually computed
+	Method               string    `json:"method"`                    // Method used (svd, nipals, kernel)
+	PreprocessingApplied bool      `json:"preprocessing_applied"`     // Whether preprocessing was applied
 	// Preprocessing statistics
 	Means   []float64 `json:"means,omitempty"`   // Original feature means
 	StdDevs []float64 `json:"stddevs,omitempty"` // Original feature std devs

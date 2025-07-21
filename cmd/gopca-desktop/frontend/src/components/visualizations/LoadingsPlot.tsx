@@ -29,6 +29,16 @@ export const LoadingsPlot: React.FC<LoadingsPlotProps> = ({
 }) => {
   const chartRef = useRef<HTMLDivElement>(null);
   const chartTheme = useChartTheme();
+  
+  // Check if loadings are available (not available for Kernel PCA)
+  if (!pcaResult.loadings || pcaResult.loadings.length === 0) {
+    return (
+      <div className="w-full h-full flex items-center justify-center text-gray-400">
+        <p>Loadings are not available for this PCA method</p>
+      </div>
+    );
+  }
+  
   // Auto-detect plot type based on number of variables
   const numVariables = pcaResult.loadings[0]?.length || 0;
   const autoPlotType = numVariables > variableThreshold ? 'line' : 'bar';

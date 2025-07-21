@@ -26,6 +26,16 @@ func NewPCAEngine() types.PCAEngine {
 	return &PCAImpl{}
 }
 
+// NewPCAEngineForMethod creates a PCA engine for the specified method
+func NewPCAEngineForMethod(method string) types.PCAEngine {
+	switch method {
+	case "kernel":
+		return NewKernelPCAEngine()
+	default:
+		return NewPCAEngine()
+	}
+}
+
 // Fit trains the PCA model on the provided data
 func (p *PCAImpl) Fit(data types.Matrix, config types.PCAConfig) (*types.PCAResult, error) {
 	if err := p.validateInput(data, config); err != nil {
@@ -74,14 +84,30 @@ func (p *PCAImpl) Fit(data types.Matrix, config types.PCAConfig) (*types.PCAResu
 		componentLabels[i] = fmt.Sprintf("PC%d", i+1)
 	}
 
+	// Calculate explained variance ratio
+	totalVar := 0.0
+	for _, v := range explainedVar {
+		totalVar += v
+	}
+	explainedVarRatio := make([]float64, len(explainedVar))
+	for i, v := range explainedVar {
+		if totalVar > 0 {
+			explainedVarRatio[i] = v / totalVar * 100
+		}
+	}
+	
 	return &types.PCAResult{
-		Scores:          denseToMatrix(scores),
-		Loadings:        denseToMatrix(loadings),
-		ExplainedVar:    explainedVar,
-		CumulativeVar:   cumulativeVar,
-		ComponentLabels: componentLabels,
-		Means:           p.mean,
-		StdDevs:         p.stdDev,
+		Scores:               denseToMatrix(scores),
+		Loadings:             denseToMatrix(loadings),
+		ExplainedVar:         explainedVar,
+		ExplainedVarRatio:    explainedVarRatio,
+		CumulativeVar:        cumulativeVar,
+		ComponentLabels:      componentLabels,
+		ComponentsComputed:   actualComponents,
+		Method:               config.Method,
+		PreprocessingApplied: config.MeanCenter || config.StandardScale,
+		Means:                p.mean,
+		StdDevs:              p.stdDev,
 	}, nil
 }
 

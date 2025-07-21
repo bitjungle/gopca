@@ -42,9 +42,16 @@ EXAMPLES:
   # Exclude specific rows and columns
   gopca-cli analyze --exclude-rows 1,5-10 --exclude-cols 3,4 data/iris_data.csv
 
+  # Kernel PCA with RBF kernel
+  gopca-cli analyze --method kernel --kernel-type rbf --kernel-gamma 0.5 data/iris_data.csv
+
+  # Kernel PCA with polynomial kernel
+  gopca-cli analyze --method kernel --kernel-type poly --kernel-degree 3 data/iris_data.csv
+
 The analysis includes:
   - Data preprocessing (mean centering, scaling)
-  - PCA computation using SVD or NIPALS algorithm
+  - PCA computation using SVD, NIPALS, or Kernel methods
+  - Kernel PCA for non-linear dimensionality reduction
   - Optional statistical metrics (Hotelling's T², Mahalanobis distances, RSS)
   - Multiple output formats (table, CSV, JSON)`,
 		Flags: []cli.Flag{
@@ -82,7 +89,7 @@ The analysis includes:
 			},
 			&cli.StringFlag{
 				Name:  "method",
-				Usage: "PCA algorithm: svd, nipals",
+				Usage: "PCA algorithm: svd, nipals, kernel",
 				Value: "svd",
 			},
 			&cli.BoolFlag{
@@ -149,6 +156,27 @@ The analysis includes:
 				Name:  "exclude-cols",
 				Usage: "Exclude columns by index (1-based, e.g., '2,4-6,8')",
 			},
+			
+			// Kernel PCA parameters
+			&cli.StringFlag{
+				Name:  "kernel-type",
+				Usage: "Kernel type for kernel PCA: rbf, linear, poly",
+			},
+			&cli.Float64Flag{
+				Name:  "kernel-gamma",
+				Usage: "Gamma parameter for RBF and polynomial kernels",
+				Value: 1.0,
+			},
+			&cli.IntFlag{
+				Name:  "kernel-degree",
+				Usage: "Degree for polynomial kernel",
+				Value: 3,
+			},
+			&cli.Float64Flag{
+				Name:  "kernel-coef0",
+				Usage: "Independent term for polynomial kernel",
+				Value: 0.0,
+			},
 		},
 		Action: runAnalyze,
 		Before: validateAnalyzeFlags,
@@ -178,10 +206,10 @@ func validateAnalyzeFlags(c *cli.Context) error {
 	// Validate method
 	method := c.String("method")
 	switch method {
-	case "svd", "nipals":
+	case "svd", "nipals", "kernel":
 		// Valid methods
 	default:
-		return fmt.Errorf("invalid PCA method: %s (must be svd or nipals)", method)
+		return fmt.Errorf("invalid PCA method: %s (must be svd, nipals, or kernel)", method)
 	}
 	
 	// Validate scale
@@ -201,6 +229,34 @@ func validateAnalyzeFlags(c *cli.Context) error {
 	// Validate delimiter
 	if len(c.String("delimiter")) != 1 {
 		return fmt.Errorf("delimiter must be a single character")
+	}
+	
+	// Validate kernel parameters if kernel method is selected
+	if method == "kernel" {
+		kernelType := c.String("kernel-type")
+		if kernelType == "" {
+			return fmt.Errorf("kernel-type must be specified when using kernel PCA method")
+		}
+		
+		switch kernelType {
+		case "rbf", "linear", "poly":
+			// Valid kernel types
+		default:
+			return fmt.Errorf("invalid kernel type: %s (must be rbf, linear, or poly)", kernelType)
+		}
+		
+		// Validate kernel-specific parameters
+		if kernelType == "rbf" || kernelType == "poly" {
+			if c.Float64("kernel-gamma") <= 0 {
+				return fmt.Errorf("kernel-gamma must be positive for %s kernel", kernelType)
+			}
+		}
+		
+		if kernelType == "poly" {
+			if c.Int("kernel-degree") < 1 {
+				return fmt.Errorf("kernel-degree must be at least 1 for polynomial kernel")
+			}
+		}
 	}
 	
 	return nil
@@ -319,6 +375,14 @@ func runAnalyze(c *cli.Context) error {
 		ExcludedColumns: excludedCols,
 	}
 	
+	// Add kernel parameters if using kernel PCA
+	if c.String("method") == "kernel" {
+		pcaConfig.KernelType = c.String("kernel-type")
+		pcaConfig.KernelGamma = c.Float64("kernel-gamma")
+		pcaConfig.KernelDegree = c.Int("kernel-degree")
+		pcaConfig.KernelCoef0 = c.Float64("kernel-coef0")
+	}
+	
 	// Check if requested components exceed available dimensions
 	maxComponents := min(data.Rows-1, data.Columns)
 	if pcaConfig.Components > maxComponents {
@@ -326,27 +390,38 @@ func runAnalyze(c *cli.Context) error {
 			pcaConfig.Components, maxComponents)
 	}
 	
-	// Apply preprocessing if needed
-	preprocessor := core.NewPreprocessor(
-		pcaConfig.MeanCenter,
-		pcaConfig.StandardScale,
-		c.String("scale") == "robust",
-	)
+	// Apply preprocessing if needed (kernel PCA typically doesn't use standard preprocessing)
+	var processedData types.Matrix
+	var preprocessor *core.Preprocessor
 	
-	if verbose {
-		fmt.Println("\nPreprocessing data...")
-		if pcaConfig.MeanCenter {
-			fmt.Println("  - Mean centering")
+	if pcaConfig.Method == "kernel" {
+		// Kernel PCA handles its own centering in the kernel space
+		processedData = data.Matrix
+		if verbose {
+			fmt.Println("\nSkipping standard preprocessing for kernel PCA")
 		}
-		if c.String("scale") != "none" {
-			fmt.Printf("  - Applying %s scaling\n", c.String("scale"))
+	} else {
+		preprocessor = core.NewPreprocessor(
+			pcaConfig.MeanCenter,
+			pcaConfig.StandardScale,
+			c.String("scale") == "robust",
+		)
+		
+		if verbose {
+			fmt.Println("\nPreprocessing data...")
+			if pcaConfig.MeanCenter {
+				fmt.Println("  - Mean centering")
+			}
+			if c.String("scale") != "none" {
+				fmt.Printf("  - Applying %s scaling\n", c.String("scale"))
+			}
 		}
-	}
-	
-	// Preprocess data
-	processedData, err := preprocessor.FitTransform(data.Matrix)
-	if err != nil {
-		return fmt.Errorf("preprocessing failed: %w", err)
+		
+		// Preprocess data
+		processedData, err = preprocessor.FitTransform(data.Matrix)
+		if err != nil {
+			return fmt.Errorf("preprocessing failed: %w", err)
+		}
 	}
 	
 	// Run PCA
@@ -354,20 +429,22 @@ func runAnalyze(c *cli.Context) error {
 		fmt.Printf("\nRunning PCA analysis using %s method...\n", pcaConfig.Method)
 	}
 	
-	engine := core.NewPCAEngine()
+	engine := core.NewPCAEngineForMethod(pcaConfig.Method)
 	result, err := engine.Fit(processedData, pcaConfig)
 	if err != nil {
 		return fmt.Errorf("PCA analysis failed: %w", err)
 	}
 	
-	// Add preprocessing statistics to the result
-	result.Means = preprocessor.GetMeans()
-	result.StdDevs = preprocessor.GetStdDevs()
+	// Add preprocessing statistics to the result (if preprocessing was done)
+	if preprocessor != nil {
+		result.Means = preprocessor.GetMeans()
+		result.StdDevs = preprocessor.GetStdDevs()
+	}
 	
 	if verbose {
 		fmt.Println("\n✓ PCA analysis completed successfully")
 		fmt.Printf("  - Explained variance: %.1f%% (PC1), %.1f%% (PC2)\n", 
-			result.ExplainedVar[0], result.ExplainedVar[1])
+			result.ExplainedVarRatio[0], result.ExplainedVarRatio[1])
 		fmt.Printf("  - Cumulative variance: %.1f%%\n", 
 			result.CumulativeVar[len(result.CumulativeVar)-1])
 	}
