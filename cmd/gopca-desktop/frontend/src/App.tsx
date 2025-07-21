@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import './App.css';
 import { ParseCSV, RunPCA } from "../wailsjs/go/main/App";
 import { DataTable } from './components/DataTable';
-import { ScoresPlot, ScreePlot, LoadingsPlot } from './components/visualizations';
+import { ScoresPlot, ScreePlot, LoadingsPlot, Biplot } from './components/visualizations';
 import { FileData, PCARequest, PCAResponse } from './types';
 import logo from './assets/images/GoPCA-logo-1024-transp.png';
 
@@ -15,7 +15,7 @@ function App() {
     // Selection state
     const [excludedRows, setExcludedRows] = useState<number[]>([]);
     const [excludedColumns, setExcludedColumns] = useState<number[]>([]);
-    const [selectedPlot, setSelectedPlot] = useState<'scores' | 'scree' | 'loadings'>('scores');
+    const [selectedPlot, setSelectedPlot] = useState<'scores' | 'scree' | 'loadings' | 'biplot'>('scores');
     const [selectedXComponent, setSelectedXComponent] = useState(0);
     const [selectedYComponent, setSelectedYComponent] = useState(1);
     const [selectedLoadingComponent, setSelectedLoadingComponent] = useState(0);
@@ -266,7 +266,7 @@ function App() {
                                 <div className="flex items-center justify-between mb-4">
                                     <h3 className="text-lg font-semibold">Visualizations</h3>
                                     <div className="flex items-center gap-4">
-                                        {selectedPlot === 'scores' && pcaResponse.result.scores[0]?.length > 2 && (
+                                        {(selectedPlot === 'scores' || selectedPlot === 'biplot') && pcaResponse.result.scores[0]?.length > 2 && (
                                             <>
                                                 <div className="flex items-center gap-2">
                                                     <label className="text-sm text-gray-400">X-axis:</label>
@@ -316,12 +316,13 @@ function App() {
                                         )}
                                         <select
                                             value={selectedPlot}
-                                            onChange={(e) => setSelectedPlot(e.target.value as 'scores' | 'scree' | 'loadings')}
+                                            onChange={(e) => setSelectedPlot(e.target.value as 'scores' | 'scree' | 'loadings' | 'biplot')}
                                             className="px-3 py-2 bg-gray-700 rounded-lg"
                                         >
                                             <option value="scores">Scores Plot</option>
                                             <option value="scree">Scree Plot</option>
                                             <option value="loadings">Loadings Plot</option>
+                                            <option value="biplot">Biplot</option>
                                         </select>
                                     </div>
                                 </div>
@@ -344,6 +345,13 @@ function App() {
                                         <LoadingsPlot
                                             pcaResult={pcaResponse.result}
                                             selectedComponent={selectedLoadingComponent}
+                                        />
+                                    ) : selectedPlot === 'biplot' ? (
+                                        <Biplot
+                                            pcaResult={pcaResponse.result}
+                                            rowNames={fileData?.rowNames || []}
+                                            xComponent={selectedXComponent}
+                                            yComponent={selectedYComponent}
                                         />
                                     ) : (
                                         <div className="w-full h-full flex items-center justify-center text-gray-400">

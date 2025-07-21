@@ -1,0 +1,315 @@
+import React, { useState } from 'react';
+import { 
+  ScatterChart, 
+  Scatter, 
+  XAxis, 
+  YAxis, 
+  CartesianGrid, 
+  Tooltip, 
+  ResponsiveContainer, 
+  ReferenceLine
+} from 'recharts';
+import { PCAResult } from '../../types';
+
+interface BiplotProps {
+  pcaResult: PCAResult;
+  rowNames: string[];
+  xComponent?: number; // 0-based index
+  yComponent?: number; // 0-based index
+  showLoadingLabels?: boolean;
+}
+
+export const Biplot: React.FC<BiplotProps> = ({ 
+  pcaResult, 
+  rowNames,
+  xComponent = 0, 
+  yComponent = 1,
+  showLoadingLabels = true
+}) => {
+  const [hoveredVariable, setHoveredVariable] = useState<number | null>(null);
+
+  // Transform scores data
+  const scoresData = pcaResult.scores.map((row, index) => ({
+    x: row[xComponent] || 0,
+    y: row[yComponent] || 0,
+    name: rowNames[index] || `Sample ${index + 1}`,
+    type: 'score'
+  }));
+
+  // Calculate scores range for plot bounds
+  const scoreXValues = scoresData.map(d => d.x);
+  const scoreYValues = scoresData.map(d => d.y);
+  const scoreXMin = Math.min(...scoreXValues);
+  const scoreXMax = Math.max(...scoreXValues);
+  const scoreYMin = Math.min(...scoreYValues);
+  const scoreYMax = Math.max(...scoreYValues);
+  
+  // Calculate plot bounds (including some padding)
+  const xRange = Math.max(Math.abs(scoreXMin), Math.abs(scoreXMax)) * 1.2;
+  const yRange = Math.max(Math.abs(scoreYMin), Math.abs(scoreYMax)) * 1.2;
+  const plotMax = Math.max(xRange, yRange);
+
+  // Calculate loading vectors and find the maximum
+  const loadingVectors = pcaResult.loadings.map(row => {
+    const x = row[xComponent] || 0;
+    const y = row[yComponent] || 0;
+    return {
+      x,
+      y,
+      magnitude: Math.sqrt(x * x + y * y)
+    };
+  });
+  
+  const maxLoadingMagnitude = Math.max(...loadingVectors.map(v => v.magnitude));
+  
+  // Scale factor to make the largest loading vector reach 70% of plot bounds
+  const scaleFactor = maxLoadingMagnitude > 0 ? (plotMax * 0.7) / maxLoadingMagnitude : 1;
+
+  // Transform loadings data for display
+  const loadingsData = pcaResult.loadings.map((row, index) => {
+    const originalX = row[xComponent] || 0;
+    const originalY = row[yComponent] || 0;
+    
+    // Scale loadings to be visible
+    const scaledX = originalX * scaleFactor;
+    const scaledY = originalY * scaleFactor;
+    const magnitude = Math.sqrt(scaledX * scaledX + scaledY * scaledY);
+    
+    return {
+      index,
+      x: scaledX,
+      y: scaledY,
+      magnitude,
+      label: pcaResult.variable_labels?.[index] || `Var${index + 1}`,
+      originalX,
+      originalY
+    };
+  });
+
+  // Sort loadings by magnitude and get top N for labeling
+  const topLoadings = [...loadingsData]
+    .sort((a, b) => b.magnitude - a.magnitude)
+    .slice(0, 8); // Show labels for top 8 variables
+
+  // Set symmetric axis ranges based on plot bounds
+  const axisRange = plotMax;
+
+  // Get variance percentages for axis labels
+  const xVariance = pcaResult.explained_variance[xComponent]?.toFixed(1) || '0';
+  const yVariance = pcaResult.explained_variance[yComponent]?.toFixed(1) || '0';
+  const xLabel = `PC${xComponent + 1} (${xVariance}%)`;
+  const yLabel = `PC${yComponent + 1} (${yVariance}%)`;
+
+  // Custom dot for loading endpoints
+  const LoadingEndpoint = (props: any) => {
+    const { cx, cy, payload } = props;
+    if (!payload || !payload.isLoadingEnd) return null;
+    
+    const { index, label } = payload;
+    const isHovered = hoveredVariable === index;
+    const isTopLoading = topLoadings.some(tl => tl.index === index);
+    const shouldShowLabel = showLoadingLabels && (isTopLoading || isHovered);
+    
+    return (
+      <g>
+        <circle
+          cx={cx}
+          cy={cy}
+          r={4}
+          fill={isHovered ? "#EF4444" : "#10B981"}
+          onMouseEnter={() => setHoveredVariable(index)}
+          onMouseLeave={() => setHoveredVariable(null)}
+        />
+        {shouldShowLabel && (
+          <text
+            x={cx + (payload.x > 0 ? 10 : -10)}
+            y={cy}
+            fill="#E5E7EB"
+            fontSize="12"
+            fontWeight="500"
+            textAnchor={payload.x > 0 ? "start" : "end"}
+            dominantBaseline="middle"
+          >
+            {label}
+          </text>
+        )}
+      </g>
+    );
+  };
+
+  // Create data for loading endpoints
+  const loadingEndpoints = loadingsData.map(loading => ({
+    ...loading,
+    isLoadingEnd: true
+  }));
+
+  // Custom shape to draw loading arrows from origin
+  const LoadingArrows = () => {
+    return (
+      <g>
+        {loadingsData.map(loading => {
+          const isHovered = hoveredVariable === loading.index;
+          const angle = Math.atan2(loading.y, loading.x);
+          const arrowLength = 0.3;
+          const arrowAngle = 0.4;
+          
+          // Calculate arrow head points
+          const headX1 = loading.x - arrowLength * Math.cos(angle - arrowAngle);
+          const headY1 = loading.y - arrowLength * Math.sin(angle - arrowAngle);
+          const headX2 = loading.x - arrowLength * Math.cos(angle + arrowAngle);
+          const headY2 = loading.y - arrowLength * Math.sin(angle + arrowAngle);
+          
+          return (
+            <g key={`arrow-${loading.index}`}>
+              <line
+                x1={0}
+                y1={0}
+                x2={loading.x}
+                y2={loading.y}
+                stroke={isHovered ? "#EF4444" : "#10B981"}
+                strokeWidth={isHovered ? 3 : 2}
+                onMouseEnter={() => setHoveredVariable(loading.index)}
+                onMouseLeave={() => setHoveredVariable(null)}
+              />
+              <path
+                d={`M ${loading.x} ${loading.y} L ${headX1} ${headY1} L ${headX2} ${headY2} Z`}
+                fill={isHovered ? "#EF4444" : "#10B981"}
+              />
+            </g>
+          );
+        })}
+      </g>
+    );
+  };
+
+  // Custom tooltip
+  const CustomTooltip = ({ active, payload }: any) => {
+    if (active && payload && payload.length) {
+      const data = payload[0].payload;
+      
+      if (data.type === 'score') {
+        return (
+          <div className="bg-gray-800 p-3 rounded shadow-lg border border-gray-600">
+            <p className="text-white font-semibold">{data.name}</p>
+            <p className="text-blue-400">{xLabel}: {data.x.toFixed(3)}</p>
+            <p className="text-blue-400">{yLabel}: {data.y.toFixed(3)}</p>
+          </div>
+        );
+      } else if (data.isLoadingEnd) {
+        return (
+          <div className="bg-gray-800 p-3 rounded shadow-lg border border-gray-600">
+            <p className="text-white font-semibold">{data.label}</p>
+            <p className="text-gray-400">Loading values:</p>
+            <p className="text-gray-300">{xLabel}: {data.originalX.toFixed(4)}</p>
+            <p className="text-gray-300">{yLabel}: {data.originalY.toFixed(4)}</p>
+          </div>
+        );
+      }
+    }
+    return null;
+  };
+
+  return (
+    <div className="w-full h-full">
+      <div className="flex items-center justify-between mb-2">
+        <h4 className="text-md font-medium text-gray-300">
+          Biplot: {xLabel} vs {yLabel}
+        </h4>
+        <div className="flex items-center gap-4 text-sm text-gray-400">
+          <span className="flex items-center gap-2">
+            <span className="w-3 h-3 bg-blue-500 rounded-full"></span>
+            Scores
+          </span>
+          <span className="flex items-center gap-2">
+            <svg width="20" height="12">
+              <line x1="0" y1="6" x2="15" y2="6" stroke="#10B981" strokeWidth="2" />
+              <path d="M 15 6 L 12 3 L 12 9 Z" fill="#10B981" />
+            </svg>
+            Loadings
+          </span>
+        </div>
+      </div>
+      
+      <ResponsiveContainer width="100%" height="95%">
+        <ScatterChart
+          margin={{ top: 20, right: 20, bottom: 60, left: 80 }}
+        >
+          <defs>
+            <marker
+              id="arrowhead"
+              markerWidth="10"
+              markerHeight="10"
+              refX="9"
+              refY="3"
+              orient="auto"
+              markerUnits="strokeWidth"
+            >
+              <path d="M0,0 L0,6 L9,3 z" fill="#10B981" />
+            </marker>
+          </defs>
+          
+          <CartesianGrid strokeDasharray="3 3" stroke="#374151" />
+          
+          <XAxis 
+            type="number" 
+            dataKey="x" 
+            name={xLabel}
+            label={{ value: xLabel, position: 'insideBottom', offset: -10, style: { fill: '#9CA3AF' } }}
+            stroke="#9CA3AF"
+            domain={[-axisRange, axisRange]}
+            tickFormatter={(value) => value.toFixed(1)}
+            allowDataOverflow={false}
+          />
+          
+          <YAxis 
+            type="number" 
+            dataKey="y" 
+            name={yLabel}
+            label={{ value: yLabel, angle: -90, position: 'insideLeft', style: { fill: '#9CA3AF' } }}
+            stroke="#9CA3AF"
+            domain={[-axisRange, axisRange]}
+            tickFormatter={(value) => value.toFixed(1)}
+            allowDataOverflow={false}
+          />
+          
+          <ReferenceLine x={0} stroke="#6B7280" strokeWidth={2} />
+          <ReferenceLine y={0} stroke="#6B7280" strokeWidth={2} />
+          
+          <Tooltip content={<CustomTooltip />} />
+          
+          {/* Loading vectors as reference lines */}
+          {loadingsData.map(loading => {
+            const isHovered = hoveredVariable === loading.index;
+            return (
+              <ReferenceLine
+                key={`loading-line-${loading.index}`}
+                segment={[{ x: 0, y: 0 }, { x: loading.x, y: loading.y }]}
+                stroke={isHovered ? "#EF4444" : "#10B981"}
+                strokeWidth={isHovered ? 3 : 2}
+                ifOverflow="visible"
+              />
+            );
+          })}
+          
+          {/* Scores (samples) */}
+          <Scatter 
+            name="Scores" 
+            data={scoresData}
+            fill="#3B82F6"
+            fillOpacity={0.8}
+            strokeWidth={1}
+            stroke="#1E40AF"
+          />
+          
+          {/* Loading endpoints for interaction */}
+          <Scatter
+            name="LoadingEnds"
+            data={loadingEndpoints}
+            fill="transparent"
+            shape={<LoadingEndpoint />}
+          />
+        </ScatterChart>
+      </ResponsiveContainer>
+    </div>
+  );
+};
