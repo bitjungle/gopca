@@ -52,6 +52,11 @@ type PCARequest struct {
 	Method          string      `json:"method"`
 	ExcludedRows    []int       `json:"excludedRows,omitempty"`
 	ExcludedColumns []int       `json:"excludedColumns,omitempty"`
+	// Kernel PCA parameters
+	KernelType   string  `json:"kernelType,omitempty"`
+	KernelGamma  float64 `json:"kernelGamma,omitempty"`
+	KernelDegree int     `json:"kernelDegree,omitempty"`
+	KernelCoef0  float64 `json:"kernelCoef0,omitempty"`
 }
 
 // PCAResponse represents the PCA analysis results
@@ -213,8 +218,20 @@ func (a *App) RunPCA(request PCARequest) PCAResponse {
 		ExcludedColumns: request.ExcludedColumns,
 	}
 	
+	// Add kernel parameters if using kernel PCA
+	if strings.ToLower(request.Method) == "kernel" {
+		config.KernelType = request.KernelType
+		config.KernelGamma = request.KernelGamma
+		config.KernelDegree = request.KernelDegree
+		config.KernelCoef0 = request.KernelCoef0
+		
+		// Skip standard preprocessing for kernel PCA
+		config.MeanCenter = false
+		config.StandardScale = false
+	}
+	
 	// Perform PCA
-	engine := core.NewPCAEngine()
+	engine := core.NewPCAEngineForMethod(config.Method)
 	result, err := engine.Fit(dataToAnalyze, config)
 	if err != nil {
 		return PCAResponse{

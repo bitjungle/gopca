@@ -18,6 +18,11 @@ export interface PCARequest {
   method: string;
   excludedRows?: number[];
   excludedColumns?: number[];
+  // Kernel PCA parameters
+  kernelType?: string;
+  kernelGamma?: number;
+  kernelDegree?: number;
+  kernelCoef0?: number;
 }
 
 export interface PCAResult {

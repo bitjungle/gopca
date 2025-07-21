@@ -28,7 +28,12 @@ function App() {
         meanCenter: true,
         standardScale: true,
         robustScale: false,
-        method: 'SVD'
+        method: 'SVD',
+        // Kernel PCA parameters
+        kernelType: 'rbf',
+        kernelGamma: 1.0,
+        kernelDegree: 3,
+        kernelCoef0: 0.0
     });
     
     const handleFileUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
@@ -205,8 +210,9 @@ function App() {
                                         onChange={(e) => setConfig({...config, method: e.target.value})}
                                         className="w-full px-3 py-2 bg-gray-100 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg text-gray-900 dark:text-white"
                                     >
-                                        <option value="NIPALS">NIPALS</option>
                                         <option value="SVD">SVD</option>
+                                        <option value="NIPALS">NIPALS</option>
+                                        <option value="kernel">Kernel PCA</option>
                                     </select>
                                 </div>
                             </div>
@@ -239,6 +245,75 @@ function App() {
                                     Robust Scale
                                 </label>
                             </div>
+                            
+                            {/* Kernel PCA Options */}
+                            {config.method === 'kernel' && (
+                                <div className="mt-4 p-4 bg-gray-50 dark:bg-gray-800 rounded-lg space-y-4">
+                                    <h4 className="font-medium text-sm">Kernel PCA Options</h4>
+                                    <div className="grid grid-cols-2 gap-4">
+                                        <div>
+                                            <label className="block text-sm font-medium mb-1">
+                                                Kernel Type
+                                            </label>
+                                            <select
+                                                value={config.kernelType}
+                                                onChange={(e) => setConfig({...config, kernelType: e.target.value})}
+                                                className="w-full px-3 py-2 bg-gray-100 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg text-gray-900 dark:text-white"
+                                            >
+                                                <option value="rbf">RBF (Gaussian)</option>
+                                                <option value="linear">Linear</option>
+                                                <option value="poly">Polynomial</option>
+                                            </select>
+                                        </div>
+                                        <div>
+                                            <label className="block text-sm font-medium mb-1">
+                                                Gamma
+                                            </label>
+                                            <input
+                                                type="number"
+                                                value={config.kernelGamma}
+                                                step="0.01"
+                                                min="0.001"
+                                                onChange={(e) => setConfig({...config, kernelGamma: parseFloat(e.target.value) || 1.0})}
+                                                className="w-full px-3 py-2 bg-gray-100 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg text-gray-900 dark:text-white"
+                                            />
+                                        </div>
+                                        {config.kernelType === 'poly' && (
+                                            <>
+                                                <div>
+                                                    <label className="block text-sm font-medium mb-1">
+                                                        Degree
+                                                    </label>
+                                                    <input
+                                                        type="number"
+                                                        value={config.kernelDegree}
+                                                        min="1"
+                                                        max="10"
+                                                        onChange={(e) => setConfig({...config, kernelDegree: parseInt(e.target.value) || 3})}
+                                                        className="w-full px-3 py-2 bg-gray-100 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg text-gray-900 dark:text-white"
+                                                    />
+                                                </div>
+                                                <div>
+                                                    <label className="block text-sm font-medium mb-1">
+                                                        Coef0
+                                                    </label>
+                                                    <input
+                                                        type="number"
+                                                        value={config.kernelCoef0}
+                                                        step="0.1"
+                                                        onChange={(e) => setConfig({...config, kernelCoef0: parseFloat(e.target.value) || 0.0})}
+                                                        className="w-full px-3 py-2 bg-gray-100 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg text-gray-900 dark:text-white"
+                                                    />
+                                                </div>
+                                            </>
+                                        )}
+                                    </div>
+                                    <p className="text-xs text-gray-500 dark:text-gray-400 mt-2">
+                                        Note: Kernel PCA uses its own centering in kernel space. Standard preprocessing options will be ignored.
+                                    </p>
+                                </div>
+                            )}
+                            
                             <button
                                 onClick={runPCA}
                                 disabled={loading}
