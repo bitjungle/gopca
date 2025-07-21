@@ -16,6 +16,8 @@ function App() {
     const [excludedRows, setExcludedRows] = useState<number[]>([]);
     const [excludedColumns, setExcludedColumns] = useState<number[]>([]);
     const [selectedPlot, setSelectedPlot] = useState<'scores' | 'scree'>('scores');
+    const [selectedXComponent, setSelectedXComponent] = useState(0);
+    const [selectedYComponent, setSelectedYComponent] = useState(1);
     
     // PCA configuration
     const [config, setConfig] = useState({
@@ -82,6 +84,9 @@ function App() {
             const result = await RunPCA(request);
             if (result.success) {
                 setPcaResponse(result);
+                // Reset PC selections to default
+                setSelectedXComponent(0);
+                setSelectedYComponent(1);
             } else {
                 setError(result.error || 'PCA analysis failed');
             }
@@ -259,14 +264,48 @@ function App() {
                             <div className="mt-6">
                                 <div className="flex items-center justify-between mb-4">
                                     <h3 className="text-lg font-semibold">Visualizations</h3>
-                                    <select
-                                        value={selectedPlot}
-                                        onChange={(e) => setSelectedPlot(e.target.value as 'scores' | 'scree')}
-                                        className="px-3 py-2 bg-gray-700 rounded-lg"
-                                    >
-                                        <option value="scores">Scores Plot</option>
-                                        <option value="scree">Scree Plot</option>
-                                    </select>
+                                    <div className="flex items-center gap-4">
+                                        {selectedPlot === 'scores' && pcaResponse.result.scores[0]?.length > 2 && (
+                                            <>
+                                                <div className="flex items-center gap-2">
+                                                    <label className="text-sm text-gray-400">X-axis:</label>
+                                                    <select
+                                                        value={selectedXComponent}
+                                                        onChange={(e) => setSelectedXComponent(parseInt(e.target.value))}
+                                                        className="px-2 py-1 bg-gray-700 rounded text-sm"
+                                                    >
+                                                        {pcaResponse.result.component_labels?.map((label, i) => (
+                                                            <option key={i} value={i}>
+                                                                {label} ({pcaResponse.result!.explained_variance[i].toFixed(1)}%)
+                                                            </option>
+                                                        ))}
+                                                    </select>
+                                                </div>
+                                                <div className="flex items-center gap-2">
+                                                    <label className="text-sm text-gray-400">Y-axis:</label>
+                                                    <select
+                                                        value={selectedYComponent}
+                                                        onChange={(e) => setSelectedYComponent(parseInt(e.target.value))}
+                                                        className="px-2 py-1 bg-gray-700 rounded text-sm"
+                                                    >
+                                                        {pcaResponse.result.component_labels?.map((label, i) => (
+                                                            <option key={i} value={i}>
+                                                                {label} ({pcaResponse.result!.explained_variance[i].toFixed(1)}%)
+                                                            </option>
+                                                        ))}
+                                                    </select>
+                                                </div>
+                                            </>
+                                        )}
+                                        <select
+                                            value={selectedPlot}
+                                            onChange={(e) => setSelectedPlot(e.target.value as 'scores' | 'scree')}
+                                            className="px-3 py-2 bg-gray-700 rounded-lg"
+                                        >
+                                            <option value="scores">Scores Plot</option>
+                                            <option value="scree">Scree Plot</option>
+                                        </select>
+                                    </div>
                                 </div>
                                 
                                 <div className="bg-gray-700 rounded-lg p-4" style={{ height: '500px' }}>
@@ -274,6 +313,8 @@ function App() {
                                         <ScoresPlot
                                             pcaResult={pcaResponse.result}
                                             rowNames={fileData?.rowNames || []}
+                                            xComponent={selectedXComponent}
+                                            yComponent={selectedYComponent}
                                         />
                                     ) : selectedPlot === 'scree' ? (
                                         <ScreePlot
