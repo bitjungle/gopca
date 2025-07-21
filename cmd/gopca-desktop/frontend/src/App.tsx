@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import './App.css';
 import { ParseCSV, RunPCA } from "../wailsjs/go/main/App";
 import { DataTable } from './components/DataTable';
-import { ScoresPlot, ScreePlot } from './components/visualizations';
+import { ScoresPlot, ScreePlot, LoadingsPlot } from './components/visualizations';
 import { FileData, PCARequest, PCAResponse } from './types';
 import logo from './assets/images/GoPCA-logo-1024-transp.png';
 
@@ -15,9 +15,10 @@ function App() {
     // Selection state
     const [excludedRows, setExcludedRows] = useState<number[]>([]);
     const [excludedColumns, setExcludedColumns] = useState<number[]>([]);
-    const [selectedPlot, setSelectedPlot] = useState<'scores' | 'scree'>('scores');
+    const [selectedPlot, setSelectedPlot] = useState<'scores' | 'scree' | 'loadings'>('scores');
     const [selectedXComponent, setSelectedXComponent] = useState(0);
     const [selectedYComponent, setSelectedYComponent] = useState(1);
+    const [selectedLoadingComponent, setSelectedLoadingComponent] = useState(0);
     
     // PCA configuration
     const [config, setConfig] = useState({
@@ -297,13 +298,30 @@ function App() {
                                                 </div>
                                             </>
                                         )}
+                                        {selectedPlot === 'loadings' && (
+                                            <div className="flex items-center gap-2">
+                                                <label className="text-sm text-gray-400">Component:</label>
+                                                <select
+                                                    value={selectedLoadingComponent}
+                                                    onChange={(e) => setSelectedLoadingComponent(parseInt(e.target.value))}
+                                                    className="px-2 py-1 bg-gray-700 rounded text-sm"
+                                                >
+                                                    {pcaResponse.result?.component_labels?.map((label, i) => (
+                                                        <option key={i} value={i}>
+                                                            {label} ({pcaResponse.result!.explained_variance[i].toFixed(1)}%)
+                                                        </option>
+                                                    ))}
+                                                </select>
+                                            </div>
+                                        )}
                                         <select
                                             value={selectedPlot}
-                                            onChange={(e) => setSelectedPlot(e.target.value as 'scores' | 'scree')}
+                                            onChange={(e) => setSelectedPlot(e.target.value as 'scores' | 'scree' | 'loadings')}
                                             className="px-3 py-2 bg-gray-700 rounded-lg"
                                         >
                                             <option value="scores">Scores Plot</option>
                                             <option value="scree">Scree Plot</option>
+                                            <option value="loadings">Loadings Plot</option>
                                         </select>
                                     </div>
                                 </div>
@@ -321,6 +339,11 @@ function App() {
                                             pcaResult={pcaResponse.result}
                                             showCumulative={true}
                                             elbowThreshold={80}
+                                        />
+                                    ) : selectedPlot === 'loadings' ? (
+                                        <LoadingsPlot
+                                            pcaResult={pcaResponse.result}
+                                            selectedComponent={selectedLoadingComponent}
                                         />
                                     ) : (
                                         <div className="w-full h-full flex items-center justify-center text-gray-400">

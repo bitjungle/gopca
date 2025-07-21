@@ -23,6 +23,7 @@ export interface PCAResult {
   explained_variance: number[];
   cumulative_variance: number[];
   component_labels: string[];
+  variable_labels?: string[];
 }
 
 export interface PCAMetrics {

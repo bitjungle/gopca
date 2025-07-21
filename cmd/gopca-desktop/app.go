@@ -173,9 +173,28 @@ func (a *App) RunPCA(request PCARequest) PCAResponse {
 		}
 	}
 	
+	// Add variable labels from headers (excluding the ones that were filtered out)
+	filteredHeaders := make([]string, 0)
+	for j, header := range request.Headers {
+		if !contains(request.ExcludedColumns, j) {
+			filteredHeaders = append(filteredHeaders, header)
+		}
+	}
+	result.VariableLabels = filteredHeaders
+	
 	return PCAResponse{
 		Success: true,
 		Result:  result,
 	}
+}
+
+// contains checks if a slice contains a value
+func contains(slice []int, val int) bool {
+	for _, item := range slice {
+		if item == val {
+			return true
+		}
+	}
+	return false
 }
 

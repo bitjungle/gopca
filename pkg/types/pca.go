@@ -20,6 +20,7 @@ type PCAResult struct {
 	ExplainedVar    []float64 `json:"explained_variance"`
 	CumulativeVar   []float64 `json:"cumulative_variance"`
 	ComponentLabels []string  `json:"component_labels"`
+	VariableLabels  []string  `json:"variable_labels,omitempty"` // Original variable names
 	// Preprocessing statistics
 	Means   []float64 `json:"means,omitempty"`   // Original feature means
 	StdDevs []float64 `json:"stddevs,omitempty"` // Original feature std devs
