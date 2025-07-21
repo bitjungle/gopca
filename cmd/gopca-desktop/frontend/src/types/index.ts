@@ -2,6 +2,9 @@ export interface FileData {
   headers: string[];
   rowNames: string[];
   data: number[][];
+  categoricalColumns?: {
+    [columnName: string]: string[];  // Column name -> array of values for each row
+  };
 }
 
 export interface PCARequest {

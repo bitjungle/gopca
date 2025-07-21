@@ -1,28 +1,41 @@
-import React, { useRef, useState, useCallback } from 'react';
-import { ScatterChart, Scatter, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, ReferenceLine } from 'recharts';
+import React, { useRef, useState, useCallback, useMemo } from 'react';
+import { ScatterChart, Scatter, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, ReferenceLine, Cell } from 'recharts';
 import { PCAResult } from '../../types';
 import { ExportButton } from '../ExportButton';
 import { PlotControls } from '../PlotControls';
 import { useZoomPan } from '../../hooks/useZoomPan';
+import { createGroupColorMap } from '../../utils/colors';
 
 interface ScoresPlotProps {
   pcaResult: PCAResult;
   rowNames: string[];
   xComponent?: number; // 0-based index
   yComponent?: number; // 0-based index
+  groupColumn?: string | null;
+  groupLabels?: string[];
 }
 
 export const ScoresPlot: React.FC<ScoresPlotProps> = ({ 
   pcaResult, 
   rowNames,
   xComponent = 0, 
-  yComponent = 1 
+  yComponent = 1,
+  groupColumn,
+  groupLabels
 }) => {
   const chartRef = useRef<HTMLDivElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
   const fullscreenRef = useRef<HTMLDivElement>(null);
   
   const [isFullscreen, setIsFullscreen] = useState(false);
+  
+  // Create color map for groups
+  const groupColorMap = useMemo(() => {
+    if (groupLabels && groupColumn) {
+      return createGroupColorMap(groupLabels);
+    }
+    return null;
+  }, [groupLabels, groupColumn]);
   
   // Transform scores data for Recharts
   const data = pcaResult.scores.map((row, index) => {
@@ -35,10 +48,14 @@ export const ScoresPlot: React.FC<ScoresPlotProps> = ({
       return null;
     }
     
+    const group = groupLabels?.[index];
+    
     return {
       x: xVal,
       y: yVal,
       name: rowNames[index] || `Sample ${index + 1}`,
+      group: group || 'Unknown',
+      color: group && groupColorMap ? groupColorMap.get(group) : '#3B82F6'
     };
   }).filter(point => point !== null);
 
@@ -130,9 +147,24 @@ export const ScoresPlot: React.FC<ScoresPlotProps> = ({
   return (
     <div ref={fullscreenRef} className={`w-full h-full ${isFullscreen ? 'fixed inset-0 z-50 bg-gray-900 p-4' : ''}`}>
       <div className="flex justify-between items-center mb-2">
-        <div className="text-sm text-gray-400">
+        <div className="flex items-center gap-4">
+          {/* Group legend */}
+          {groupColumn && groupColorMap && (
+            <div className="flex items-center gap-3 text-sm">
+              <span className="text-gray-400">{groupColumn}:</span>
+              {Array.from(groupColorMap.entries()).map(([group, color]) => (
+                <div key={group} className="flex items-center gap-1">
+                  <div 
+                    className="w-3 h-3 rounded-full" 
+                    style={{ backgroundColor: color }}
+                  />
+                  <span className="text-gray-300">{group}</span>
+                </div>
+              ))}
+            </div>
+          )}
           {isZoomed && (
-            <span className="mr-2">
+            <span className="text-sm text-gray-400">
               Zoomed (drag to pan)
             </span>
           )}
@@ -198,6 +230,9 @@ export const ScoresPlot: React.FC<ScoresPlotProps> = ({
                 return (
                   <div className="bg-gray-800 p-2 rounded shadow-lg border border-gray-600">
                     <p className="text-white font-semibold">{data.name}</p>
+                    {groupColumn && data.group !== 'Unknown' && (
+                      <p className="text-gray-300">{groupColumn}: {data.group}</p>
+                    )}
                     <p className="text-gray-300">{xLabel}: {data.x.toFixed(3)}</p>
                     <p className="text-gray-300">{yLabel}: {data.y.toFixed(3)}</p>
                   </div>
@@ -212,7 +247,13 @@ export const ScoresPlot: React.FC<ScoresPlotProps> = ({
             fillOpacity={0.8}
             strokeWidth={1}
             stroke="#1E40AF"
-          />
+          >
+            {groupColumn && groupLabels ? (
+              data.map((entry, index) => (
+                <Cell key={`cell-${index}`} fill={entry!.color} />
+              ))
+            ) : null}
+          </Scatter>
         </ScatterChart>
         </ResponsiveContainer>
       </div>

@@ -1,4 +1,4 @@
-import React, { useState, useRef, useCallback } from 'react';
+import React, { useState, useRef, useCallback, useMemo } from 'react';
 import { 
   ScatterChart, 
   Scatter, 
@@ -7,12 +7,14 @@ import {
   CartesianGrid, 
   Tooltip, 
   ResponsiveContainer, 
-  ReferenceLine
+  ReferenceLine,
+  Cell
 } from 'recharts';
 import { PCAResult } from '../../types';
 import { ExportButton } from '../ExportButton';
 import { PlotControls } from '../PlotControls';
 import { useZoomPan } from '../../hooks/useZoomPan';
+import { createGroupColorMap } from '../../utils/colors';
 
 interface BiplotProps {
   pcaResult: PCAResult;
@@ -20,6 +22,8 @@ interface BiplotProps {
   xComponent?: number; // 0-based index
   yComponent?: number; // 0-based index
   showLoadingLabels?: boolean;
+  groupColumn?: string | null;
+  groupLabels?: string[];
 }
 
 export const Biplot: React.FC<BiplotProps> = ({ 
@@ -27,7 +31,9 @@ export const Biplot: React.FC<BiplotProps> = ({
   rowNames,
   xComponent = 0, 
   yComponent = 1,
-  showLoadingLabels = true
+  showLoadingLabels = true,
+  groupColumn,
+  groupLabels
 }) => {
   const [hoveredVariable, setHoveredVariable] = useState<number | null>(null);
   const chartRef = useRef<HTMLDivElement>(null);
@@ -36,13 +42,26 @@ export const Biplot: React.FC<BiplotProps> = ({
   
   const [isFullscreen, setIsFullscreen] = useState(false);
 
+  // Create color map for groups
+  const groupColorMap = useMemo(() => {
+    if (groupLabels && groupColumn) {
+      return createGroupColorMap(groupLabels);
+    }
+    return null;
+  }, [groupLabels, groupColumn]);
+
   // Transform scores data
-  const scoresData = pcaResult.scores.map((row, index) => ({
-    x: row[xComponent] || 0,
-    y: row[yComponent] || 0,
-    name: rowNames[index] || `Sample ${index + 1}`,
-    type: 'score'
-  }));
+  const scoresData = pcaResult.scores.map((row, index) => {
+    const group = groupLabels?.[index];
+    return {
+      x: row[xComponent] || 0,
+      y: row[yComponent] || 0,
+      name: rowNames[index] || `Sample ${index + 1}`,
+      type: 'score',
+      group: group || 'Unknown',
+      color: group && groupColorMap ? groupColorMap.get(group) : '#3B82F6'
+    };
+  });
 
   // Calculate scores range for plot bounds
   const scoreXValues = scoresData.map(d => d.x);
@@ -253,6 +272,9 @@ export const Biplot: React.FC<BiplotProps> = ({
         return (
           <div className="bg-gray-800 p-3 rounded shadow-lg border border-gray-600">
             <p className="text-white font-semibold">{data.name}</p>
+            {groupColumn && data.group !== 'Unknown' && (
+              <p className="text-gray-300">{groupColumn}: {data.group}</p>
+            )}
             <p className="text-blue-400">{xLabel}: {data.x.toFixed(3)}</p>
             <p className="text-blue-400">{yLabel}: {data.y.toFixed(3)}</p>
           </div>
@@ -278,19 +300,35 @@ export const Biplot: React.FC<BiplotProps> = ({
           <h4 className="text-md font-medium text-gray-300">
             Biplot: {xLabel} vs {yLabel}
           </h4>
-          <div className="flex items-center gap-4 text-sm text-gray-400">
-            <span className="flex items-center gap-2">
-              <span className="w-3 h-3 bg-blue-500 rounded-full"></span>
-              Scores
-            </span>
-            <span className="flex items-center gap-2">
-              <svg width="20" height="12">
-                <line x1="0" y1="6" x2="15" y2="6" stroke="#10B981" strokeWidth="2" />
-                <path d="M 15 6 L 12 3 L 12 9 Z" fill="#10B981" />
-              </svg>
-              Loadings
-            </span>
-          </div>
+          {/* Group legend */}
+          {groupColumn && groupColorMap ? (
+            <div className="flex items-center gap-3 text-sm">
+              <span className="text-gray-400">{groupColumn}:</span>
+              {Array.from(groupColorMap.entries()).map(([group, color]) => (
+                <div key={group} className="flex items-center gap-1">
+                  <div 
+                    className="w-3 h-3 rounded-full" 
+                    style={{ backgroundColor: color }}
+                  />
+                  <span className="text-gray-300">{group}</span>
+                </div>
+              ))}
+            </div>
+          ) : (
+            <div className="flex items-center gap-4 text-sm text-gray-400">
+              <span className="flex items-center gap-2">
+                <span className="w-3 h-3 bg-blue-500 rounded-full"></span>
+                Scores
+              </span>
+              <span className="flex items-center gap-2">
+                <svg width="20" height="12">
+                  <line x1="0" y1="6" x2="15" y2="6" stroke="#10B981" strokeWidth="2" />
+                  <path d="M 15 6 L 12 3 L 12 9 Z" fill="#10B981" />
+                </svg>
+                Loadings
+              </span>
+            </div>
+          )}
           {isZoomed && <span className="text-sm text-gray-400">Zoomed (drag to pan)</span>}
         </div>
         <div className="flex items-center gap-2">
@@ -386,7 +424,13 @@ export const Biplot: React.FC<BiplotProps> = ({
             fillOpacity={0.8}
             strokeWidth={1}
             stroke="#1E40AF"
-          />
+          >
+            {groupColumn && groupLabels ? (
+              scoresData.map((entry, index) => (
+                <Cell key={`cell-${index}`} fill={entry.color} />
+              ))
+            ) : null}
+          </Scatter>
           
           {/* Loading endpoints for interaction */}
           <Scatter

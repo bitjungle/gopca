@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import './App.css';
-import { ParseCSV, RunPCA } from "../wailsjs/go/main/App";
+import { ParseCSV, RunPCA, LoadIrisDataset } from "../wailsjs/go/main/App";
 import { DataTable } from './components/DataTable';
 import { ScoresPlot, ScreePlot, LoadingsPlot, Biplot } from './components/visualizations';
 import { FileData, PCARequest, PCAResponse } from './types';
@@ -19,6 +19,7 @@ function App() {
     const [selectedXComponent, setSelectedXComponent] = useState(0);
     const [selectedYComponent, setSelectedYComponent] = useState(1);
     const [selectedLoadingComponent, setSelectedLoadingComponent] = useState(0);
+    const [selectedGroupColumn, setSelectedGroupColumn] = useState<string | null>(null);
     
     // PCA configuration
     const [config, setConfig] = useState({
@@ -41,9 +42,10 @@ function App() {
             const result = await ParseCSV(content);
             setFileData(result);
             setPcaResponse(null);
-            // Reset exclusions when loading new data
+            // Reset exclusions and selections when loading new data
             setExcludedRows([]);
             setExcludedColumns([]);
+            setSelectedGroupColumn(null);
         } catch (err) {
             setError(`Failed to parse CSV: ${err}`);
         } finally {
@@ -109,21 +111,48 @@ function App() {
                     {/* File Upload Section */}
                     <div className="bg-gray-800 rounded-lg p-6 shadow-lg">
                         <h2 className="text-xl font-semibold mb-4">Step 1: Load Data</h2>
-                        <div>
-                            <label className="block text-sm font-medium mb-2">
-                                Upload CSV File
-                            </label>
-                            <input
-                                type="file"
-                                accept=".csv"
-                                onChange={handleFileUpload}
-                                className="block w-full text-sm text-gray-300
-                                    file:mr-4 file:py-2 file:px-4
-                                    file:rounded-full file:border-0
-                                    file:text-sm file:font-semibold
-                                    file:bg-blue-600 file:text-white
-                                    hover:file:bg-blue-700"
-                            />
+                        <div className="space-y-4">
+                            <div>
+                                <label className="block text-sm font-medium mb-2">
+                                    Upload CSV File
+                                </label>
+                                <input
+                                    type="file"
+                                    accept=".csv"
+                                    onChange={handleFileUpload}
+                                    className="block w-full text-sm text-gray-300
+                                        file:mr-4 file:py-2 file:px-4
+                                        file:rounded-full file:border-0
+                                        file:text-sm file:font-semibold
+                                        file:bg-blue-600 file:text-white
+                                        hover:file:bg-blue-700"
+                                />
+                            </div>
+                            <div className="text-sm text-gray-400">
+                                Or try the example dataset with categorical groups
+                            </div>
+                            <button
+                                onClick={async () => {
+                                    setLoading(true);
+                                    setError(null);
+                                    try {
+                                        const result = await LoadIrisDataset();
+                                        setFileData(result);
+                                        setPcaResponse(null);
+                                        setExcludedRows([]);
+                                        setExcludedColumns([]);
+                                        setSelectedGroupColumn('species');
+                                    } catch (err) {
+                                        setError(`Failed to load iris dataset: ${err}`);
+                                    } finally {
+                                        setLoading(false);
+                                    }
+                                }}
+                                className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700"
+                                disabled={loading}
+                            >
+                                Load Iris Dataset (with species)
+                            </button>
                         </div>
                     </div>
                     
@@ -266,6 +295,24 @@ function App() {
                                 <div className="flex items-center justify-between mb-4">
                                     <h3 className="text-lg font-semibold">Visualizations</h3>
                                     <div className="flex items-center gap-4">
+                                        {/* Group selection for color coding */}
+                                        {(selectedPlot === 'scores' || selectedPlot === 'biplot') && fileData?.categoricalColumns && Object.keys(fileData.categoricalColumns).length > 0 && (
+                                            <div className="flex items-center gap-2">
+                                                <label className="text-sm text-gray-400">Color by:</label>
+                                                <select
+                                                    value={selectedGroupColumn || ''}
+                                                    onChange={(e) => setSelectedGroupColumn(e.target.value || null)}
+                                                    className="px-2 py-1 bg-gray-700 rounded text-sm"
+                                                >
+                                                    <option value="">None</option>
+                                                    {Object.keys(fileData.categoricalColumns).map((colName) => (
+                                                        <option key={colName} value={colName}>
+                                                            {colName}
+                                                        </option>
+                                                    ))}
+                                                </select>
+                                            </div>
+                                        )}
                                         {(selectedPlot === 'scores' || selectedPlot === 'biplot') && pcaResponse.result.scores[0]?.length > 2 && (
                                             <>
                                                 <div className="flex items-center gap-2">
@@ -334,6 +381,8 @@ function App() {
                                             rowNames={fileData?.rowNames || []}
                                             xComponent={selectedXComponent}
                                             yComponent={selectedYComponent}
+                                            groupColumn={selectedGroupColumn}
+                                            groupLabels={selectedGroupColumn && fileData?.categoricalColumns ? fileData.categoricalColumns[selectedGroupColumn] : undefined}
                                         />
                                     ) : selectedPlot === 'scree' ? (
                                         <ScreePlot
@@ -352,6 +401,8 @@ function App() {
                                             rowNames={fileData?.rowNames || []}
                                             xComponent={selectedXComponent}
                                             yComponent={selectedYComponent}
+                                            groupColumn={selectedGroupColumn}
+                                            groupLabels={selectedGroupColumn && fileData?.categoricalColumns ? fileData.categoricalColumns[selectedGroupColumn] : undefined}
                                         />
                                     ) : (
                                         <div className="w-full h-full flex items-center justify-center text-gray-400">
