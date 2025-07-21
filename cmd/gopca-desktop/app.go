@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/base64"
 	"encoding/csv"
+	"encoding/json"
 	"fmt"
 	"math"
 	"net/url"
@@ -39,6 +40,39 @@ type FileData struct {
 	RowNames            []string               `json:"rowNames"`
 	Data                [][]float64            `json:"data"`
 	CategoricalColumns  map[string][]string    `json:"categoricalColumns,omitempty"`
+}
+
+// MarshalJSON implements custom JSON marshaling to handle NaN values
+func (f *FileData) MarshalJSON() ([]byte, error) {
+	// Create a type alias to avoid infinite recursion
+	type Alias FileData
+	
+	// Convert the data to handle NaN values
+	jsonData := make([][]interface{}, len(f.Data))
+	for i, row := range f.Data {
+		jsonRow := make([]interface{}, len(row))
+		for j, val := range row {
+			if math.IsNaN(val) {
+				jsonRow[j] = nil // JSON null for NaN
+			} else {
+				jsonRow[j] = val
+			}
+		}
+		jsonData[i] = jsonRow
+	}
+	
+	// Create a temporary struct with the converted data
+	return json.Marshal(&struct {
+		Headers            []string               `json:"headers"`
+		RowNames           []string               `json:"rowNames"`
+		Data               [][]interface{}        `json:"data"`
+		CategoricalColumns map[string][]string    `json:"categoricalColumns,omitempty"`
+	}{
+		Headers:            f.Headers,
+		RowNames:           f.RowNames,
+		Data:               jsonData,
+		CategoricalColumns: f.CategoricalColumns,
+	})
 }
 
 // PCARequest represents a PCA analysis request from the frontend
@@ -176,10 +210,60 @@ func (a *App) ParseCSV(content string) (*FileData, error) {
 		numericHeaders = append(numericHeaders, headers[j-startIdx])
 	}
 	
+	// Filter out rows with NaN values (missing data)
+	// This is necessary because:
+	// 1. JSON cannot represent NaN values
+	// 2. PCA requires complete data (no missing values)
+	cleanData := [][]float64{}
+	cleanRowNames := []string{}
+	skippedRows := 0
+	for i, row := range data {
+		hasNaN := false
+		for _, val := range row {
+			if math.IsNaN(val) {
+				hasNaN = true
+				break
+			}
+		}
+		if !hasNaN {
+			cleanData = append(cleanData, row)
+			if hasRowNames && i < len(rowNames) {
+				cleanRowNames = append(cleanRowNames, rowNames[i])
+			}
+		} else {
+			skippedRows++
+		}
+	}
+	
+	// Log info about skipped rows (would appear in console during development)
+	if skippedRows > 0 {
+		fmt.Printf("Info: Skipped %d rows containing missing values (marked as 'm')\n", skippedRows)
+	}
+	
+	// Update categorical data to match filtered rows
+	if len(categoricalData) > 0 {
+		for colName, values := range categoricalData {
+			cleanValues := []string{}
+			for i := range data {
+				hasNaN := false
+				for _, val := range data[i] {
+					if math.IsNaN(val) {
+						hasNaN = true
+						break
+					}
+				}
+				if !hasNaN && i < len(values) {
+					cleanValues = append(cleanValues, values[i])
+				}
+			}
+			categoricalData[colName] = cleanValues
+		}
+	}
+	
 	result := &FileData{
 		Headers:  numericHeaders,
-		RowNames: rowNames,
-		Data:     data,
+		RowNames: cleanRowNames,
+		Data:     cleanData,
 	}
 	
 	// Only add categorical columns if there are any

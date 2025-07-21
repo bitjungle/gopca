@@ -10,7 +10,7 @@ import {
 interface DataTableProps {
   headers: string[];
   rowNames: string[];
-  data: number[][];
+  data: (number | null)[][];
   title?: string;
   enableRowSelection?: boolean;
   enableColumnSelection?: boolean;
@@ -149,7 +149,9 @@ export const DataTable: React.FC<DataTableProps> = ({
         ) : header,
         cell: info => {
           const value = info.getValue() as number;
-          return <div className="text-right">{value?.toFixed(4) || ''}</div>;
+          return <div className="text-right">
+            {value === null ? 'NaN' : value?.toFixed(4) || ''}
+          </div>;
         },
       });
     });

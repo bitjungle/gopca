@@ -1,7 +1,7 @@
 export interface FileData {
   headers: string[];
   rowNames: string[];
-  data: number[][];
+  data: (number | null)[][];  // null represents NaN values
   categoricalColumns?: {
     [columnName: string]: string[];  // Column name -> array of values for each row
   };
