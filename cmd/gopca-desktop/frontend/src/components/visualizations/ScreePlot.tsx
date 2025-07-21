@@ -13,6 +13,7 @@ import {
 } from 'recharts';
 import { PCAResult } from '../../types';
 import { ExportButton } from '../ExportButton';
+import { useChartTheme } from '../../hooks/useChartTheme';
 
 interface ScreePlotProps {
   pcaResult: PCAResult;
@@ -27,6 +28,7 @@ export const ScreePlot: React.FC<ScreePlotProps> = ({
 }) => {
   const chartRef = useRef<HTMLDivElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
+  const chartTheme = useChartTheme();
   // Transform variance data for Recharts
   const data = pcaResult.explained_variance.map((variance, index) => ({
     component: pcaResult.component_labels?.[index] || `PC${index + 1}`,
@@ -42,7 +44,7 @@ export const ScreePlot: React.FC<ScreePlotProps> = ({
   // Handle edge cases
   if (!data || data.length === 0) {
     return (
-      <div className="w-full h-full flex items-center justify-center text-gray-400">
+      <div className="w-full h-full flex items-center justify-center text-gray-500 dark:text-gray-400">
         <p>No variance data to display</p>
       </div>
     );
@@ -62,27 +64,27 @@ export const ScreePlot: React.FC<ScreePlotProps> = ({
           data={data} 
           margin={{ top: 20, right: 20, bottom: 60, left: 80 }}
         >
-          <CartesianGrid strokeDasharray="3 3" stroke="#374151" />
+          <CartesianGrid strokeDasharray="3 3" stroke={chartTheme.gridColor} />
           
           <XAxis 
             dataKey="component" 
-            stroke="#9CA3AF"
+            stroke={chartTheme.axisColor}
             label={{ 
               value: 'Principal Component', 
               position: 'insideBottom', 
               offset: -10,
-              style: { fill: '#9CA3AF' }
+              style: { fill: chartTheme.textColor }
             }}
           />
           
           <YAxis 
             yAxisId="variance"
-            stroke="#9CA3AF"
+            stroke={chartTheme.axisColor}
             label={{ 
               value: 'Explained Variance (%)', 
               angle: -90, 
               position: 'insideLeft',
-              style: { fill: '#9CA3AF' }
+              style: { fill: chartTheme.textColor }
             }}
             domain={[0, 'auto']}
             tickFormatter={(value) => value.toFixed(0)}
@@ -109,8 +111,14 @@ export const ScreePlot: React.FC<ScreePlotProps> = ({
               if (active && payload && payload.length) {
                 const data = payload[0].payload;
                 return (
-                  <div className="bg-gray-800 p-3 rounded shadow-lg border border-gray-600">
-                    <p className="text-white font-semibold">{data.component}</p>
+                  <div 
+                    className="p-3 rounded shadow-lg border"
+                    style={{ 
+                      backgroundColor: chartTheme.tooltipBackgroundColor,
+                      borderColor: chartTheme.tooltipBorderColor
+                    }}
+                  >
+                    <p className="font-semibold" style={{ color: chartTheme.tooltipTextColor }}>{data.component}</p>
                     <p className="text-blue-400">
                       Variance: {data.variance.toFixed(2)}%
                     </p>

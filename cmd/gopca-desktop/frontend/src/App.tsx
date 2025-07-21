@@ -1,9 +1,10 @@
 import React, { useState } from 'react';
 import './App.css';
 import { ParseCSV, RunPCA, LoadIrisDataset } from "../wailsjs/go/main/App";
-import { DataTable } from './components/DataTable';
+import { DataTable, ThemeToggle } from './components';
 import { ScoresPlot, ScreePlot, LoadingsPlot, Biplot } from './components/visualizations';
 import { FileData, PCARequest, PCAResponse } from './types';
+import { ThemeProvider } from './contexts/ThemeContext';
 import logo from './assets/images/GoPCA-logo-1024-transp.png';
 
 function App() {
@@ -101,15 +102,19 @@ function App() {
     };
     
     return (
-        <div className="flex flex-col h-screen bg-gray-900 text-white">
-            <header className="bg-gray-800 p-4 shadow-lg">
-                <img src={logo} alt="GoPCA - Principal Component Analysis Tool" className="h-12 mx-auto" />
-            </header>
+        <ThemeProvider>
+            <div className="flex flex-col h-screen bg-gray-50 dark:bg-gray-900 text-gray-900 dark:text-white transition-colors duration-200">
+                <header className="sticky top-0 z-50 bg-white dark:bg-gray-800 p-4 shadow-lg backdrop-blur-sm bg-opacity-95 dark:bg-opacity-95">
+                    <div className="flex items-center justify-between max-w-7xl mx-auto">
+                        <img src={logo} alt="GoPCA - Principal Component Analysis Tool" className="h-12" />
+                        <ThemeToggle />
+                    </div>
+                </header>
             
             <main className="flex-1 overflow-auto p-6">
                 <div className="max-w-7xl mx-auto space-y-6">
                     {/* File Upload Section */}
-                    <div className="bg-gray-800 rounded-lg p-6 shadow-lg">
+                    <div className="bg-white dark:bg-gray-800 rounded-lg p-6 shadow-lg border border-gray-200 dark:border-gray-700">
                         <h2 className="text-xl font-semibold mb-4">Step 1: Load Data</h2>
                         <div className="space-y-4">
                             <div>
@@ -120,7 +125,7 @@ function App() {
                                     type="file"
                                     accept=".csv"
                                     onChange={handleFileUpload}
-                                    className="block w-full text-sm text-gray-300
+                                    className="block w-full text-sm text-gray-700 dark:text-gray-300
                                         file:mr-4 file:py-2 file:px-4
                                         file:rounded-full file:border-0
                                         file:text-sm file:font-semibold
@@ -128,7 +133,7 @@ function App() {
                                         hover:file:bg-blue-700"
                                 />
                             </div>
-                            <div className="text-sm text-gray-400">
+                            <div className="text-sm text-gray-600 dark:text-gray-400">
                                 Or try the example dataset with categorical groups
                             </div>
                             <button
@@ -158,7 +163,7 @@ function App() {
                     
                     {/* Data Display */}
                     {fileData && (
-                        <div className="bg-gray-800 rounded-lg p-6 shadow-lg">
+                        <div className="bg-white dark:bg-gray-800 rounded-lg p-6 shadow-lg border border-gray-200 dark:border-gray-700">
                             <h2 className="text-xl font-semibold mb-4">Loaded Data</h2>
                             <DataTable
                                 headers={fileData.headers}
@@ -175,7 +180,7 @@ function App() {
                     
                     {/* Configuration Section */}
                     {fileData && (
-                        <div className="bg-gray-800 rounded-lg p-6 shadow-lg">
+                        <div className="bg-white dark:bg-gray-800 rounded-lg p-6 shadow-lg border border-gray-200 dark:border-gray-700">
                             <h2 className="text-xl font-semibold mb-4">Step 2: Configure PCA</h2>
                             <div className="grid grid-cols-2 gap-4">
                                 <div>
@@ -188,7 +193,7 @@ function App() {
                                         max={Math.min(fileData.headers.length, fileData.data.length)}
                                         value={config.components}
                                         onChange={(e) => setConfig({...config, components: parseInt(e.target.value) || 2})}
-                                        className="w-full px-3 py-2 bg-gray-700 rounded-lg"
+                                        className="w-full px-3 py-2 bg-gray-100 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg text-gray-900 dark:text-white"
                                     />
                                 </div>
                                 <div>
@@ -198,7 +203,7 @@ function App() {
                                     <select
                                         value={config.method}
                                         onChange={(e) => setConfig({...config, method: e.target.value})}
-                                        className="w-full px-3 py-2 bg-gray-700 rounded-lg"
+                                        className="w-full px-3 py-2 bg-gray-100 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg text-gray-900 dark:text-white"
                                     >
                                         <option value="NIPALS">NIPALS</option>
                                         <option value="SVD">SVD</option>
@@ -237,7 +242,7 @@ function App() {
                             <button
                                 onClick={runPCA}
                                 disabled={loading}
-                                className="mt-4 px-6 py-2 bg-blue-600 hover:bg-blue-700 disabled:bg-gray-600 rounded-lg font-medium"
+                                className="mt-4 px-6 py-2 bg-blue-600 hover:bg-blue-700 disabled:bg-gray-400 dark:disabled:bg-gray-600 rounded-lg font-medium text-white"
                             >
                                 {loading ? 'Running...' : 'Run PCA Analysis'}
                             </button>
@@ -246,14 +251,14 @@ function App() {
                     
                     {/* Error Display */}
                     {error && (
-                        <div className="bg-red-800 border border-red-600 rounded-lg p-4">
-                            <p className="text-red-200">{error}</p>
+                        <div className="bg-red-100 dark:bg-red-800 border border-red-300 dark:border-red-600 rounded-lg p-4">
+                            <p className="text-red-700 dark:text-red-200">{error}</p>
                         </div>
                     )}
                     
                     {/* PCA Results */}
                     {pcaResponse?.success && pcaResponse.result && (
-                        <div className="bg-gray-800 rounded-lg p-6 shadow-lg">
+                        <div className="bg-white dark:bg-gray-800 rounded-lg p-6 shadow-lg border border-gray-200 dark:border-gray-700">
                             <h2 className="text-xl font-semibold mb-4">PCA Results</h2>
                             
                             {/* Scores Matrix */}
@@ -267,7 +272,7 @@ function App() {
                             </div>
                             
                             {/* Explained Variance */}
-                            <div className="bg-gray-700 rounded-lg p-4">
+                            <div className="bg-gray-100 dark:bg-gray-700 rounded-lg p-4">
                                 <h3 className="text-lg font-semibold mb-2">Explained Variance</h3>
                                 <div className="space-y-2">
                                     {pcaResponse.result.explained_variance.map((variance, i) => {
@@ -279,7 +284,7 @@ function App() {
                                             </div>
                                         );
                                     })}
-                                    <div className="border-t border-gray-600 pt-2 font-semibold">
+                                    <div className="border-t border-gray-300 dark:border-gray-600 pt-2 font-semibold">
                                         <div className="flex justify-between">
                                             <span>Cumulative:</span>
                                             <span>
@@ -298,11 +303,11 @@ function App() {
                                         {/* Group selection for color coding */}
                                         {(selectedPlot === 'scores' || selectedPlot === 'biplot') && fileData?.categoricalColumns && Object.keys(fileData.categoricalColumns).length > 0 && (
                                             <div className="flex items-center gap-2">
-                                                <label className="text-sm text-gray-400">Color by:</label>
+                                                <label className="text-sm text-gray-600 dark:text-gray-400">Color by:</label>
                                                 <select
                                                     value={selectedGroupColumn || ''}
                                                     onChange={(e) => setSelectedGroupColumn(e.target.value || null)}
-                                                    className="px-2 py-1 bg-gray-700 rounded text-sm"
+                                                    className="px-2 py-1 bg-gray-100 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded text-sm text-gray-900 dark:text-white"
                                                 >
                                                     <option value="">None</option>
                                                     {Object.keys(fileData.categoricalColumns).map((colName) => (
@@ -316,11 +321,11 @@ function App() {
                                         {(selectedPlot === 'scores' || selectedPlot === 'biplot') && pcaResponse.result.scores[0]?.length > 2 && (
                                             <>
                                                 <div className="flex items-center gap-2">
-                                                    <label className="text-sm text-gray-400">X-axis:</label>
+                                                    <label className="text-sm text-gray-600 dark:text-gray-400">X-axis:</label>
                                                     <select
                                                         value={selectedXComponent}
                                                         onChange={(e) => setSelectedXComponent(parseInt(e.target.value))}
-                                                        className="px-2 py-1 bg-gray-700 rounded text-sm"
+                                                        className="px-2 py-1 bg-gray-100 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded text-sm text-gray-900 dark:text-white"
                                                     >
                                                         {pcaResponse.result.component_labels?.map((label, i) => (
                                                             <option key={i} value={i}>
@@ -330,11 +335,11 @@ function App() {
                                                     </select>
                                                 </div>
                                                 <div className="flex items-center gap-2">
-                                                    <label className="text-sm text-gray-400">Y-axis:</label>
+                                                    <label className="text-sm text-gray-600 dark:text-gray-400">Y-axis:</label>
                                                     <select
                                                         value={selectedYComponent}
                                                         onChange={(e) => setSelectedYComponent(parseInt(e.target.value))}
-                                                        className="px-2 py-1 bg-gray-700 rounded text-sm"
+                                                        className="px-2 py-1 bg-gray-100 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded text-sm text-gray-900 dark:text-white"
                                                     >
                                                         {pcaResponse.result.component_labels?.map((label, i) => (
                                                             <option key={i} value={i}>
@@ -347,11 +352,11 @@ function App() {
                                         )}
                                         {selectedPlot === 'loadings' && (
                                             <div className="flex items-center gap-2">
-                                                <label className="text-sm text-gray-400">Component:</label>
+                                                <label className="text-sm text-gray-600 dark:text-gray-400">Component:</label>
                                                 <select
                                                     value={selectedLoadingComponent}
                                                     onChange={(e) => setSelectedLoadingComponent(parseInt(e.target.value))}
-                                                    className="px-2 py-1 bg-gray-700 rounded text-sm"
+                                                    className="px-2 py-1 bg-gray-100 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded text-sm text-gray-900 dark:text-white"
                                                 >
                                                     {pcaResponse.result?.component_labels?.map((label, i) => (
                                                         <option key={i} value={i}>
@@ -364,7 +369,7 @@ function App() {
                                         <select
                                             value={selectedPlot}
                                             onChange={(e) => setSelectedPlot(e.target.value as 'scores' | 'scree' | 'loadings' | 'biplot')}
-                                            className="px-3 py-2 bg-gray-700 rounded-lg"
+                                            className="px-3 py-2 bg-gray-100 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg text-gray-900 dark:text-white"
                                         >
                                             <option value="scores">Scores Plot</option>
                                             <option value="scree">Scree Plot</option>
@@ -374,7 +379,7 @@ function App() {
                                     </div>
                                 </div>
                                 
-                                <div className="bg-gray-700 rounded-lg p-4" style={{ height: '500px' }}>
+                                <div className="bg-gray-50 dark:bg-gray-700 rounded-lg p-4 border border-gray-200 dark:border-gray-600" style={{ height: '500px' }}>
                                     {selectedPlot === 'scores' && pcaResponse.result.scores.length > 0 && pcaResponse.result.scores[0].length >= 2 ? (
                                         <ScoresPlot
                                             pcaResult={pcaResponse.result}
@@ -405,7 +410,7 @@ function App() {
                                             groupLabels={selectedGroupColumn && fileData?.categoricalColumns ? fileData.categoricalColumns[selectedGroupColumn] : undefined}
                                         />
                                     ) : (
-                                        <div className="w-full h-full flex items-center justify-center text-gray-400">
+                                        <div className="w-full h-full flex items-center justify-center text-gray-500 dark:text-gray-400">
                                             <p>Not enough components for scores plot (minimum 2 required)</p>
                                         </div>
                                     )}
@@ -416,7 +421,8 @@ function App() {
                     )}
                 </div>
             </main>
-        </div>
+            </div>
+        </ThemeProvider>
     );
 }
 

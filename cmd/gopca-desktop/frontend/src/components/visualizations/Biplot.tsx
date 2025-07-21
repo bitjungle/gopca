@@ -15,6 +15,7 @@ import { ExportButton } from '../ExportButton';
 import { PlotControls } from '../PlotControls';
 import { useZoomPan } from '../../hooks/useZoomPan';
 import { createGroupColorMap } from '../../utils/colors';
+import { useChartTheme } from '../../hooks/useChartTheme';
 
 interface BiplotProps {
   pcaResult: PCAResult;
@@ -41,6 +42,7 @@ export const Biplot: React.FC<BiplotProps> = ({
   const fullscreenRef = useRef<HTMLDivElement>(null);
   
   const [isFullscreen, setIsFullscreen] = useState(false);
+  const chartTheme = useChartTheme();
 
   // Create color map for groups
   const groupColorMap = useMemo(() => {
@@ -205,7 +207,7 @@ export const Biplot: React.FC<BiplotProps> = ({
           <text
             x={cx + (payload.x > 0 ? 10 : -10)}
             y={cy}
-            fill="#E5E7EB"
+            fill={chartTheme.textColor}
             fontSize="12"
             fontWeight="500"
             textAnchor={payload.x > 0 ? "start" : "end"}
@@ -270,22 +272,34 @@ export const Biplot: React.FC<BiplotProps> = ({
       
       if (data.type === 'score') {
         return (
-          <div className="bg-gray-800 p-3 rounded shadow-lg border border-gray-600">
-            <p className="text-white font-semibold">{data.name}</p>
+          <div 
+            className="p-3 rounded shadow-lg border"
+            style={{ 
+              backgroundColor: chartTheme.tooltipBackgroundColor,
+              borderColor: chartTheme.tooltipBorderColor
+            }}
+          >
+            <p className="font-semibold" style={{ color: chartTheme.tooltipTextColor }}>{data.name}</p>
             {groupColumn && data.group !== 'Unknown' && (
-              <p className="text-gray-300">{groupColumn}: {data.group}</p>
+              <p style={{ color: chartTheme.tooltipTextColor }}>{groupColumn}: {data.group}</p>
             )}
-            <p className="text-blue-400">{xLabel}: {data.x.toFixed(3)}</p>
-            <p className="text-blue-400">{yLabel}: {data.y.toFixed(3)}</p>
+            <p style={{ color: chartTheme.tooltipTextColor }}>{xLabel}: {data.x.toFixed(3)}</p>
+            <p style={{ color: chartTheme.tooltipTextColor }}>{yLabel}: {data.y.toFixed(3)}</p>
           </div>
         );
       } else if (data.isLoadingEnd) {
         return (
-          <div className="bg-gray-800 p-3 rounded shadow-lg border border-gray-600">
-            <p className="text-white font-semibold">{data.label}</p>
-            <p className="text-gray-400">Loading values:</p>
-            <p className="text-gray-300">{xLabel}: {data.originalX.toFixed(4)}</p>
-            <p className="text-gray-300">{yLabel}: {data.originalY.toFixed(4)}</p>
+          <div 
+            className="p-3 rounded shadow-lg border"
+            style={{ 
+              backgroundColor: chartTheme.tooltipBackgroundColor,
+              borderColor: chartTheme.tooltipBorderColor
+            }}
+          >
+            <p className="font-semibold" style={{ color: chartTheme.tooltipTextColor }}>{data.label}</p>
+            <p style={{ color: chartTheme.tooltipTextColor }}>Loading values:</p>
+            <p style={{ color: chartTheme.tooltipTextColor }}>{xLabel}: {data.originalX.toFixed(4)}</p>
+            <p style={{ color: chartTheme.tooltipTextColor }}>{yLabel}: {data.originalY.toFixed(4)}</p>
           </div>
         );
       }
@@ -297,25 +311,25 @@ export const Biplot: React.FC<BiplotProps> = ({
     <div ref={fullscreenRef} className={`w-full h-full ${isFullscreen ? 'fixed inset-0 z-50 bg-gray-900 p-4' : ''}`}>
       <div className="flex items-center justify-between mb-2">
         <div className="flex items-center gap-4">
-          <h4 className="text-md font-medium text-gray-300">
+          <h4 className="text-md font-medium text-gray-700 dark:text-gray-300">
             Biplot: {xLabel} vs {yLabel}
           </h4>
           {/* Group legend */}
           {groupColumn && groupColorMap ? (
             <div className="flex items-center gap-3 text-sm">
-              <span className="text-gray-400">{groupColumn}:</span>
+              <span className="text-gray-600 dark:text-gray-400">{groupColumn}:</span>
               {Array.from(groupColorMap.entries()).map(([group, color]) => (
                 <div key={group} className="flex items-center gap-1">
                   <div 
                     className="w-3 h-3 rounded-full" 
                     style={{ backgroundColor: color }}
                   />
-                  <span className="text-gray-300">{group}</span>
+                  <span className="text-gray-700 dark:text-gray-300">{group}</span>
                 </div>
               ))}
             </div>
           ) : (
-            <div className="flex items-center gap-4 text-sm text-gray-400">
+            <div className="flex items-center gap-4 text-sm text-gray-600 dark:text-gray-400">
               <span className="flex items-center gap-2">
                 <span className="w-3 h-3 bg-blue-500 rounded-full"></span>
                 Scores
@@ -329,7 +343,7 @@ export const Biplot: React.FC<BiplotProps> = ({
               </span>
             </div>
           )}
-          {isZoomed && <span className="text-sm text-gray-400">Zoomed (drag to pan)</span>}
+          {isZoomed && <span className="text-sm text-gray-600 dark:text-gray-400">Zoomed (drag to pan)</span>}
         </div>
         <div className="flex items-center gap-2">
           <PlotControls 
@@ -373,14 +387,14 @@ export const Biplot: React.FC<BiplotProps> = ({
             </marker>
           </defs>
           
-          <CartesianGrid strokeDasharray="3 3" stroke="#374151" />
+          <CartesianGrid strokeDasharray="3 3" stroke={chartTheme.gridColor} />
           
           <XAxis 
             type="number" 
             dataKey="x" 
             name={xLabel}
-            label={{ value: xLabel, position: 'insideBottom', offset: -10, style: { fill: '#9CA3AF' } }}
-            stroke="#9CA3AF"
+            label={{ value: xLabel, position: 'insideBottom', offset: -10, style: { fill: chartTheme.textColor } }}
+            stroke={chartTheme.axisColor}
             domain={zoomDomain.x || defaultDomain}
             tickFormatter={(value) => value.toFixed(1)}
             allowDataOverflow={false}
@@ -390,15 +404,15 @@ export const Biplot: React.FC<BiplotProps> = ({
             type="number" 
             dataKey="y" 
             name={yLabel}
-            label={{ value: yLabel, angle: -90, position: 'insideLeft', style: { fill: '#9CA3AF' } }}
-            stroke="#9CA3AF"
+            label={{ value: yLabel, angle: -90, position: 'insideLeft', style: { fill: chartTheme.textColor } }}
+            stroke={chartTheme.axisColor}
             domain={zoomDomain.y || defaultDomain}
             tickFormatter={(value) => value.toFixed(1)}
             allowDataOverflow={false}
           />
           
-          <ReferenceLine x={0} stroke="#6B7280" strokeWidth={2} />
-          <ReferenceLine y={0} stroke="#6B7280" strokeWidth={2} />
+          <ReferenceLine x={0} stroke={chartTheme.referenceLineColor} strokeWidth={2} />
+          <ReferenceLine y={0} stroke={chartTheme.referenceLineColor} strokeWidth={2} />
           
           <Tooltip content={<CustomTooltip />} />
           

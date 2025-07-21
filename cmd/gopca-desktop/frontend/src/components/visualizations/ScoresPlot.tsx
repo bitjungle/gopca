@@ -5,6 +5,7 @@ import { ExportButton } from '../ExportButton';
 import { PlotControls } from '../PlotControls';
 import { useZoomPan } from '../../hooks/useZoomPan';
 import { createGroupColorMap } from '../../utils/colors';
+import { useChartTheme } from '../../hooks/useChartTheme';
 
 interface ScoresPlotProps {
   pcaResult: PCAResult;
@@ -28,6 +29,7 @@ export const ScoresPlot: React.FC<ScoresPlotProps> = ({
   const fullscreenRef = useRef<HTMLDivElement>(null);
   
   const [isFullscreen, setIsFullscreen] = useState(false);
+  const chartTheme = useChartTheme();
   
   // Create color map for groups
   const groupColorMap = useMemo(() => {
@@ -150,20 +152,20 @@ export const ScoresPlot: React.FC<ScoresPlotProps> = ({
           {/* Group legend */}
           {groupColumn && groupColorMap && (
             <div className="flex items-center gap-3 text-sm">
-              <span className="text-gray-400">{groupColumn}:</span>
+              <span className="text-gray-600 dark:text-gray-400">{groupColumn}:</span>
               {Array.from(groupColorMap.entries()).map(([group, color]) => (
                 <div key={group} className="flex items-center gap-1">
                   <div 
                     className="w-3 h-3 rounded-full" 
                     style={{ backgroundColor: color }}
                   />
-                  <span className="text-gray-300">{group}</span>
+                  <span className="text-gray-700 dark:text-gray-300">{group}</span>
                 </div>
               ))}
             </div>
           )}
           {isZoomed && (
-            <span className="text-sm text-gray-400">
+            <span className="text-sm text-gray-600 dark:text-gray-400">
               Zoomed (drag to pan)
             </span>
           )}
@@ -196,16 +198,16 @@ export const ScoresPlot: React.FC<ScoresPlotProps> = ({
           data={data}
           margin={{ top: 20, right: 20, bottom: 60, left: 80 }}
         >
-          <CartesianGrid strokeDasharray="3 3" stroke="#374151" />
+          <CartesianGrid strokeDasharray="3 3" stroke={chartTheme.gridColor} />
           <XAxis 
             type="number" 
             dataKey="x" 
             name={xLabel}
             label={{ value: xLabel, position: 'insideBottom', offset: -10 }}
-            stroke="#9CA3AF"
+            stroke={chartTheme.axisColor}
             domain={zoomDomain.x || defaultXDomain}
-            axisLine={{ stroke: '#9CA3AF' }}
-            tickLine={{ stroke: '#9CA3AF' }}
+            axisLine={{ stroke: chartTheme.axisColor }}
+            tickLine={{ stroke: chartTheme.axisColor }}
             tickFormatter={(value) => value.toFixed(1)}
           />
           <YAxis 
@@ -213,14 +215,14 @@ export const ScoresPlot: React.FC<ScoresPlotProps> = ({
             dataKey="y" 
             name={yLabel}
             label={{ value: yLabel, angle: -90, position: 'insideLeft' }}
-            stroke="#9CA3AF"
+            stroke={chartTheme.axisColor}
             domain={zoomDomain.y || defaultYDomain}
-            axisLine={{ stroke: '#9CA3AF' }}
-            tickLine={{ stroke: '#9CA3AF' }}
+            axisLine={{ stroke: chartTheme.axisColor }}
+            tickLine={{ stroke: chartTheme.axisColor }}
             tickFormatter={(value) => value.toFixed(1)}
           />
-          <ReferenceLine x={0} stroke="#6B7280" strokeWidth={2} />
-          <ReferenceLine y={0} stroke="#6B7280" strokeWidth={2} />
+          <ReferenceLine x={0} stroke={chartTheme.referenceLineColor} strokeWidth={2} />
+          <ReferenceLine y={0} stroke={chartTheme.referenceLineColor} strokeWidth={2} />
           
           <Tooltip 
             cursor={{ strokeDasharray: '3 3' }}
@@ -228,13 +230,19 @@ export const ScoresPlot: React.FC<ScoresPlotProps> = ({
               if (active && payload && payload.length) {
                 const data = payload[0].payload;
                 return (
-                  <div className="bg-gray-800 p-2 rounded shadow-lg border border-gray-600">
-                    <p className="text-white font-semibold">{data.name}</p>
+                  <div 
+                    className="p-2 rounded shadow-lg border"
+                    style={{ 
+                      backgroundColor: chartTheme.tooltipBackgroundColor,
+                      borderColor: chartTheme.tooltipBorderColor
+                    }}
+                  >
+                    <p className="font-semibold" style={{ color: chartTheme.tooltipTextColor }}>{data.name}</p>
                     {groupColumn && data.group !== 'Unknown' && (
-                      <p className="text-gray-300">{groupColumn}: {data.group}</p>
+                      <p style={{ color: chartTheme.tooltipTextColor }}>{groupColumn}: {data.group}</p>
                     )}
-                    <p className="text-gray-300">{xLabel}: {data.x.toFixed(3)}</p>
-                    <p className="text-gray-300">{yLabel}: {data.y.toFixed(3)}</p>
+                    <p style={{ color: chartTheme.tooltipTextColor }}>{xLabel}: {data.x.toFixed(3)}</p>
+                    <p style={{ color: chartTheme.tooltipTextColor }}>{yLabel}: {data.y.toFixed(3)}</p>
                   </div>
                 );
               }
