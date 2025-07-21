@@ -1,7 +1,9 @@
-import React, { useRef } from 'react';
+import React, { useRef, useState, useCallback } from 'react';
 import { ScatterChart, Scatter, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, ReferenceLine } from 'recharts';
 import { PCAResult } from '../../types';
 import { ExportButton } from '../ExportButton';
+import { PlotControls } from '../PlotControls';
+import { useZoomPan } from '../../hooks/useZoomPan';
 
 interface ScoresPlotProps {
   pcaResult: PCAResult;
@@ -18,6 +20,10 @@ export const ScoresPlot: React.FC<ScoresPlotProps> = ({
 }) => {
   const chartRef = useRef<HTMLDivElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
+  const fullscreenRef = useRef<HTMLDivElement>(null);
+  
+  const [isFullscreen, setIsFullscreen] = useState(false);
+  
   // Transform scores data for Recharts
   const data = pcaResult.scores.map((row, index) => {
     const xVal = row[xComponent] || 0;
@@ -55,6 +61,62 @@ export const ScoresPlot: React.FC<ScoresPlotProps> = ({
   // Add padding to the range
   const xPadding = (xMax - xMin) * 0.1 || 1;
   const yPadding = (yMax - yMin) * 0.1 || 1;
+  
+  // Default domain (full range)
+  const defaultXDomain: [number, number] = [xMin - xPadding, xMax + xPadding];
+  const defaultYDomain: [number, number] = [yMin - yPadding, yMax + yPadding];
+  
+  // Use zoom/pan hook
+  const {
+    zoomDomain,
+    isPanning,
+    handleZoomIn,
+    handleZoomOut,
+    handleResetView,
+    handlePanStart,
+    handlePanMove,
+    handlePanEnd,
+    isZoomed
+  } = useZoomPan({
+    defaultXDomain,
+    defaultYDomain,
+    zoomFactor: 0.7
+  });
+  
+  const handleToggleFullscreen = useCallback(() => {
+    if (!fullscreenRef.current) return;
+    
+    if (!isFullscreen) {
+      if (fullscreenRef.current.requestFullscreen) {
+        fullscreenRef.current.requestFullscreen();
+      } else if ((fullscreenRef.current as any).webkitRequestFullscreen) {
+        (fullscreenRef.current as any).webkitRequestFullscreen();
+      }
+      setIsFullscreen(true);
+    } else {
+      if (document.exitFullscreen) {
+        document.exitFullscreen();
+      } else if ((document as any).webkitExitFullscreen) {
+        (document as any).webkitExitFullscreen();
+      }
+      setIsFullscreen(false);
+    }
+  }, [isFullscreen]);
+  
+  // Listen for fullscreen changes
+  React.useEffect(() => {
+    const handleFullscreenChange = () => {
+      setIsFullscreen(!!document.fullscreenElement);
+    };
+    
+    document.addEventListener('fullscreenchange', handleFullscreenChange);
+    document.addEventListener('webkitfullscreenchange', handleFullscreenChange);
+    
+    return () => {
+      document.removeEventListener('fullscreenchange', handleFullscreenChange);
+      document.removeEventListener('webkitfullscreenchange', handleFullscreenChange);
+    };
+  }, []);
 
   // Handle case where there's no data
   if (data.length === 0) {
@@ -66,14 +128,38 @@ export const ScoresPlot: React.FC<ScoresPlotProps> = ({
   }
 
   return (
-    <div className="w-full h-full">
-      <div className="flex justify-end mb-2">
-        <ExportButton 
-          chartRef={containerRef} 
-          fileName={`scores-plot-PC${xComponent + 1}-vs-PC${yComponent + 1}`}
-        />
+    <div ref={fullscreenRef} className={`w-full h-full ${isFullscreen ? 'fixed inset-0 z-50 bg-gray-900 p-4' : ''}`}>
+      <div className="flex justify-between items-center mb-2">
+        <div className="text-sm text-gray-400">
+          {isZoomed && (
+            <span className="mr-2">
+              Zoomed (drag to pan)
+            </span>
+          )}
+        </div>
+        <div className="flex items-center gap-2">
+          <PlotControls 
+            onResetView={handleResetView}
+            onToggleFullscreen={handleToggleFullscreen}
+            onZoomIn={handleZoomIn}
+            onZoomOut={handleZoomOut}
+            isFullscreen={isFullscreen}
+          />
+          <ExportButton 
+            chartRef={containerRef} 
+            fileName={`scores-plot-PC${xComponent + 1}-vs-PC${yComponent + 1}`}
+          />
+        </div>
       </div>
-      <div ref={containerRef} className="w-full" style={{ height: 'calc(100% - 40px)' }}>
+      <div 
+        ref={containerRef} 
+        className={`w-full ${isZoomed ? (isPanning ? 'cursor-grabbing' : 'cursor-grab') : ''}`}
+        style={{ height: isFullscreen ? 'calc(100vh - 80px)' : 'calc(100% - 40px)' }}
+        onMouseDown={handlePanStart}
+        onMouseMove={handlePanMove}
+        onMouseUp={handlePanEnd}
+        onMouseLeave={handlePanEnd}
+      >
         <ResponsiveContainer width="100%" height="100%">
         <ScatterChart
           data={data}
@@ -86,7 +172,7 @@ export const ScoresPlot: React.FC<ScoresPlotProps> = ({
             name={xLabel}
             label={{ value: xLabel, position: 'insideBottom', offset: -10 }}
             stroke="#9CA3AF"
-            domain={[xMin - xPadding, xMax + xPadding]}
+            domain={zoomDomain.x || defaultXDomain}
             axisLine={{ stroke: '#9CA3AF' }}
             tickLine={{ stroke: '#9CA3AF' }}
             tickFormatter={(value) => value.toFixed(1)}
@@ -97,7 +183,7 @@ export const ScoresPlot: React.FC<ScoresPlotProps> = ({
             name={yLabel}
             label={{ value: yLabel, angle: -90, position: 'insideLeft' }}
             stroke="#9CA3AF"
-            domain={[yMin - yPadding, yMax + yPadding]}
+            domain={zoomDomain.y || defaultYDomain}
             axisLine={{ stroke: '#9CA3AF' }}
             tickLine={{ stroke: '#9CA3AF' }}
             tickFormatter={(value) => value.toFixed(1)}

@@ -1,4 +1,4 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useCallback } from 'react';
 import { 
   ScatterChart, 
   Scatter, 
@@ -11,6 +11,8 @@ import {
 } from 'recharts';
 import { PCAResult } from '../../types';
 import { ExportButton } from '../ExportButton';
+import { PlotControls } from '../PlotControls';
+import { useZoomPan } from '../../hooks/useZoomPan';
 
 interface BiplotProps {
   pcaResult: PCAResult;
@@ -30,6 +32,9 @@ export const Biplot: React.FC<BiplotProps> = ({
   const [hoveredVariable, setHoveredVariable] = useState<number | null>(null);
   const chartRef = useRef<HTMLDivElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
+  const fullscreenRef = useRef<HTMLDivElement>(null);
+  
+  const [isFullscreen, setIsFullscreen] = useState(false);
 
   // Transform scores data
   const scoresData = pcaResult.scores.map((row, index) => ({
@@ -96,6 +101,60 @@ export const Biplot: React.FC<BiplotProps> = ({
 
   // Set symmetric axis ranges based on plot bounds
   const axisRange = plotMax;
+  const defaultDomain: [number, number] = [-axisRange, axisRange];
+  
+  // Use zoom/pan hook with maintain aspect ratio for biplot
+  const {
+    zoomDomain,
+    isPanning,
+    handleZoomIn,
+    handleZoomOut,
+    handleResetView,
+    handlePanStart,
+    handlePanMove,
+    handlePanEnd,
+    isZoomed
+  } = useZoomPan({
+    defaultXDomain: defaultDomain,
+    defaultYDomain: defaultDomain,
+    zoomFactor: 0.7,
+    maintainAspectRatio: true // Important for biplot to keep symmetry
+  });
+  
+  const handleToggleFullscreen = useCallback(() => {
+    if (!fullscreenRef.current) return;
+    
+    if (!isFullscreen) {
+      if (fullscreenRef.current.requestFullscreen) {
+        fullscreenRef.current.requestFullscreen();
+      } else if ((fullscreenRef.current as any).webkitRequestFullscreen) {
+        (fullscreenRef.current as any).webkitRequestFullscreen();
+      }
+      setIsFullscreen(true);
+    } else {
+      if (document.exitFullscreen) {
+        document.exitFullscreen();
+      } else if ((document as any).webkitExitFullscreen) {
+        (document as any).webkitExitFullscreen();
+      }
+      setIsFullscreen(false);
+    }
+  }, [isFullscreen]);
+  
+  // Listen for fullscreen changes
+  React.useEffect(() => {
+    const handleFullscreenChange = () => {
+      setIsFullscreen(!!document.fullscreenElement);
+    };
+    
+    document.addEventListener('fullscreenchange', handleFullscreenChange);
+    document.addEventListener('webkitfullscreenchange', handleFullscreenChange);
+    
+    return () => {
+      document.removeEventListener('fullscreenchange', handleFullscreenChange);
+      document.removeEventListener('webkitfullscreenchange', handleFullscreenChange);
+    };
+  }, []);
 
   // Get variance percentages for axis labels
   const xVariance = pcaResult.explained_variance[xComponent]?.toFixed(1) || '0';
@@ -213,12 +272,12 @@ export const Biplot: React.FC<BiplotProps> = ({
   };
 
   return (
-    <div className="w-full h-full">
+    <div ref={fullscreenRef} className={`w-full h-full ${isFullscreen ? 'fixed inset-0 z-50 bg-gray-900 p-4' : ''}`}>
       <div className="flex items-center justify-between mb-2">
-        <h4 className="text-md font-medium text-gray-300">
-          Biplot: {xLabel} vs {yLabel}
-        </h4>
         <div className="flex items-center gap-4">
+          <h4 className="text-md font-medium text-gray-300">
+            Biplot: {xLabel} vs {yLabel}
+          </h4>
           <div className="flex items-center gap-4 text-sm text-gray-400">
             <span className="flex items-center gap-2">
               <span className="w-3 h-3 bg-blue-500 rounded-full"></span>
@@ -232,6 +291,16 @@ export const Biplot: React.FC<BiplotProps> = ({
               Loadings
             </span>
           </div>
+          {isZoomed && <span className="text-sm text-gray-400">Zoomed (drag to pan)</span>}
+        </div>
+        <div className="flex items-center gap-2">
+          <PlotControls 
+            onResetView={handleResetView}
+            onToggleFullscreen={handleToggleFullscreen}
+            onZoomIn={handleZoomIn}
+            onZoomOut={handleZoomOut}
+            isFullscreen={isFullscreen}
+          />
           <ExportButton 
             chartRef={containerRef} 
             fileName={`biplot-PC${xComponent + 1}-vs-PC${yComponent + 1}`}
@@ -239,7 +308,15 @@ export const Biplot: React.FC<BiplotProps> = ({
         </div>
       </div>
       
-      <div ref={containerRef} className="w-full" style={{ height: 'calc(100% - 40px)' }}>
+      <div 
+        ref={containerRef} 
+        className={`w-full ${isZoomed ? (isPanning ? 'cursor-grabbing' : 'cursor-grab') : ''}`}
+        style={{ height: isFullscreen ? 'calc(100vh - 80px)' : 'calc(100% - 40px)' }}
+        onMouseDown={handlePanStart}
+        onMouseMove={handlePanMove}
+        onMouseUp={handlePanEnd}
+        onMouseLeave={handlePanEnd}
+      >
         <ResponsiveContainer width="100%" height="100%">
         <ScatterChart
           margin={{ top: 20, right: 20, bottom: 60, left: 80 }}
@@ -266,7 +343,7 @@ export const Biplot: React.FC<BiplotProps> = ({
             name={xLabel}
             label={{ value: xLabel, position: 'insideBottom', offset: -10, style: { fill: '#9CA3AF' } }}
             stroke="#9CA3AF"
-            domain={[-axisRange, axisRange]}
+            domain={zoomDomain.x || defaultDomain}
             tickFormatter={(value) => value.toFixed(1)}
             allowDataOverflow={false}
           />
@@ -277,7 +354,7 @@ export const Biplot: React.FC<BiplotProps> = ({
             name={yLabel}
             label={{ value: yLabel, angle: -90, position: 'insideLeft', style: { fill: '#9CA3AF' } }}
             stroke="#9CA3AF"
-            domain={[-axisRange, axisRange]}
+            domain={zoomDomain.y || defaultDomain}
             tickFormatter={(value) => value.toFixed(1)}
             allowDataOverflow={false}
           />
