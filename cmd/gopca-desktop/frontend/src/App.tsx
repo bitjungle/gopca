@@ -28,7 +28,7 @@ function App() {
         meanCenter: true,
         standardScale: true,
         robustScale: false,
-        method: 'NIPALS'
+        method: 'SVD'
     });
     
     const handleFileUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {

@@ -47,10 +47,10 @@ func (p *PCAImpl) Fit(data types.Matrix, config types.PCAConfig) (*types.PCAResu
 	var err error
 
 	switch config.Method {
-	case "nipals", "":
-		scores, loadings, err = p.nipalsAlgorithm(X, config.Components)
-	case "svd":
+	case "svd", "":
 		scores, loadings, err = p.svdAlgorithm(X, config.Components)
+	case "nipals":
+		scores, loadings, err = p.nipalsAlgorithm(X, config.Components)
 	default:
 		return nil, fmt.Errorf("unknown PCA method: %s", config.Method)
 	}
