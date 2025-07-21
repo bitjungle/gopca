@@ -31,31 +31,36 @@ export const DataTable: React.FC<DataTableProps> = ({
   const hasRowNames = rowNames && rowNames.length > 0;
   const [rowSelection, setRowSelection] = React.useState<RowSelectionState>({});
   const [columnSelection, setColumnSelection] = React.useState<Record<string, boolean>>({});
+  const isFirstRender = React.useRef(true);
   
-  // Initialize row selection state (all selected by default)
+  // Initialize selection states when component mounts with data
   React.useEffect(() => {
-    if (enableRowSelection && data.length > 0) {
+    if (!enableRowSelection && !enableColumnSelection) return;
+    if (data.length === 0) return;
+    
+    // Initialize row selection
+    if (enableRowSelection && Object.keys(rowSelection).length === 0) {
       const initialRowSelection: RowSelectionState = {};
       data.forEach((_, index) => {
         initialRowSelection[index] = true;
       });
       setRowSelection(initialRowSelection);
     }
-  }, [data, enableRowSelection]);
-  
-  // Initialize column selection state (all selected by default)
-  React.useEffect(() => {
-    if (enableColumnSelection) {
+    
+    // Initialize column selection
+    if (enableColumnSelection && Object.keys(columnSelection).length === 0) {
       const initialSelection: Record<string, boolean> = {};
       headers.forEach((_, index) => {
         initialSelection[`col${index}`] = true;
       });
       setColumnSelection(initialSelection);
     }
-  }, [headers, enableColumnSelection]);
+  }, [data.length, headers.length, enableRowSelection, enableColumnSelection]);
   
-  // Notify parent of row selection changes
+  // Notify parent of row selection changes (skip if empty)
   React.useEffect(() => {
+    if (Object.keys(rowSelection).length === 0) return;
+    
     if (onRowSelectionChange) {
       const selectedIndices = Object.keys(rowSelection)
         .filter(key => rowSelection[key])
@@ -64,8 +69,10 @@ export const DataTable: React.FC<DataTableProps> = ({
     }
   }, [rowSelection, onRowSelectionChange]);
   
-  // Notify parent of column selection changes
+  // Notify parent of column selection changes (skip if empty)
   React.useEffect(() => {
+    if (Object.keys(columnSelection).length === 0) return;
+    
     if (onColumnSelectionChange) {
       const selectedIndices = headers
         .map((_, index) => index)

@@ -2,6 +2,9 @@ export interface FileData {
   headers: string[];
   rowNames: string[];
   data: number[][];
+  categoricalColumns?: {
+    [columnName: string]: string[];  // Column name -> array of values for each row
+  };
 }
 
 export interface PCARequest {
@@ -23,6 +26,7 @@ export interface PCAResult {
   explained_variance: number[];
   cumulative_variance: number[];
   component_labels: string[];
+  variable_labels?: string[];
 }
 
 export interface PCAMetrics {
