@@ -261,16 +261,6 @@ function App() {
                         <div className="bg-white dark:bg-gray-800 rounded-lg p-6 shadow-lg border border-gray-200 dark:border-gray-700">
                             <h2 className="text-xl font-semibold mb-4">PCA Results</h2>
                             
-                            {/* Scores Matrix */}
-                            <div className="mb-6">
-                                <DataTable
-                                    headers={pcaResponse.result.component_labels || []}
-                                    rowNames={fileData?.rowNames || []}
-                                    data={pcaResponse.result.scores}
-                                    title="Scores Matrix"
-                                />
-                            </div>
-                            
                             {/* Explained Variance */}
                             <div className="bg-gray-100 dark:bg-gray-700 rounded-lg p-4">
                                 <h3 className="text-lg font-semibold mb-2">Explained Variance</h3>
@@ -415,6 +405,16 @@ function App() {
                                         </div>
                                     )}
                                 </div>
+                            </div>
+                            
+                            {/* Scores Matrix */}
+                            <div className="mt-6">
+                                <DataTable
+                                    headers={pcaResponse.result.component_labels || []}
+                                    rowNames={fileData?.rowNames || []}
+                                    data={pcaResponse.result.scores}
+                                    title="Scores Matrix"
+                                />
                             </div>
                             
                         </div>
