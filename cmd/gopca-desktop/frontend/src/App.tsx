@@ -2,9 +2,9 @@ import React, { useState } from 'react';
 import './App.css';
 import { ParseCSV, RunPCA } from "../wailsjs/go/main/App";
 import { DataTable } from './components/DataTable';
-import { ScoresPlot } from './components/visualizations';
+import { ScoresPlot, ScreePlot } from './components/visualizations';
 import { FileData, PCARequest, PCAResponse } from './types';
-import logo from './assets/images/GoPCA-logo-1024.png';
+import logo from './assets/images/GoPCA-logo-1024-transp.png';
 
 function App() {
     const [fileData, setFileData] = useState<FileData | null>(null);
@@ -15,6 +15,7 @@ function App() {
     // Selection state
     const [excludedRows, setExcludedRows] = useState<number[]>([]);
     const [excludedColumns, setExcludedColumns] = useState<number[]>([]);
+    const [selectedPlot, setSelectedPlot] = useState<'scores' | 'scree'>('scores');
     
     // PCA configuration
     const [config, setConfig] = useState({
@@ -254,18 +255,39 @@ function App() {
                                 </div>
                             </div>
                             
-                            {/* Scores Plot */}
-                            {pcaResponse.result.scores.length > 0 && pcaResponse.result.scores[0].length >= 2 && (
-                                <div className="mt-6">
-                                    <h3 className="text-lg font-semibold mb-4">Scores Plot</h3>
-                                    <div className="bg-gray-700 rounded-lg p-4" style={{ height: '500px' }}>
+                            {/* Plot Selector and Visualization */}
+                            <div className="mt-6">
+                                <div className="flex items-center justify-between mb-4">
+                                    <h3 className="text-lg font-semibold">Visualizations</h3>
+                                    <select
+                                        value={selectedPlot}
+                                        onChange={(e) => setSelectedPlot(e.target.value as 'scores' | 'scree')}
+                                        className="px-3 py-2 bg-gray-700 rounded-lg"
+                                    >
+                                        <option value="scores">Scores Plot</option>
+                                        <option value="scree">Scree Plot</option>
+                                    </select>
+                                </div>
+                                
+                                <div className="bg-gray-700 rounded-lg p-4" style={{ height: '500px' }}>
+                                    {selectedPlot === 'scores' && pcaResponse.result.scores.length > 0 && pcaResponse.result.scores[0].length >= 2 ? (
                                         <ScoresPlot
                                             pcaResult={pcaResponse.result}
                                             rowNames={fileData?.rowNames || []}
                                         />
-                                    </div>
+                                    ) : selectedPlot === 'scree' ? (
+                                        <ScreePlot
+                                            pcaResult={pcaResponse.result}
+                                            showCumulative={true}
+                                            elbowThreshold={80}
+                                        />
+                                    ) : (
+                                        <div className="w-full h-full flex items-center justify-center text-gray-400">
+                                            <p>Not enough components for scores plot (minimum 2 required)</p>
+                                        </div>
+                                    )}
                                 </div>
-                            )}
+                            </div>
                             
                         </div>
                     )}
