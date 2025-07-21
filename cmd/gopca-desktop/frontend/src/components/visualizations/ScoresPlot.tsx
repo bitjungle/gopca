@@ -59,7 +59,6 @@ export const ScoresPlot: React.FC<ScoresPlotProps> = ({
     };
   }).filter(point => point !== null);
 
-
   // Get variance percentages for axis labels
   const xVariance = pcaResult.explained_variance[xComponent]?.toFixed(1) || '0';
   const yVariance = pcaResult.explained_variance[yComponent]?.toFixed(1) || '0';
@@ -222,6 +221,7 @@ export const ScoresPlot: React.FC<ScoresPlotProps> = ({
           />
           <ReferenceLine x={0} stroke="#6B7280" strokeWidth={2} />
           <ReferenceLine y={0} stroke="#6B7280" strokeWidth={2} />
+          
           <Tooltip 
             cursor={{ strokeDasharray: '3 3' }}
             content={({ active, payload }) => {
