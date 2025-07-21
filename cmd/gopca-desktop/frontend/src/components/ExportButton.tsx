@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { toPng, toSvg } from 'html-to-image';
 import { saveAs } from 'file-saver';
 import { SaveFile } from '../../wailsjs/go/main/App';
+import { useTheme } from '../contexts/ThemeContext';
 
 interface ExportButtonProps {
   chartRef: React.RefObject<HTMLDivElement>;
@@ -12,6 +13,7 @@ interface ExportButtonProps {
 export const ExportButton: React.FC<ExportButtonProps> = ({ chartRef, fileName, className = '' }) => {
   const [isExporting, setIsExporting] = useState(false);
   const [showMenu, setShowMenu] = useState(false);
+  const { theme } = useTheme();
 
   const handleExport = async (format: 'png' | 'svg') => {
     if (!chartRef.current) return;
@@ -31,7 +33,7 @@ export const ExportButton: React.FC<ExportButtonProps> = ({ chartRef, fileName, 
         const bounds = chartElement.getBoundingClientRect();
         
         dataUrl = await toPng(chartElement, {
-          backgroundColor: '#1F2937',
+          backgroundColor: theme === 'dark' ? '#1F2937' : '#FFFFFF',
           width: bounds.width,
           height: bounds.height,
           pixelRatio: 2,
@@ -46,7 +48,7 @@ export const ExportButton: React.FC<ExportButtonProps> = ({ chartRef, fileName, 
       } else {
         // SVG export
         dataUrl = await toSvg(chartRef.current, {
-          backgroundColor: '#1F2937',
+          backgroundColor: theme === 'dark' ? '#1F2937' : '#FFFFFF',
         });
       }
       
@@ -79,8 +81,8 @@ export const ExportButton: React.FC<ExportButtonProps> = ({ chartRef, fileName, 
         className={`
           px-3 py-1 text-sm rounded-lg transition-colors
           ${isExporting 
-            ? 'bg-gray-600 text-gray-400 cursor-not-allowed' 
-            : 'bg-gray-700 hover:bg-gray-600 text-gray-300'
+            ? 'bg-gray-400 dark:bg-gray-600 text-gray-200 dark:text-gray-400 cursor-not-allowed' 
+            : 'bg-gray-200 dark:bg-gray-700 hover:bg-gray-300 dark:hover:bg-gray-600 text-gray-700 dark:text-gray-300'
           }
         `}
       >
@@ -103,16 +105,16 @@ export const ExportButton: React.FC<ExportButtonProps> = ({ chartRef, fileName, 
       </button>
       
       {showMenu && !isExporting && (
-        <div className="absolute right-0 mt-2 w-32 bg-gray-800 rounded-lg shadow-lg border border-gray-700 z-10">
+        <div className="absolute right-0 mt-2 w-32 bg-white dark:bg-gray-800 rounded-lg shadow-lg border border-gray-200 dark:border-gray-700 z-10">
           <button
             onClick={() => handleExport('png')}
-            className="w-full text-left px-4 py-2 text-sm text-gray-300 hover:bg-gray-700 rounded-t-lg"
+            className="w-full text-left px-4 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-t-lg"
           >
             Export as PNG
           </button>
           <button
             onClick={() => handleExport('svg')}
-            className="w-full text-left px-4 py-2 text-sm text-gray-300 hover:bg-gray-700 rounded-b-lg"
+            className="w-full text-left px-4 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-b-lg"
           >
             Export as SVG
           </button>

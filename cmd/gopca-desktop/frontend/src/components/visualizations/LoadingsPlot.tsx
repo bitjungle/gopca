@@ -14,6 +14,7 @@ import {
 } from 'recharts';
 import { PCAResult } from '../../types';
 import { ExportButton } from '../ExportButton';
+import { useChartTheme } from '../../hooks/useChartTheme';
 
 interface LoadingsPlotProps {
   pcaResult: PCAResult;
@@ -27,6 +28,7 @@ export const LoadingsPlot: React.FC<LoadingsPlotProps> = ({
   variableThreshold = 50
 }) => {
   const chartRef = useRef<HTMLDivElement>(null);
+  const chartTheme = useChartTheme();
   // Auto-detect plot type based on number of variables
   const numVariables = pcaResult.loadings[0]?.length || 0;
   const autoPlotType = numVariables > variableThreshold ? 'line' : 'bar';
@@ -68,7 +70,7 @@ export const LoadingsPlot: React.FC<LoadingsPlotProps> = ({
   // Handle edge cases
   if (!loadingsData || loadingsData.length === 0) {
     return (
-      <div className="w-full h-full flex items-center justify-center text-gray-400">
+      <div className="w-full h-full flex items-center justify-center text-gray-500 dark:text-gray-400">
         <p>No loadings data to display</p>
       </div>
     );
@@ -79,8 +81,14 @@ export const LoadingsPlot: React.FC<LoadingsPlotProps> = ({
     if (active && payload && payload.length) {
       const data = payload[0].payload;
       return (
-        <div className="bg-gray-800 p-3 rounded shadow-lg border border-gray-600">
-          <p className="text-white font-semibold">{data.variable}</p>
+        <div 
+          className="p-3 rounded shadow-lg border"
+          style={{ 
+            backgroundColor: chartTheme.tooltipBackgroundColor,
+            borderColor: chartTheme.tooltipBorderColor
+          }}
+        >
+          <p className="font-semibold" style={{ color: chartTheme.tooltipTextColor }}>{data.variable}</p>
           <p className="text-blue-400">
             Loading: {data.loading.toFixed(4)}
           </p>
@@ -94,16 +102,16 @@ export const LoadingsPlot: React.FC<LoadingsPlotProps> = ({
     <div className="w-full h-full" ref={chartRef}>
       {/* Header with plot type selector and export button */}
       <div className="flex items-center justify-between mb-4">
-        <h4 className="text-md font-medium text-gray-300">
+        <h4 className="text-md font-medium text-gray-700 dark:text-gray-300">
           {componentLabel} Loadings ({variance}% variance)
         </h4>
         <div className="flex items-center gap-4">
           <div className="flex items-center gap-2">
-            <span className="text-sm text-gray-400">Plot type:</span>
+            <span className="text-sm text-gray-600 dark:text-gray-400">Plot type:</span>
             <select
               value={plotType}
               onChange={(e) => setPlotType(e.target.value as 'bar' | 'line')}
-              className="px-2 py-1 bg-gray-700 rounded text-sm"
+              className="px-2 py-1 bg-gray-100 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded text-sm text-gray-900 dark:text-white"
             >
               <option value="bar">Bar Chart</option>
               <option value="line">Line Chart</option>
@@ -125,11 +133,11 @@ export const LoadingsPlot: React.FC<LoadingsPlotProps> = ({
             data={sortedData} 
             margin={{ top: 20, right: 20, bottom: 60, left: 80 }}
           >
-            <CartesianGrid strokeDasharray="3 3" stroke="#374151" />
+            <CartesianGrid strokeDasharray="3 3" stroke={chartTheme.gridColor} />
             
             <XAxis 
               dataKey="variable" 
-              stroke="#9CA3AF"
+              stroke={chartTheme.axisColor}
               angle={-45}
               textAnchor="end"
               height={60}
@@ -137,12 +145,12 @@ export const LoadingsPlot: React.FC<LoadingsPlotProps> = ({
             />
             
             <YAxis 
-              stroke="#9CA3AF"
+              stroke={chartTheme.axisColor}
               domain={[-absMax - padding, absMax + padding]}
               tickFormatter={(value) => value.toFixed(2)}
             />
             
-            <ReferenceLine y={0} stroke="#6B7280" strokeWidth={2} />
+            <ReferenceLine y={0} stroke={chartTheme.referenceLineColor} strokeWidth={2} />
             
             <Tooltip content={<CustomTooltip />} />
             
@@ -160,33 +168,33 @@ export const LoadingsPlot: React.FC<LoadingsPlotProps> = ({
             data={sortedData} 
             margin={{ top: 20, right: 20, bottom: 60, left: 80 }}
           >
-            <CartesianGrid strokeDasharray="3 3" stroke="#374151" />
+            <CartesianGrid strokeDasharray="3 3" stroke={chartTheme.gridColor} />
             
             <XAxis 
               dataKey="variableIndex" 
-              stroke="#9CA3AF"
+              stroke={chartTheme.axisColor}
               label={{ 
                 value: 'Variable Index', 
                 position: 'insideBottom', 
                 offset: -10,
-                style: { fill: '#9CA3AF' }
+                style: { fill: chartTheme.textColor }
               }}
               domain={[0, numVariables - 1]}
             />
             
             <YAxis 
-              stroke="#9CA3AF"
+              stroke={chartTheme.axisColor}
               domain={[-absMax - padding, absMax + padding]}
               tickFormatter={(value) => value.toFixed(2)}
               label={{ 
                 value: 'Loading Value', 
                 angle: -90, 
                 position: 'insideLeft',
-                style: { fill: '#9CA3AF' }
+                style: { fill: chartTheme.textColor }
               }}
             />
             
-            <ReferenceLine y={0} stroke="#6B7280" strokeWidth={2} />
+            <ReferenceLine y={0} stroke={chartTheme.referenceLineColor} strokeWidth={2} />
             
             <Tooltip content={<CustomTooltip />} />
             

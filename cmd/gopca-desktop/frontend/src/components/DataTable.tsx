@@ -103,7 +103,7 @@ export const DataTable: React.FC<DataTableProps> = ({
               type="checkbox"
               checked={table.getIsAllRowsSelected()}
               onChange={table.getToggleAllRowsSelectedHandler()}
-              className="w-4 h-4 text-blue-600 bg-gray-700 border-gray-600 rounded focus:ring-blue-500"
+              className="w-4 h-4 text-blue-600 bg-white dark:bg-gray-700 border-gray-300 dark:border-gray-600 rounded focus:ring-blue-500"
             />
           );
         },
@@ -142,7 +142,7 @@ export const DataTable: React.FC<DataTableProps> = ({
                   [colId]: e.target.checked
                 }));
               }}
-              className="w-4 h-4 text-blue-600 bg-gray-700 border-gray-600 rounded focus:ring-blue-500"
+              className="w-4 h-4 text-blue-600 bg-white dark:bg-gray-700 border-gray-300 dark:border-gray-600 rounded focus:ring-blue-500"
             />
             <span>{header}</span>
           </div>
@@ -188,10 +188,10 @@ export const DataTable: React.FC<DataTableProps> = ({
   
   return (
     <div className="flex flex-col space-y-2">
-      {title && <h3 className="text-lg font-semibold text-white">{title}</h3>}
-      <div className="overflow-auto max-h-96 border border-gray-600 rounded-lg">
-        <table className="w-full text-sm text-left text-gray-300">
-          <thead className="text-xs uppercase bg-gray-700 text-gray-300 sticky top-0">
+      {title && <h3 className="text-lg font-semibold text-gray-900 dark:text-white">{title}</h3>}
+      <div className="overflow-auto max-h-96 border border-gray-300 dark:border-gray-600 rounded-lg">
+        <table className="w-full text-sm text-left text-gray-700 dark:text-gray-300">
+          <thead className="text-xs uppercase bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 sticky top-0">
             {table.getHeaderGroups().map(headerGroup => (
               <tr key={headerGroup.id}>
                 {headerGroup.headers.map(header => (
@@ -209,7 +209,7 @@ export const DataTable: React.FC<DataTableProps> = ({
           </thead>
           <tbody>
             {table.getRowModel().rows.map(row => (
-              <tr key={row.id} className="border-b border-gray-700 hover:bg-gray-800">
+              <tr key={row.id} className="border-b border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-800">
                 {row.getVisibleCells().map(cell => (
                   <td key={cell.id} className="px-4 py-2">
                     {flexRender(cell.column.columnDef.cell, cell.getContext())}
@@ -220,7 +220,7 @@ export const DataTable: React.FC<DataTableProps> = ({
           </tbody>
         </table>
       </div>
-      <div className="text-sm text-gray-400">
+      <div className="text-sm text-gray-600 dark:text-gray-400">
         {enableRowSelection || enableColumnSelection ? (
           <div className="flex justify-between">
             <span>Showing {data.length} rows × {headers.length} columns</span>
