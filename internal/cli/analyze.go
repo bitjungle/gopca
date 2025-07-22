@@ -126,7 +126,7 @@ The analysis includes:
 			&cli.StringFlag{
 				Name:  "na-values",
 				Usage: "String(s) representing missing values (comma-separated)",
-				Value: "NA,NaN",
+				Value: ",NA,N/A,nan,NaN,null,NULL,m",
 			},
 			&cli.StringFlag{
 				Name:  "missing-strategy",
