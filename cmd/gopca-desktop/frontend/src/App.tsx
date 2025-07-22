@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useRef } from 'react';
 import './App.css';
 import { ParseCSV, RunPCA, LoadIrisDataset } from "../wailsjs/go/main/App";
 import { DataTable, ThemeToggle } from './components';
@@ -22,6 +22,10 @@ function App() {
     const [selectedYComponent, setSelectedYComponent] = useState(1);
     const [selectedLoadingComponent, setSelectedLoadingComponent] = useState(0);
     const [selectedGroupColumn, setSelectedGroupColumn] = useState<string | null>(null);
+    
+    // Refs for smooth scrolling
+    const pcaErrorRef = useRef<HTMLDivElement>(null);
+    const pcaResultsRef = useRef<HTMLDivElement>(null);
     
     // PCA configuration
     const [config, setConfig] = useState({
@@ -104,9 +108,23 @@ function App() {
                 setSelectedYComponent(1);
                 // Clear any previous errors
                 setPcaError(null);
+                // Smooth scroll to results
+                setTimeout(() => {
+                    pcaResultsRef.current?.scrollIntoView({ 
+                        behavior: 'smooth', 
+                        block: 'start' 
+                    });
+                }, 100);
             } else {
                 setPcaError(result.error || 'PCA analysis failed');
                 setPcaResponse(null);
+                // Smooth scroll to error
+                setTimeout(() => {
+                    pcaErrorRef.current?.scrollIntoView({ 
+                        behavior: 'smooth', 
+                        block: 'start' 
+                    });
+                }, 100);
             }
         } catch (err) {
             setPcaError(`Failed to run PCA: ${err}`);
@@ -355,21 +373,21 @@ function App() {
                                 disabled={loading}
                                 className="mt-4 px-6 py-2 bg-blue-600 hover:bg-blue-700 disabled:bg-gray-400 dark:disabled:bg-gray-600 rounded-lg font-medium text-white"
                             >
-                                {loading ? 'Running...' : 'Run PCA Analysis'}
+                                {loading ? 'Running...' : 'Go PCA!'}
                             </button>
                         </div>
                     )}
                     
                     {/* PCA Error Display - shown between Step 2 and Results */}
                     {pcaError && fileData && (
-                        <div className="bg-red-100 dark:bg-red-800 border border-red-300 dark:border-red-600 rounded-lg p-4">
+                        <div ref={pcaErrorRef} className="bg-red-100 dark:bg-red-800 border border-red-300 dark:border-red-600 rounded-lg p-4">
                             <p className="text-red-700 dark:text-red-200">{pcaError}</p>
                         </div>
                     )}
                     
                     {/* PCA Results */}
                     {pcaResponse?.success && pcaResponse.result && (
-                        <div className="bg-white dark:bg-gray-800 rounded-lg p-6 shadow-lg border border-gray-200 dark:border-gray-700">
+                        <div ref={pcaResultsRef} className="bg-white dark:bg-gray-800 rounded-lg p-6 shadow-lg border border-gray-200 dark:border-gray-700">
                             <h2 className="text-xl font-semibold mb-4">PCA Results</h2>
                             
                             {/* Info message about missing data handling */}
