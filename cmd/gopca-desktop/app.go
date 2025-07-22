@@ -33,15 +33,17 @@ func (a *App) startup(ctx context.Context) {
 
 // FileData represents the structure of CSV data for the frontend
 type FileData struct {
-	Headers             []string               `json:"headers"`
-	RowNames            []string               `json:"rowNames"`
-	Data                [][]float64            `json:"data"`
-	CategoricalColumns  map[string][]string    `json:"categoricalColumns,omitempty"`
+	Headers            []string            `json:"headers"`
+	RowNames           []string            `json:"rowNames"`
+	Data               [][]float64         `json:"data"`
+	MissingMask        [][]bool            `json:"missingMask,omitempty"`
+	CategoricalColumns map[string][]string `json:"categoricalColumns,omitempty"`
 }
 
 // PCARequest represents a PCA analysis request from the frontend
 type PCARequest struct {
 	Data            [][]float64 `json:"data"`
+	MissingMask     [][]bool    `json:"missingMask,omitempty"`
 	Headers         []string    `json:"headers"`
 	RowNames        []string    `json:"rowNames"`
 	Components      int         `json:"components"`
@@ -51,6 +53,7 @@ type PCARequest struct {
 	Method          string      `json:"method"`
 	ExcludedRows    []int       `json:"excludedRows,omitempty"`
 	ExcludedColumns []int       `json:"excludedColumns,omitempty"`
+	MissingStrategy string      `json:"missingStrategy,omitempty"`
 	// Kernel PCA parameters
 	KernelType   string  `json:"kernelType,omitempty"`
 	KernelGamma  float64 `json:"kernelGamma,omitempty"`
@@ -63,11 +66,21 @@ type PCAResponse struct {
 	Success bool             `json:"success"`
 	Error   string           `json:"error,omitempty"`
 	Result  *types.PCAResult `json:"result,omitempty"`
+	Info    string           `json:"info,omitempty"`
 }
 
-
 // RunPCA performs PCA analysis on the provided data
-func (a *App) RunPCA(request PCARequest) PCAResponse {
+func (a *App) RunPCA(request PCARequest) (response PCAResponse) {
+	// Recover from any panic to prevent app crash
+	defer func() {
+		if r := recover(); r != nil {
+			response = PCAResponse{
+				Success: false,
+				Error:   fmt.Sprintf("Unexpected error during PCA analysis: %v", r),
+			}
+		}
+	}()
+
 	// Validate request
 	if len(request.Data) == 0 {
 		return PCAResponse{
@@ -75,17 +88,28 @@ func (a *App) RunPCA(request PCARequest) PCAResponse {
 			Error:   "No data provided",
 		}
 	}
-	
+
 	if request.Components <= 0 {
 		request.Components = 2 // Default to 2 components
 	}
-	
+
+	// Restore NaN values from missing mask
+	dataToAnalyze := make([][]float64, len(request.Data))
+	for i := range request.Data {
+		dataToAnalyze[i] = make([]float64, len(request.Data[i]))
+		for j := range request.Data[i] {
+			if request.MissingMask != nil && i < len(request.MissingMask) && j < len(request.MissingMask[i]) && request.MissingMask[i][j] {
+				dataToAnalyze[i][j] = math.NaN()
+			} else {
+				dataToAnalyze[i][j] = request.Data[i][j]
+			}
+		}
+	}
+
 	// Filter data if exclusions are provided
-	dataToAnalyze := request.Data
-	
 	if len(request.ExcludedRows) > 0 || len(request.ExcludedColumns) > 0 {
 		// Filter the data matrix
-		filteredData, err := utils.FilterMatrix(request.Data, request.ExcludedRows, request.ExcludedColumns)
+		filteredData, err := utils.FilterMatrix(dataToAnalyze, request.ExcludedRows, request.ExcludedColumns)
 		if err != nil {
 			return PCAResponse{
 				Success: false,
@@ -93,24 +117,117 @@ func (a *App) RunPCA(request PCARequest) PCAResponse {
 			}
 		}
 		dataToAnalyze = filteredData
-		
+
 		// Note: We don't need to filter headers and row names for PCA computation
 		// The frontend handles the display of selected data
 	}
-	
-	// Check for missing values in the data to analyze
-	// For GUI, we'll use a simple validation approach since the user can't specify strategy yet
+
+	// Check for missing values and handle based on strategy
+	hasMissing := false
+	missingInfo := &types.MissingValueInfo{}
+	rowsDropped := 0
+
+	// Count missing values
 	for i := 0; i < len(dataToAnalyze); i++ {
 		for j := 0; j < len(dataToAnalyze[i]); j++ {
 			if math.IsNaN(dataToAnalyze[i][j]) {
-				return PCAResponse{
-					Success: false,
-					Error:   fmt.Sprintf("Missing values (NaN) detected at row %d, column %d. Please clean your data before running PCA.", i+1, j+1),
-				}
+				hasMissing = true
+				missingInfo.TotalMissing++
 			}
 		}
 	}
-	
+
+	// Handle missing values based on strategy
+	if hasMissing {
+		// Default strategy if not specified
+		if request.MissingStrategy == "" {
+			request.MissingStrategy = "error"
+		}
+
+		switch request.MissingStrategy {
+		case "error":
+			return PCAResponse{
+				Success: false,
+				Error:   fmt.Sprintf("Missing values detected (%d values). Please select a strategy to handle them: 'drop' to remove rows, or 'mean' to impute with column means.", missingInfo.TotalMissing),
+			}
+		case "drop", "mean", "median":
+			// Create missing value handler
+			strategy := types.MissingValueStrategy(request.MissingStrategy)
+			handler := core.NewMissingValueHandler(strategy)
+
+			// Convert to types.Matrix for handler
+			matrix := types.Matrix(dataToAnalyze)
+
+			// Create missing info manually since we don't have CSVData here
+			selectedCols := make([]int, len(dataToAnalyze[0]))
+			for i := range selectedCols {
+				selectedCols[i] = i
+			}
+
+			// Build missing info
+			actualMissingInfo := &types.MissingValueInfo{
+				ColumnIndices:   selectedCols,
+				RowsAffected:    []int{},
+				MissingByColumn: make(map[int]int),
+			}
+
+			// Find rows with missing values
+			rowsWithMissing := make(map[int]bool)
+			for i := 0; i < len(dataToAnalyze); i++ {
+				for j := 0; j < len(dataToAnalyze[i]); j++ {
+					if math.IsNaN(dataToAnalyze[i][j]) {
+						rowsWithMissing[i] = true
+						actualMissingInfo.MissingByColumn[j]++
+						actualMissingInfo.TotalMissing++
+					}
+				}
+			}
+
+			// Convert map to slice
+			for row := range rowsWithMissing {
+				actualMissingInfo.RowsAffected = append(actualMissingInfo.RowsAffected, row)
+			}
+
+			// Apply missing value strategy
+			cleanedData, err := handler.HandleMissingValues(matrix, actualMissingInfo, selectedCols)
+			if err != nil {
+				return PCAResponse{
+					Success: false,
+					Error:   fmt.Sprintf("Failed to handle missing values: %v", err),
+				}
+			}
+
+			dataToAnalyze = cleanedData
+			rowsDropped = len(actualMissingInfo.RowsAffected)
+
+			// Update row names if rows were dropped
+			if request.MissingStrategy == "drop" && rowsDropped > 0 {
+				// Create a map of rows to keep
+				keepRows := make(map[int]bool)
+				for i := 0; i < len(matrix); i++ {
+					keepRows[i] = true
+				}
+				for _, rowIdx := range actualMissingInfo.RowsAffected {
+					delete(keepRows, rowIdx)
+				}
+
+				// Filter row names
+				newRowNames := []string{}
+				for i := 0; i < len(request.RowNames); i++ {
+					if keepRows[i] {
+						newRowNames = append(newRowNames, request.RowNames[i])
+					}
+				}
+				request.RowNames = newRowNames
+			}
+		default:
+			return PCAResponse{
+				Success: false,
+				Error:   fmt.Sprintf("Invalid missing value strategy: %s", request.MissingStrategy),
+			}
+		}
+	}
+
 	// Create PCA configuration
 	config := types.PCAConfig{
 		Components:      request.Components,
@@ -120,19 +237,19 @@ func (a *App) RunPCA(request PCARequest) PCAResponse {
 		ExcludedRows:    request.ExcludedRows,
 		ExcludedColumns: request.ExcludedColumns,
 	}
-	
+
 	// Add kernel parameters if using kernel PCA
 	if strings.ToLower(request.Method) == "kernel" {
 		config.KernelType = request.KernelType
 		config.KernelGamma = request.KernelGamma
 		config.KernelDegree = request.KernelDegree
 		config.KernelCoef0 = request.KernelCoef0
-		
+
 		// Skip standard preprocessing for kernel PCA
 		config.MeanCenter = false
 		config.StandardScale = false
 	}
-	
+
 	// Perform PCA
 	engine := core.NewPCAEngineForMethod(config.Method)
 	result, err := engine.Fit(dataToAnalyze, config)
@@ -142,7 +259,7 @@ func (a *App) RunPCA(request PCARequest) PCAResponse {
 			Error:   fmt.Sprintf("PCA fit failed: %v", err),
 		}
 	}
-	
+
 	// Update component labels to use filtered headers if needed
 	if len(result.ComponentLabels) == 0 {
 		result.ComponentLabels = make([]string, request.Components)
@@ -150,7 +267,7 @@ func (a *App) RunPCA(request PCARequest) PCAResponse {
 			result.ComponentLabels[i] = fmt.Sprintf("PC%d", i+1)
 		}
 	}
-	
+
 	// Add variable labels from headers (excluding the ones that were filtered out)
 	filteredHeaders := make([]string, 0)
 	for j, header := range request.Headers {
@@ -159,10 +276,24 @@ func (a *App) RunPCA(request PCARequest) PCAResponse {
 		}
 	}
 	result.VariableLabels = filteredHeaders
-	
+
+	// Build info message about missing value handling
+	infoMsg := ""
+	if hasMissing && request.MissingStrategy != "error" {
+		switch request.MissingStrategy {
+		case "drop":
+			infoMsg = fmt.Sprintf("Dropped %d rows containing missing values.", rowsDropped)
+		case "mean":
+			infoMsg = fmt.Sprintf("Imputed %d missing values with column means.", missingInfo.TotalMissing)
+		case "median":
+			infoMsg = fmt.Sprintf("Imputed %d missing values with column medians.", missingInfo.TotalMissing)
+		}
+	}
+
 	return PCAResponse{
 		Success: true,
 		Result:  result,
+		Info:    infoMsg,
 	}
 }
 
@@ -181,7 +312,7 @@ func (a *App) SaveFile(fileName string, dataURL string) error {
 	// Show save dialog
 	filePath, err := runtime.SaveFileDialog(a.ctx, runtime.SaveDialogOptions{
 		DefaultFilename: fileName,
-		Title:          "Save Plot",
+		Title:           "Save Plot",
 		Filters: []runtime.FileFilter{
 			{
 				DisplayName: "PNG Image",
@@ -193,22 +324,22 @@ func (a *App) SaveFile(fileName string, dataURL string) error {
 			},
 		},
 	})
-	
+
 	if err != nil {
 		return fmt.Errorf("failed to open save dialog: %v", err)
 	}
-	
+
 	// User cancelled
 	if filePath == "" {
 		return nil
 	}
-	
+
 	// Parse the data URL
 	parts := strings.SplitN(dataURL, ",", 2)
 	if len(parts) != 2 {
 		return fmt.Errorf("invalid data URL format")
 	}
-	
+
 	// Decode based on format
 	var data []byte
 	if strings.Contains(parts[0], "base64") {
@@ -225,18 +356,18 @@ func (a *App) SaveFile(fileName string, dataURL string) error {
 		}
 		data = []byte(decodedSVG)
 	}
-	
+
 	// Write to file
 	err = os.WriteFile(filePath, data, 0644)
 	if err != nil {
 		return fmt.Errorf("failed to write file: %v", err)
 	}
-	
+
 	return nil
 }
 
 // LoadIrisDataset loads the built-in iris dataset with species column
-func (a *App) LoadIrisDataset() (*FileData, error) {
+func (a *App) LoadIrisDataset() (*FileDataJSON, error) {
 	// Hardcoded iris dataset with species column
 	csvContent := `sepal length (cm),sepal width (cm),petal length (cm),petal width (cm),species
 5.1,3.5,1.4,0.2,setosa
@@ -389,14 +520,14 @@ func (a *App) LoadIrisDataset() (*FileData, error) {
 6.5,3.0,5.2,2.0,virginica
 6.2,3.4,5.4,2.3,virginica
 5.9,3.0,5.1,1.8,virginica`
-	
+
 	// Add row names to the CSV content
 	lines := strings.Split(csvContent, "\n")
 	var newLines []string
 	newLines = append(newLines, ","+lines[0]) // Add empty header for row names column
-	
+
 	speciesCount := map[string]int{"setosa": 0, "versicolor": 0, "virginica": 0}
-	
+
 	for i := 1; i < len(lines); i++ {
 		parts := strings.Split(lines[i], ",")
 		if len(parts) >= 5 {
@@ -406,9 +537,8 @@ func (a *App) LoadIrisDataset() (*FileData, error) {
 			newLines = append(newLines, rowName+","+lines[i])
 		}
 	}
-	
+
 	modifiedContent := strings.Join(newLines, "\n")
-	
+
 	return a.ParseCSV(modifiedContent)
 }
-

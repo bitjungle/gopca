@@ -2,6 +2,7 @@ export interface FileData {
   headers: string[];
   rowNames: string[];
   data: number[][];
+  missingMask?: boolean[][];
   categoricalColumns?: {
     [columnName: string]: string[];  // Column name -> array of values for each row
   };
@@ -9,6 +10,7 @@ export interface FileData {
 
 export interface PCARequest {
   data: number[][];
+  missingMask?: boolean[][];
   headers: string[];
   rowNames: string[];
   components: number;
@@ -18,6 +20,7 @@ export interface PCARequest {
   method: string;
   excludedRows?: number[];
   excludedColumns?: number[];
+  missingStrategy?: string;
   // Kernel PCA parameters
   kernelType?: string;
   kernelGamma?: number;
@@ -56,4 +59,5 @@ export interface PCAResponse {
   success: boolean;
   error?: string;
   result?: PCAResult;
+  info?: string;
 }
