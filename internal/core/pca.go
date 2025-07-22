@@ -423,6 +423,15 @@ func (p *PCAImpl) validateInput(data types.Matrix, config types.PCAConfig) error
 		return fmt.Errorf("insufficient features: need at least 1, got %d", m)
 	}
 
+	// Check for NaN values
+	for i := 0; i < n; i++ {
+		for j := 0; j < m; j++ {
+			if math.IsNaN(data[i][j]) {
+				return fmt.Errorf("NaN value found at row %d, column %d - use missing value handling before PCA", i+1, j+1)
+			}
+		}
+	}
+
 	// Check components
 	maxComponents := n
 	if m < n {

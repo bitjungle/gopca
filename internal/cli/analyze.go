@@ -115,13 +115,23 @@ The analysis includes:
 			},
 			&cli.StringFlag{
 				Name:  "delimiter",
-				Usage: "CSV field delimiter",
+				Usage: "CSV field delimiter (comma, semicolon, tab)",
 				Value: ",",
+			},
+			&cli.StringFlag{
+				Name:  "decimal-separator",
+				Usage: "Decimal separator (dot, comma)",
+				Value: ".",
 			},
 			&cli.StringFlag{
 				Name:  "na-values",
 				Usage: "String(s) representing missing values (comma-separated)",
 				Value: "NA,NaN",
+			},
+			&cli.StringFlag{
+				Name:  "missing-strategy",
+				Usage: "How to handle missing values: error, drop, mean, median",
+				Value: "error",
 			},
 			
 			// Output options
@@ -227,8 +237,24 @@ func validateAnalyzeFlags(c *cli.Context) error {
 	}
 	
 	// Validate delimiter
-	if len(c.String("delimiter")) != 1 {
+	delimiter := c.String("delimiter")
+	if delimiter == "tab" {
+		delimiter = "\t"
+	}
+	if len(delimiter) != 1 {
 		return fmt.Errorf("delimiter must be a single character")
+	}
+	
+	// Validate decimal separator
+	decimalSep := c.String("decimal-separator")
+	if decimalSep != "." && decimalSep != "," && decimalSep != "dot" && decimalSep != "comma" {
+		return fmt.Errorf("decimal-separator must be 'dot' or 'comma'")
+	}
+	
+	// Validate missing strategy
+	missingStrategy := c.String("missing-strategy")
+	if missingStrategy != "error" && missingStrategy != "drop" && missingStrategy != "mean" && missingStrategy != "median" {
+		return fmt.Errorf("missing-strategy must be one of: error, drop, mean, median")
 	}
 	
 	// Validate kernel parameters if kernel method is selected
@@ -262,6 +288,16 @@ func validateAnalyzeFlags(c *cli.Context) error {
 	return nil
 }
 
+// contains checks if a slice contains a value
+func contains(slice []int, val int) bool {
+	for _, item := range slice {
+		if item == val {
+			return true
+		}
+	}
+	return false
+}
+
 func runAnalyze(c *cli.Context) error {
 	inputFile := c.Args().First()
 	verbose := c.Bool("verbose")
@@ -271,7 +307,23 @@ func runAnalyze(c *cli.Context) error {
 	parseOpts := NewCSVParseOptions()
 	parseOpts.HasHeaders = !c.Bool("no-headers")
 	parseOpts.HasIndex = !c.Bool("no-index")
-	parseOpts.Delimiter = rune(c.String("delimiter")[0])
+	
+	// Handle delimiter
+	delimiter := c.String("delimiter")
+	if delimiter == "tab" {
+		delimiter = "\t"
+	}
+	parseOpts.Delimiter = rune(delimiter[0])
+	
+	// Handle decimal separator
+	decimalSep := c.String("decimal-separator")
+	if decimalSep == "dot" {
+		parseOpts.DecimalSeparator = '.'
+	} else if decimalSep == "comma" || decimalSep == "," {
+		parseOpts.DecimalSeparator = ','
+	} else {
+		parseOpts.DecimalSeparator = rune(decimalSep[0])
+	}
 	
 	// Parse NA values
 	if naValues := c.String("na-values"); naValues != "" {
@@ -343,12 +395,12 @@ func runAnalyze(c *cli.Context) error {
 		}
 		
 		// Filter column names
-		if len(excludedCols) > 0 && len(data.ColumnNames) > 0 {
-			filteredHeaders, err := utils.FilterStringSlice(data.ColumnNames, excludedCols)
+		if len(excludedCols) > 0 && len(data.Headers) > 0 {
+			filteredHeaders, err := utils.FilterStringSlice(data.Headers, excludedCols)
 			if err != nil {
 				return fmt.Errorf("failed to filter column names: %w", err)
 			}
-			data.ColumnNames = filteredHeaders
+			data.Headers = filteredHeaders
 		}
 		
 		// Update dimensions
@@ -365,6 +417,62 @@ func runAnalyze(c *cli.Context) error {
 		}
 	}
 	
+	// Handle missing values after filtering
+	// Get the columns that will be used for PCA (after exclusion)
+	selectedCols := make([]int, 0, data.Columns)
+	for i := 0; i < data.Columns; i++ {
+		if !contains(excludedCols, i) {
+			selectedCols = append(selectedCols, i)
+		}
+	}
+	
+	// Check for missing values in selected columns
+	missingInfo := data.GetMissingValueInfo(selectedCols)
+	if missingInfo.HasMissing() {
+		if verbose {
+			fmt.Printf("\nMissing values detected: %s\n", missingInfo.GetSummary())
+		}
+		
+		// Handle based on strategy
+		missingStrategy := c.String("missing-strategy")
+		switch missingStrategy {
+		case "error":
+			return fmt.Errorf("missing values found in selected columns - use --missing-strategy to specify handling")
+		case "drop", "mean", "median":
+			handler := core.NewMissingValueHandler(types.MissingValueStrategy(missingStrategy))
+			cleanData, err := handler.HandleMissingValues(data.Matrix, missingInfo, selectedCols)
+			if err != nil {
+				return fmt.Errorf("failed to handle missing values: %w", err)
+			}
+			
+			// Update data matrix and affected row names
+			if missingStrategy == "drop" && len(data.RowNames) > 0 {
+				// Filter row names to match the cleaned data
+				cleanRowNames := make([]string, 0, len(cleanData))
+				droppedRows := make(map[int]bool)
+				for _, row := range missingInfo.RowsAffected {
+					droppedRows[row] = true
+				}
+				for i, name := range data.RowNames {
+					if !droppedRows[i] {
+						cleanRowNames = append(cleanRowNames, name)
+					}
+				}
+				data.RowNames = cleanRowNames
+			}
+			
+			data.Matrix = cleanData
+			data.Rows = len(cleanData)
+			
+			if verbose {
+				fmt.Printf("Applied %s strategy for missing values\n", missingStrategy)
+				if missingStrategy == "drop" {
+					fmt.Printf("Removed %d rows containing missing values\n", len(missingInfo.RowsAffected))
+				}
+			}
+		}
+	}
+	
 	// Configure PCA
 	pcaConfig := types.PCAConfig{
 		Components:      c.Int("components"),
@@ -373,6 +481,7 @@ func runAnalyze(c *cli.Context) error {
 		Method:          c.String("method"),
 		ExcludedRows:    excludedRows,
 		ExcludedColumns: excludedCols,
+		MissingStrategy: types.MissingValueStrategy(c.String("missing-strategy")),
 	}
 	
 	// Add kernel parameters if using kernel PCA

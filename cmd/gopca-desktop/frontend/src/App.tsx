@@ -11,7 +11,8 @@ function App() {
     const [fileData, setFileData] = useState<FileData | null>(null);
     const [pcaResponse, setPcaResponse] = useState<PCAResponse | null>(null);
     const [loading, setLoading] = useState(false);
-    const [error, setError] = useState<string | null>(null);
+    const [fileError, setFileError] = useState<string | null>(null);
+    const [pcaError, setPcaError] = useState<string | null>(null);
     
     // Selection state
     const [excludedRows, setExcludedRows] = useState<number[]>([]);
@@ -29,6 +30,7 @@ function App() {
         standardScale: true,
         robustScale: false,
         method: 'SVD',
+        missingStrategy: 'error',
         // Kernel PCA parameters
         kernelType: 'rbf',
         kernelGamma: 1.0,
@@ -41,7 +43,8 @@ function App() {
         if (!file) return;
         
         setLoading(true);
-        setError(null);
+        setFileError(null);
+        setPcaError(null); // Clear any previous PCA errors
         
         try {
             const content = await file.text();
@@ -53,7 +56,7 @@ function App() {
             setExcludedColumns([]);
             setSelectedGroupColumn(null);
         } catch (err) {
-            setError(`Failed to parse CSV: ${err}`);
+            setFileError(`Failed to parse CSV: ${err}`);
         } finally {
             setLoading(false);
         }
@@ -81,11 +84,14 @@ function App() {
         if (!fileData) return;
         
         setLoading(true);
-        setError(null);
+        setPcaError(null);
         
         try {
             const request: PCARequest = {
-                ...fileData,
+                data: fileData.data,
+                missingMask: fileData.missingMask,
+                headers: fileData.headers,
+                rowNames: fileData.rowNames,
                 ...config,
                 excludedRows,
                 excludedColumns
@@ -96,11 +102,14 @@ function App() {
                 // Reset PC selections to default
                 setSelectedXComponent(0);
                 setSelectedYComponent(1);
+                // Clear any previous errors
+                setPcaError(null);
             } else {
-                setError(result.error || 'PCA analysis failed');
+                setPcaError(result.error || 'PCA analysis failed');
+                setPcaResponse(null);
             }
         } catch (err) {
-            setError(`Failed to run PCA: ${err}`);
+            setPcaError(`Failed to run PCA: ${err}`);
         } finally {
             setLoading(false);
         }
@@ -144,7 +153,8 @@ function App() {
                             <button
                                 onClick={async () => {
                                     setLoading(true);
-                                    setError(null);
+                                    setFileError(null);
+                                    setPcaError(null);
                                     try {
                                         const result = await LoadIrisDataset();
                                         setFileData(result);
@@ -153,7 +163,7 @@ function App() {
                                         setExcludedColumns([]);
                                         setSelectedGroupColumn('species');
                                     } catch (err) {
-                                        setError(`Failed to load iris dataset: ${err}`);
+                                        setFileError(`Failed to load iris dataset: ${err}`);
                                     } finally {
                                         setLoading(false);
                                     }
@@ -165,6 +175,13 @@ function App() {
                             </button>
                         </div>
                     </div>
+                    
+                    {/* File Error Display */}
+                    {fileError && (
+                        <div className="bg-red-100 dark:bg-red-800 border border-red-300 dark:border-red-600 rounded-lg p-4">
+                            <p className="text-red-700 dark:text-red-200">{fileError}</p>
+                        </div>
+                    )}
                     
                     {/* Data Display */}
                     {fileData && (
@@ -246,6 +263,25 @@ function App() {
                                 </label>
                             </div>
                             
+                            <div className="mt-4">
+                                <label className="block text-sm font-medium mb-2">
+                                    Missing Data Strategy
+                                </label>
+                                <select
+                                    value={config.missingStrategy}
+                                    onChange={(e) => setConfig({...config, missingStrategy: e.target.value})}
+                                    className="w-full px-3 py-2 bg-gray-100 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg text-gray-900 dark:text-white"
+                                >
+                                    <option value="error">Show Error (default)</option>
+                                    <option value="drop">Drop Rows with Missing Values</option>
+                                    <option value="mean">Impute with Column Mean</option>
+                                    <option value="median">Impute with Column Median</option>
+                                </select>
+                                <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                                    Choose how to handle missing values (NaN) in your data
+                                </p>
+                            </div>
+                            
                             {/* Kernel PCA Options */}
                             {config.method === 'kernel' && (
                                 <div className="mt-4 p-4 bg-gray-50 dark:bg-gray-800 rounded-lg space-y-4">
@@ -324,10 +360,10 @@ function App() {
                         </div>
                     )}
                     
-                    {/* Error Display */}
-                    {error && (
+                    {/* PCA Error Display - shown between Step 2 and Results */}
+                    {pcaError && fileData && (
                         <div className="bg-red-100 dark:bg-red-800 border border-red-300 dark:border-red-600 rounded-lg p-4">
-                            <p className="text-red-700 dark:text-red-200">{error}</p>
+                            <p className="text-red-700 dark:text-red-200">{pcaError}</p>
                         </div>
                     )}
                     
@@ -335,6 +371,15 @@ function App() {
                     {pcaResponse?.success && pcaResponse.result && (
                         <div className="bg-white dark:bg-gray-800 rounded-lg p-6 shadow-lg border border-gray-200 dark:border-gray-700">
                             <h2 className="text-xl font-semibold mb-4">PCA Results</h2>
+                            
+                            {/* Info message about missing data handling */}
+                            {pcaResponse.info && (
+                                <div className="mb-4 p-3 bg-blue-100 dark:bg-blue-800 border border-blue-300 dark:border-blue-600 rounded-lg">
+                                    <p className="text-blue-700 dark:text-blue-200 text-sm">
+                                        <span className="font-semibold">Note:</span> {pcaResponse.info}
+                                    </p>
+                                </div>
+                            )}
                             
                             {/* Explained Variance */}
                             <div className="bg-gray-100 dark:bg-gray-700 rounded-lg p-4">
