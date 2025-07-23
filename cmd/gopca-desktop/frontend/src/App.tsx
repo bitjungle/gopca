@@ -2,7 +2,7 @@ import React, { useState, useRef } from 'react';
 import './App.css';
 import { ParseCSV, RunPCA, LoadIrisDataset } from "../wailsjs/go/main/App";
 import { DataTable, SelectionTable, ThemeToggle } from './components';
-import { ScoresPlot, ScreePlot, LoadingsPlot, Biplot } from './components/visualizations';
+import { ScoresPlot, ScreePlot, LoadingsPlot, Biplot, CircleOfCorrelations, DiagnosticScatterPlot } from './components/visualizations';
 import { FileData, PCARequest, PCAResponse } from './types';
 import { ThemeProvider } from './contexts/ThemeContext';
 import logo from './assets/images/GoPCA-logo-1024-transp.png';
@@ -17,7 +17,7 @@ function App() {
     // Selection state
     const [excludedRows, setExcludedRows] = useState<number[]>([]);
     const [excludedColumns, setExcludedColumns] = useState<number[]>([]);
-    const [selectedPlot, setSelectedPlot] = useState<'scores' | 'scree' | 'loadings' | 'biplot'>('scores');
+    const [selectedPlot, setSelectedPlot] = useState<'scores' | 'scree' | 'loadings' | 'biplot' | 'correlations' | 'diagnostics'>('scores');
     const [selectedXComponent, setSelectedXComponent] = useState(0);
     const [selectedYComponent, setSelectedYComponent] = useState(1);
     const [selectedLoadingComponent, setSelectedLoadingComponent] = useState(0);
@@ -37,6 +37,7 @@ function App() {
         vectorNorm: false,
         method: 'SVD',
         missingStrategy: 'error',
+        calculateMetrics: true,
         // Kernel PCA parameters
         kernelType: 'rbf',
         kernelGamma: 1.0,
@@ -359,6 +360,26 @@ function App() {
                                 </p>
                             </div>
                             
+                            {/* Diagnostic Metrics Option */}
+                            {config.method !== 'kernel' && (
+                                <div className="mt-4">
+                                    <label className="flex items-center gap-2">
+                                        <input
+                                            type="checkbox"
+                                            checked={config.calculateMetrics}
+                                            onChange={(e) => setConfig({...config, calculateMetrics: e.target.checked})}
+                                            className="w-4 h-4 text-blue-600 bg-gray-100 border-gray-300 rounded focus:ring-blue-500 dark:focus:ring-blue-600 dark:ring-offset-gray-800 focus:ring-2 dark:bg-gray-700 dark:border-gray-600"
+                                        />
+                                        <span className="text-sm font-medium text-gray-700 dark:text-gray-300">
+                                            Calculate Diagnostic Metrics
+                                        </span>
+                                    </label>
+                                    <p className="text-xs text-gray-500 dark:text-gray-400 mt-1 ml-6">
+                                        Enable calculation of Mahalanobis distances, Hotelling's T², and residuals for outlier detection
+                                    </p>
+                                </div>
+                            )}
+                            
                             {/* Kernel PCA Options */}
                             {config.method === 'kernel' && (
                                 <div className="mt-4 p-4 bg-gray-50 dark:bg-gray-800 rounded-lg space-y-4">
@@ -505,7 +526,7 @@ function App() {
                                                 </select>
                                             </div>
                                         )}
-                                        {(selectedPlot === 'scores' || selectedPlot === 'biplot') && pcaResponse.result.scores[0]?.length > 2 && (
+                                        {(selectedPlot === 'scores' || selectedPlot === 'biplot' || selectedPlot === 'correlations') && pcaResponse.result.scores[0]?.length > 2 && (
                                             <>
                                                 <div className="flex items-center gap-2">
                                                     <label className="text-sm text-gray-600 dark:text-gray-400">X-axis:</label>
@@ -555,13 +576,15 @@ function App() {
                                         )}
                                         <select
                                             value={selectedPlot}
-                                            onChange={(e) => setSelectedPlot(e.target.value as 'scores' | 'scree' | 'loadings' | 'biplot')}
+                                            onChange={(e) => setSelectedPlot(e.target.value as 'scores' | 'scree' | 'loadings' | 'biplot' | 'correlations' | 'diagnostics')}
                                             className="px-3 py-2 bg-gray-100 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg text-gray-900 dark:text-white"
                                         >
                                             <option value="scores">Scores Plot</option>
                                             <option value="scree">Scree Plot</option>
                                             <option value="loadings">Loadings Plot</option>
                                             <option value="biplot">Biplot</option>
+                                            <option value="correlations">Circle of Correlations</option>
+                                            <option value="diagnostics">Diagnostics (Mahalanobis vs RSS)</option>
                                         </select>
                                     </div>
                                 </div>
@@ -595,6 +618,17 @@ function App() {
                                             yComponent={selectedYComponent}
                                             groupColumn={selectedGroupColumn}
                                             groupLabels={selectedGroupColumn && fileData?.categoricalColumns ? fileData.categoricalColumns[selectedGroupColumn] : undefined}
+                                        />
+                                    ) : selectedPlot === 'correlations' ? (
+                                        <CircleOfCorrelations
+                                            pcaResult={pcaResponse.result}
+                                            xComponent={selectedXComponent}
+                                            yComponent={selectedYComponent}
+                                        />
+                                    ) : selectedPlot === 'diagnostics' ? (
+                                        <DiagnosticScatterPlot
+                                            pcaResult={pcaResponse.result}
+                                            rowNames={fileData?.rowNames || []}
                                         />
                                     ) : (
                                         <div className="w-full h-full flex items-center justify-center text-gray-500 dark:text-gray-400">

@@ -13,6 +13,7 @@ import (
 	"github.com/bitjungle/gopca/internal/utils"
 	"github.com/bitjungle/gopca/pkg/types"
 	"github.com/wailsapp/wails/v2/pkg/runtime"
+	"gonum.org/v1/gonum/mat"
 )
 
 // App struct
@@ -56,6 +57,7 @@ type PCARequest struct {
 	ExcludedRows    []int       `json:"excludedRows,omitempty"`
 	ExcludedColumns []int       `json:"excludedColumns,omitempty"`
 	MissingStrategy string      `json:"missingStrategy,omitempty"`
+	CalculateMetrics bool       `json:"calculateMetrics,omitempty"`
 	// Kernel PCA parameters
 	KernelType   string  `json:"kernelType,omitempty"`
 	KernelGamma  float64 `json:"kernelGamma,omitempty"`
@@ -282,6 +284,36 @@ func (a *App) RunPCA(request PCARequest) (response PCAResponse) {
 	}
 	result.VariableLabels = filteredHeaders
 
+	// Calculate diagnostic metrics if requested
+	if request.CalculateMetrics && strings.ToLower(request.Method) != "kernel" {
+		// Keep a copy of the original data (before preprocessing) for residual calculations
+		originalData := make(types.Matrix, len(dataToAnalyze))
+		for i := range dataToAnalyze {
+			originalData[i] = make([]float64, len(dataToAnalyze[i]))
+			copy(originalData[i], dataToAnalyze[i])
+		}
+
+		// Create metrics calculator
+		scoresDense := matrixToDense(result.Scores)
+		loadingsDense := matrixToDense(result.Loadings)
+		metricsCalc := core.NewPCAMetricsCalculator(scoresDense, loadingsDense, result.Means, result.StdDevs)
+
+		// Calculate metrics
+		metrics, err := metricsCalc.CalculateMetrics(originalData)
+		if err != nil {
+			// Don't fail the whole PCA, just log the error
+			fmt.Printf("Warning: Failed to calculate diagnostic metrics: %v\n", err)
+		} else {
+			result.Metrics = metrics
+			// TODO: Add confidence limit calculations
+			// For now, set placeholder values
+			result.T2Limit95 = 0.0
+			result.T2Limit99 = 0.0
+			result.QLimit95 = 0.0
+			result.QLimit99 = 0.0
+		}
+	}
+
 	// Build info message about missing value handling
 	infoMsg := ""
 	if hasMissing && request.MissingStrategy != "error" {
@@ -310,6 +342,22 @@ func contains(slice []int, val int) bool {
 		}
 	}
 	return false
+}
+
+// matrixToDense converts types.Matrix to *mat.Dense
+func matrixToDense(m types.Matrix) *mat.Dense {
+	if len(m) == 0 || len(m[0]) == 0 {
+		return mat.NewDense(0, 0, nil)
+	}
+
+	rows, cols := len(m), len(m[0])
+	data := make([]float64, rows*cols)
+	for i := 0; i < rows; i++ {
+		for j := 0; j < cols; j++ {
+			data[i*cols+j] = m[i][j]
+		}
+	}
+	return mat.NewDense(rows, cols, data)
 }
 
 // SaveFile handles saving exported plot data
