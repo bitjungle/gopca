@@ -540,7 +540,7 @@ function App() {
                     {/* PCA Results */}
                     {pcaResponse?.success && pcaResponse.result && (
                         <div ref={pcaResultsRef} className="bg-white dark:bg-gray-800 rounded-lg p-6 shadow-lg border border-gray-200 dark:border-gray-700">
-                            <h2 className="text-xl font-semibold mb-4">PCA Results</h2>
+                            <h2 className="text-xl font-semibold mb-4">Step 3: Interpret PCA Model</h2>
                             
                             {/* Info message about missing data handling */}
                             {pcaResponse.info && (
