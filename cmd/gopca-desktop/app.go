@@ -42,21 +42,21 @@ type FileData struct {
 
 // PCARequest represents a PCA analysis request from the frontend
 type PCARequest struct {
-	Data            [][]float64 `json:"data"`
-	MissingMask     [][]bool    `json:"missingMask,omitempty"`
-	Headers         []string    `json:"headers"`
-	RowNames        []string    `json:"rowNames"`
-	Components      int         `json:"components"`
-	MeanCenter      bool        `json:"meanCenter"`
-	StandardScale   bool        `json:"standardScale"`
-	RobustScale     bool        `json:"robustScale"`
-	SNV             bool        `json:"snv"`
-	VectorNorm      bool        `json:"vectorNorm"`
-	Method          string      `json:"method"`
-	ExcludedRows    []int       `json:"excludedRows,omitempty"`
-	ExcludedColumns []int       `json:"excludedColumns,omitempty"`
-	MissingStrategy string      `json:"missingStrategy,omitempty"`
-	CalculateMetrics bool       `json:"calculateMetrics,omitempty"`
+	Data             [][]float64 `json:"data"`
+	MissingMask      [][]bool    `json:"missingMask,omitempty"`
+	Headers          []string    `json:"headers"`
+	RowNames         []string    `json:"rowNames"`
+	Components       int         `json:"components"`
+	MeanCenter       bool        `json:"meanCenter"`
+	StandardScale    bool        `json:"standardScale"`
+	RobustScale      bool        `json:"robustScale"`
+	SNV              bool        `json:"snv"`
+	VectorNorm       bool        `json:"vectorNorm"`
+	Method           string      `json:"method"`
+	ExcludedRows     []int       `json:"excludedRows,omitempty"`
+	ExcludedColumns  []int       `json:"excludedColumns,omitempty"`
+	MissingStrategy  string      `json:"missingStrategy,omitempty"`
+	CalculateMetrics bool        `json:"calculateMetrics,omitempty"`
 	// Kernel PCA parameters
 	KernelType   string  `json:"kernelType,omitempty"`
 	KernelGamma  float64 `json:"kernelGamma,omitempty"`
@@ -289,7 +289,7 @@ func (a *App) RunPCA(request PCARequest) (response PCAResponse) {
 		// we need to use data that has ONLY the row-wise preprocessing applied,
 		// not the column-wise preprocessing (mean centering/scaling)
 		preprocessedData := dataToAnalyze
-		
+
 		if config.SNV || config.VectorNorm {
 			// Apply only row-wise preprocessing for metrics
 			rowPreprocessor := core.NewPreprocessorFull(false, false, false, config.SNV, config.VectorNorm)
@@ -309,7 +309,7 @@ func (a *App) RunPCA(request PCARequest) (response PCAResponse) {
 				preprocessedData = dataToAnalyze // Fallback to original data
 			}
 		}
-		
+
 		// Calculate metrics using the appropriately preprocessed data
 		metrics, err := core.CalculateMetricsFromPCAResult(result, preprocessedData)
 		if err != nil {

@@ -217,10 +217,10 @@ func TestInverseTransform(t *testing.T) {
 func TestVectorNormalization(t *testing.T) {
 	// Test data
 	data := types.Matrix{
-		{3.0, 4.0},      // L2 norm = 5
-		{1.0, 0.0},      // L2 norm = 1
-		{6.0, 8.0},      // L2 norm = 10
-		{0.0, 0.0},      // L2 norm = 0 (edge case)
+		{3.0, 4.0}, // L2 norm = 5
+		{1.0, 0.0}, // L2 norm = 1
+		{6.0, 8.0}, // L2 norm = 10
+		{0.0, 0.0}, // L2 norm = 0 (edge case)
 	}
 
 	prep := NewPreprocessorFull(false, false, false, false, true)
@@ -237,7 +237,7 @@ func TestVectorNormalization(t *testing.T) {
 			norm += transformed[i][j] * transformed[i][j]
 		}
 		norm = math.Sqrt(norm)
-		
+
 		if math.Abs(norm-expectedNorms[i]) > 1e-10 {
 			t.Errorf("Row %d has L2 norm %f, expected %f", i, norm, expectedNorms[i])
 		}

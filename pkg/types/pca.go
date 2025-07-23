@@ -39,26 +39,26 @@ type PCAConfig struct {
 
 // PCAResult contains the results of PCA analysis
 type PCAResult struct {
-	Scores               Matrix          `json:"scores"`
-	Loadings             Matrix          `json:"loadings"`
-	ExplainedVar         []float64       `json:"explained_variance"`
-	ExplainedVarRatio    []float64       `json:"explained_variance_ratio"` // Percentage of variance explained
-	CumulativeVar        []float64       `json:"cumulative_variance"`
-	ComponentLabels      []string        `json:"component_labels"`
-	VariableLabels       []string        `json:"variable_labels,omitempty"` // Original variable names
-	ComponentsComputed   int             `json:"components_computed"`       // Number of components actually computed
-	Method               string          `json:"method"`                    // Method used (svd, nipals, kernel)
-	PreprocessingApplied bool            `json:"preprocessing_applied"`     // Whether preprocessing was applied
+	Scores               Matrix    `json:"scores"`
+	Loadings             Matrix    `json:"loadings"`
+	ExplainedVar         []float64 `json:"explained_variance"`
+	ExplainedVarRatio    []float64 `json:"explained_variance_ratio"` // Percentage of variance explained
+	CumulativeVar        []float64 `json:"cumulative_variance"`
+	ComponentLabels      []string  `json:"component_labels"`
+	VariableLabels       []string  `json:"variable_labels,omitempty"` // Original variable names
+	ComponentsComputed   int       `json:"components_computed"`       // Number of components actually computed
+	Method               string    `json:"method"`                    // Method used (svd, nipals, kernel)
+	PreprocessingApplied bool      `json:"preprocessing_applied"`     // Whether preprocessing was applied
 	// Preprocessing statistics
-	Means   []float64       `json:"means,omitempty"`   // Original feature means
-	StdDevs []float64       `json:"stddevs,omitempty"` // Original feature std devs
+	Means   []float64 `json:"means,omitempty"`   // Original feature means
+	StdDevs []float64 `json:"stddevs,omitempty"` // Original feature std devs
 	// Diagnostic metrics
 	Metrics []SampleMetrics `json:"metrics,omitempty"` // Per-sample diagnostic metrics
 	// Confidence limits for diagnostics
-	T2Limit95  float64       `json:"t2_limit_95,omitempty"`  // 95% confidence limit for T²
-	T2Limit99  float64       `json:"t2_limit_99,omitempty"`  // 99% confidence limit for T²
-	QLimit95   float64       `json:"q_limit_95,omitempty"`   // 95% confidence limit for Q-residuals
-	QLimit99   float64       `json:"q_limit_99,omitempty"`   // 99% confidence limit for Q-residuals
+	T2Limit95 float64 `json:"t2_limit_95,omitempty"` // 95% confidence limit for T²
+	T2Limit99 float64 `json:"t2_limit_99,omitempty"` // 99% confidence limit for T²
+	QLimit95  float64 `json:"q_limit_95,omitempty"`  // 95% confidence limit for Q-residuals
+	QLimit99  float64 `json:"q_limit_99,omitempty"`  // 99% confidence limit for Q-residuals
 }
 
 // PCAEngine defines the interface for PCA computation
