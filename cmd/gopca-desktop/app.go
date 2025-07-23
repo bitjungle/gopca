@@ -286,20 +286,33 @@ func (a *App) RunPCA(request PCARequest) (response PCAResponse) {
 
 	// Calculate diagnostic metrics if requested
 	if request.CalculateMetrics && strings.ToLower(request.Method) != "kernel" {
-		// Keep a copy of the original data (before preprocessing) for residual calculations
-		originalData := make(types.Matrix, len(dataToAnalyze))
-		for i := range dataToAnalyze {
-			originalData[i] = make([]float64, len(dataToAnalyze[i]))
-			copy(originalData[i], dataToAnalyze[i])
+		// For RSS calculation with row-wise preprocessing (SNV/VectorNorm),
+		// we need to use data that has ONLY the row-wise preprocessing applied,
+		// not the column-wise preprocessing (mean centering/scaling)
+		preprocessedData := dataToAnalyze
+		
+		if config.SNV || config.VectorNorm {
+			// Apply only row-wise preprocessing for metrics
+			rowPreprocessor := core.NewPreprocessorFull(false, false, false, config.SNV, config.VectorNorm)
+			var err error
+			preprocessedData, err = rowPreprocessor.FitTransform(dataToAnalyze)
+			if err != nil {
+				fmt.Printf("Warning: Failed to apply row preprocessing for metrics: %v\n", err)
+				preprocessedData = dataToAnalyze // Fallback to original data
+			}
+		} else if config.MeanCenter || config.StandardScale || config.RobustScale {
+			// For column-wise preprocessing only, use the fully preprocessed data
+			colPreprocessor := core.NewPreprocessorFull(config.MeanCenter, config.StandardScale, config.RobustScale, false, false)
+			var err error
+			preprocessedData, err = colPreprocessor.FitTransform(dataToAnalyze)
+			if err != nil {
+				fmt.Printf("Warning: Failed to preprocess data for metrics: %v\n", err)
+				preprocessedData = dataToAnalyze // Fallback to original data
+			}
 		}
-
-		// Create metrics calculator
-		scoresDense := matrixToDense(result.Scores)
-		loadingsDense := matrixToDense(result.Loadings)
-		metricsCalc := core.NewPCAMetricsCalculator(scoresDense, loadingsDense, result.Means, result.StdDevs)
-
-		// Calculate metrics
-		metrics, err := metricsCalc.CalculateMetrics(originalData)
+		
+		// Calculate metrics using the appropriately preprocessed data
+		metrics, err := core.CalculateMetricsFromPCAResult(result, preprocessedData)
 		if err != nil {
 			// Don't fail the whole PCA, just log the error
 			fmt.Printf("Warning: Failed to calculate diagnostic metrics: %v\n", err)

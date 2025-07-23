@@ -86,13 +86,13 @@ export const DiagnosticScatterPlot: React.FC<DiagnosticScatterPlotProps> = ({
     handlePanEnd,
     isZoomed
   } = useZoomPan({
-    defaultXDomain: [0, maxMahalanobis],
-    defaultYDomain: [0, maxRSS],
+    defaultXDomain: [0, maxRSS],       // X-axis is RSS
+    defaultYDomain: [0, maxMahalanobis], // Y-axis is Mahalanobis
     maintainAspectRatio: false
   });
 
-  const xDomain = zoomDomain.x || [0, maxMahalanobis];
-  const yDomain = zoomDomain.y || [0, maxRSS];
+  const xDomain = zoomDomain.x || [0, maxRSS];
+  const yDomain = zoomDomain.y || [0, maxMahalanobis];
 
   // Color mapping for outlier types
   const getColor = (outlierType: string) => {
@@ -174,6 +174,7 @@ export const DiagnosticScatterPlot: React.FC<DiagnosticScatterPlotProps> = ({
                 dataKey="rss"
                 domain={xDomain}
                 stroke={chartTheme.axisColor}
+                tickFormatter={(value) => value.toFixed(2)}
                 label={{ 
                   value: 'Residual Sum of Squares (RSS)', 
                   position: 'insideBottom', 
@@ -187,6 +188,7 @@ export const DiagnosticScatterPlot: React.FC<DiagnosticScatterPlotProps> = ({
                 dataKey="mahalanobis"
                 domain={yDomain}
                 stroke={chartTheme.axisColor}
+                tickFormatter={(value) => value.toFixed(2)}
                 label={{ 
                   value: 'Mahalanobis Distance', 
                   angle: -90, 

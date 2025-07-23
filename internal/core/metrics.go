@@ -186,10 +186,10 @@ func (m *PCAMetricsCalculator) calculateMahalanobisDistance(scoreVec *mat.VecDen
 // calculateRSS computes the Residual Sum of Squares
 func (m *PCAMetricsCalculator) calculateRSS(sampleIdx int, originalData types.Matrix) (float64, error) {
 	// RSS measures the reconstruction error: sum((X_preprocessed - X_reconstructed)²)
-	// where X_reconstructed = Scores × Loadings^T
+	// where X_reconstructed = scores × loadings^T + mean
 	// 
-	// IMPORTANT: When PCA includes row-wise preprocessing (SNV/VectorNorm),
-	// the originalData should already be fully preprocessed.
+	// IMPORTANT: The key insight is that we're measuring RSS in the preprocessed space,
+	// not the original space. This matches sklearn's approach.
 
 	// Get the score vector for this sample
 	scoreVec := mat.NewVecDense(m.nComponents, nil)
@@ -201,47 +201,18 @@ func (m *PCAMetricsCalculator) calculateRSS(sampleIdx int, originalData types.Ma
 	reconstructed := mat.NewVecDense(m.nFeatures, nil)
 	reconstructed.MulVec(m.loadings, scoreVec)
 
-	// Get the data point
+	// Add back the mean (this is what sklearn's inverse_transform does)
+	if len(m.mean) > 0 {
+		for j := 0; j < m.nFeatures; j++ {
+			reconstructed.SetVec(j, reconstructed.AtVec(j) + m.mean[j])
+		}
+	}
+
+	// Get the data point - this should already be preprocessed
+	// (SNV applied if it was used during fitting)
 	dataPoint := make([]float64, m.nFeatures)
 	for j := 0; j < m.nFeatures; j++ {
 		dataPoint[j] = originalData[sampleIdx][j]
-	}
-
-	// Check if we need to apply preprocessing
-	// If mean and stdDev are provided AND the data values suggest it's not already preprocessed
-	needsPreprocessing := false
-	if len(m.mean) > 0 {
-		// Check if data appears to be already centered by looking at a few values
-		// If data is already preprocessed (especially with SNV), values should be small
-		sampleMagnitude := 0.0
-		for j := 0; j < m.nFeatures && j < 10; j++ {
-			sampleMagnitude += math.Abs(dataPoint[j])
-		}
-		avgMagnitude := sampleMagnitude / math.Min(10, float64(m.nFeatures))
-		
-		// If average magnitude is large (>10), data is likely not preprocessed
-		if avgMagnitude > 10 {
-			needsPreprocessing = true
-		}
-	}
-
-	// Apply preprocessing only if needed
-	if needsPreprocessing {
-		for j := 0; j < m.nFeatures; j++ {
-			val := dataPoint[j]
-			
-			// Apply centering
-			if len(m.mean) > 0 {
-				val -= m.mean[j]
-			}
-			
-			// Apply scaling
-			if len(m.stdDev) > 0 && m.stdDev[j] > 0 {
-				val /= m.stdDev[j]
-			}
-			
-			dataPoint[j] = val
-		}
 	}
 
 	// Calculate sum of squared residuals
@@ -299,7 +270,7 @@ func convertMatrixToDense(m types.Matrix) *mat.Dense {
 }
 
 // CalculateMetricsFromPCAResult is a convenience function that calculates metrics directly from PCAResult
-func CalculateMetricsFromPCAResult(result *types.PCAResult, originalData types.Matrix) ([]types.SampleMetrics, error) {
+func CalculateMetricsFromPCAResult(result *types.PCAResult, preprocessedData types.Matrix) ([]types.SampleMetrics, error) {
 	// Convert result matrices to gonum matrices
 	scores := convertMatrixToDense(result.Scores)
 	loadings := convertMatrixToDense(result.Loadings)
@@ -308,5 +279,6 @@ func CalculateMetricsFromPCAResult(result *types.PCAResult, originalData types.M
 	calculator := NewPCAMetricsCalculator(scores, loadings, result.Means, result.StdDevs)
 
 	// Calculate metrics
-	return calculator.CalculateMetrics(originalData)
+	// Note: preprocessedData should be the same preprocessed data that was used for PCA fitting
+	return calculator.CalculateMetrics(preprocessedData)
 }
