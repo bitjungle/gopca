@@ -151,7 +151,7 @@ function App() {
                     {/* File Upload Section */}
                     <div className="bg-white dark:bg-gray-800 rounded-lg p-6 shadow-lg border border-gray-200 dark:border-gray-700">
                         <h2 className="text-xl font-semibold mb-6">Step 1: Load Data</h2>
-                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-[2fr_2fr_1fr] gap-6">
                             {/* Column 1: File Upload */}
                             <div className="flex flex-col justify-center">
                                 <label className="block text-sm font-medium mb-3">
@@ -206,7 +206,7 @@ function App() {
                                         className="w-full px-4 py-2 text-sm bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors"
                                         disabled={loading}
                                     >
-                                        Corn (NIR spectroscopy of corn)
+                                        Corn (NIR)
                                     </button>
                                     <button
                                         onClick={async () => {
@@ -229,7 +229,7 @@ function App() {
                                         className="w-full px-4 py-2 text-sm bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors"
                                         disabled={loading}
                                     >
-                                        Iris (classic dataset with species)
+                                        Iris
                                     </button>
                                     <button
                                         onClick={async () => {
@@ -252,7 +252,7 @@ function App() {
                                         className="w-full px-4 py-2 text-sm bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors"
                                         disabled={loading}
                                     >
-                                        Wine (classic dataset with class)
+                                        Wine
                                     </button>
                                 </div>
                             </div>
