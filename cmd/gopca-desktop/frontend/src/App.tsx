@@ -1,7 +1,7 @@
 import React, { useState, useRef } from 'react';
 import './App.css';
 import { ParseCSV, RunPCA, LoadIrisDataset } from "../wailsjs/go/main/App";
-import { DataTable, ThemeToggle } from './components';
+import { DataTable, SelectionTable, ThemeToggle } from './components';
 import { ScoresPlot, ScreePlot, LoadingsPlot, Biplot } from './components/visualizations';
 import { FileData, PCARequest, PCAResponse } from './types';
 import { ThemeProvider } from './contexts/ThemeContext';
@@ -205,16 +205,28 @@ function App() {
                     {fileData && (
                         <div className="bg-white dark:bg-gray-800 rounded-lg p-6 shadow-lg border border-gray-200 dark:border-gray-700">
                             <h2 className="text-xl font-semibold mb-4">Loaded Data</h2>
-                            <DataTable
-                                headers={fileData.headers}
-                                rowNames={fileData.rowNames}
-                                data={fileData.data}
-                                title="Input Data"
-                                enableRowSelection={true}
-                                enableColumnSelection={true}
-                                onRowSelectionChange={handleRowSelectionChange}
-                                onColumnSelectionChange={handleColumnSelectionChange}
-                            />
+                            {/* Check if dataset is large (>10,000 cells) */}
+                            {fileData.data.length * fileData.headers.length > 10000 ? (
+                                <SelectionTable
+                                    headers={fileData.headers}
+                                    rowNames={fileData.rowNames}
+                                    data={fileData.data}
+                                    title="Input Data"
+                                    onRowSelectionChange={handleRowSelectionChange}
+                                    onColumnSelectionChange={handleColumnSelectionChange}
+                                />
+                            ) : (
+                                <DataTable
+                                    headers={fileData.headers}
+                                    rowNames={fileData.rowNames}
+                                    data={fileData.data}
+                                    title="Input Data"
+                                    enableRowSelection={true}
+                                    enableColumnSelection={true}
+                                    onRowSelectionChange={handleRowSelectionChange}
+                                    onColumnSelectionChange={handleColumnSelectionChange}
+                                />
+                            )}
                         </div>
                     )}
                     
