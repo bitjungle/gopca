@@ -29,6 +29,13 @@ func NewPCAMetricsCalculator(scores, loadings *mat.Dense, mean, stdDev []float64
 	nSamples, nComponents := scores.Dims()
 	nFeatures, _ := loadings.Dims()
 
+	// Use adaptive regularization based on number of components and samples
+	// Higher regularization for high-dimensional data with few samples
+	regularization := 1e-4
+	if nComponents > nSamples/2 {
+		regularization = 1e-3
+	}
+
 	return &PCAMetricsCalculator{
 		scores:         scores,
 		loadings:       loadings,
@@ -37,7 +44,7 @@ func NewPCAMetricsCalculator(scores, loadings *mat.Dense, mean, stdDev []float64
 		nComponents:    nComponents,
 		nSamples:       nSamples,
 		nFeatures:      nFeatures,
-		regularization: 1e-8,
+		regularization: regularization,
 	}
 }
 
@@ -55,7 +62,14 @@ func (m *PCAMetricsCalculator) CalculateMetrics(originalData types.Matrix) ([]ty
 	var scoresCovInv mat.Dense
 	err = scoresCovInv.Inverse(scoresCov)
 	if err != nil {
-		return nil, fmt.Errorf("failed to invert covariance matrix: %w", err)
+		// If standard inversion fails, try with increased regularization
+		for i := 0; i < m.nComponents; i++ {
+			scoresCov.Set(i, i, scoresCov.At(i, i)+m.regularization*10)
+		}
+		err = scoresCovInv.Inverse(scoresCov)
+		if err != nil {
+			return nil, fmt.Errorf("failed to invert covariance matrix even with increased regularization: %w", err)
+		}
 	}
 
 	// Calculate mean of scores (should be close to zero for centered data)
@@ -171,8 +185,11 @@ func (m *PCAMetricsCalculator) calculateMahalanobisDistance(scoreVec *mat.VecDen
 
 // calculateRSS computes the Residual Sum of Squares
 func (m *PCAMetricsCalculator) calculateRSS(sampleIdx int, originalData types.Matrix) (float64, error) {
-	// RSS is calculated as the squared difference between the centered/scaled data
-	// and its reconstruction in the transformed space
+	// RSS measures the reconstruction error: sum((X_preprocessed - X_reconstructed)²)
+	// where X_reconstructed = scores × loadings^T + mean
+	// 
+	// IMPORTANT: The key insight is that we're measuring RSS in the preprocessed space,
+	// not the original space. This matches sklearn's approach.
 
 	// Get the score vector for this sample
 	scoreVec := mat.NewVecDense(m.nComponents, nil)
@@ -180,37 +197,28 @@ func (m *PCAMetricsCalculator) calculateRSS(sampleIdx int, originalData types.Ma
 		scoreVec.SetVec(j, m.scores.At(sampleIdx, j))
 	}
 
-	// Calculate reconstructed values in the transformed space
-	reconstructed := make([]float64, m.nFeatures)
-	for j := 0; j < m.nFeatures; j++ {
-		val := 0.0
-		for k := 0; k < m.nComponents; k++ {
-			val += scoreVec.AtVec(k) * m.loadings.At(j, k)
+	// Reconstruct the data: X_reconstructed = scores × loadings^T
+	reconstructed := mat.NewVecDense(m.nFeatures, nil)
+	reconstructed.MulVec(m.loadings, scoreVec)
+
+	// Add back the mean (this is what sklearn's inverse_transform does)
+	if len(m.mean) > 0 {
+		for j := 0; j < m.nFeatures; j++ {
+			reconstructed.SetVec(j, reconstructed.AtVec(j) + m.mean[j])
 		}
-		reconstructed[j] = val
 	}
 
-	// Calculate the centered/scaled version of the original data point
-	centeredData := make([]float64, m.nFeatures)
+	// Get the data point - this should already be preprocessed
+	// (SNV applied if it was used during fitting)
+	dataPoint := make([]float64, m.nFeatures)
 	for j := 0; j < m.nFeatures; j++ {
-		val := originalData[sampleIdx][j]
-
-		// Apply the same preprocessing as was used for PCA
-		if len(m.mean) > 0 {
-			val -= m.mean[j]
-		}
-
-		if len(m.stdDev) > 0 && m.stdDev[j] > 0 {
-			val /= m.stdDev[j]
-		}
-
-		centeredData[j] = val
+		dataPoint[j] = originalData[sampleIdx][j]
 	}
 
-	// Calculate sum of squared residuals between centered data and reconstruction
+	// Calculate sum of squared residuals
 	rss := 0.0
 	for j := 0; j < m.nFeatures; j++ {
-		residual := centeredData[j] - reconstructed[j]
+		residual := dataPoint[j] - reconstructed.AtVec(j)
 		rss += residual * residual
 	}
 
@@ -245,15 +253,32 @@ func (m *PCAMetricsCalculator) isOutlier(hotellingT2 float64) bool {
 	return hotellingT2 > t2Critical
 }
 
+// convertMatrixToDense converts a types.Matrix to a gonum Dense matrix
+func convertMatrixToDense(m types.Matrix) *mat.Dense {
+	if len(m) == 0 || len(m[0]) == 0 {
+		return mat.NewDense(0, 0, nil)
+	}
+
+	rows, cols := len(m), len(m[0])
+	data := make([]float64, rows*cols)
+	for i := 0; i < rows; i++ {
+		for j := 0; j < cols; j++ {
+			data[i*cols+j] = m[i][j]
+		}
+	}
+	return mat.NewDense(rows, cols, data)
+}
+
 // CalculateMetricsFromPCAResult is a convenience function that calculates metrics directly from PCAResult
-func CalculateMetricsFromPCAResult(result *types.PCAResult, originalData types.Matrix) ([]types.SampleMetrics, error) {
+func CalculateMetricsFromPCAResult(result *types.PCAResult, preprocessedData types.Matrix) ([]types.SampleMetrics, error) {
 	// Convert result matrices to gonum matrices
-	scores := matrixToDense(result.Scores)
-	loadings := matrixToDense(result.Loadings)
+	scores := convertMatrixToDense(result.Scores)
+	loadings := convertMatrixToDense(result.Loadings)
 
 	// Create metrics calculator
 	calculator := NewPCAMetricsCalculator(scores, loadings, result.Means, result.StdDevs)
 
 	// Calculate metrics
-	return calculator.CalculateMetrics(originalData)
+	// Note: preprocessedData should be the same preprocessed data that was used for PCA fitting
+	return calculator.CalculateMetrics(preprocessedData)
 }
