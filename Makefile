@@ -9,6 +9,25 @@ CLI_PATH := cmd/gopca-cli/main.go
 DESKTOP_PATH := cmd/gopca-desktop
 COVERAGE_FILE := coverage.out
 
+# Shortcuts for CLI builds
+cli: build
+cli-all: build-all
+
+# Shortcuts for desktop/GUI builds  
+desktop: gui-build
+desktop-dev: gui-dev
+
+# Cross-platform build variables
+GOOS ?= $(shell go env GOOS)
+GOARCH ?= $(shell go env GOARCH)
+
+# Binary extension (for Windows)
+ifeq ($(GOOS),windows)
+	EXT := .exe
+else
+	EXT :=
+endif
+
 # Go commands
 GOCMD := go
 GOBUILD := $(GOCMD) build
@@ -30,17 +49,53 @@ WAILS := $(shell which wails 2> /dev/null || echo "$${HOME}/go/bin/wails")
 .DEFAULT_GOAL := all
 
 # Phony targets
-.PHONY: all build gui-dev gui-build gui-run gui-deps test test-verbose test-coverage fmt lint run-pca-iris clean install deps help
+.PHONY: all build cli cli-all build-cross build-darwin-amd64 build-darwin-arm64 build-linux-amd64 build-linux-arm64 build-windows-amd64 build-all gui-dev gui-build gui-run gui-deps test test-verbose test-coverage fmt lint run-pca-iris clean clean-cross install deps help
 
 ## all: Build the binary and run tests
 all: build test
 
 ## build: Build the CLI binary
 build:
-	@echo "Building $(BINARY_NAME)..."
+	@echo "Building $(BINARY_NAME) for $(GOOS)/$(GOARCH)..."
 	@mkdir -p $(BUILD_DIR)
-	$(GOBUILD) $(LDFLAGS) -o $(BUILD_DIR)/$(BINARY_NAME) $(CLI_PATH)
-	@echo "Build complete: $(BUILD_DIR)/$(BINARY_NAME)"
+	GOOS=$(GOOS) GOARCH=$(GOARCH) $(GOBUILD) $(LDFLAGS) -o $(BUILD_DIR)/$(BINARY_NAME)$(EXT) $(CLI_PATH)
+	@echo "Build complete: $(BUILD_DIR)/$(BINARY_NAME)$(EXT)"
+
+## build-cross: Generic cross-platform build (use with GOOS and GOARCH)
+build-cross:
+	@echo "Building $(BINARY_NAME) for $(GOOS)/$(GOARCH)..."
+	@mkdir -p $(BUILD_DIR)
+	@if [ "$(GOOS)" = "windows" ]; then \
+		GOOS=$(GOOS) GOARCH=$(GOARCH) $(GOBUILD) $(LDFLAGS) -o $(BUILD_DIR)/$(BINARY_NAME)-$(GOOS)-$(GOARCH).exe $(CLI_PATH); \
+		echo "Build complete: $(BUILD_DIR)/$(BINARY_NAME)-$(GOOS)-$(GOARCH).exe"; \
+	else \
+		GOOS=$(GOOS) GOARCH=$(GOARCH) $(GOBUILD) $(LDFLAGS) -o $(BUILD_DIR)/$(BINARY_NAME)-$(GOOS)-$(GOARCH) $(CLI_PATH); \
+		echo "Build complete: $(BUILD_DIR)/$(BINARY_NAME)-$(GOOS)-$(GOARCH)"; \
+	fi
+
+## build-darwin-amd64: Build for macOS Intel
+build-darwin-amd64:
+	@$(MAKE) build-cross GOOS=darwin GOARCH=amd64
+
+## build-darwin-arm64: Build for macOS Apple Silicon
+build-darwin-arm64:
+	@$(MAKE) build-cross GOOS=darwin GOARCH=arm64
+
+## build-linux-amd64: Build for Linux x64
+build-linux-amd64:
+	@$(MAKE) build-cross GOOS=linux GOARCH=amd64
+
+## build-linux-arm64: Build for Linux ARM64
+build-linux-arm64:
+	@$(MAKE) build-cross GOOS=linux GOARCH=arm64
+
+## build-windows-amd64: Build for Windows x64
+build-windows-amd64:
+	@$(MAKE) build-cross GOOS=windows GOARCH=amd64
+
+## build-all: Build for all supported platforms
+build-all: build-darwin-amd64 build-darwin-arm64 build-linux-amd64 build-linux-arm64 build-windows-amd64
+	@echo "All platform builds complete!"
 
 ## gui-dev: Run GUI in development mode with hot reload
 gui-dev:
@@ -132,6 +187,12 @@ clean:
 	@rm -f $(COVERAGE_FILE) coverage.html
 	@echo "Clean complete"
 
+## clean-cross: Remove cross-compiled binaries
+clean-cross:
+	@echo "Cleaning cross-compiled binaries..."
+	@rm -f $(BUILD_DIR)/$(BINARY_NAME)-*
+	@echo "Cross-compiled binaries removed"
+
 ## install: Install the binary to GOPATH/bin
 install: build
 	@echo "Installing $(BINARY_NAME) to GOPATH/bin..."
@@ -154,12 +215,26 @@ help:
 	@echo "Usage: make [target]"
 	@echo ""
 	@echo "Example workflows:"
-	@echo "  make              # Build CLI and test (default)"
-	@echo "  make build        # Build the CLI binary"
+	@echo "  make                  # Build CLI and test (default)"
+	@echo "  make build            # Build the CLI binary for current platform"
+	@echo "  make build-all        # Build for all supported platforms"
+	@echo "  make build-linux-amd64 # Build for Linux x64"
+	@echo "  make build-darwin-arm64 # Build for macOS Apple Silicon"
+	@echo "  make build-windows-amd64 # Build for Windows x64"
+	@echo ""
+	@echo "Cross-compilation examples:"
+	@echo "  GOOS=linux GOARCH=amd64 make build    # Build for Linux x64"
+	@echo "  GOOS=darwin GOARCH=arm64 make build   # Build for macOS ARM64"
+	@echo "  make build-cross GOOS=windows GOARCH=amd64 # Generic cross-build"
+	@echo ""
+	@echo "GUI development:"
 	@echo "  make gui-deps     # Install GUI dependencies (first time)"
 	@echo "  make gui-dev      # Run GUI in development mode"
 	@echo "  make gui-build    # Build GUI for production"
 	@echo "  make gui-run      # Run the built GUI application"
+	@echo ""
+	@echo "Other targets:"
 	@echo "  make test         # Run tests with coverage"
 	@echo "  make run-pca-iris # Run PCA on iris dataset"
 	@echo "  make clean        # Clean all artifacts"
+	@echo "  make clean-cross  # Clean cross-compiled binaries only"
