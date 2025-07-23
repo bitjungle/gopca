@@ -31,7 +31,7 @@ function App() {
     const [config, setConfig] = useState({
         components: 2,
         meanCenter: true,
-        standardScale: true,
+        standardScale: false,
         robustScale: false,
         snv: false,
         vectorNorm: false,
