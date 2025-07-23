@@ -478,6 +478,7 @@ func runAnalyze(c *cli.Context) error {
 		Components:      c.Int("components"),
 		MeanCenter:      !c.Bool("no-mean-centering"),
 		StandardScale:   c.String("scale") == "standard",
+		RobustScale:     c.String("scale") == "robust",
 		Method:          c.String("method"),
 		ExcludedRows:    excludedRows,
 		ExcludedColumns: excludedCols,

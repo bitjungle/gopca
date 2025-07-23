@@ -11,11 +11,10 @@ import (
 // PCAImpl implements the PCAEngine interface
 type PCAImpl struct {
 	// Fitted model parameters
-	mean        []float64
-	stdDev      []float64
-	loadings    *mat.Dense
-	nComponents int
-	fitted      bool
+	preprocessor *Preprocessor
+	loadings     *mat.Dense
+	nComponents  int
+	fitted       bool
 
 	// Configuration
 	config types.PCAConfig
@@ -47,9 +46,22 @@ func (p *PCAImpl) Fit(data types.Matrix, config types.PCAConfig) (*types.PCAResu
 	// Convert to gonum matrix
 	X := matrixToDense(data)
 
-	// Preprocessing
-	if config.MeanCenter || config.StandardScale {
-		X, p.mean, p.stdDev = p.preprocess(X, true)
+	// Preprocessing using the Preprocessor class
+	if config.MeanCenter || config.StandardScale || config.RobustScale {
+		// Create preprocessor with the appropriate settings
+		p.preprocessor = NewPreprocessor(config.MeanCenter, config.StandardScale, config.RobustScale)
+		
+		// Convert to types.Matrix for preprocessor
+		typeMatrix := denseToMatrix(X)
+		
+		// Fit and transform
+		processedData, err := p.preprocessor.FitTransform(typeMatrix)
+		if err != nil {
+			return nil, fmt.Errorf("preprocessing failed: %w", err)
+		}
+		
+		// Convert back to mat.Dense
+		X = matrixToDense(processedData)
 	}
 
 	// Select PCA method
@@ -96,6 +108,13 @@ func (p *PCAImpl) Fit(data types.Matrix, config types.PCAConfig) (*types.PCAResu
 		}
 	}
 	
+	// Get preprocessing stats if applicable
+	var means, stddevs []float64
+	if p.preprocessor != nil {
+		means = p.preprocessor.GetMeans()
+		stddevs = p.preprocessor.GetStdDevs()
+	}
+	
 	return &types.PCAResult{
 		Scores:               denseToMatrix(scores),
 		Loadings:             denseToMatrix(loadings),
@@ -105,9 +124,9 @@ func (p *PCAImpl) Fit(data types.Matrix, config types.PCAConfig) (*types.PCAResu
 		ComponentLabels:      componentLabels,
 		ComponentsComputed:   actualComponents,
 		Method:               config.Method,
-		PreprocessingApplied: config.MeanCenter || config.StandardScale,
-		Means:                p.mean,
-		StdDevs:              p.stdDev,
+		PreprocessingApplied: config.MeanCenter || config.StandardScale || config.RobustScale,
+		Means:                means,
+		StdDevs:              stddevs,
 	}, nil
 }
 
@@ -121,8 +140,18 @@ func (p *PCAImpl) Transform(data types.Matrix) (types.Matrix, error) {
 	X := matrixToDense(data)
 
 	// Apply same preprocessing as during fit
-	if p.config.MeanCenter || p.config.StandardScale {
-		X, _, _ = p.preprocess(X, false)
+	if p.preprocessor != nil {
+		// Convert to types.Matrix for preprocessor
+		typeMatrix := denseToMatrix(X)
+		
+		// Transform using preprocessor
+		processedData, err := p.preprocessor.Transform(typeMatrix)
+		if err != nil {
+			return nil, fmt.Errorf("preprocessing failed: %w", err)
+		}
+		
+		// Convert back to mat.Dense
+		X = matrixToDense(processedData)
 	}
 
 	// Project onto loadings
@@ -300,66 +329,6 @@ func (p *PCAImpl) svdAlgorithm(X *mat.Dense, nComponents int) (*mat.Dense, *mat.
 	return scores, loadings, nil
 }
 
-// preprocess applies mean centering and/or standard scaling
-func (p *PCAImpl) preprocess(X *mat.Dense, fit bool) (*mat.Dense, []float64, []float64) {
-	n, m := X.Dims()
-	result := mat.NewDense(n, m, nil)
-	result.Copy(X)
-
-	mean := make([]float64, m)
-	stdDev := make([]float64, m)
-
-	if fit {
-		// Calculate mean and stddev
-		for j := 0; j < m; j++ {
-			col := mat.Col(nil, j, X)
-
-			// Mean
-			sum := 0.0
-			for _, v := range col {
-				sum += v
-			}
-			mean[j] = sum / float64(n)
-
-			// Standard deviation
-			if p.config.StandardScale {
-				sumSq := 0.0
-				for _, v := range col {
-					diff := v - mean[j]
-					sumSq += diff * diff
-				}
-				stdDev[j] = math.Sqrt(sumSq / float64(n-1))
-				if stdDev[j] < 1e-8 {
-					stdDev[j] = 1.0 // Avoid division by zero
-				}
-			} else {
-				stdDev[j] = 1.0
-			}
-		}
-	} else {
-		// Use stored parameters
-		copy(mean, p.mean)
-		copy(stdDev, p.stdDev)
-	}
-
-	// Apply preprocessing
-	if p.config.MeanCenter || p.config.StandardScale {
-		for j := 0; j < m; j++ {
-			for i := 0; i < n; i++ {
-				val := result.At(i, j)
-				if p.config.MeanCenter {
-					val -= mean[j]
-				}
-				if p.config.StandardScale {
-					val /= stdDev[j]
-				}
-				result.Set(i, j, val)
-			}
-		}
-	}
-
-	return result, mean, stdDev
-}
 
 // calculateVariance computes explained variance for each component
 func (p *PCAImpl) calculateVariance(X, scores, loadings *mat.Dense) ([]float64, []float64) {

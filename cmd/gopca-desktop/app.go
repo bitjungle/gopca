@@ -233,6 +233,7 @@ func (a *App) RunPCA(request PCARequest) (response PCAResponse) {
 		Components:      request.Components,
 		MeanCenter:      request.MeanCenter,
 		StandardScale:   request.StandardScale,
+		RobustScale:     request.RobustScale,
 		Method:          strings.ToLower(request.Method),
 		ExcludedRows:    request.ExcludedRows,
 		ExcludedColumns: request.ExcludedColumns,
