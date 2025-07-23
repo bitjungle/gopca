@@ -23,11 +23,19 @@ export interface PCARequest {
   excludedRows?: number[];
   excludedColumns?: number[];
   missingStrategy?: string;
+  calculateMetrics?: boolean;
   // Kernel PCA parameters
   kernelType?: string;
   kernelGamma?: number;
   kernelDegree?: number;
   kernelCoef0?: number;
+}
+
+export interface SampleMetrics {
+  hotelling_t2: number;
+  mahalanobis: number;
+  rss: number;
+  is_outlier: boolean;
 }
 
 export interface PCAResult {
@@ -37,6 +45,11 @@ export interface PCAResult {
   cumulative_variance: number[];
   component_labels: string[];
   variable_labels?: string[];
+  metrics?: SampleMetrics[];
+  t2_limit_95?: number;
+  t2_limit_99?: number;
+  q_limit_95?: number;
+  q_limit_99?: number;
 }
 
 export interface PCAMetrics {
