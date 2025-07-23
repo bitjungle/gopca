@@ -86,6 +86,102 @@ func TestRobustScaling(t *testing.T) {
 	}
 }
 
+// Test SNV preprocessing
+func TestSNVPreprocessing(t *testing.T) {
+	// Test data where each row has different mean and variance
+	data := types.Matrix{
+		{1.0, 2.0, 3.0, 4.0},     // mean=2.5, std≈1.29
+		{10.0, 20.0, 30.0, 40.0}, // mean=25, std≈12.9 (10x the first row)
+		{5.0, 5.0, 5.0, 5.0},     // mean=5, std=0 (constant row)
+	}
+
+	prep := NewPreprocessorFull(false, false, false, true, false)
+	transformed, err := prep.FitTransform(data)
+	if err != nil {
+		t.Fatalf("FitTransform failed: %v", err)
+	}
+
+	// Check that each row (except constant) has zero mean and unit variance
+	for i := 0; i < 2; i++ { // First two rows
+		rowSum := 0.0
+		for j := 0; j < len(transformed[i]); j++ {
+			rowSum += transformed[i][j]
+		}
+		rowMean := rowSum / float64(len(transformed[i]))
+		if math.Abs(rowMean) > 1e-10 {
+			t.Errorf("Row %d has non-zero mean after SNV: %f", i, rowMean)
+		}
+
+		// Check variance
+		rowSumSq := 0.0
+		for j := 0; j < len(transformed[i]); j++ {
+			diff := transformed[i][j] - rowMean
+			rowSumSq += diff * diff
+		}
+		rowVar := rowSumSq / float64(len(transformed[i])-1)
+		if math.Abs(rowVar-1.0) > 1e-10 {
+			t.Errorf("Row %d does not have unit variance after SNV: %f", i, rowVar)
+		}
+	}
+
+	// Check that constant row is centered but not scaled
+	constantRow := transformed[2]
+	for j := 0; j < len(constantRow); j++ {
+		if math.Abs(constantRow[j]) > 1e-10 {
+			t.Errorf("Constant row value %d is not zero after SNV: %f", j, constantRow[j])
+		}
+	}
+}
+
+// Test SNV combined with column preprocessing
+func TestSNVWithColumnPreprocessing(t *testing.T) {
+	// Use diverse data to ensure variance after SNV
+	data := types.Matrix{
+		{1.0, 4.0, 7.0},
+		{2.0, 5.0, 8.0},
+		{3.0, 6.0, 9.0},
+		{10.0, 5.0, 2.0}, // Different pattern
+	}
+
+	// Test 1: Just SNV
+	prep1 := NewPreprocessorFull(false, false, false, true, false)
+	snvOnly, err := prep1.FitTransform(data)
+	if err != nil {
+		t.Fatalf("SNV only FitTransform failed: %v", err)
+	}
+
+	// Verify each row has zero mean after SNV
+	for i := 0; i < len(snvOnly); i++ {
+		rowSum := 0.0
+		for j := 0; j < len(snvOnly[i]); j++ {
+			rowSum += snvOnly[i][j]
+		}
+		rowMean := rowSum / float64(len(snvOnly[i]))
+		if math.Abs(rowMean) > 1e-10 {
+			t.Errorf("Row %d has non-zero mean after SNV: %f", i, rowMean)
+		}
+	}
+
+	// Test 2: SNV + Mean centering (should center columns after SNV)
+	prep2 := NewPreprocessorFull(true, false, false, true, false)
+	transformed, err := prep2.FitTransform(data)
+	if err != nil {
+		t.Fatalf("SNV + mean center FitTransform failed: %v", err)
+	}
+
+	// After SNV + mean centering, columns should have zero mean
+	for j := 0; j < len(transformed[0]); j++ {
+		colSum := 0.0
+		for i := 0; i < len(transformed); i++ {
+			colSum += transformed[i][j]
+		}
+		colMean := colSum / float64(len(transformed))
+		if math.Abs(colMean) > 1e-10 {
+			t.Errorf("Column %d has non-zero mean after SNV + mean centering: %f", j, colMean)
+		}
+	}
+}
+
 // Test inverse transform
 func TestInverseTransform(t *testing.T) {
 	data := types.Matrix{
@@ -113,6 +209,75 @@ func TestInverseTransform(t *testing.T) {
 				t.Errorf("Inverse transform failed at [%d,%d]: expected %f, got %f",
 					i, j, data[i][j], inversed[i][j])
 			}
+		}
+	}
+}
+
+// Test Vector Normalization
+func TestVectorNormalization(t *testing.T) {
+	// Test data
+	data := types.Matrix{
+		{3.0, 4.0},      // L2 norm = 5
+		{1.0, 0.0},      // L2 norm = 1
+		{6.0, 8.0},      // L2 norm = 10
+		{0.0, 0.0},      // L2 norm = 0 (edge case)
+	}
+
+	prep := NewPreprocessorFull(false, false, false, false, true)
+	transformed, err := prep.FitTransform(data)
+	if err != nil {
+		t.Fatalf("FitTransform failed: %v", err)
+	}
+
+	// Check that each row (except zero vector) has unit L2 norm
+	expectedNorms := []float64{1.0, 1.0, 1.0, 0.0}
+	for i := 0; i < len(transformed); i++ {
+		norm := 0.0
+		for j := 0; j < len(transformed[i]); j++ {
+			norm += transformed[i][j] * transformed[i][j]
+		}
+		norm = math.Sqrt(norm)
+		
+		if math.Abs(norm-expectedNorms[i]) > 1e-10 {
+			t.Errorf("Row %d has L2 norm %f, expected %f", i, norm, expectedNorms[i])
+		}
+	}
+
+	// Check specific values
+	if math.Abs(transformed[0][0]-0.6) > 1e-10 || math.Abs(transformed[0][1]-0.8) > 1e-10 {
+		t.Errorf("Row 0 incorrect: got [%f, %f], expected [0.6, 0.8]", transformed[0][0], transformed[0][1])
+	}
+}
+
+// Test SNV against reference implementation
+func TestSNVReferenceImplementation(t *testing.T) {
+	// Test with known input/output from Python reference
+	data := types.Matrix{
+		{1.0, 2.0, 3.0, 4.0, 5.0},
+		{2.0, 4.0, 6.0, 8.0, 10.0},
+	}
+
+	prep := NewPreprocessorFull(false, false, false, true, false)
+	transformed, err := prep.FitTransform(data)
+	if err != nil {
+		t.Fatalf("FitTransform failed: %v", err)
+	}
+
+	// Expected values for first row after SNV
+	// mean = 3, std = sqrt(2.5) ≈ 1.58114
+	// Expected: [-1.26491, -0.63246, 0, 0.63246, 1.26491]
+	expected := []float64{-1.26491, -0.63246, 0, 0.63246, 1.26491}
+
+	for j, exp := range expected {
+		if math.Abs(transformed[0][j]-exp) > 0.0001 {
+			t.Errorf("Row 0, Col %d: expected %f, got %f", j, exp, transformed[0][j])
+		}
+	}
+
+	// Second row should have same normalized values (scaled version of first)
+	for j := 0; j < len(expected); j++ {
+		if math.Abs(transformed[1][j]-expected[j]) > 0.0001 {
+			t.Errorf("Row 1, Col %d: expected %f, got %f", j, expected[j], transformed[1][j])
 		}
 	}
 }

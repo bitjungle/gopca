@@ -19,13 +19,15 @@ const (
 
 // PCAConfig holds configuration for PCA analysis
 type PCAConfig struct {
-	Components      int     `json:"components"`
-	MeanCenter      bool    `json:"mean_center"`
-	StandardScale   bool    `json:"standard_scale"`
-	RobustScale     bool    `json:"robust_scale"`    // Robust scaling (median/MAD)
-	Method          string  `json:"method"` // "svd", "eigen", "nipals", or "kernel"
-	ExcludedRows    []int   `json:"excluded_rows,omitempty"`    // 0-based indices of rows to exclude
-	ExcludedColumns []int   `json:"excluded_columns,omitempty"` // 0-based indices of columns to exclude
+	Components      int    `json:"components"`
+	MeanCenter      bool   `json:"mean_center"`
+	StandardScale   bool   `json:"standard_scale"`
+	RobustScale     bool   `json:"robust_scale"`               // Robust scaling (median/MAD)
+	SNV             bool   `json:"snv"`                        // Standard Normal Variate (row-wise normalization)
+	VectorNorm      bool   `json:"vector_norm"`                // L2 normalization (row-wise)
+	Method          string `json:"method"`                     // "svd", "eigen", "nipals", or "kernel"
+	ExcludedRows    []int  `json:"excluded_rows,omitempty"`    // 0-based indices of rows to exclude
+	ExcludedColumns []int  `json:"excluded_columns,omitempty"` // 0-based indices of columns to exclude
 	// Missing value handling
 	MissingStrategy MissingValueStrategy `json:"missing_strategy,omitempty"` // How to handle missing values
 	// Kernel PCA specific parameters
@@ -68,8 +70,8 @@ type PCAOutputData struct {
 
 // SampleData contains sample-space results
 type SampleData struct {
-	Names   []string       `json:"names"`   // Sample names from input
-	Scores  Matrix         `json:"scores"`  // PC scores (n × c)
+	Names   []string        `json:"names"`   // Sample names from input
+	Scores  Matrix          `json:"scores"`  // PC scores (n × c)
 	Metrics []SampleMetrics `json:"metrics"` // Advanced metrics per sample
 }
 
@@ -91,11 +93,11 @@ type SampleMetrics struct {
 
 // PCAMetadata contains analysis metadata
 type PCAMetadata struct {
-	NSamples            int       `json:"n_samples"`
-	NFeatures           int       `json:"n_features"`
-	NComponents         int       `json:"n_components"`
-	Method              string    `json:"method"`
-	Preprocessing       string    `json:"preprocessing"`
-	ExplainedVariance   []float64 `json:"explained_variance"`
-	CumulativeVariance  []float64 `json:"cumulative_variance"`
+	NSamples           int       `json:"n_samples"`
+	NFeatures          int       `json:"n_features"`
+	NComponents        int       `json:"n_components"`
+	Method             string    `json:"method"`
+	Preprocessing      string    `json:"preprocessing"`
+	ExplainedVariance  []float64 `json:"explained_variance"`
+	CumulativeVariance []float64 `json:"cumulative_variance"`
 }

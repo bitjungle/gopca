@@ -31,12 +31,12 @@ func DefaultCSVFormat() CSVFormat {
 
 // CSVData represents parsed CSV data with metadata
 type CSVData struct {
-	Matrix       Matrix   // The numerical data
-	Headers      []string // Column names (if present)
-	RowNames     []string // Row names (if present)
-	MissingMask  [][]bool // Track NaN locations (true = missing)
-	Rows         int      // Number of data rows
-	Columns      int      // Number of data columns
+	Matrix      Matrix   // The numerical data
+	Headers     []string // Column names (if present)
+	RowNames    []string // Row names (if present)
+	MissingMask [][]bool // Track NaN locations (true = missing)
+	Rows        int      // Number of data rows
+	Columns     int      // Number of data columns
 }
 
 // CSVParser provides methods for parsing CSV files
@@ -196,7 +196,7 @@ func DetectFormat(sample []byte) (*CSVFormat, error) {
 	// Convert sample to string for analysis
 	sampleStr := string(sample)
 	lines := strings.Split(sampleStr, "\n")
-	
+
 	if len(lines) < 2 {
 		return nil, fmt.Errorf("insufficient sample data for format detection")
 	}
@@ -269,10 +269,10 @@ func DetectFormat(sample []byte) (*CSVFormat, error) {
 // GetMissingValueInfo returns information about missing values in selected columns
 func (d *CSVData) GetMissingValueInfo(selectedColumns []int) *MissingValueInfo {
 	info := &MissingValueInfo{
-		ColumnIndices:    []int{},
-		RowsAffected:     []int{},
-		TotalMissing:     0,
-		MissingByColumn:  make(map[int]int),
+		ColumnIndices:   []int{},
+		RowsAffected:    []int{},
+		TotalMissing:    0,
+		MissingByColumn: make(map[int]int),
 	}
 
 	// If no columns selected, analyze all columns
@@ -317,10 +317,10 @@ func (d *CSVData) GetMissingValueInfo(selectedColumns []int) *MissingValueInfo {
 
 // MissingValueInfo contains information about missing values in the data
 type MissingValueInfo struct {
-	ColumnIndices   []int         // Columns that contain missing values
-	RowsAffected    []int         // Rows that contain missing values in selected columns
-	TotalMissing    int           // Total number of missing values
-	MissingByColumn map[int]int   // Missing count per column
+	ColumnIndices   []int       // Columns that contain missing values
+	RowsAffected    []int       // Rows that contain missing values in selected columns
+	TotalMissing    int         // Total number of missing values
+	MissingByColumn map[int]int // Missing count per column
 }
 
 // HasMissing returns true if there are any missing values

@@ -179,7 +179,7 @@ func TestMutuallyExclusivePreprocessing(t *testing.T) {
 
 	// Store results for comparison
 	results := make([]*types.PCAResult, len(configs))
-	
+
 	for i, config := range configs {
 		engine := NewPCAEngine()
 		result, err := engine.Fit(data, config)
@@ -196,15 +196,15 @@ func TestMutuallyExclusivePreprocessing(t *testing.T) {
 			// Compare first score values
 			score1 := results[i].Scores[0][0]
 			score2 := results[j].Scores[0][0]
-			
+
 			// If both have no preprocessing, scores should be the same
 			if !configs[i].MeanCenter && !configs[i].StandardScale && !configs[i].RobustScale &&
-			   !configs[j].MeanCenter && !configs[j].StandardScale && !configs[j].RobustScale {
+				!configs[j].MeanCenter && !configs[j].StandardScale && !configs[j].RobustScale {
 				if math.Abs(score1-score2) > 1e-6 {
 					t.Errorf("Results for no preprocessing should be the same")
 				}
 			} else if (configs[i].MeanCenter || configs[i].StandardScale || configs[i].RobustScale) !=
-			          (configs[j].MeanCenter || configs[j].StandardScale || configs[j].RobustScale) {
+				(configs[j].MeanCenter || configs[j].StandardScale || configs[j].RobustScale) {
 				// If one has preprocessing and the other doesn't, they should differ
 				if math.Abs(score1-score2) < 1e-6 {
 					t.Errorf("Results for preprocessing configs %d and %d should be different", i, j)
@@ -249,7 +249,7 @@ func TestPreprocessingWithTransform(t *testing.T) {
 
 	for _, config := range configs {
 		engine := NewPCAEngine()
-		
+
 		// Fit on training data
 		_, err := engine.Fit(trainData, config)
 		if err != nil {

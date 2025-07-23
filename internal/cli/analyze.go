@@ -48,8 +48,14 @@ EXAMPLES:
   # Kernel PCA with polynomial kernel
   gopca-cli analyze --method kernel --kernel-type poly --kernel-degree 3 data/iris_data.csv
 
+  # Apply SNV preprocessing (useful for spectral data)
+  gopca-cli analyze --snv --scale standard data/spectral_data.csv
+
+  # Apply L2 vector normalization
+  gopca-cli analyze --vector-norm data/data.csv
+
 The analysis includes:
-  - Data preprocessing (mean centering, scaling)
+  - Data preprocessing (SNV, vector normalization, mean centering, scaling)
   - PCA computation using SVD, NIPALS, or Kernel methods
   - Kernel PCA for non-linear dimensionality reduction
   - Optional statistical metrics (Hotelling's T², Mahalanobis distances, RSS)
@@ -66,7 +72,7 @@ The analysis includes:
 				Aliases: []string{"q"},
 				Usage:   "Minimal output (for scripting)",
 			},
-			
+
 			// Output flags
 			&cli.StringFlag{
 				Name:    "output-dir",
@@ -79,7 +85,7 @@ The analysis includes:
 				Usage:   "Output format: table, csv, json",
 				Value:   "table",
 			},
-			
+
 			// PCA parameters
 			&cli.IntFlag{
 				Name:    "components",
@@ -96,14 +102,22 @@ The analysis includes:
 				Name:  "no-mean-centering",
 				Usage: "Disable mean centering",
 			},
-			
+
 			// Preprocessing
 			&cli.StringFlag{
 				Name:  "scale",
 				Usage: "Scaling method: none, standard, robust",
 				Value: "none",
 			},
-			
+			&cli.BoolFlag{
+				Name:  "snv",
+				Usage: "Apply Standard Normal Variate (row-wise normalization) before column preprocessing",
+			},
+			&cli.BoolFlag{
+				Name:  "vector-norm",
+				Usage: "Apply L2 vector normalization (row-wise) before column preprocessing",
+			},
+
 			// Data format
 			&cli.BoolFlag{
 				Name:  "no-headers",
@@ -133,7 +147,7 @@ The analysis includes:
 				Usage: "How to handle missing values: error, drop, mean, median",
 				Value: "error",
 			},
-			
+
 			// Output options
 			&cli.BoolFlag{
 				Name:  "output-scores",
@@ -156,7 +170,7 @@ The analysis includes:
 				Name:  "include-metrics",
 				Usage: "Include advanced metrics (Hotelling's T², Mahalanobis, RSS)",
 			},
-			
+
 			// Data filtering
 			&cli.StringFlag{
 				Name:  "exclude-rows",
@@ -166,7 +180,7 @@ The analysis includes:
 				Name:  "exclude-cols",
 				Usage: "Exclude columns by index (1-based, e.g., '2,4-6,8')",
 			},
-			
+
 			// Kernel PCA parameters
 			&cli.StringFlag{
 				Name:  "kernel-type",
@@ -198,12 +212,12 @@ func validateAnalyzeFlags(c *cli.Context) error {
 	if c.Bool("verbose") && c.Bool("quiet") {
 		return fmt.Errorf("cannot use both --verbose and --quiet flags")
 	}
-	
+
 	// Validate arguments
 	if c.NArg() < 1 {
 		return fmt.Errorf("missing required argument: input CSV file")
 	}
-	
+
 	// Validate format
 	format := c.String("format")
 	switch format {
@@ -212,7 +226,7 @@ func validateAnalyzeFlags(c *cli.Context) error {
 	default:
 		return fmt.Errorf("invalid output format: %s (must be table, csv, or json)", format)
 	}
-	
+
 	// Validate method
 	method := c.String("method")
 	switch method {
@@ -221,7 +235,7 @@ func validateAnalyzeFlags(c *cli.Context) error {
 	default:
 		return fmt.Errorf("invalid PCA method: %s (must be svd, nipals, or kernel)", method)
 	}
-	
+
 	// Validate scale
 	scale := c.String("scale")
 	switch scale {
@@ -230,12 +244,17 @@ func validateAnalyzeFlags(c *cli.Context) error {
 	default:
 		return fmt.Errorf("invalid scaling method: %s (must be none, standard, or robust)", scale)
 	}
-	
+
 	// Validate components
 	if c.Int("components") < 1 {
 		return fmt.Errorf("number of components must be at least 1")
 	}
-	
+
+	// Validate row-wise preprocessing options (mutually exclusive)
+	if c.Bool("snv") && c.Bool("vector-norm") {
+		return fmt.Errorf("cannot use both --snv and --vector-norm flags (choose one row-wise preprocessing method)")
+	}
+
 	// Validate delimiter
 	delimiter := c.String("delimiter")
 	if delimiter == "tab" {
@@ -244,47 +263,47 @@ func validateAnalyzeFlags(c *cli.Context) error {
 	if len(delimiter) != 1 {
 		return fmt.Errorf("delimiter must be a single character")
 	}
-	
+
 	// Validate decimal separator
 	decimalSep := c.String("decimal-separator")
 	if decimalSep != "." && decimalSep != "," && decimalSep != "dot" && decimalSep != "comma" {
 		return fmt.Errorf("decimal-separator must be 'dot' or 'comma'")
 	}
-	
+
 	// Validate missing strategy
 	missingStrategy := c.String("missing-strategy")
 	if missingStrategy != "error" && missingStrategy != "drop" && missingStrategy != "mean" && missingStrategy != "median" {
 		return fmt.Errorf("missing-strategy must be one of: error, drop, mean, median")
 	}
-	
+
 	// Validate kernel parameters if kernel method is selected
 	if method == "kernel" {
 		kernelType := c.String("kernel-type")
 		if kernelType == "" {
 			return fmt.Errorf("kernel-type must be specified when using kernel PCA method")
 		}
-		
+
 		switch kernelType {
 		case "rbf", "linear", "poly":
 			// Valid kernel types
 		default:
 			return fmt.Errorf("invalid kernel type: %s (must be rbf, linear, or poly)", kernelType)
 		}
-		
+
 		// Validate kernel-specific parameters
 		if kernelType == "rbf" || kernelType == "poly" {
 			if c.Float64("kernel-gamma") <= 0 {
 				return fmt.Errorf("kernel-gamma must be positive for %s kernel", kernelType)
 			}
 		}
-		
+
 		if kernelType == "poly" {
 			if c.Int("kernel-degree") < 1 {
 				return fmt.Errorf("kernel-degree must be at least 1 for polynomial kernel")
 			}
 		}
 	}
-	
+
 	return nil
 }
 
@@ -302,19 +321,19 @@ func runAnalyze(c *cli.Context) error {
 	inputFile := c.Args().First()
 	verbose := c.Bool("verbose")
 	quiet := c.Bool("quiet")
-	
+
 	// Parse CSV options
 	parseOpts := NewCSVParseOptions()
 	parseOpts.HasHeaders = !c.Bool("no-headers")
 	parseOpts.HasIndex = !c.Bool("no-index")
-	
+
 	// Handle delimiter
 	delimiter := c.String("delimiter")
 	if delimiter == "tab" {
 		delimiter = "\t"
 	}
 	parseOpts.Delimiter = rune(delimiter[0])
-	
+
 	// Handle decimal separator
 	decimalSep := c.String("decimal-separator")
 	if decimalSep == "dot" {
@@ -324,7 +343,7 @@ func runAnalyze(c *cli.Context) error {
 	} else {
 		parseOpts.DecimalSeparator = rune(decimalSep[0])
 	}
-	
+
 	// Parse NA values
 	if naValues := c.String("na-values"); naValues != "" {
 		parseOpts.NullValues = strings.Split(naValues, ",")
@@ -332,30 +351,30 @@ func runAnalyze(c *cli.Context) error {
 			parseOpts.NullValues[i] = strings.TrimSpace(parseOpts.NullValues[i])
 		}
 	}
-	
+
 	// Load CSV data
 	if verbose {
 		fmt.Printf("Loading data from %s...\n", inputFile)
 	}
-	
+
 	data, err := ParseCSV(inputFile, parseOpts)
 	if err != nil {
 		return fmt.Errorf("failed to parse CSV: %w", err)
 	}
-	
+
 	// Validate data
 	if err := ValidateCSVData(data); err != nil {
 		return fmt.Errorf("data validation failed: %w", err)
 	}
-	
+
 	if verbose {
 		fmt.Println("\nData summary:")
 		fmt.Print(GetDataSummary(data))
 	}
-	
+
 	// Parse exclusion flags
 	var excludedRows, excludedCols []int
-	
+
 	if excludeRowsStr := c.String("exclude-rows"); excludeRowsStr != "" {
 		excludedRows, err = utils.ParseRanges(excludeRowsStr)
 		if err != nil {
@@ -365,7 +384,7 @@ func runAnalyze(c *cli.Context) error {
 			fmt.Printf("\nExcluding %d rows: %v\n", len(excludedRows), excludedRows)
 		}
 	}
-	
+
 	if excludeColsStr := c.String("exclude-cols"); excludeColsStr != "" {
 		excludedCols, err = utils.ParseRanges(excludeColsStr)
 		if err != nil {
@@ -375,7 +394,7 @@ func runAnalyze(c *cli.Context) error {
 			fmt.Printf("Excluding %d columns: %v\n", len(excludedCols), excludedCols)
 		}
 	}
-	
+
 	// Apply exclusions to data if needed
 	if len(excludedRows) > 0 || len(excludedCols) > 0 {
 		// Filter the data matrix
@@ -384,7 +403,7 @@ func runAnalyze(c *cli.Context) error {
 			return fmt.Errorf("failed to filter data: %w", err)
 		}
 		data.Matrix = filteredData
-		
+
 		// Filter row names
 		if len(excludedRows) > 0 && len(data.RowNames) > 0 {
 			filteredRowNames, err := utils.FilterStringSlice(data.RowNames, excludedRows)
@@ -393,7 +412,7 @@ func runAnalyze(c *cli.Context) error {
 			}
 			data.RowNames = filteredRowNames
 		}
-		
+
 		// Filter column names
 		if len(excludedCols) > 0 && len(data.Headers) > 0 {
 			filteredHeaders, err := utils.FilterStringSlice(data.Headers, excludedCols)
@@ -402,7 +421,7 @@ func runAnalyze(c *cli.Context) error {
 			}
 			data.Headers = filteredHeaders
 		}
-		
+
 		// Update dimensions
 		data.Rows = len(data.Matrix)
 		if data.Rows > 0 {
@@ -410,13 +429,13 @@ func runAnalyze(c *cli.Context) error {
 		} else {
 			data.Columns = 0
 		}
-		
+
 		if verbose {
 			fmt.Printf("\nData after filtering:")
 			fmt.Print(GetDataSummary(data))
 		}
 	}
-	
+
 	// Handle missing values after filtering
 	// Get the columns that will be used for PCA (after exclusion)
 	selectedCols := make([]int, 0, data.Columns)
@@ -425,14 +444,14 @@ func runAnalyze(c *cli.Context) error {
 			selectedCols = append(selectedCols, i)
 		}
 	}
-	
+
 	// Check for missing values in selected columns
 	missingInfo := data.GetMissingValueInfo(selectedCols)
 	if missingInfo.HasMissing() {
 		if verbose {
 			fmt.Printf("\nMissing values detected: %s\n", missingInfo.GetSummary())
 		}
-		
+
 		// Handle based on strategy
 		missingStrategy := c.String("missing-strategy")
 		switch missingStrategy {
@@ -444,7 +463,7 @@ func runAnalyze(c *cli.Context) error {
 			if err != nil {
 				return fmt.Errorf("failed to handle missing values: %w", err)
 			}
-			
+
 			// Update data matrix and affected row names
 			if missingStrategy == "drop" && len(data.RowNames) > 0 {
 				// Filter row names to match the cleaned data
@@ -460,10 +479,10 @@ func runAnalyze(c *cli.Context) error {
 				}
 				data.RowNames = cleanRowNames
 			}
-			
+
 			data.Matrix = cleanData
 			data.Rows = len(cleanData)
-			
+
 			if verbose {
 				fmt.Printf("Applied %s strategy for missing values\n", missingStrategy)
 				if missingStrategy == "drop" {
@@ -472,7 +491,7 @@ func runAnalyze(c *cli.Context) error {
 			}
 		}
 	}
-	
+
 	// Configure PCA
 	pcaConfig := types.PCAConfig{
 		Components:      c.Int("components"),
@@ -484,7 +503,7 @@ func runAnalyze(c *cli.Context) error {
 		ExcludedColumns: excludedCols,
 		MissingStrategy: types.MissingValueStrategy(c.String("missing-strategy")),
 	}
-	
+
 	// Add kernel parameters if using kernel PCA
 	if c.String("method") == "kernel" {
 		pcaConfig.KernelType = c.String("kernel-type")
@@ -492,18 +511,18 @@ func runAnalyze(c *cli.Context) error {
 		pcaConfig.KernelDegree = c.Int("kernel-degree")
 		pcaConfig.KernelCoef0 = c.Float64("kernel-coef0")
 	}
-	
+
 	// Check if requested components exceed available dimensions
 	maxComponents := min(data.Rows-1, data.Columns)
 	if pcaConfig.Components > maxComponents {
-		return fmt.Errorf("requested %d components but data only supports maximum %d components", 
+		return fmt.Errorf("requested %d components but data only supports maximum %d components",
 			pcaConfig.Components, maxComponents)
 	}
-	
+
 	// Apply preprocessing if needed (kernel PCA typically doesn't use standard preprocessing)
 	var processedData types.Matrix
 	var preprocessor *core.Preprocessor
-	
+
 	if pcaConfig.Method == "kernel" {
 		// Kernel PCA handles its own centering in the kernel space
 		processedData = data.Matrix
@@ -511,14 +530,24 @@ func runAnalyze(c *cli.Context) error {
 			fmt.Println("\nSkipping standard preprocessing for kernel PCA")
 		}
 	} else {
-		preprocessor = core.NewPreprocessor(
+		preprocessor = core.NewPreprocessorFull(
 			pcaConfig.MeanCenter,
 			pcaConfig.StandardScale,
 			c.String("scale") == "robust",
+			c.Bool("snv"),
+			c.Bool("vector-norm"),
 		)
-		
+
 		if verbose {
 			fmt.Println("\nPreprocessing data...")
+			// Row-wise preprocessing (applied first)
+			if c.Bool("snv") {
+				fmt.Println("  - Standard Normal Variate (row-wise normalization)")
+			}
+			if c.Bool("vector-norm") {
+				fmt.Println("  - L2 Vector Normalization (row-wise)")
+			}
+			// Column-wise preprocessing (applied second)
 			if pcaConfig.MeanCenter {
 				fmt.Println("  - Mean centering")
 			}
@@ -526,77 +555,77 @@ func runAnalyze(c *cli.Context) error {
 				fmt.Printf("  - Applying %s scaling\n", c.String("scale"))
 			}
 		}
-		
+
 		// Preprocess data
 		processedData, err = preprocessor.FitTransform(data.Matrix)
 		if err != nil {
 			return fmt.Errorf("preprocessing failed: %w", err)
 		}
 	}
-	
+
 	// Run PCA
 	if verbose {
 		fmt.Printf("\nRunning PCA analysis using %s method...\n", pcaConfig.Method)
 	}
-	
+
 	engine := core.NewPCAEngineForMethod(pcaConfig.Method)
 	result, err := engine.Fit(processedData, pcaConfig)
 	if err != nil {
 		return fmt.Errorf("PCA analysis failed: %w", err)
 	}
-	
+
 	// Add preprocessing statistics to the result (if preprocessing was done)
 	if preprocessor != nil {
 		result.Means = preprocessor.GetMeans()
 		result.StdDevs = preprocessor.GetStdDevs()
 	}
-	
+
 	if verbose {
 		fmt.Println("\n✓ PCA analysis completed successfully")
-		fmt.Printf("  - Explained variance: %.1f%% (PC1), %.1f%% (PC2)\n", 
+		fmt.Printf("  - Explained variance: %.1f%% (PC1), %.1f%% (PC2)\n",
 			result.ExplainedVarRatio[0], result.ExplainedVarRatio[1])
-		fmt.Printf("  - Cumulative variance: %.1f%%\n", 
+		fmt.Printf("  - Cumulative variance: %.1f%%\n",
 			result.CumulativeVar[len(result.CumulativeVar)-1])
 	}
-	
+
 	// Prepare output
 	outputFormat := c.String("format")
 	outputDir := c.String("output-dir")
-	
+
 	if verbose {
 		fmt.Printf("\nOutput configuration:\n")
 		fmt.Printf("  Format: %s\n", outputFormat)
 		fmt.Printf("  Output dir: %s\n", outputDir)
 	}
-	
+
 	// Handle output options
 	outputScores := c.Bool("output-scores") || c.Bool("output-all")
 	outputLoadings := c.Bool("output-loadings") || c.Bool("output-all")
 	outputVariance := c.Bool("output-variance") || c.Bool("output-all")
 	includeMetrics := c.Bool("include-metrics")
-	
+
 	// Format and output results
 	switch outputFormat {
 	case "table":
 		if !quiet {
-			err = outputTableFormat(result, data, outputScores, outputLoadings, 
+			err = outputTableFormat(result, data, outputScores, outputLoadings,
 				outputVariance, includeMetrics)
 		}
 	case "csv":
 		// CSV output is different - don't show table
-		err = outputCSVFormat(result, data, inputFile, outputDir, outputScores, outputLoadings, 
+		err = outputCSVFormat(result, data, inputFile, outputDir, outputScores, outputLoadings,
 			outputVariance, includeMetrics)
 	case "json":
 		// JSON output is different - don't show table
-		err = outputJSONFormat(result, data, inputFile, outputDir, outputScores, outputLoadings, 
+		err = outputJSONFormat(result, data, inputFile, outputDir, outputScores, outputLoadings,
 			outputVariance, includeMetrics)
 	default:
 		return fmt.Errorf("unsupported output format: %s", outputFormat)
 	}
-	
+
 	if err != nil {
 		return fmt.Errorf("output failed: %w", err)
 	}
-	
+
 	return nil
 }

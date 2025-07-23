@@ -99,4 +99,3 @@ func RunWithOSExit() {
 		os.Exit(1)
 	}
 }
-

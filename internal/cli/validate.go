@@ -55,7 +55,7 @@ The validation includes:
 				Usage: "String(s) representing missing values (comma-separated)",
 				Value: ",NA,N/A,nan,NaN,null,NULL,m",
 			},
-			
+
 			// Validation options
 			&cli.BoolFlag{
 				Name:  "strict",
@@ -80,13 +80,13 @@ func runValidate(c *cli.Context) error {
 	inputFile := c.Args().First()
 	strict := c.Bool("strict")
 	showSummary := c.Bool("summary")
-	
+
 	// Parse CSV options
 	parseOpts := NewCSVParseOptions()
 	parseOpts.HasHeaders = !c.Bool("no-headers")
 	parseOpts.HasIndex = !c.Bool("no-index")
 	parseOpts.Delimiter = rune(c.String("delimiter")[0])
-	
+
 	// Parse NA values
 	if naValues := c.String("na-values"); naValues != "" {
 		parseOpts.NullValues = strings.Split(naValues, ",")
@@ -94,23 +94,23 @@ func runValidate(c *cli.Context) error {
 			parseOpts.NullValues[i] = strings.TrimSpace(parseOpts.NullValues[i])
 		}
 	}
-	
+
 	fmt.Printf("Validating file: %s\n", inputFile)
-	
+
 	// Load CSV data
 	data, err := ParseCSV(inputFile, parseOpts)
 	if err != nil {
 		return fmt.Errorf("failed to parse CSV: %w", err)
 	}
-	
+
 	// Basic validation
 	if err := ValidateCSVData(data); err != nil {
 		return fmt.Errorf("data validation failed: %w", err)
 	}
-	
+
 	// Perform additional validation checks
 	warnings := []string{}
-	
+
 	// Check for low variance columns
 	for j := 0; j < data.Columns; j++ {
 		var values []float64
@@ -119,7 +119,7 @@ func runValidate(c *cli.Context) error {
 				values = append(values, data.Matrix[i][j])
 			}
 		}
-		
+
 		if len(values) > 1 {
 			// Calculate variance
 			mean := 0.0
@@ -127,13 +127,13 @@ func runValidate(c *cli.Context) error {
 				mean += v
 			}
 			mean /= float64(len(values))
-			
+
 			variance := 0.0
 			for _, v := range values {
 				variance += (v - mean) * (v - mean)
 			}
 			variance /= float64(len(values) - 1)
-			
+
 			if variance < 1e-10 {
 				colName := fmt.Sprintf("column %d", j+1)
 				if j < len(data.Headers) {
@@ -143,7 +143,7 @@ func runValidate(c *cli.Context) error {
 			}
 		}
 	}
-	
+
 	// Check for high missing value percentage per column
 	for j := 0; j < data.Columns; j++ {
 		missingCount := 0
@@ -152,7 +152,7 @@ func runValidate(c *cli.Context) error {
 				missingCount++
 			}
 		}
-		
+
 		missingPercent := float64(missingCount) / float64(data.Rows) * 100
 		if missingPercent > 50 {
 			colName := fmt.Sprintf("column %d", j+1)
@@ -162,11 +162,11 @@ func runValidate(c *cli.Context) error {
 			warnings = append(warnings, fmt.Sprintf("%s has %.1f%% missing values", colName, missingPercent))
 		}
 	}
-	
+
 	// Display results
 	fmt.Println("\n✓ Data format validation passed")
 	fmt.Printf("  - Dimensions: %d rows × %d columns\n", data.Rows, data.Columns)
-	
+
 	if showSummary {
 		fmt.Println("\nData summary:")
 		summary := GetDataSummary(data)
@@ -178,21 +178,21 @@ func runValidate(c *cli.Context) error {
 			}
 		}
 	}
-	
+
 	if len(warnings) > 0 {
 		fmt.Println("\n⚠ Warnings:")
 		for _, w := range warnings {
 			fmt.Printf("  - %s\n", w)
 		}
-		
+
 		if strict {
 			return fmt.Errorf("validation failed with %d warnings in strict mode", len(warnings))
 		}
 	} else {
 		fmt.Println("\n✓ No warnings found")
 	}
-	
+
 	fmt.Println("\n✓ Data is ready for PCA analysis")
-	
+
 	return nil
 }

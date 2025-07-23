@@ -9,20 +9,31 @@ import (
 	"gonum.org/v1/gonum/stat"
 )
 
+const (
+	// Minimum variance/norm threshold to avoid division by zero
+	MinVarianceThreshold = 1e-8
+)
+
 // Preprocessor handles data preprocessing for PCA
 type Preprocessor struct {
 	// Preprocessing parameters
 	MeanCenter    bool
 	StandardScale bool
 	RobustScale   bool
+	SNV           bool
+	VectorNorm    bool
 
 	// Fitted parameters
-	mean         []float64
-	scale        []float64
-	originalStd  []float64 // Original standard deviations before scaling
-	median       []float64
-	mad          []float64
-	fitted       bool
+	mean        []float64
+	scale       []float64
+	originalStd []float64 // Original standard deviations before scaling
+	median      []float64
+	mad         []float64
+	fitted      bool
+
+	// SNV parameters (stored for potential inverse transform)
+	rowMeans   []float64
+	rowStdDevs []float64
 }
 
 // NewPreprocessor creates a new preprocessor instance
@@ -34,11 +45,87 @@ func NewPreprocessor(meanCenter, standardScale, robustScale bool) *Preprocessor 
 	}
 }
 
+// NewPreprocessorFull creates a new preprocessor instance with all options
+func NewPreprocessorFull(meanCenter, standardScale, robustScale, snv, vectorNorm bool) *Preprocessor {
+	return &Preprocessor{
+		MeanCenter:    meanCenter,
+		StandardScale: standardScale,
+		RobustScale:   robustScale,
+		SNV:           snv,
+		VectorNorm:    vectorNorm,
+	}
+}
+
+// applyRowWisePreprocessing applies SNV or Vector Normalization to a single row
+func (p *Preprocessor) applyRowWisePreprocessing(row []float64, rowIndex int) []float64 {
+	result := make([]float64, len(row))
+	copy(result, row)
+
+	if p.SNV {
+		// Apply SNV: (x - row_mean) / row_std
+		rowMean := stat.Mean(result, nil)
+		rowStdDev := stat.StdDev(result, nil)
+
+		// Store for potential inverse transform
+		if p.rowMeans != nil && rowIndex < len(p.rowMeans) {
+			p.rowMeans[rowIndex] = rowMean
+			p.rowStdDevs[rowIndex] = rowStdDev
+		}
+
+		if rowStdDev < MinVarianceThreshold {
+			// Just center if std dev is too small
+			for j := range result {
+				result[j] -= rowMean
+			}
+		} else {
+			for j := range result {
+				result[j] = (result[j] - rowMean) / rowStdDev
+			}
+		}
+	} else if p.VectorNorm {
+		// Apply L2 normalization
+		rowNorm := 0.0
+		for j := range result {
+			rowNorm += result[j] * result[j]
+		}
+		rowNorm = math.Sqrt(rowNorm)
+
+		// Store norm for potential inverse transform
+		if p.rowStdDevs != nil && rowIndex < len(p.rowStdDevs) {
+			p.rowStdDevs[rowIndex] = rowNorm
+		}
+
+		if rowNorm > MinVarianceThreshold {
+			for j := range result {
+				result[j] /= rowNorm
+			}
+		}
+	}
+
+	return result
+}
+
 // FitTransform fits the preprocessor and transforms the data
 func (p *Preprocessor) FitTransform(data types.Matrix) (types.Matrix, error) {
-	if err := p.Fit(data); err != nil {
-		return nil, err
+	// If row-wise preprocessing is enabled, we need to fit column statistics on row-normalized data
+	if p.SNV || p.VectorNorm {
+		// First apply row-wise preprocessing
+		dataForFit := make(types.Matrix, len(data))
+		for i := range data {
+			dataForFit[i] = p.applyRowWisePreprocessing(data[i], i)
+		}
+
+		// Fit column statistics on row-normalized data
+		if err := p.Fit(dataForFit); err != nil {
+			return nil, err
+		}
+	} else {
+		// Standard case: fit on original data
+		if err := p.Fit(data); err != nil {
+			return nil, err
+		}
 	}
+
 	return p.Transform(data)
 }
 
@@ -73,7 +160,7 @@ func (p *Preprocessor) Fit(data types.Matrix) error {
 		// Standard deviation for scaling
 		if p.StandardScale {
 			p.scale[j] = p.originalStd[j]
-			if p.scale[j] < 1e-8 {
+			if p.scale[j] < MinVarianceThreshold {
 				p.scale[j] = 1.0 // Avoid division by zero
 			}
 		} else {
@@ -89,7 +176,7 @@ func (p *Preprocessor) Fit(data types.Matrix) error {
 
 			p.median[j] = stat.Quantile(0.5, stat.Empirical, sortedCol, nil)
 			p.mad[j] = medianAbsoluteDeviation(col, p.median[j])
-			if p.mad[j] < 1e-8 {
+			if p.mad[j] < MinVarianceThreshold {
 				p.mad[j] = 1.0 // Avoid division by zero
 			}
 		}
@@ -114,12 +201,30 @@ func (p *Preprocessor) Transform(data types.Matrix) (types.Matrix, error) {
 		return nil, fmt.Errorf("data has %d features, expected %d", m, len(p.mean))
 	}
 
-	// Create output matrix
+	// Create output matrix - start with copy of input data
 	result := make(types.Matrix, n)
 	for i := 0; i < n; i++ {
 		result[i] = make([]float64, m)
+		copy(result[i], data[i])
+	}
+
+	// Apply row-wise preprocessing first (SNV or Vector Normalization)
+	if p.SNV || p.VectorNorm {
+		// Initialize storage for row statistics if needed
+		if p.rowMeans == nil {
+			p.rowMeans = make([]float64, n)
+			p.rowStdDevs = make([]float64, n)
+		}
+
+		for i := 0; i < n; i++ {
+			result[i] = p.applyRowWisePreprocessing(result[i], i)
+		}
+	}
+
+	// Then apply column-wise preprocessing
+	for i := 0; i < n; i++ {
 		for j := 0; j < m; j++ {
-			val := data[i][j]
+			val := result[i][j]
 
 			// Apply centering and scaling
 			if p.RobustScale {
@@ -143,6 +248,9 @@ func (p *Preprocessor) Transform(data types.Matrix) (types.Matrix, error) {
 }
 
 // InverseTransform reverses the preprocessing
+// Note: When SNV is combined with column-wise preprocessing, the inverse transform
+// only reverses the column-wise operations. Full reversal of SNV after column
+// preprocessing would require storing the full transformed matrix.
 func (p *Preprocessor) InverseTransform(data types.Matrix) (types.Matrix, error) {
 	if !p.fitted {
 		return nil, fmt.Errorf("preprocessor not fitted")
@@ -160,7 +268,7 @@ func (p *Preprocessor) InverseTransform(data types.Matrix) (types.Matrix, error)
 		for j := 0; j < m; j++ {
 			val := data[i][j]
 
-			// Reverse scaling and centering
+			// Reverse scaling and centering (column-wise operations only)
 			if p.RobustScale {
 				// Reverse robust scaling
 				val = val*p.mad[j] + p.median[j]
@@ -177,6 +285,9 @@ func (p *Preprocessor) InverseTransform(data types.Matrix) (types.Matrix, error)
 			result[i][j] = val
 		}
 	}
+
+	// Note: SNV reversal is not performed when combined with column preprocessing
+	// as it would require the intermediate state after SNV but before column operations
 
 	return result, nil
 }
@@ -441,6 +552,11 @@ func (p *Preprocessor) GetStdDevs() []float64 {
 		return nil
 	}
 	return p.originalStd
+}
+
+// IsSNVEnabled returns whether SNV preprocessing is enabled
+func (p *Preprocessor) IsSNVEnabled() bool {
+	return p.SNV
 }
 
 // GetVarianceByColumn calculates variance for each column

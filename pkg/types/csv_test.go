@@ -39,7 +39,7 @@ Row3,2.1,3.4,NaN`,
 						t.Errorf("Header[%d] = %s, want %s", i, data.Headers[i], h)
 					}
 				}
-				
+
 				// Check row names
 				expectedRows := []string{"Row1", "Row2", "Row3"}
 				for i, r := range expectedRows {
@@ -47,12 +47,12 @@ Row3,2.1,3.4,NaN`,
 						t.Errorf("RowName[%d] = %s, want %s", i, data.RowNames[i], r)
 					}
 				}
-				
+
 				// Check values
 				if data.Matrix[0][0] != 1.5 {
 					t.Errorf("Matrix[0][0] = %f, want 1.5", data.Matrix[0][0])
 				}
-				
+
 				// Check NaN handling
 				if !math.IsNaN(data.Matrix[1][1]) {
 					t.Errorf("Matrix[1][1] should be NaN, got %f", data.Matrix[1][1])
@@ -60,7 +60,7 @@ Row3,2.1,3.4,NaN`,
 				if !data.MissingMask[1][1] {
 					t.Errorf("MissingMask[1][1] should be true")
 				}
-				
+
 				if !math.IsNaN(data.Matrix[2][2]) {
 					t.Errorf("Matrix[2][2] should be NaN, got %f", data.Matrix[2][2])
 				}
@@ -89,12 +89,12 @@ S3;2,1;3,4;`,
 				if data.Matrix[0][1] != 2.3 {
 					t.Errorf("Matrix[0][1] = %f, want 2.3", data.Matrix[0][1])
 				}
-				
+
 				// Check 'm' as missing value
 				if !math.IsNaN(data.Matrix[1][1]) {
 					t.Errorf("Matrix[1][1] should be NaN (m), got %f", data.Matrix[1][1])
 				}
-				
+
 				// Check empty string as missing
 				if !math.IsNaN(data.Matrix[2][2]) {
 					t.Errorf("Matrix[2][2] should be NaN (empty), got %f", data.Matrix[2][2])
@@ -110,14 +110,14 @@ S3;2,1;3,4;`,
 				HasRowNames:      false,
 				NullValues:       []string{"NULL"},
 			},
-			input: "X1\tX2\tX3\n1.0\t2.0\t3.0\n4.0\tNULL\t6.0",
+			input:    "X1\tX2\tX3\n1.0\t2.0\t3.0\n4.0\tNULL\t6.0",
 			wantRows: 2,
 			wantCols: 3,
 			checkValues: func(t *testing.T, data *CSVData) {
 				if len(data.RowNames) != 0 {
 					t.Errorf("Expected no row names, got %d", len(data.RowNames))
 				}
-				
+
 				if !math.IsNaN(data.Matrix[1][1]) {
 					t.Errorf("Matrix[1][1] should be NaN (NULL), got %f", data.Matrix[1][1])
 				}
@@ -132,7 +132,7 @@ S3;2,1;3,4;`,
 				HasRowNames:      false,
 				NullValues:       []string{},
 			},
-			input: "1.0,Inf,-Inf\n2.0,+Inf,infinity",
+			input:    "1.0,Inf,-Inf\n2.0,+Inf,infinity",
 			wantRows: 2,
 			wantCols: 3,
 			checkValues: func(t *testing.T, data *CSVData) {
@@ -148,7 +148,7 @@ S3;2,1;3,4;`,
 			},
 		},
 		{
-			name: "Error: inconsistent columns",
+			name:   "Error: inconsistent columns",
 			format: DefaultCSVFormat(),
 			input: `A,B,C
 1,2,3
@@ -156,13 +156,13 @@ S3;2,1;3,4;`,
 			wantErr: true,
 		},
 		{
-			name: "Error: no data",
-			format: DefaultCSVFormat(),
-			input: ``,
+			name:    "Error: no data",
+			format:  DefaultCSVFormat(),
+			input:   ``,
 			wantErr: true,
 		},
 		{
-			name: "Error: invalid number",
+			name:   "Error: invalid number",
 			format: DefaultCSVFormat(),
 			input: `A,B
 1,abc
@@ -175,24 +175,24 @@ S3;2,1;3,4;`,
 		t.Run(tt.name, func(t *testing.T) {
 			parser := NewCSVParser(tt.format)
 			data, err := parser.Parse(strings.NewReader(tt.input))
-			
+
 			if (err != nil) != tt.wantErr {
 				t.Errorf("Parse() error = %v, wantErr %v", err, tt.wantErr)
 				return
 			}
-			
+
 			if tt.wantErr {
 				return
 			}
-			
+
 			if data.Rows != tt.wantRows {
 				t.Errorf("Rows = %d, want %d", data.Rows, tt.wantRows)
 			}
-			
+
 			if data.Columns != tt.wantCols {
 				t.Errorf("Columns = %d, want %d", data.Columns, tt.wantCols)
 			}
-			
+
 			if tt.checkValues != nil {
 				tt.checkValues(t, data)
 			}
@@ -202,11 +202,11 @@ S3;2,1;3,4;`,
 
 func TestDetectFormat(t *testing.T) {
 	tests := []struct {
-		name              string
-		sample            string
-		wantDelimiter     rune
-		wantDecimalSep    rune
-		wantHasHeaders    bool
+		name           string
+		sample         string
+		wantDelimiter  rune
+		wantDecimalSep rune
+		wantHasHeaders bool
 	}{
 		{
 			name: "Comma-separated with headers",
@@ -227,8 +227,8 @@ Jane;234,56;789,01`,
 			wantHasHeaders: true,
 		},
 		{
-			name: "Tab-separated",
-			sample: "A\tB\tC\n1\t2\t3\n4\t5\t6",
+			name:           "Tab-separated",
+			sample:         "A\tB\tC\n1\t2\t3\n4\t5\t6",
 			wantDelimiter:  '\t',
 			wantDecimalSep: '.',
 			wantHasHeaders: true,
@@ -251,15 +251,15 @@ Jane;234,56;789,01`,
 				t.Errorf("DetectFormat() error = %v", err)
 				return
 			}
-			
+
 			if format.FieldDelimiter != tt.wantDelimiter {
 				t.Errorf("FieldDelimiter = %c, want %c", format.FieldDelimiter, tt.wantDelimiter)
 			}
-			
+
 			if format.DecimalSeparator != tt.wantDecimalSep {
 				t.Errorf("DecimalSeparator = %c, want %c", format.DecimalSeparator, tt.wantDecimalSep)
 			}
-			
+
 			if format.HasHeaders != tt.wantHasHeaders {
 				t.Errorf("HasHeaders = %v, want %v", format.HasHeaders, tt.wantHasHeaders)
 			}
@@ -287,43 +287,43 @@ func TestGetMissingValueInfo(t *testing.T) {
 	}
 
 	tests := []struct {
-		name            string
-		selectedColumns []int
-		wantMissing     bool
-		wantTotalMissing int
-		wantRowsAffected int
+		name                   string
+		selectedColumns        []int
+		wantMissing            bool
+		wantTotalMissing       int
+		wantRowsAffected       int
 		wantColumnsWithMissing int
 	}{
 		{
-			name:            "All columns",
-			selectedColumns: []int{0, 1, 2, 3},
-			wantMissing:     true,
-			wantTotalMissing: 3,
-			wantRowsAffected: 3,
+			name:                   "All columns",
+			selectedColumns:        []int{0, 1, 2, 3},
+			wantMissing:            true,
+			wantTotalMissing:       3,
+			wantRowsAffected:       3,
 			wantColumnsWithMissing: 2,
 		},
 		{
-			name:            "Only columns with missing",
-			selectedColumns: []int{1, 2},
-			wantMissing:     true,
-			wantTotalMissing: 3,
-			wantRowsAffected: 3,
+			name:                   "Only columns with missing",
+			selectedColumns:        []int{1, 2},
+			wantMissing:            true,
+			wantTotalMissing:       3,
+			wantRowsAffected:       3,
 			wantColumnsWithMissing: 2,
 		},
 		{
-			name:            "Only columns without missing",
-			selectedColumns: []int{0, 3},
-			wantMissing:     false,
-			wantTotalMissing: 0,
-			wantRowsAffected: 0,
+			name:                   "Only columns without missing",
+			selectedColumns:        []int{0, 3},
+			wantMissing:            false,
+			wantTotalMissing:       0,
+			wantRowsAffected:       0,
 			wantColumnsWithMissing: 0,
 		},
 		{
-			name:            "Single column with missing",
-			selectedColumns: []int{1},
-			wantMissing:     true,
-			wantTotalMissing: 2,
-			wantRowsAffected: 2,
+			name:                   "Single column with missing",
+			selectedColumns:        []int{1},
+			wantMissing:            true,
+			wantTotalMissing:       2,
+			wantRowsAffected:       2,
 			wantColumnsWithMissing: 1,
 		},
 	}
@@ -331,19 +331,19 @@ func TestGetMissingValueInfo(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			info := data.GetMissingValueInfo(tt.selectedColumns)
-			
+
 			if info.HasMissing() != tt.wantMissing {
 				t.Errorf("HasMissing() = %v, want %v", info.HasMissing(), tt.wantMissing)
 			}
-			
+
 			if info.TotalMissing != tt.wantTotalMissing {
 				t.Errorf("TotalMissing = %d, want %d", info.TotalMissing, tt.wantTotalMissing)
 			}
-			
+
 			if len(info.RowsAffected) != tt.wantRowsAffected {
 				t.Errorf("RowsAffected count = %d, want %d", len(info.RowsAffected), tt.wantRowsAffected)
 			}
-			
+
 			if len(info.ColumnIndices) != tt.wantColumnsWithMissing {
 				t.Errorf("ColumnIndices count = %d, want %d", len(info.ColumnIndices), tt.wantColumnsWithMissing)
 			}
@@ -367,9 +367,9 @@ func TestMissingValueInfo_GetSummary(t *testing.T) {
 		{
 			name: "Some missing values",
 			info: MissingValueInfo{
-				TotalMissing:    5,
-				RowsAffected:    []int{1, 3, 5},
-				ColumnIndices:   []int{2, 4},
+				TotalMissing:  5,
+				RowsAffected:  []int{1, 3, 5},
+				ColumnIndices: []int{2, 4},
 			},
 			want: "5 missing values found, affecting 3 rows, in 2 columns",
 		},
