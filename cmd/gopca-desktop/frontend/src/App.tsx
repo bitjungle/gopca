@@ -191,29 +191,6 @@ function App() {
                                             setFileError(null);
                                             setPcaError(null);
                                             try {
-                                                const result = await LoadDatasetFile('bronir2.csv');
-                                                setFileData(result);
-                                                setPcaResponse(null);
-                                                setExcludedRows([]);
-                                                setExcludedColumns([]);
-                                                setSelectedGroupColumn(null);
-                                            } catch (err) {
-                                                setFileError(`Failed to load BroNIR2 dataset: ${err}`);
-                                            } finally {
-                                                setLoading(false);
-                                            }
-                                        }}
-                                        className="w-full px-4 py-2 text-sm bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors"
-                                        disabled={loading}
-                                    >
-                                        BroNIR2 (NIR spectroscopy of HDPE)
-                                    </button>
-                                    <button
-                                        onClick={async () => {
-                                            setLoading(true);
-                                            setFileError(null);
-                                            setPcaError(null);
-                                            try {
                                                 const result = await LoadDatasetFile('corn.csv');
                                                 setFileData(result);
                                                 setPcaResponse(null);
