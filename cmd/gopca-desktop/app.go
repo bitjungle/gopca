@@ -7,9 +7,11 @@ import (
 	"math"
 	"net/url"
 	"os"
+	"path/filepath"
 	"strings"
 
 	"github.com/bitjungle/gopca/internal/core"
+	"github.com/bitjungle/gopca/internal/datasets"
 	"github.com/bitjungle/gopca/internal/utils"
 	"github.com/bitjungle/gopca/pkg/types"
 	"github.com/wailsapp/wails/v2/pkg/runtime"
@@ -590,4 +592,29 @@ func (a *App) LoadIrisDataset() (*FileDataJSON, error) {
 	modifiedContent := strings.Join(newLines, "\n")
 
 	return a.ParseCSV(modifiedContent)
+}
+
+// LoadDatasetFile loads a CSV file from the embedded data
+func (a *App) LoadDatasetFile(filename string) (*FileDataJSON, error) {
+	// First try to get the embedded dataset
+	if content, ok := datasets.GetDataset(filename); ok {
+		return a.ParseCSV(content)
+	}
+	
+	// If not found in embedded data, try file system as fallback
+	// This is useful during development
+	possiblePaths := []string{
+		filepath.Join("data", filename),
+		filepath.Join("..", "..", "data", filename),
+		filepath.Join("../../data", filename),
+	}
+	
+	for _, path := range possiblePaths {
+		content, err := os.ReadFile(path)
+		if err == nil {
+			return a.ParseCSV(string(content))
+		}
+	}
+	
+	return nil, fmt.Errorf("dataset file not found: %s", filename)
 }
