@@ -251,34 +251,39 @@ function App() {
                                     </select>
                                 </div>
                             </div>
-                            <div className="mt-4 space-y-2">
-                                <label className="flex items-center">
-                                    <input
-                                        type="checkbox"
-                                        checked={config.meanCenter}
-                                        onChange={(e) => setConfig({...config, meanCenter: e.target.checked})}
-                                        className="mr-2"
-                                    />
-                                    Mean Center
+                            <div className="mt-4">
+                                <label className="block text-sm font-medium mb-2">
+                                    Preprocessing Method
                                 </label>
-                                <label className="flex items-center">
-                                    <input
-                                        type="checkbox"
-                                        checked={config.standardScale}
-                                        onChange={(e) => setConfig({...config, standardScale: e.target.checked})}
-                                        className="mr-2"
-                                    />
-                                    Standard Scale
-                                </label>
-                                <label className="flex items-center">
-                                    <input
-                                        type="checkbox"
-                                        checked={config.robustScale}
-                                        onChange={(e) => setConfig({...config, robustScale: e.target.checked})}
-                                        className="mr-2"
-                                    />
-                                    Robust Scale
-                                </label>
+                                <select
+                                    value={
+                                        config.method === 'kernel' ? 'none' :
+                                        config.robustScale ? 'robust' :
+                                        config.standardScale ? 'standard' :
+                                        config.meanCenter ? 'center' : 'none'
+                                    }
+                                    onChange={(e) => {
+                                        const value = e.target.value;
+                                        setConfig({
+                                            ...config,
+                                            meanCenter: value === 'center' || value === 'standard',
+                                            standardScale: value === 'standard',
+                                            robustScale: value === 'robust'
+                                        });
+                                    }}
+                                    disabled={config.method === 'kernel'}
+                                    className="w-full px-3 py-2 bg-gray-100 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg text-gray-900 dark:text-white disabled:opacity-50 disabled:cursor-not-allowed"
+                                >
+                                    <option value="none">None (Raw Data)</option>
+                                    <option value="center">Mean Center Only</option>
+                                    <option value="standard">Standard Scale (Mean + Std Dev)</option>
+                                    <option value="robust">Robust Scale (Median + MAD)</option>
+                                </select>
+                                <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                                    {config.method === 'kernel' 
+                                        ? 'Kernel PCA uses its own centering in kernel space'
+                                        : 'Choose how to preprocess your data before PCA'}
+                                </p>
                             </div>
                             
                             <div className="mt-4">
