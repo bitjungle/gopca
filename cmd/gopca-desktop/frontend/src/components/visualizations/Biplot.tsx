@@ -317,7 +317,7 @@ export const Biplot: React.FC<BiplotProps> = ({
   };
 
   return (
-    <div ref={fullscreenRef} className={`w-full h-full ${isFullscreen ? 'fixed inset-0 z-50 bg-gray-900 p-4' : ''}`}>
+    <div ref={fullscreenRef} className={`w-full h-full ${isFullscreen ? 'fixed inset-0 z-50 bg-white dark:bg-gray-900 p-4' : ''}`}>
       <div className="flex items-center justify-between mb-2">
         <div className="flex items-center gap-4">
           <h4 className="text-md font-medium text-gray-700 dark:text-gray-300">
