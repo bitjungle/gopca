@@ -213,6 +213,42 @@ func TestInverseTransform(t *testing.T) {
 	}
 }
 
+// Test Vector Normalization
+func TestVectorNormalization(t *testing.T) {
+	// Test data
+	data := types.Matrix{
+		{3.0, 4.0},      // L2 norm = 5
+		{1.0, 0.0},      // L2 norm = 1
+		{6.0, 8.0},      // L2 norm = 10
+		{0.0, 0.0},      // L2 norm = 0 (edge case)
+	}
+
+	prep := NewPreprocessorFull(false, false, false, false, true)
+	transformed, err := prep.FitTransform(data)
+	if err != nil {
+		t.Fatalf("FitTransform failed: %v", err)
+	}
+
+	// Check that each row (except zero vector) has unit L2 norm
+	expectedNorms := []float64{1.0, 1.0, 1.0, 0.0}
+	for i := 0; i < len(transformed); i++ {
+		norm := 0.0
+		for j := 0; j < len(transformed[i]); j++ {
+			norm += transformed[i][j] * transformed[i][j]
+		}
+		norm = math.Sqrt(norm)
+		
+		if math.Abs(norm-expectedNorms[i]) > 1e-10 {
+			t.Errorf("Row %d has L2 norm %f, expected %f", i, norm, expectedNorms[i])
+		}
+	}
+
+	// Check specific values
+	if math.Abs(transformed[0][0]-0.6) > 1e-10 || math.Abs(transformed[0][1]-0.8) > 1e-10 {
+		t.Errorf("Row 0 incorrect: got [%f, %f], expected [0.6, 0.8]", transformed[0][0], transformed[0][1])
+	}
+}
+
 // Test SNV against reference implementation
 func TestSNVReferenceImplementation(t *testing.T) {
 	// Test with known input/output from Python reference

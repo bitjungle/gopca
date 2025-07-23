@@ -47,9 +47,9 @@ func (p *PCAImpl) Fit(data types.Matrix, config types.PCAConfig) (*types.PCAResu
 	X := matrixToDense(data)
 
 	// Preprocessing using the Preprocessor class
-	if config.MeanCenter || config.StandardScale || config.RobustScale || config.SNV {
+	if config.MeanCenter || config.StandardScale || config.RobustScale || config.SNV || config.VectorNorm {
 		// Create preprocessor with the appropriate settings
-		p.preprocessor = NewPreprocessorWithSNV(config.MeanCenter, config.StandardScale, config.RobustScale, config.SNV)
+		p.preprocessor = NewPreprocessorFull(config.MeanCenter, config.StandardScale, config.RobustScale, config.SNV, config.VectorNorm)
 
 		// Convert to types.Matrix for preprocessor
 		typeMatrix := denseToMatrix(X)

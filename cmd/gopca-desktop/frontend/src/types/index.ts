@@ -17,6 +17,8 @@ export interface PCARequest {
   meanCenter: boolean;
   standardScale: boolean;
   robustScale: boolean;
+  snv: boolean;
+  vectorNorm: boolean;
   method: string;
   excludedRows?: number[];
   excludedColumns?: number[];

@@ -51,8 +51,11 @@ EXAMPLES:
   # Apply SNV preprocessing (useful for spectral data)
   gopca-cli analyze --snv --scale standard data/spectral_data.csv
 
+  # Apply L2 vector normalization
+  gopca-cli analyze --vector-norm data/data.csv
+
 The analysis includes:
-  - Data preprocessing (SNV, mean centering, scaling)
+  - Data preprocessing (SNV, vector normalization, mean centering, scaling)
   - PCA computation using SVD, NIPALS, or Kernel methods
   - Kernel PCA for non-linear dimensionality reduction
   - Optional statistical metrics (Hotelling's T², Mahalanobis distances, RSS)
@@ -109,6 +112,10 @@ The analysis includes:
 			&cli.BoolFlag{
 				Name:  "snv",
 				Usage: "Apply Standard Normal Variate (row-wise normalization) before column preprocessing",
+			},
+			&cli.BoolFlag{
+				Name:  "vector-norm",
+				Usage: "Apply L2 vector normalization (row-wise) before column preprocessing",
 			},
 
 			// Data format
@@ -241,6 +248,11 @@ func validateAnalyzeFlags(c *cli.Context) error {
 	// Validate components
 	if c.Int("components") < 1 {
 		return fmt.Errorf("number of components must be at least 1")
+	}
+
+	// Validate row-wise preprocessing options (mutually exclusive)
+	if c.Bool("snv") && c.Bool("vector-norm") {
+		return fmt.Errorf("cannot use both --snv and --vector-norm flags (choose one row-wise preprocessing method)")
 	}
 
 	// Validate delimiter
@@ -518,18 +530,24 @@ func runAnalyze(c *cli.Context) error {
 			fmt.Println("\nSkipping standard preprocessing for kernel PCA")
 		}
 	} else {
-		preprocessor = core.NewPreprocessorWithSNV(
+		preprocessor = core.NewPreprocessorFull(
 			pcaConfig.MeanCenter,
 			pcaConfig.StandardScale,
 			c.String("scale") == "robust",
 			c.Bool("snv"),
+			c.Bool("vector-norm"),
 		)
 
 		if verbose {
 			fmt.Println("\nPreprocessing data...")
+			// Row-wise preprocessing (applied first)
 			if c.Bool("snv") {
 				fmt.Println("  - Standard Normal Variate (row-wise normalization)")
 			}
+			if c.Bool("vector-norm") {
+				fmt.Println("  - L2 Vector Normalization (row-wise)")
+			}
+			// Column-wise preprocessing (applied second)
 			if pcaConfig.MeanCenter {
 				fmt.Println("  - Mean centering")
 			}

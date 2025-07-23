@@ -24,6 +24,7 @@ type PCAConfig struct {
 	StandardScale   bool   `json:"standard_scale"`
 	RobustScale     bool   `json:"robust_scale"`               // Robust scaling (median/MAD)
 	SNV             bool   `json:"snv"`                        // Standard Normal Variate (row-wise normalization)
+	VectorNorm      bool   `json:"vector_norm"`                // L2 normalization (row-wise)
 	Method          string `json:"method"`                     // "svd", "eigen", "nipals", or "kernel"
 	ExcludedRows    []int  `json:"excluded_rows,omitempty"`    // 0-based indices of rows to exclude
 	ExcludedColumns []int  `json:"excluded_columns,omitempty"` // 0-based indices of columns to exclude

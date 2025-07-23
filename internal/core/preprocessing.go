@@ -16,6 +16,7 @@ type Preprocessor struct {
 	StandardScale bool
 	RobustScale   bool
 	SNV           bool
+	VectorNorm    bool
 
 	// Fitted parameters
 	mean        []float64
@@ -49,33 +50,59 @@ func NewPreprocessorWithSNV(meanCenter, standardScale, robustScale, snv bool) *P
 	}
 }
 
+// NewPreprocessorFull creates a new preprocessor instance with all options
+func NewPreprocessorFull(meanCenter, standardScale, robustScale, snv, vectorNorm bool) *Preprocessor {
+	return &Preprocessor{
+		MeanCenter:    meanCenter,
+		StandardScale: standardScale,
+		RobustScale:   robustScale,
+		SNV:           snv,
+		VectorNorm:    vectorNorm,
+	}
+}
+
 // FitTransform fits the preprocessor and transforms the data
 func (p *Preprocessor) FitTransform(data types.Matrix) (types.Matrix, error) {
-	// If SNV is enabled, we need to fit column statistics on SNV-transformed data
-	if p.SNV {
-		// First apply SNV
+	// If row-wise preprocessing is enabled, we need to fit column statistics on row-normalized data
+	if p.SNV || p.VectorNorm {
+		// First apply row-wise preprocessing
 		dataForFit := make(types.Matrix, len(data))
 		for i := range data {
 			dataForFit[i] = make([]float64, len(data[i]))
 			copy(dataForFit[i], data[i])
 
-			// Apply SNV to this row
-			rowMean := stat.Mean(dataForFit[i], nil)
-			rowStdDev := stat.StdDev(dataForFit[i], nil)
+			if p.SNV {
+				// Apply SNV to this row
+				rowMean := stat.Mean(dataForFit[i], nil)
+				rowStdDev := stat.StdDev(dataForFit[i], nil)
 
-			if rowStdDev < 1e-8 {
-				// Just center if std dev is too small
-				for j := range dataForFit[i] {
-					dataForFit[i][j] -= rowMean
+				if rowStdDev < 1e-8 {
+					// Just center if std dev is too small
+					for j := range dataForFit[i] {
+						dataForFit[i][j] -= rowMean
+					}
+				} else {
+					for j := range dataForFit[i] {
+						dataForFit[i][j] = (dataForFit[i][j] - rowMean) / rowStdDev
+					}
 				}
-			} else {
+			} else if p.VectorNorm {
+				// Apply L2 normalization
+				rowNorm := 0.0
 				for j := range dataForFit[i] {
-					dataForFit[i][j] = (dataForFit[i][j] - rowMean) / rowStdDev
+					rowNorm += dataForFit[i][j] * dataForFit[i][j]
+				}
+				rowNorm = math.Sqrt(rowNorm)
+
+				if rowNorm > 1e-8 {
+					for j := range dataForFit[i] {
+						dataForFit[i][j] /= rowNorm
+					}
 				}
 			}
 		}
 
-		// Fit column statistics on SNV-transformed data
+		// Fit column statistics on row-normalized data
 		if err := p.Fit(dataForFit); err != nil {
 			return nil, err
 		}
@@ -168,8 +195,8 @@ func (p *Preprocessor) Transform(data types.Matrix) (types.Matrix, error) {
 		copy(result[i], data[i])
 	}
 
-	// Apply SNV first (row-wise normalization)
-	if p.SNV {
+	// Apply row-wise preprocessing first (SNV or Vector Normalization)
+	if p.SNV || p.VectorNorm {
 		// Initialize storage for row statistics if needed
 		if p.rowMeans == nil {
 			p.rowMeans = make([]float64, n)
@@ -177,24 +204,43 @@ func (p *Preprocessor) Transform(data types.Matrix) (types.Matrix, error) {
 		}
 
 		for i := 0; i < n; i++ {
-			// Calculate row mean and std dev
-			rowMean := stat.Mean(result[i], nil)
-			rowStdDev := stat.StdDev(result[i], nil)
+			if p.SNV {
+				// Calculate row mean and std dev
+				rowMean := stat.Mean(result[i], nil)
+				rowStdDev := stat.StdDev(result[i], nil)
 
-			// Store for potential inverse transform
-			p.rowMeans[i] = rowMean
-			p.rowStdDevs[i] = rowStdDev
+				// Store for potential inverse transform
+				p.rowMeans[i] = rowMean
+				p.rowStdDevs[i] = rowStdDev
 
-			// Apply SNV: (x - row_mean) / row_std
-			if rowStdDev < 1e-8 {
-				// Handle case where row has near-zero variance
-				// Just center the row without scaling
-				for j := 0; j < m; j++ {
-					result[i][j] -= rowMean
+				// Apply SNV: (x - row_mean) / row_std
+				if rowStdDev < 1e-8 {
+					// Handle case where row has near-zero variance
+					// Just center the row without scaling
+					for j := 0; j < m; j++ {
+						result[i][j] -= rowMean
+					}
+				} else {
+					for j := 0; j < m; j++ {
+						result[i][j] = (result[i][j] - rowMean) / rowStdDev
+					}
 				}
-			} else {
+			} else if p.VectorNorm {
+				// Calculate L2 norm of the row
+				rowNorm := 0.0
 				for j := 0; j < m; j++ {
-					result[i][j] = (result[i][j] - rowMean) / rowStdDev
+					rowNorm += result[i][j] * result[i][j]
+				}
+				rowNorm = math.Sqrt(rowNorm)
+
+				// Store norm for potential inverse transform (in rowStdDevs for simplicity)
+				p.rowStdDevs[i] = rowNorm
+
+				// Apply L2 normalization
+				if rowNorm > 1e-8 {
+					for j := 0; j < m; j++ {
+						result[i][j] /= rowNorm
+					}
 				}
 			}
 		}

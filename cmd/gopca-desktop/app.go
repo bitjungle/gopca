@@ -51,6 +51,7 @@ type PCARequest struct {
 	StandardScale   bool        `json:"standardScale"`
 	RobustScale     bool        `json:"robustScale"`
 	SNV             bool        `json:"snv"`
+	VectorNorm      bool        `json:"vectorNorm"`
 	Method          string      `json:"method"`
 	ExcludedRows    []int       `json:"excludedRows,omitempty"`
 	ExcludedColumns []int       `json:"excludedColumns,omitempty"`
@@ -236,6 +237,7 @@ func (a *App) RunPCA(request PCARequest) (response PCAResponse) {
 		StandardScale:   request.StandardScale,
 		RobustScale:     request.RobustScale,
 		SNV:             request.SNV,
+		VectorNorm:      request.VectorNorm,
 		Method:          strings.ToLower(request.Method),
 		ExcludedRows:    request.ExcludedRows,
 		ExcludedColumns: request.ExcludedColumns,

@@ -34,6 +34,7 @@ function App() {
         standardScale: true,
         robustScale: false,
         snv: false,
+        vectorNorm: false,
         method: 'SVD',
         missingStrategy: 'error',
         // Kernel PCA parameters
@@ -264,55 +265,79 @@ function App() {
                                     </select>
                                 </div>
                             </div>
-                            <div className="mt-4">
-                                <label className="block text-sm font-medium mb-2">
-                                    Preprocessing Method
-                                </label>
-                                <select
-                                    value={
-                                        config.method === 'kernel' ? 'none' :
-                                        config.robustScale ? 'robust' :
-                                        config.standardScale ? 'standard' :
-                                        config.meanCenter ? 'center' : 'none'
-                                    }
-                                    onChange={(e) => {
-                                        const value = e.target.value;
-                                        setConfig({
-                                            ...config,
-                                            meanCenter: value === 'center' || value === 'standard',
-                                            standardScale: value === 'standard',
-                                            robustScale: value === 'robust'
-                                        });
-                                    }}
-                                    disabled={config.method === 'kernel'}
-                                    className="w-full px-3 py-2 bg-gray-100 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg text-gray-900 dark:text-white disabled:opacity-50 disabled:cursor-not-allowed"
-                                >
-                                    <option value="none">None (Raw Data)</option>
-                                    <option value="center">Mean Center Only</option>
-                                    <option value="standard">Standard Scale (Mean + Std Dev)</option>
-                                    <option value="robust">Robust Scale (Median + MAD)</option>
-                                </select>
-                                <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
-                                    {config.method === 'kernel' 
-                                        ? 'Kernel PCA uses its own centering in kernel space'
-                                        : 'Choose how to preprocess your data before PCA'}
-                                </p>
-                            </div>
                             
-                            <div className="mt-4">
-                                <label className="flex items-center">
-                                    <input
-                                        type="checkbox"
-                                        checked={config.snv}
-                                        onChange={(e) => setConfig({...config, snv: e.target.checked})}
+                            {/* Preprocessing Section */}
+                            <div className="mt-6 space-y-4">
+                                <h3 className="text-sm font-semibold text-gray-700 dark:text-gray-300">Preprocessing Options</h3>
+                                
+                                {/* Step 1: Row-wise preprocessing (applied first) */}
+                                <div className="p-3 bg-gray-50 dark:bg-gray-800 rounded-lg">
+                                    <label className="block text-sm font-medium mb-2">
+                                        Step 1: Row-wise Preprocessing (optional)
+                                    </label>
+                                    <select
+                                        value={
+                                            config.snv ? 'snv' :
+                                            config.vectorNorm ? 'vector-norm' :
+                                            'none'
+                                        }
+                                        onChange={(e) => {
+                                            const value = e.target.value;
+                                            setConfig({
+                                                ...config,
+                                                snv: value === 'snv',
+                                                vectorNorm: value === 'vector-norm'
+                                            });
+                                        }}
                                         disabled={config.method === 'kernel'}
-                                        className="mr-2 rounded border-gray-300 dark:border-gray-600 text-indigo-600 focus:ring-indigo-500 disabled:opacity-50 disabled:cursor-not-allowed"
-                                    />
-                                    <span className="text-sm font-medium">Apply SNV (Standard Normal Variate)</span>
-                                </label>
-                                <p className="text-xs text-gray-500 dark:text-gray-400 mt-1 ml-6">
-                                    Row-wise normalization, useful for spectral data and other profile-based measurements
-                                </p>
+                                        className="w-full px-3 py-2 bg-gray-100 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg text-gray-900 dark:text-white disabled:opacity-50 disabled:cursor-not-allowed"
+                                    >
+                                        <option value="none">None</option>
+                                        <option value="snv">SNV (Standard Normal Variate)</option>
+                                        <option value="vector-norm">L2 Vector Normalization</option>
+                                    </select>
+                                    <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                                        {config.method === 'kernel' 
+                                            ? 'Kernel PCA uses its own preprocessing'
+                                            : 'Normalizes each row/sample independently (useful for spectral data)'}
+                                    </p>
+                                </div>
+                                
+                                {/* Step 2: Column-wise preprocessing (applied second) */}
+                                <div className="p-3 bg-gray-50 dark:bg-gray-800 rounded-lg">
+                                    <label className="block text-sm font-medium mb-2">
+                                        Step 2: Column-wise Preprocessing
+                                    </label>
+                                    <select
+                                        value={
+                                            config.method === 'kernel' ? 'none' :
+                                            config.robustScale ? 'robust' :
+                                            config.standardScale ? 'standard' :
+                                            config.meanCenter ? 'center' : 'none'
+                                        }
+                                        onChange={(e) => {
+                                            const value = e.target.value;
+                                            setConfig({
+                                                ...config,
+                                                meanCenter: value === 'center' || value === 'standard',
+                                                standardScale: value === 'standard',
+                                                robustScale: value === 'robust'
+                                            });
+                                        }}
+                                        disabled={config.method === 'kernel'}
+                                        className="w-full px-3 py-2 bg-gray-100 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg text-gray-900 dark:text-white disabled:opacity-50 disabled:cursor-not-allowed"
+                                    >
+                                        <option value="none">None (Raw Data)</option>
+                                        <option value="center">Mean Center Only</option>
+                                        <option value="standard">Standard Scale (Mean + Std Dev)</option>
+                                        <option value="robust">Robust Scale (Median + MAD)</option>
+                                    </select>
+                                    <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                                        {config.method === 'kernel' 
+                                            ? 'Kernel PCA uses its own centering in kernel space'
+                                            : 'Normalizes each column/feature across all samples'}
+                                    </p>
+                                </div>
                             </div>
                             
                             <div className="mt-4">
