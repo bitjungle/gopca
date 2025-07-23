@@ -146,7 +146,7 @@ export const ScoresPlot: React.FC<ScoresPlotProps> = ({
   }
 
   return (
-    <div ref={fullscreenRef} className={`w-full h-full ${isFullscreen ? 'fixed inset-0 z-50 bg-gray-900 p-4' : ''}`}>
+    <div ref={fullscreenRef} className={`w-full h-full ${isFullscreen ? 'fixed inset-0 z-50 bg-white dark:bg-gray-900 p-4' : ''}`}>
       <div className="flex justify-between items-center mb-2">
         <div className="flex items-center gap-4">
           {/* Group legend */}
