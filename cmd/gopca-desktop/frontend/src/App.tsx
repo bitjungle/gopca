@@ -1,7 +1,7 @@
 import React, { useState, useRef } from 'react';
 import './App.css';
-import { ParseCSV, RunPCA, LoadIrisDataset } from "../wailsjs/go/main/App";
-import { DataTable, SelectionTable, ThemeToggle } from './components';
+import { ParseCSV, RunPCA, LoadIrisDataset, LoadDatasetFile } from "../wailsjs/go/main/App";
+import { DataTable, SelectionTable, ThemeToggle, MatrixIllustration } from './components';
 import { ScoresPlot, ScreePlot, LoadingsPlot, Biplot, CircleOfCorrelations, DiagnosticScatterPlot } from './components/visualizations';
 import { FileData, PCARequest, PCAResponse } from './types';
 import { ThemeProvider } from './contexts/ThemeContext';
@@ -150,11 +150,12 @@ function App() {
                 <div className="max-w-7xl mx-auto space-y-6">
                     {/* File Upload Section */}
                     <div className="bg-white dark:bg-gray-800 rounded-lg p-6 shadow-lg border border-gray-200 dark:border-gray-700">
-                        <h2 className="text-xl font-semibold mb-4">Step 1: Load Data</h2>
-                        <div className="space-y-4">
-                            <div>
-                                <label className="block text-sm font-medium mb-2">
-                                    Upload CSV File
+                        <h2 className="text-xl font-semibold mb-6">Step 1: Load Data</h2>
+                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                            {/* Column 1: File Upload */}
+                            <div className="flex flex-col justify-center">
+                                <label className="block text-sm font-medium mb-3">
+                                    Upload Your CSV File
                                 </label>
                                 <input
                                     type="file"
@@ -165,35 +166,119 @@ function App() {
                                         file:rounded-full file:border-0
                                         file:text-sm file:font-semibold
                                         file:bg-blue-600 file:text-white
-                                        hover:file:bg-blue-700"
+                                        hover:file:bg-blue-700
+                                        file:transition-colors"
                                 />
+                                <p className="mt-2 text-xs text-gray-500 dark:text-gray-400">
+                                    Accepts CSV files with headers
+                                </p>
                             </div>
-                            <div className="text-sm text-gray-600 dark:text-gray-400">
-                                Or try the example dataset with categorical groups
+
+                            {/* Column 2: Matrix Illustration */}
+                            <div className="flex items-center justify-center border-0 md:border-x lg:border-x border-gray-200 dark:border-gray-700 px-4 py-6 md:py-0">
+                                <MatrixIllustration />
                             </div>
-                            <button
-                                onClick={async () => {
-                                    setLoading(true);
-                                    setFileError(null);
-                                    setPcaError(null);
-                                    try {
-                                        const result = await LoadIrisDataset();
-                                        setFileData(result);
-                                        setPcaResponse(null);
-                                        setExcludedRows([]);
-                                        setExcludedColumns([]);
-                                        setSelectedGroupColumn('species');
-                                    } catch (err) {
-                                        setFileError(`Failed to load iris dataset: ${err}`);
-                                    } finally {
-                                        setLoading(false);
-                                    }
-                                }}
-                                className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700"
-                                disabled={loading}
-                            >
-                                Load Iris Dataset (with species)
-                            </button>
+
+                            {/* Column 3: Sample Datasets */}
+                            <div className="flex flex-col justify-center md:col-span-2 lg:col-span-1">
+                                <label className="block text-sm font-medium mb-3">
+                                    Or Try Sample Datasets
+                                </label>
+                                <div className="space-y-2">
+                                    <button
+                                        onClick={async () => {
+                                            setLoading(true);
+                                            setFileError(null);
+                                            setPcaError(null);
+                                            try {
+                                                const result = await LoadDatasetFile('bronir2.csv');
+                                                setFileData(result);
+                                                setPcaResponse(null);
+                                                setExcludedRows([]);
+                                                setExcludedColumns([]);
+                                                setSelectedGroupColumn(null);
+                                            } catch (err) {
+                                                setFileError(`Failed to load BroNIR2 dataset: ${err}`);
+                                            } finally {
+                                                setLoading(false);
+                                            }
+                                        }}
+                                        className="w-full px-4 py-2 text-sm bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors"
+                                        disabled={loading}
+                                    >
+                                        BroNIR2 (NIR spectroscopy of HDPE)
+                                    </button>
+                                    <button
+                                        onClick={async () => {
+                                            setLoading(true);
+                                            setFileError(null);
+                                            setPcaError(null);
+                                            try {
+                                                const result = await LoadDatasetFile('corn.csv');
+                                                setFileData(result);
+                                                setPcaResponse(null);
+                                                setExcludedRows([]);
+                                                setExcludedColumns([]);
+                                                setSelectedGroupColumn(null);
+                                            } catch (err) {
+                                                setFileError(`Failed to load Corn dataset: ${err}`);
+                                            } finally {
+                                                setLoading(false);
+                                            }
+                                        }}
+                                        className="w-full px-4 py-2 text-sm bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors"
+                                        disabled={loading}
+                                    >
+                                        Corn (NIR spectroscopy of corn)
+                                    </button>
+                                    <button
+                                        onClick={async () => {
+                                            setLoading(true);
+                                            setFileError(null);
+                                            setPcaError(null);
+                                            try {
+                                                const result = await LoadDatasetFile('iris.csv');
+                                                setFileData(result);
+                                                setPcaResponse(null);
+                                                setExcludedRows([]);
+                                                setExcludedColumns([]);
+                                                setSelectedGroupColumn('species');
+                                            } catch (err) {
+                                                setFileError(`Failed to load Iris dataset: ${err}`);
+                                            } finally {
+                                                setLoading(false);
+                                            }
+                                        }}
+                                        className="w-full px-4 py-2 text-sm bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors"
+                                        disabled={loading}
+                                    >
+                                        Iris (classic dataset with species)
+                                    </button>
+                                    <button
+                                        onClick={async () => {
+                                            setLoading(true);
+                                            setFileError(null);
+                                            setPcaError(null);
+                                            try {
+                                                const result = await LoadDatasetFile('wine.csv');
+                                                setFileData(result);
+                                                setPcaResponse(null);
+                                                setExcludedRows([]);
+                                                setExcludedColumns([]);
+                                                setSelectedGroupColumn('target');
+                                            } catch (err) {
+                                                setFileError(`Failed to load Wine dataset: ${err}`);
+                                            } finally {
+                                                setLoading(false);
+                                            }
+                                        }}
+                                        className="w-full px-4 py-2 text-sm bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors"
+                                        disabled={loading}
+                                    >
+                                        Wine (classic dataset with class)
+                                    </button>
+                                </div>
+                            </div>
                         </div>
                     </div>
                     
