@@ -236,225 +236,235 @@ function App() {
                     {/* Configuration Section */}
                     {fileData && (
                         <div className="bg-white dark:bg-gray-800 rounded-lg p-6 shadow-lg border border-gray-200 dark:border-gray-700">
-                            <h2 className="text-xl font-semibold mb-4">Step 2: Configure PCA</h2>
-                            <div className="grid grid-cols-2 gap-4">
-                                <div>
-                                    <label className="block text-sm font-medium mb-2">
-                                        Number of Components
-                                    </label>
-                                    <input
-                                        type="number"
-                                        min="1"
-                                        max={Math.min(fileData.headers.length, fileData.data.length)}
-                                        value={config.components}
-                                        onChange={(e) => setConfig({...config, components: parseInt(e.target.value) || 2})}
-                                        className="w-full px-3 py-2 bg-gray-100 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg text-gray-900 dark:text-white"
-                                    />
-                                </div>
-                                <div>
-                                    <label className="block text-sm font-medium mb-2">
-                                        Method
-                                    </label>
-                                    <select
-                                        value={config.method}
-                                        onChange={(e) => setConfig({...config, method: e.target.value})}
-                                        className="w-full px-3 py-2 bg-gray-100 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg text-gray-900 dark:text-white"
-                                    >
-                                        <option value="SVD">SVD</option>
-                                        <option value="NIPALS">NIPALS</option>
-                                        <option value="kernel">Kernel PCA</option>
-                                    </select>
-                                </div>
-                            </div>
+                            <h2 className="text-xl font-semibold mb-6">Step 2: Configure PCA</h2>
                             
-                            {/* Preprocessing Section */}
-                            <div className="mt-6 space-y-4">
-                                <h3 className="text-sm font-semibold text-gray-700 dark:text-gray-300">Preprocessing Options</h3>
-                                
-                                {/* Step 1: Row-wise preprocessing (applied first) */}
-                                <div className="p-3 bg-gray-50 dark:bg-gray-800 rounded-lg">
-                                    <label className="block text-sm font-medium mb-2">
-                                        Step 1: Row-wise Preprocessing (optional)
-                                    </label>
-                                    <select
-                                        value={
-                                            config.snv ? 'snv' :
-                                            config.vectorNorm ? 'vector-norm' :
-                                            'none'
-                                        }
-                                        onChange={(e) => {
-                                            const value = e.target.value;
-                                            setConfig({
-                                                ...config,
-                                                snv: value === 'snv',
-                                                vectorNorm: value === 'vector-norm'
-                                            });
-                                        }}
-                                        disabled={config.method === 'kernel'}
-                                        className="w-full px-3 py-2 bg-gray-100 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg text-gray-900 dark:text-white disabled:opacity-50 disabled:cursor-not-allowed"
-                                    >
-                                        <option value="none">None</option>
-                                        <option value="snv">SNV (Standard Normal Variate)</option>
-                                        <option value="vector-norm">L2 Vector Normalization</option>
-                                    </select>
-                                    <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
-                                        {config.method === 'kernel' 
-                                            ? 'Kernel PCA uses its own preprocessing'
-                                            : 'Normalizes each row/sample independently (useful for spectral data)'}
-                                    </p>
-                                </div>
-                                
-                                {/* Step 2: Column-wise preprocessing (applied second) */}
-                                <div className="p-3 bg-gray-50 dark:bg-gray-800 rounded-lg">
-                                    <label className="block text-sm font-medium mb-2">
-                                        Step 2: Column-wise Preprocessing
-                                    </label>
-                                    <select
-                                        value={
-                                            config.method === 'kernel' ? 'none' :
-                                            config.robustScale ? 'robust' :
-                                            config.standardScale ? 'standard' :
-                                            config.meanCenter ? 'center' : 'none'
-                                        }
-                                        onChange={(e) => {
-                                            const value = e.target.value;
-                                            setConfig({
-                                                ...config,
-                                                meanCenter: value === 'center' || value === 'standard',
-                                                standardScale: value === 'standard',
-                                                robustScale: value === 'robust'
-                                            });
-                                        }}
-                                        disabled={config.method === 'kernel'}
-                                        className="w-full px-3 py-2 bg-gray-100 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg text-gray-900 dark:text-white disabled:opacity-50 disabled:cursor-not-allowed"
-                                    >
-                                        <option value="none">None (Raw Data)</option>
-                                        <option value="center">Mean Center Only</option>
-                                        <option value="standard">Standard Scale (Mean + Std Dev)</option>
-                                        <option value="robust">Robust Scale (Median + MAD)</option>
-                                    </select>
-                                    <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
-                                        {config.method === 'kernel' 
-                                            ? 'Kernel PCA uses its own centering in kernel space'
-                                            : 'Normalizes each column/feature across all samples'}
-                                    </p>
-                                </div>
-                            </div>
-                            
-                            <div className="mt-4">
-                                <label className="block text-sm font-medium mb-2">
-                                    Missing Data Strategy
-                                </label>
-                                <select
-                                    value={config.missingStrategy}
-                                    onChange={(e) => setConfig({...config, missingStrategy: e.target.value})}
-                                    className="w-full px-3 py-2 bg-gray-100 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg text-gray-900 dark:text-white"
-                                >
-                                    <option value="error">Show Error (default)</option>
-                                    <option value="drop">Drop Rows with Missing Values</option>
-                                    <option value="mean">Impute with Column Mean</option>
-                                    <option value="median">Impute with Column Median</option>
-                                </select>
-                                <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
-                                    Choose how to handle missing values (NaN) in your data
-                                </p>
-                            </div>
-                            
-                            {/* Diagnostic Metrics Option */}
-                            {config.method !== 'kernel' && (
-                                <div className="mt-4">
-                                    <label className="flex items-center gap-2">
+                            {/* Two-column layout */}
+                            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                                {/* Left Column - Core PCA Configuration */}
+                                <div className="space-y-4">
+                                    <div>
+                                        <label className="block text-sm font-medium mb-2">
+                                            Number of Components
+                                        </label>
                                         <input
-                                            type="checkbox"
-                                            checked={config.calculateMetrics}
-                                            onChange={(e) => setConfig({...config, calculateMetrics: e.target.checked})}
-                                            className="w-4 h-4 text-blue-600 bg-gray-100 border-gray-300 rounded focus:ring-blue-500 dark:focus:ring-blue-600 dark:ring-offset-gray-800 focus:ring-2 dark:bg-gray-700 dark:border-gray-600"
+                                            type="number"
+                                            min="1"
+                                            max={Math.min(fileData.headers.length, fileData.data.length)}
+                                            value={config.components}
+                                            onChange={(e) => setConfig({...config, components: parseInt(e.target.value) || 2})}
+                                            className="w-full px-3 py-2 bg-gray-100 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg text-gray-900 dark:text-white"
                                         />
-                                        <span className="text-sm font-medium text-gray-700 dark:text-gray-300">
-                                            Calculate Diagnostic Metrics
-                                        </span>
-                                    </label>
-                                    <p className="text-xs text-gray-500 dark:text-gray-400 mt-1 ml-6">
-                                        Enable calculation of Mahalanobis distances, Hotelling's T², and residuals for outlier detection
-                                    </p>
-                                </div>
-                            )}
-                            
-                            {/* Kernel PCA Options */}
-                            {config.method === 'kernel' && (
-                                <div className="mt-4 p-4 bg-gray-50 dark:bg-gray-800 rounded-lg space-y-4">
-                                    <h4 className="font-medium text-sm">Kernel PCA Options</h4>
-                                    <div className="grid grid-cols-2 gap-4">
-                                        <div>
-                                            <label className="block text-sm font-medium mb-1">
-                                                Kernel Type
-                                            </label>
-                                            <select
-                                                value={config.kernelType}
-                                                onChange={(e) => setConfig({...config, kernelType: e.target.value})}
-                                                className="w-full px-3 py-2 bg-gray-100 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg text-gray-900 dark:text-white"
-                                            >
-                                                <option value="rbf">RBF (Gaussian)</option>
-                                                <option value="linear">Linear</option>
-                                                <option value="poly">Polynomial</option>
-                                            </select>
-                                        </div>
-                                        <div>
-                                            <label className="block text-sm font-medium mb-1">
-                                                Gamma
-                                            </label>
-                                            <input
-                                                type="number"
-                                                value={config.kernelGamma}
-                                                step="0.01"
-                                                min="0.001"
-                                                onChange={(e) => setConfig({...config, kernelGamma: parseFloat(e.target.value) || 1.0})}
-                                                className="w-full px-3 py-2 bg-gray-100 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg text-gray-900 dark:text-white"
-                                            />
-                                        </div>
-                                        {config.kernelType === 'poly' && (
-                                            <>
-                                                <div>
-                                                    <label className="block text-sm font-medium mb-1">
-                                                        Degree
-                                                    </label>
-                                                    <input
-                                                        type="number"
-                                                        value={config.kernelDegree}
-                                                        min="1"
-                                                        max="10"
-                                                        onChange={(e) => setConfig({...config, kernelDegree: parseInt(e.target.value) || 3})}
-                                                        className="w-full px-3 py-2 bg-gray-100 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg text-gray-900 dark:text-white"
-                                                    />
-                                                </div>
-                                                <div>
-                                                    <label className="block text-sm font-medium mb-1">
-                                                        Coef0
-                                                    </label>
-                                                    <input
-                                                        type="number"
-                                                        value={config.kernelCoef0}
-                                                        step="0.1"
-                                                        onChange={(e) => setConfig({...config, kernelCoef0: parseFloat(e.target.value) || 0.0})}
-                                                        className="w-full px-3 py-2 bg-gray-100 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg text-gray-900 dark:text-white"
-                                                    />
-                                                </div>
-                                            </>
-                                        )}
                                     </div>
-                                    <p className="text-xs text-gray-500 dark:text-gray-400 mt-2">
-                                        Note: Kernel PCA uses its own centering in kernel space. Standard preprocessing options will be ignored.
-                                    </p>
+                                    
+                                    <div>
+                                        <label className="block text-sm font-medium mb-2">
+                                            Method
+                                        </label>
+                                        <select
+                                            value={config.method}
+                                            onChange={(e) => setConfig({...config, method: e.target.value})}
+                                            className="w-full px-3 py-2 bg-gray-100 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg text-gray-900 dark:text-white"
+                                        >
+                                            <option value="SVD">SVD</option>
+                                            <option value="NIPALS">NIPALS</option>
+                                            <option value="kernel">Kernel PCA</option>
+                                        </select>
+                                    </div>
+                                    
+                                    {/* Kernel PCA Options - moved to left column */}
+                                    {config.method === 'kernel' && (
+                                        <div className="p-4 bg-gray-50 dark:bg-gray-700/50 rounded-lg space-y-4">
+                                            <h4 className="font-medium text-sm">Kernel PCA Options</h4>
+                                            <div className="space-y-4">
+                                                <div>
+                                                    <label className="block text-sm font-medium mb-1">
+                                                        Kernel Type
+                                                    </label>
+                                                    <select
+                                                        value={config.kernelType}
+                                                        onChange={(e) => setConfig({...config, kernelType: e.target.value})}
+                                                        className="w-full px-3 py-2 bg-gray-100 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg text-gray-900 dark:text-white"
+                                                    >
+                                                        <option value="rbf">RBF (Gaussian)</option>
+                                                        <option value="linear">Linear</option>
+                                                        <option value="poly">Polynomial</option>
+                                                    </select>
+                                                </div>
+                                                <div>
+                                                    <label className="block text-sm font-medium mb-1">
+                                                        Gamma
+                                                    </label>
+                                                    <input
+                                                        type="number"
+                                                        value={config.kernelGamma}
+                                                        step="0.01"
+                                                        min="0.001"
+                                                        onChange={(e) => setConfig({...config, kernelGamma: parseFloat(e.target.value) || 1.0})}
+                                                        className="w-full px-3 py-2 bg-gray-100 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg text-gray-900 dark:text-white"
+                                                    />
+                                                </div>
+                                                {config.kernelType === 'poly' && (
+                                                    <>
+                                                        <div>
+                                                            <label className="block text-sm font-medium mb-1">
+                                                                Degree
+                                                            </label>
+                                                            <input
+                                                                type="number"
+                                                                value={config.kernelDegree}
+                                                                min="1"
+                                                                max="10"
+                                                                onChange={(e) => setConfig({...config, kernelDegree: parseInt(e.target.value) || 3})}
+                                                                className="w-full px-3 py-2 bg-gray-100 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg text-gray-900 dark:text-white"
+                                                            />
+                                                        </div>
+                                                        <div>
+                                                            <label className="block text-sm font-medium mb-1">
+                                                                Coef0
+                                                            </label>
+                                                            <input
+                                                                type="number"
+                                                                value={config.kernelCoef0}
+                                                                step="0.1"
+                                                                onChange={(e) => setConfig({...config, kernelCoef0: parseFloat(e.target.value) || 0.0})}
+                                                                className="w-full px-3 py-2 bg-gray-100 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg text-gray-900 dark:text-white"
+                                                            />
+                                                        </div>
+                                                    </>
+                                                )}
+                                            </div>
+                                            <p className="text-xs text-gray-500 dark:text-gray-400 mt-2">
+                                                Note: Kernel PCA uses its own centering in kernel space.
+                                            </p>
+                                        </div>
+                                    )}
                                 </div>
-                            )}
+                                
+                                {/* Right Column - Preprocessing Options */}
+                                <div className="space-y-4">
+                                    <h3 className="text-sm font-semibold text-gray-700 dark:text-gray-300">Preprocessing Options</h3>
+                                    
+                                    {/* Step 1: Row-wise preprocessing */}
+                                    <div className="p-3 bg-gray-50 dark:bg-gray-700/50 rounded-lg">
+                                        <label className="block text-sm font-medium mb-2">
+                                            Step 1: Row-wise Preprocessing (optional)
+                                        </label>
+                                        <select
+                                            value={
+                                                config.snv ? 'snv' :
+                                                config.vectorNorm ? 'vector-norm' :
+                                                'none'
+                                            }
+                                            onChange={(e) => {
+                                                const value = e.target.value;
+                                                setConfig({
+                                                    ...config,
+                                                    snv: value === 'snv',
+                                                    vectorNorm: value === 'vector-norm'
+                                                });
+                                            }}
+                                            disabled={config.method === 'kernel'}
+                                            className="w-full px-3 py-2 bg-gray-100 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg text-gray-900 dark:text-white disabled:opacity-50 disabled:cursor-not-allowed"
+                                        >
+                                            <option value="none">None</option>
+                                            <option value="snv">SNV (Standard Normal Variate)</option>
+                                            <option value="vector-norm">L2 Vector Normalization</option>
+                                        </select>
+                                        <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                                            {config.method === 'kernel' 
+                                                ? 'Kernel PCA uses its own preprocessing'
+                                                : 'Normalizes each row/sample independently (useful for spectral data)'}
+                                        </p>
+                                    </div>
+                                    
+                                    {/* Step 2: Column-wise preprocessing */}
+                                    <div className="p-3 bg-gray-50 dark:bg-gray-700/50 rounded-lg">
+                                        <label className="block text-sm font-medium mb-2">
+                                            Step 2: Column-wise Preprocessing
+                                        </label>
+                                        <select
+                                            value={
+                                                config.method === 'kernel' ? 'none' :
+                                                config.robustScale ? 'robust' :
+                                                config.standardScale ? 'standard' :
+                                                config.meanCenter ? 'center' : 'none'
+                                            }
+                                            onChange={(e) => {
+                                                const value = e.target.value;
+                                                setConfig({
+                                                    ...config,
+                                                    meanCenter: value === 'center' || value === 'standard',
+                                                    standardScale: value === 'standard',
+                                                    robustScale: value === 'robust'
+                                                });
+                                            }}
+                                            disabled={config.method === 'kernel'}
+                                            className="w-full px-3 py-2 bg-gray-100 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg text-gray-900 dark:text-white disabled:opacity-50 disabled:cursor-not-allowed"
+                                        >
+                                            <option value="none">None (Raw Data)</option>
+                                            <option value="center">Mean Center Only</option>
+                                            <option value="standard">Standard Scale (Mean + Std Dev)</option>
+                                            <option value="robust">Robust Scale (Median + MAD)</option>
+                                        </select>
+                                        <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                                            {config.method === 'kernel' 
+                                                ? 'Kernel PCA uses its own centering in kernel space'
+                                                : 'Normalizes each column/feature across all samples'}
+                                        </p>
+                                    </div>
+                                    
+                                    {/* Missing Data Strategy */}
+                                    <div>
+                                        <label className="block text-sm font-medium mb-2">
+                                            Missing Data Strategy
+                                        </label>
+                                        <select
+                                            value={config.missingStrategy}
+                                            onChange={(e) => setConfig({...config, missingStrategy: e.target.value})}
+                                            className="w-full px-3 py-2 bg-gray-100 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg text-gray-900 dark:text-white"
+                                        >
+                                            <option value="error">Show Error (default)</option>
+                                            <option value="drop">Drop Rows with Missing Values</option>
+                                            <option value="mean">Impute with Column Mean</option>
+                                            <option value="median">Impute with Column Median</option>
+                                        </select>
+                                        <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                                            Choose how to handle missing values (NaN) in your data
+                                        </p>
+                                    </div>
+                                    
+                                    {/* Diagnostic Metrics Option */}
+                                    {config.method !== 'kernel' && (
+                                        <div>
+                                            <label className="flex items-center gap-2">
+                                                <input
+                                                    type="checkbox"
+                                                    checked={config.calculateMetrics}
+                                                    onChange={(e) => setConfig({...config, calculateMetrics: e.target.checked})}
+                                                    className="w-4 h-4 text-blue-600 bg-gray-100 border-gray-300 rounded focus:ring-blue-500 dark:focus:ring-blue-600 dark:ring-offset-gray-800 focus:ring-2 dark:bg-gray-700 dark:border-gray-600"
+                                                />
+                                                <span className="text-sm font-medium text-gray-700 dark:text-gray-300">
+                                                    Calculate Diagnostic Metrics
+                                                </span>
+                                            </label>
+                                            <p className="text-xs text-gray-500 dark:text-gray-400 mt-1 ml-6">
+                                                Enable calculation of Mahalanobis distances, Hotelling's T², and residuals for outlier detection
+                                            </p>
+                                        </div>
+                                    )}
+                                </div>
+                            </div>
                             
-                            <button
-                                onClick={runPCA}
-                                disabled={loading}
-                                className="mt-4 px-6 py-2 bg-blue-600 hover:bg-blue-700 disabled:bg-gray-400 dark:disabled:bg-gray-600 rounded-lg font-medium text-white"
-                            >
-                                {loading ? 'Running...' : 'Go PCA!'}
-                            </button>
+                            {/* Go PCA! button - centered and spanning both columns */}
+                            <div className="mt-6 flex justify-center">
+                                <button
+                                    onClick={runPCA}
+                                    disabled={loading}
+                                    className="px-6 py-2 bg-blue-600 hover:bg-blue-700 disabled:bg-gray-400 dark:disabled:bg-gray-600 rounded-lg font-medium text-white"
+                                >
+                                    {loading ? 'Running...' : 'Go PCA!'}
+                                </button>
+                            </div>
                         </div>
                     )}
                     

@@ -187,7 +187,7 @@ func (m *PCAMetricsCalculator) calculateMahalanobisDistance(scoreVec *mat.VecDen
 func (m *PCAMetricsCalculator) calculateRSS(sampleIdx int, originalData types.Matrix) (float64, error) {
 	// RSS measures the reconstruction error: sum((X_preprocessed - X_reconstructed)²)
 	// where X_reconstructed = scores × loadings^T + mean
-	// 
+	//
 	// IMPORTANT: The key insight is that we're measuring RSS in the preprocessed space,
 	// not the original space. This matches sklearn's approach.
 
@@ -204,7 +204,7 @@ func (m *PCAMetricsCalculator) calculateRSS(sampleIdx int, originalData types.Ma
 	// Add back the mean (this is what sklearn's inverse_transform does)
 	if len(m.mean) > 0 {
 		for j := 0; j < m.nFeatures; j++ {
-			reconstructed.SetVec(j, reconstructed.AtVec(j) + m.mean[j])
+			reconstructed.SetVec(j, reconstructed.AtVec(j)+m.mean[j])
 		}
 	}
 
