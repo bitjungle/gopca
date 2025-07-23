@@ -28,7 +28,7 @@ export const DiagnosticScatterPlot: React.FC<DiagnosticScatterPlotProps> = ({
   pcaResult,
   rowNames = [],
   mahalanobisThreshold = 3.0,  // Default threshold for Mahalanobis distance
-  rssThreshold = 2.0           // Default threshold for RSS
+  rssThreshold = 0.03           // Default threshold for RSS (adjusted for typical RSS scale)
 }) => {
   const chartRef = useRef<HTMLDivElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
