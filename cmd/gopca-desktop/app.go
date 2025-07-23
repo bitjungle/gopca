@@ -13,7 +13,6 @@ import (
 	"github.com/bitjungle/gopca/internal/utils"
 	"github.com/bitjungle/gopca/pkg/types"
 	"github.com/wailsapp/wails/v2/pkg/runtime"
-	"gonum.org/v1/gonum/mat"
 )
 
 // App struct
@@ -355,22 +354,6 @@ func contains(slice []int, val int) bool {
 		}
 	}
 	return false
-}
-
-// matrixToDense converts types.Matrix to *mat.Dense
-func matrixToDense(m types.Matrix) *mat.Dense {
-	if len(m) == 0 || len(m[0]) == 0 {
-		return mat.NewDense(0, 0, nil)
-	}
-
-	rows, cols := len(m), len(m[0])
-	data := make([]float64, rows*cols)
-	for i := 0; i < rows; i++ {
-		for j := 0; j < cols; j++ {
-			data[i*cols+j] = m[i][j]
-		}
-	}
-	return mat.NewDense(rows, cols, data)
 }
 
 // SaveFile handles saving exported plot data
