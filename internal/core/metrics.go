@@ -186,7 +186,10 @@ func (m *PCAMetricsCalculator) calculateMahalanobisDistance(scoreVec *mat.VecDen
 // calculateRSS computes the Residual Sum of Squares
 func (m *PCAMetricsCalculator) calculateRSS(sampleIdx int, originalData types.Matrix) (float64, error) {
 	// RSS measures the reconstruction error: sum((X_preprocessed - X_reconstructed)²)
-	// where X_reconstructed = Scores × Loadings^T + Mean
+	// where X_reconstructed = Scores × Loadings^T
+	// 
+	// IMPORTANT: When PCA includes row-wise preprocessing (SNV/VectorNorm),
+	// the originalData should already be fully preprocessed.
 
 	// Get the score vector for this sample
 	scoreVec := mat.NewVecDense(m.nComponents, nil)
@@ -198,28 +201,53 @@ func (m *PCAMetricsCalculator) calculateRSS(sampleIdx int, originalData types.Ma
 	reconstructed := mat.NewVecDense(m.nFeatures, nil)
 	reconstructed.MulVec(m.loadings, scoreVec)
 
-	// Calculate the preprocessed version of the original data point
-	preprocessedData := make([]float64, m.nFeatures)
+	// Get the data point
+	dataPoint := make([]float64, m.nFeatures)
 	for j := 0; j < m.nFeatures; j++ {
-		val := originalData[sampleIdx][j]
+		dataPoint[j] = originalData[sampleIdx][j]
+	}
 
-		// Apply centering
-		if len(m.mean) > 0 {
-			val -= m.mean[j]
+	// Check if we need to apply preprocessing
+	// If mean and stdDev are provided AND the data values suggest it's not already preprocessed
+	needsPreprocessing := false
+	if len(m.mean) > 0 {
+		// Check if data appears to be already centered by looking at a few values
+		// If data is already preprocessed (especially with SNV), values should be small
+		sampleMagnitude := 0.0
+		for j := 0; j < m.nFeatures && j < 10; j++ {
+			sampleMagnitude += math.Abs(dataPoint[j])
 		}
-
-		// Apply scaling
-		if len(m.stdDev) > 0 && m.stdDev[j] > 0 {
-			val /= m.stdDev[j]
+		avgMagnitude := sampleMagnitude / math.Min(10, float64(m.nFeatures))
+		
+		// If average magnitude is large (>10), data is likely not preprocessed
+		if avgMagnitude > 10 {
+			needsPreprocessing = true
 		}
+	}
 
-		preprocessedData[j] = val
+	// Apply preprocessing only if needed
+	if needsPreprocessing {
+		for j := 0; j < m.nFeatures; j++ {
+			val := dataPoint[j]
+			
+			// Apply centering
+			if len(m.mean) > 0 {
+				val -= m.mean[j]
+			}
+			
+			// Apply scaling
+			if len(m.stdDev) > 0 && m.stdDev[j] > 0 {
+				val /= m.stdDev[j]
+			}
+			
+			dataPoint[j] = val
+		}
 	}
 
 	// Calculate sum of squared residuals
 	rss := 0.0
 	for j := 0; j < m.nFeatures; j++ {
-		residual := preprocessedData[j] - reconstructed.AtVec(j)
+		residual := dataPoint[j] - reconstructed.AtVec(j)
 		rss += residual * residual
 	}
 
