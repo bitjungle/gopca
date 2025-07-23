@@ -36,8 +36,11 @@ GOFMT := $(GOCMD) fmt
 GOMOD := $(GOCMD) mod
 GOGET := $(GOCMD) get
 
+# Version information
+VERSION ?= $(shell git describe --tags --always --dirty 2>/dev/null || echo "dev")
+
 # Build flags
-LDFLAGS := -ldflags="-s -w"
+LDFLAGS := -ldflags="-s -w -X github.com/bitjungle/gopca/internal/cli.Version=$(VERSION)"
 
 # Check if golangci-lint is installed
 GOLINT := $(shell which golangci-lint 2> /dev/null)

@@ -8,8 +8,12 @@ import (
 )
 
 const (
-	Version = "0.1.0"
 	AppName = "gopca-cli"
+)
+
+var (
+	// Version is set at build time via ldflags
+	Version = "dev"
 )
 
 // NewApp creates and configures the CLI application
