@@ -12,6 +12,7 @@ import (
 //   - "1,3,5" returns [1, 3, 5]
 //   - "1-3,5" returns [1, 2, 3, 5]
 //   - "1,3-5,7" returns [1, 3, 4, 5, 7]
+//
 // Note: Input indices are 1-based (human-friendly), output indices are 0-based
 func ParseRanges(input string) ([]int, error) {
 	if input == "" {
@@ -20,41 +21,41 @@ func ParseRanges(input string) ([]int, error) {
 
 	// Use a map to avoid duplicates
 	indexMap := make(map[int]bool)
-	
+
 	// Split by comma
 	parts := strings.Split(input, ",")
-	
+
 	for _, part := range parts {
 		part = strings.TrimSpace(part)
 		if part == "" {
 			continue
 		}
-		
+
 		// Check if it's a range (contains hyphen)
 		if strings.Contains(part, "-") {
 			rangeParts := strings.Split(part, "-")
 			if len(rangeParts) != 2 {
 				return nil, fmt.Errorf("invalid range format: %s", part)
 			}
-			
+
 			start, err := strconv.Atoi(strings.TrimSpace(rangeParts[0]))
 			if err != nil {
 				return nil, fmt.Errorf("invalid start index in range %s: %v", part, err)
 			}
-			
+
 			end, err := strconv.Atoi(strings.TrimSpace(rangeParts[1]))
 			if err != nil {
 				return nil, fmt.Errorf("invalid end index in range %s: %v", part, err)
 			}
-			
+
 			if start < 1 || end < 1 {
 				return nil, fmt.Errorf("indices must be positive (1-based), got range %d-%d", start, end)
 			}
-			
+
 			if start > end {
 				return nil, fmt.Errorf("invalid range: start %d is greater than end %d", start, end)
 			}
-			
+
 			// Add all indices in the range (convert to 0-based)
 			for i := start; i <= end; i++ {
 				indexMap[i-1] = true
@@ -65,23 +66,23 @@ func ParseRanges(input string) ([]int, error) {
 			if err != nil {
 				return nil, fmt.Errorf("invalid index %s: %v", part, err)
 			}
-			
+
 			if index < 1 {
 				return nil, fmt.Errorf("indices must be positive (1-based), got %d", index)
 			}
-			
+
 			// Convert to 0-based
 			indexMap[index-1] = true
 		}
 	}
-	
+
 	// Convert map to sorted slice
 	result := make([]int, 0, len(indexMap))
 	for index := range indexMap {
 		result = append(result, index)
 	}
 	sort.Ints(result)
-	
+
 	return result, nil
 }
 
@@ -90,7 +91,7 @@ func FilterMatrix(data [][]float64, excludedRows, excludedColumns []int) ([][]fl
 	if len(data) == 0 {
 		return data, nil
 	}
-	
+
 	// Create maps for O(1) lookup
 	excludeRowMap := make(map[int]bool)
 	for _, idx := range excludedRows {
@@ -99,7 +100,7 @@ func FilterMatrix(data [][]float64, excludedRows, excludedColumns []int) ([][]fl
 		}
 		excludeRowMap[idx] = true
 	}
-	
+
 	excludeColMap := make(map[int]bool)
 	numCols := len(data[0])
 	for _, idx := range excludedColumns {
@@ -108,26 +109,26 @@ func FilterMatrix(data [][]float64, excludedRows, excludedColumns []int) ([][]fl
 		}
 		excludeColMap[idx] = true
 	}
-	
+
 	// Build filtered matrix
 	var filtered [][]float64
 	for i, row := range data {
 		if excludeRowMap[i] {
 			continue
 		}
-		
+
 		var filteredRow []float64
 		for j, val := range row {
 			if !excludeColMap[j] {
 				filteredRow = append(filteredRow, val)
 			}
 		}
-		
+
 		if len(filteredRow) > 0 {
 			filtered = append(filtered, filteredRow)
 		}
 	}
-	
+
 	return filtered, nil
 }
 
@@ -141,13 +142,13 @@ func FilterStringSlice(items []string, excludedIndices []int) ([]string, error) 
 		}
 		excludeMap[idx] = true
 	}
-	
+
 	var filtered []string
 	for i, item := range items {
 		if !excludeMap[i] {
 			filtered = append(filtered, item)
 		}
 	}
-	
+
 	return filtered, nil
 }

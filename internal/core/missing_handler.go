@@ -30,13 +30,13 @@ func (h *MissingValueHandler) HandleMissingValues(data types.Matrix, missingInfo
 	switch h.strategy {
 	case types.MissingDrop:
 		return h.dropRows(data, missingInfo.RowsAffected)
-		
+
 	case types.MissingMean:
 		return h.imputeWithMean(data, missingInfo, selectedCols)
-		
+
 	case types.MissingMedian:
 		return h.imputeWithMedian(data, missingInfo, selectedCols)
-		
+
 	default:
 		return nil, fmt.Errorf("unsupported missing value strategy: %s", h.strategy)
 	}
@@ -177,7 +177,7 @@ func ValidateDataForPCA(data types.Matrix, selectedCols []int) error {
 	for _, col := range selectedCols {
 		hasValidValue := false
 		allNaN := true
-		
+
 		for row := 0; row < len(data); row++ {
 			if !math.IsNaN(data[row][col]) {
 				hasValidValue = true

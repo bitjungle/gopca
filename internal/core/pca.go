@@ -47,19 +47,19 @@ func (p *PCAImpl) Fit(data types.Matrix, config types.PCAConfig) (*types.PCAResu
 	X := matrixToDense(data)
 
 	// Preprocessing using the Preprocessor class
-	if config.MeanCenter || config.StandardScale || config.RobustScale {
+	if config.MeanCenter || config.StandardScale || config.RobustScale || config.SNV {
 		// Create preprocessor with the appropriate settings
-		p.preprocessor = NewPreprocessor(config.MeanCenter, config.StandardScale, config.RobustScale)
-		
+		p.preprocessor = NewPreprocessorWithSNV(config.MeanCenter, config.StandardScale, config.RobustScale, config.SNV)
+
 		// Convert to types.Matrix for preprocessor
 		typeMatrix := denseToMatrix(X)
-		
+
 		// Fit and transform
 		processedData, err := p.preprocessor.FitTransform(typeMatrix)
 		if err != nil {
 			return nil, fmt.Errorf("preprocessing failed: %w", err)
 		}
-		
+
 		// Convert back to mat.Dense
 		X = matrixToDense(processedData)
 	}
@@ -107,14 +107,14 @@ func (p *PCAImpl) Fit(data types.Matrix, config types.PCAConfig) (*types.PCAResu
 			explainedVarRatio[i] = v / totalVar * 100
 		}
 	}
-	
+
 	// Get preprocessing stats if applicable
 	var means, stddevs []float64
 	if p.preprocessor != nil {
 		means = p.preprocessor.GetMeans()
 		stddevs = p.preprocessor.GetStdDevs()
 	}
-	
+
 	return &types.PCAResult{
 		Scores:               denseToMatrix(scores),
 		Loadings:             denseToMatrix(loadings),
@@ -143,13 +143,13 @@ func (p *PCAImpl) Transform(data types.Matrix) (types.Matrix, error) {
 	if p.preprocessor != nil {
 		// Convert to types.Matrix for preprocessor
 		typeMatrix := denseToMatrix(X)
-		
+
 		// Transform using preprocessor
 		processedData, err := p.preprocessor.Transform(typeMatrix)
 		if err != nil {
 			return nil, fmt.Errorf("preprocessing failed: %w", err)
 		}
-		
+
 		// Convert back to mat.Dense
 		X = matrixToDense(processedData)
 	}
@@ -328,7 +328,6 @@ func (p *PCAImpl) svdAlgorithm(X *mat.Dense, nComponents int) (*mat.Dense, *mat.
 
 	return scores, loadings, nil
 }
-
 
 // calculateVariance computes explained variance for each component
 func (p *PCAImpl) calculateVariance(X, scores, loadings *mat.Dense) ([]float64, []float64) {

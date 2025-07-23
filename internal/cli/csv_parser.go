@@ -68,7 +68,6 @@ func ParseCSVReader(r io.Reader, options CSVParseOptions) (*CSVData, error) {
 	return &CSVData{CSVData: unifiedData}, nil
 }
 
-
 // ValidateCSVData performs basic validation on parsed CSV data
 func ValidateCSVData(data *CSVData) error {
 	if data == nil {
@@ -86,7 +85,7 @@ func ValidateCSVData(data *CSVData) error {
 	// Check for consistent column count
 	for i, row := range data.Matrix {
 		if len(row) != data.Columns {
-			return fmt.Errorf("row %d has %d columns, expected %d", 
+			return fmt.Errorf("row %d has %d columns, expected %d",
 				i+1, len(row), data.Columns)
 		}
 	}
@@ -115,9 +114,9 @@ func ValidateCSVData(data *CSVData) error {
 // GetDataSummary returns a summary of the CSV data
 func GetDataSummary(data *CSVData) string {
 	var sb strings.Builder
-	
+
 	sb.WriteString(fmt.Sprintf("Data dimensions: %d rows × %d columns\n", data.Rows, data.Columns))
-	
+
 	if len(data.Headers) > 0 {
 		sb.WriteString(fmt.Sprintf("Column names: %s", strings.Join(data.Headers, ", ")))
 		if len(data.Headers) > 5 {
@@ -126,7 +125,7 @@ func GetDataSummary(data *CSVData) string {
 			sb.WriteString("\n")
 		}
 	}
-	
+
 	if len(data.RowNames) > 0 {
 		sb.WriteString(fmt.Sprintf("Row names: %s", strings.Join(data.RowNames[:min(5, len(data.RowNames))], ", ")))
 		if len(data.RowNames) > 5 {
@@ -135,7 +134,7 @@ func GetDataSummary(data *CSVData) string {
 			sb.WriteString("\n")
 		}
 	}
-	
+
 	// Count missing values
 	missingCount := 0
 	for i := 0; i < data.Rows; i++ {
@@ -145,11 +144,11 @@ func GetDataSummary(data *CSVData) string {
 			}
 		}
 	}
-	
+
 	totalValues := data.Rows * data.Columns
 	missingPercent := float64(missingCount) / float64(totalValues) * 100
 	sb.WriteString(fmt.Sprintf("Missing values: %d (%.1f%%)\n", missingCount, missingPercent))
-	
+
 	return sb.String()
 }
 
