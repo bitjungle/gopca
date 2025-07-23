@@ -9,6 +9,11 @@ import (
 	"gonum.org/v1/gonum/stat"
 )
 
+const (
+	// Minimum variance/norm threshold to avoid division by zero
+	MinVarianceThreshold = 1e-8
+)
+
 // Preprocessor handles data preprocessing for PCA
 type Preprocessor struct {
 	// Preprocessing parameters
@@ -40,16 +45,6 @@ func NewPreprocessor(meanCenter, standardScale, robustScale bool) *Preprocessor 
 	}
 }
 
-// NewPreprocessorWithSNV creates a new preprocessor instance with SNV support
-func NewPreprocessorWithSNV(meanCenter, standardScale, robustScale, snv bool) *Preprocessor {
-	return &Preprocessor{
-		MeanCenter:    meanCenter,
-		StandardScale: standardScale,
-		RobustScale:   robustScale,
-		SNV:           snv,
-	}
-}
-
 // NewPreprocessorFull creates a new preprocessor instance with all options
 func NewPreprocessorFull(meanCenter, standardScale, robustScale, snv, vectorNorm bool) *Preprocessor {
 	return &Preprocessor{
@@ -61,6 +56,55 @@ func NewPreprocessorFull(meanCenter, standardScale, robustScale, snv, vectorNorm
 	}
 }
 
+// applyRowWisePreprocessing applies SNV or Vector Normalization to a single row
+func (p *Preprocessor) applyRowWisePreprocessing(row []float64, rowIndex int) []float64 {
+	result := make([]float64, len(row))
+	copy(result, row)
+
+	if p.SNV {
+		// Apply SNV: (x - row_mean) / row_std
+		rowMean := stat.Mean(result, nil)
+		rowStdDev := stat.StdDev(result, nil)
+
+		// Store for potential inverse transform
+		if p.rowMeans != nil && rowIndex < len(p.rowMeans) {
+			p.rowMeans[rowIndex] = rowMean
+			p.rowStdDevs[rowIndex] = rowStdDev
+		}
+
+		if rowStdDev < MinVarianceThreshold {
+			// Just center if std dev is too small
+			for j := range result {
+				result[j] -= rowMean
+			}
+		} else {
+			for j := range result {
+				result[j] = (result[j] - rowMean) / rowStdDev
+			}
+		}
+	} else if p.VectorNorm {
+		// Apply L2 normalization
+		rowNorm := 0.0
+		for j := range result {
+			rowNorm += result[j] * result[j]
+		}
+		rowNorm = math.Sqrt(rowNorm)
+
+		// Store norm for potential inverse transform
+		if p.rowStdDevs != nil && rowIndex < len(p.rowStdDevs) {
+			p.rowStdDevs[rowIndex] = rowNorm
+		}
+
+		if rowNorm > MinVarianceThreshold {
+			for j := range result {
+				result[j] /= rowNorm
+			}
+		}
+	}
+
+	return result
+}
+
 // FitTransform fits the preprocessor and transforms the data
 func (p *Preprocessor) FitTransform(data types.Matrix) (types.Matrix, error) {
 	// If row-wise preprocessing is enabled, we need to fit column statistics on row-normalized data
@@ -68,38 +112,7 @@ func (p *Preprocessor) FitTransform(data types.Matrix) (types.Matrix, error) {
 		// First apply row-wise preprocessing
 		dataForFit := make(types.Matrix, len(data))
 		for i := range data {
-			dataForFit[i] = make([]float64, len(data[i]))
-			copy(dataForFit[i], data[i])
-
-			if p.SNV {
-				// Apply SNV to this row
-				rowMean := stat.Mean(dataForFit[i], nil)
-				rowStdDev := stat.StdDev(dataForFit[i], nil)
-
-				if rowStdDev < 1e-8 {
-					// Just center if std dev is too small
-					for j := range dataForFit[i] {
-						dataForFit[i][j] -= rowMean
-					}
-				} else {
-					for j := range dataForFit[i] {
-						dataForFit[i][j] = (dataForFit[i][j] - rowMean) / rowStdDev
-					}
-				}
-			} else if p.VectorNorm {
-				// Apply L2 normalization
-				rowNorm := 0.0
-				for j := range dataForFit[i] {
-					rowNorm += dataForFit[i][j] * dataForFit[i][j]
-				}
-				rowNorm = math.Sqrt(rowNorm)
-
-				if rowNorm > 1e-8 {
-					for j := range dataForFit[i] {
-						dataForFit[i][j] /= rowNorm
-					}
-				}
-			}
+			dataForFit[i] = p.applyRowWisePreprocessing(data[i], i)
 		}
 
 		// Fit column statistics on row-normalized data
@@ -147,7 +160,7 @@ func (p *Preprocessor) Fit(data types.Matrix) error {
 		// Standard deviation for scaling
 		if p.StandardScale {
 			p.scale[j] = p.originalStd[j]
-			if p.scale[j] < 1e-8 {
+			if p.scale[j] < MinVarianceThreshold {
 				p.scale[j] = 1.0 // Avoid division by zero
 			}
 		} else {
@@ -163,7 +176,7 @@ func (p *Preprocessor) Fit(data types.Matrix) error {
 
 			p.median[j] = stat.Quantile(0.5, stat.Empirical, sortedCol, nil)
 			p.mad[j] = medianAbsoluteDeviation(col, p.median[j])
-			if p.mad[j] < 1e-8 {
+			if p.mad[j] < MinVarianceThreshold {
 				p.mad[j] = 1.0 // Avoid division by zero
 			}
 		}
@@ -204,45 +217,7 @@ func (p *Preprocessor) Transform(data types.Matrix) (types.Matrix, error) {
 		}
 
 		for i := 0; i < n; i++ {
-			if p.SNV {
-				// Calculate row mean and std dev
-				rowMean := stat.Mean(result[i], nil)
-				rowStdDev := stat.StdDev(result[i], nil)
-
-				// Store for potential inverse transform
-				p.rowMeans[i] = rowMean
-				p.rowStdDevs[i] = rowStdDev
-
-				// Apply SNV: (x - row_mean) / row_std
-				if rowStdDev < 1e-8 {
-					// Handle case where row has near-zero variance
-					// Just center the row without scaling
-					for j := 0; j < m; j++ {
-						result[i][j] -= rowMean
-					}
-				} else {
-					for j := 0; j < m; j++ {
-						result[i][j] = (result[i][j] - rowMean) / rowStdDev
-					}
-				}
-			} else if p.VectorNorm {
-				// Calculate L2 norm of the row
-				rowNorm := 0.0
-				for j := 0; j < m; j++ {
-					rowNorm += result[i][j] * result[i][j]
-				}
-				rowNorm = math.Sqrt(rowNorm)
-
-				// Store norm for potential inverse transform (in rowStdDevs for simplicity)
-				p.rowStdDevs[i] = rowNorm
-
-				// Apply L2 normalization
-				if rowNorm > 1e-8 {
-					for j := 0; j < m; j++ {
-						result[i][j] /= rowNorm
-					}
-				}
-			}
+			result[i] = p.applyRowWisePreprocessing(result[i], i)
 		}
 	}
 

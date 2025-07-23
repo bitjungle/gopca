@@ -95,7 +95,7 @@ func TestSNVPreprocessing(t *testing.T) {
 		{5.0, 5.0, 5.0, 5.0},     // mean=5, std=0 (constant row)
 	}
 
-	prep := NewPreprocessorWithSNV(false, false, false, true)
+	prep := NewPreprocessorFull(false, false, false, true, false)
 	transformed, err := prep.FitTransform(data)
 	if err != nil {
 		t.Fatalf("FitTransform failed: %v", err)
@@ -144,7 +144,7 @@ func TestSNVWithColumnPreprocessing(t *testing.T) {
 	}
 
 	// Test 1: Just SNV
-	prep1 := NewPreprocessorWithSNV(false, false, false, true)
+	prep1 := NewPreprocessorFull(false, false, false, true, false)
 	snvOnly, err := prep1.FitTransform(data)
 	if err != nil {
 		t.Fatalf("SNV only FitTransform failed: %v", err)
@@ -163,7 +163,7 @@ func TestSNVWithColumnPreprocessing(t *testing.T) {
 	}
 
 	// Test 2: SNV + Mean centering (should center columns after SNV)
-	prep2 := NewPreprocessorWithSNV(true, false, false, true)
+	prep2 := NewPreprocessorFull(true, false, false, true, false)
 	transformed, err := prep2.FitTransform(data)
 	if err != nil {
 		t.Fatalf("SNV + mean center FitTransform failed: %v", err)
@@ -257,7 +257,7 @@ func TestSNVReferenceImplementation(t *testing.T) {
 		{2.0, 4.0, 6.0, 8.0, 10.0},
 	}
 
-	prep := NewPreprocessorWithSNV(false, false, false, true)
+	prep := NewPreprocessorFull(false, false, false, true, false)
 	transformed, err := prep.FitTransform(data)
 	if err != nil {
 		t.Fatalf("FitTransform failed: %v", err)
