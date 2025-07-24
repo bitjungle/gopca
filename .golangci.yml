@@ -7,10 +7,6 @@ run:
   
   # Modules download mode
   modules-download-mode: readonly
-  
-  # Skip analysis of desktop package
-  skip-dirs:
-    - cmd/gopca-desktop
 
 linters:
   enable:
@@ -26,6 +22,11 @@ linters:
     - goimports
     - revive
     - misspell
+  
+  # Exclude desktop package from all linters
+  exclusions:
+    paths:
+      - cmd/gopca-desktop
 
 linters-settings:
   govet:
@@ -46,10 +47,6 @@ linters-settings:
         disabled: true
 
 issues:
-  # Exclude desktop package from all linters
-  exclude-dirs:
-    - cmd/gopca-desktop
-  
   # Exclude some linters from running on tests files
   exclude-rules:
     - path: _test\.go
@@ -57,10 +54,6 @@ issues:
         - gocritic
         - errcheck
         - dupl
-    - path: cmd/gopca-desktop
-      linters:
-        - typecheck
-        - unused
   
   # Maximum issues count per one linter
   max-issues-per-linter: 50
