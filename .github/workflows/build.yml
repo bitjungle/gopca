@@ -49,16 +49,16 @@ jobs:
     - name: Run linter
       run: |
         echo "Checking code formatting..."
-        # Check formatting using go fmt -n (dry run) which works consistently across platforms
-        FMT_OUTPUT=$(go fmt -n ./internal/... ./pkg/... ./cmd/gopca-cli/... 2>&1)
-        if [ -n "$FMT_OUTPUT" ]; then
-          echo "Code needs formatting. Files that would be changed:"
-          echo "$FMT_OUTPUT"
+        # Use gofmt -l to list files that need formatting, excluding desktop package
+        NEED_FORMAT=$(gofmt -l internal pkg cmd/gopca-cli 2>/dev/null)
+        if [ -n "$NEED_FORMAT" ]; then
+          echo "ERROR: The following files need formatting:"
+          echo "$NEED_FORMAT"
           echo ""
           echo "Run 'go fmt ./...' locally to fix formatting."
           exit 1
         else
-          echo "All code is properly formatted"
+          echo "All files are properly formatted"
         fi
         
         echo ""
