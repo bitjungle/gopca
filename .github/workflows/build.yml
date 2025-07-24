@@ -38,20 +38,33 @@ jobs:
       run: go mod download
     
     - name: Run tests
-      run: make ci-test
+      run: |
+        if [ "$RUNNER_OS" == "Windows" ]; then
+          go test -v ./internal/... ./pkg/... ./cmd/gopca-cli/...
+        else
+          make ci-test
+        fi
+      shell: bash
     
     - name: Run linter
       run: |
         # Run basic Go tools that are guaranteed to work
         echo "Running gofmt..."
-        test -z "$(gofmt -l . | grep -v cmd/gopca-desktop)" || (echo "Files need formatting" && exit 1)
+        if [ "$RUNNER_OS" == "Windows" ]; then
+          # Windows: Check formatting
+          GOFMT_FILES=$(gofmt -l .)
+          if [ -n "$GOFMT_FILES" ]; then
+            echo "Files need formatting:"
+            echo "$GOFMT_FILES"
+            exit 1
+          fi
+        else
+          test -z "$(gofmt -l . | grep -v cmd/gopca-desktop)" || (echo "Files need formatting" && exit 1)
+        fi
         
         echo "Running go vet..."
         go vet ./internal/... ./pkg/... ./cmd/gopca-cli/...
-        
-        echo "Running staticcheck if available..."
-        go install honnef.co/go/tools/cmd/staticcheck@latest || true
-        staticcheck ./internal/... ./pkg/... ./cmd/gopca-cli/... || true
+      shell: bash
 
   build-cli:
     name: Build CLI
