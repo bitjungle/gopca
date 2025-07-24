@@ -1,6 +1,6 @@
 # golangci-lint configuration for GoPCA
 # This configuration ensures consistent code quality across the project
-# Required version: v2.2.2 or later (for proper type checking)
+# Compatible with golangci-lint v2.x (CI uses v2.3.0)
 
 run:
   timeout: 5m
