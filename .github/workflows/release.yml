@@ -191,20 +191,23 @@ jobs:
     - name: Prepare macOS artifact
       if: matrix.os == 'macos-latest'
       run: |
+        mkdir -p build
         cd cmd/gopca-desktop/build/bin
         zip -r GoPCA-Desktop.app.zip gopca-desktop.app
-        mv GoPCA-Desktop.app.zip ../../../build/
+        mv GoPCA-Desktop.app.zip ../../../../build/
     
     - name: Prepare Windows artifact
       if: matrix.os == 'windows-latest'
       run: |
-        # Assuming Wails creates an installer, adjust path as needed
+        # Create build directory and move Windows executable
+        New-Item -ItemType Directory -Force -Path build
         Move-Item cmd/gopca-desktop/build/bin/gopca-desktop.exe build/GoPCA-Desktop-Setup.exe
     
     - name: Prepare Linux artifact
       if: matrix.os == 'ubuntu-latest'
       run: |
-        # Create AppImage or use the binary directly
+        # Create build directory and move Linux binary
+        mkdir -p build
         mv cmd/gopca-desktop/build/bin/gopca-desktop build/gopca-desktop-linux.AppImage
         chmod +x build/gopca-desktop-linux.AppImage
     
