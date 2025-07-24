@@ -1,5 +1,6 @@
 # golangci-lint configuration
 # This file configures the golangci-lint tool for the GoPCA project
+# Requires golangci-lint v1.50.0 or later
 
 run:
   # Timeout for analysis
@@ -18,28 +19,16 @@ linters:
     - gosimple
     - ineffassign
     - typecheck
-    - gocritic
     - goimports
-    - revive
     - misspell
+  disable:
+    - gocritic  # Too opinionated for initial setup
+    - revive    # Conflicts with gocritic
 
 linters-settings:
   govet:
     enable:
       - shadow
-  
-  gocritic:
-    enabled-tags:
-      - diagnostic
-      - experimental
-      - opinionated
-      - performance
-      - style
-  
-  revive:
-    rules:
-      - name: package-comments
-        disabled: true
 
 issues:
   # Exclude some linters from running on tests files
