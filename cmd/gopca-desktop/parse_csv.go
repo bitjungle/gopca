@@ -1,6 +1,3 @@
-//go:build desktop || wails
-// +build desktop wails
-
 package main
 
 import (
