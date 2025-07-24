@@ -28,17 +28,22 @@ else
 fi
 echo ""
 
-# Run linter if available
-echo "3. Running linter..."
-if command -v golangci-lint &> /dev/null; then
-    if golangci-lint run; then
-        echo "✓ Linter passed"
-    else
-        echo "✗ Linter failed"
-        exit 1
-    fi
+# Run linter checks
+echo "3. Running linter checks..."
+echo "  - gofmt..."
+if [ -z "$(gofmt -l . | grep -v cmd/gopca-desktop)" ]; then
+    echo "    ✓ Code is formatted"
 else
-    echo "⚠ golangci-lint not installed, skipping"
+    echo "    ✗ Code needs formatting"
+    exit 1
+fi
+
+echo "  - go vet..."
+if go vet ./internal/... ./pkg/... ./cmd/gopca-cli/...; then
+    echo "    ✓ go vet passed"
+else
+    echo "    ✗ go vet failed"
+    exit 1
 fi
 echo ""
 
