@@ -22,11 +22,6 @@ linters:
     - goimports
     - revive
     - misspell
-  
-  # Exclude desktop package from all linters
-  exclusions:
-    paths:
-      - cmd/gopca-desktop
 
 linters-settings:
   govet:
