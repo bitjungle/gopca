@@ -1,5 +1,5 @@
-//go:build desktop || wails
-// +build desktop wails
+//go:build wails
+// +build wails
 
 package main
 
