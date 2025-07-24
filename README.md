@@ -17,3 +17,4 @@ gopca-cli analyze data.csv --components 3 --mean-center
 
 # GUI (coming soon)
 gopca-gui
+
