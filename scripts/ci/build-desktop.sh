@@ -47,7 +47,7 @@ echo "- Wails: $(wails version 2>/dev/null || echo 'version unknown')"
 # Change to desktop directory
 cd cmd/gopca-desktop
 
-# Install frontend dependencies
+# Install frontend dependencies (wails build needs this)
 echo ""
 echo "Installing frontend dependencies..."
 cd frontend
@@ -55,17 +55,6 @@ if [ -f "package.json" ]; then
     npm ci || npm install
 else
     echo "ERROR: frontend/package.json not found"
-    exit 1
-fi
-
-# Build frontend
-echo ""
-echo "Building frontend..."
-npm run build
-
-# Verify frontend build
-if [ ! -d "dist" ]; then
-    echo "ERROR: Frontend build failed - dist directory not created"
     exit 1
 fi
 
@@ -90,7 +79,7 @@ fi
 
 echo "Building for platform: $PLATFORM"
 
-# Build with wails
+# Build with wails (includes generating bindings and building frontend)
 if wails build -platform "$PLATFORM"; then
     echo ""
     echo "=== Desktop application built successfully ==="
