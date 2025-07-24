@@ -117,7 +117,12 @@ jobs:
       if: matrix.os == 'ubuntu-latest'
       run: |
         sudo apt-get update
-        sudo apt-get install -y libgtk-3-dev libwebkit2gtk-4.0-dev
+        # For Ubuntu 24.04, the package name has changed
+        if sudo apt-cache search libwebkit2gtk-4.1-dev | grep -q libwebkit2gtk-4.1-dev; then
+          sudo apt-get install -y libgtk-3-dev libwebkit2gtk-4.1-dev
+        else
+          sudo apt-get install -y libgtk-3-dev libwebkit2gtk-4.0-dev
+        fi
     
     - name: Install frontend dependencies
       working-directory: cmd/gopca-desktop/frontend

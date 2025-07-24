@@ -16,7 +16,6 @@ jobs:
     name: Create Release
     runs-on: ubuntu-latest
     outputs:
-      upload_url: ${{ steps.create_release.outputs.upload_url }}
       version: ${{ steps.get_version.outputs.version }}
     
     steps:
@@ -29,12 +28,10 @@ jobs:
     
     - name: Create Release
       id: create_release
-      uses: actions/create-release@v1
-      env:
-        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      uses: softprops/action-gh-release@v1
       with:
         tag_name: ${{ github.ref }}
-        release_name: GoPCA ${{ steps.get_version.outputs.version }}
+        name: GoPCA ${{ steps.get_version.outputs.version }}
         draft: false
         prerelease: false
         body: |
@@ -107,7 +104,7 @@ jobs:
           BINARY_NAME="${BINARY_NAME}.exe"
         fi
         
-        go build -ldflags="-s -w -X main.Version=${VERSION}" \
+        go build -ldflags="-s -w -X github.com/bitjungle/gopca/internal/cli.Version=${VERSION}" \
           -o "build/${BINARY_NAME}" \
           cmd/gopca-cli/main.go
         
@@ -124,14 +121,10 @@ jobs:
         echo "BINARY_NAME=${BINARY_NAME}" >> $GITHUB_ENV
     
     - name: Upload Release Asset
-      uses: actions/upload-release-asset@v1
-      env:
-        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      uses: softprops/action-gh-release@v1
       with:
-        upload_url: ${{ needs.create-release.outputs.upload_url }}
-        asset_path: build/${{ env.ARCHIVE_NAME }}
-        asset_name: ${{ env.ARCHIVE_NAME }}
-        asset_content_type: ${{ matrix.goos == 'windows' && 'application/zip' || 'application/gzip' }}
+        tag_name: ${{ needs.create-release.outputs.version }}
+        files: build/${{ env.ARCHIVE_NAME }}
 
   build-desktop:
     name: Build Desktop - ${{ matrix.os }}
@@ -176,7 +169,12 @@ jobs:
       if: matrix.os == 'ubuntu-latest'
       run: |
         sudo apt-get update
-        sudo apt-get install -y libgtk-3-dev libwebkit2gtk-4.0-dev
+        # For Ubuntu 24.04, the package name has changed
+        if sudo apt-cache search libwebkit2gtk-4.1-dev | grep -q libwebkit2gtk-4.1-dev; then
+          sudo apt-get install -y libgtk-3-dev libwebkit2gtk-4.1-dev
+        else
+          sudo apt-get install -y libgtk-3-dev libwebkit2gtk-4.0-dev
+        fi
     
     - name: Install frontend dependencies
       working-directory: cmd/gopca-desktop/frontend
@@ -188,7 +186,7 @@ jobs:
         VERSION: ${{ needs.create-release.outputs.version }}
       run: |
         export PATH=$PATH:$(go env GOPATH)/bin
-        wails build -platform ${{ matrix.platform }} -ldflags "-X main.Version=${VERSION}"
+        wails build -platform ${{ matrix.platform }} -ldflags "-X 'main.Version=${VERSION}'"
     
     - name: Prepare macOS artifact
       if: matrix.os == 'macos-latest'
@@ -211,14 +209,10 @@ jobs:
         chmod +x build/gopca-desktop-linux.AppImage
     
     - name: Upload Release Asset
-      uses: actions/upload-release-asset@v1
-      env:
-        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      uses: softprops/action-gh-release@v1
       with:
-        upload_url: ${{ needs.create-release.outputs.upload_url }}
-        asset_path: build/${{ matrix.artifact_name }}
-        asset_name: ${{ matrix.artifact_name }}
-        asset_content_type: ${{ matrix.asset_content_type }}
+        tag_name: ${{ needs.create-release.outputs.version }}
+        files: build/${{ matrix.artifact_name }}
 
   generate-checksums:
     name: Generate Checksums
@@ -248,11 +242,7 @@ jobs:
         cat checksums.txt
     
     - name: Upload checksums
-      uses: actions/upload-release-asset@v1
-      env:
-        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      uses: softprops/action-gh-release@v1
       with:
-        upload_url: ${{ needs.create-release.outputs.upload_url }}
-        asset_path: checksums.txt
-        asset_name: checksums.txt
-        asset_content_type: text/plain
+        tag_name: ${{ needs.create-release.outputs.version }}
+        files: checksums.txt
