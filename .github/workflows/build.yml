@@ -41,9 +41,9 @@ jobs:
       run: make ci-test
     
     - name: Run linter
-      uses: golangci/golangci-lint-action@v7
+      uses: golangci/golangci-lint-action@v6
       with:
-        version: v2.3.0
+        version: v1.61.0
 
   build-cli:
     name: Build CLI
