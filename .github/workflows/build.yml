@@ -48,18 +48,23 @@ jobs:
     
     - name: Run linter
       run: |
-        # Run basic Go tools that are guaranteed to work
         echo "Running gofmt..."
-        if [ "$RUNNER_OS" == "Windows" ]; then
-          # Windows: Check formatting
-          GOFMT_FILES=$(gofmt -l .)
-          if [ -n "$GOFMT_FILES" ]; then
-            echo "Files need formatting:"
-            echo "$GOFMT_FILES"
-            exit 1
+        # Get list of files needing formatting, excluding desktop package
+        NEEDS_FORMAT=""
+        for file in $(gofmt -l .); do
+          # Normalize path separators for comparison
+          normalized=$(echo "$file" | tr '\\' '/')
+          if [[ ! "$normalized" =~ ^cmd/gopca-desktop/ ]]; then
+            NEEDS_FORMAT="${NEEDS_FORMAT}${file}\n"
           fi
+        done
+        
+        if [ -n "$NEEDS_FORMAT" ]; then
+          echo "Files need formatting:"
+          echo -e "$NEEDS_FORMAT"
+          exit 1
         else
-          test -z "$(gofmt -l . | grep -v cmd/gopca-desktop)" || (echo "Files need formatting" && exit 1)
+          echo "All files are properly formatted"
         fi
         
         echo "Running go vet..."
