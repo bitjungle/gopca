@@ -1,3 +1,5 @@
+//go:build !test_without_gui
+
 package main
 
 import (
