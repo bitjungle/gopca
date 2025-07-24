@@ -605,7 +605,7 @@ func (a *App) LoadDatasetFile(filename string) (*FileDataJSON, error) {
 	if content, ok := datasets.GetDataset(filename); ok {
 		return a.ParseCSV(content)
 	}
-	
+
 	// If not found in embedded data, try file system as fallback
 	// This is useful during development
 	possiblePaths := []string{
@@ -613,13 +613,13 @@ func (a *App) LoadDatasetFile(filename string) (*FileDataJSON, error) {
 		filepath.Join("..", "..", "data", filename),
 		filepath.Join("../../data", filename),
 	}
-	
+
 	for _, path := range possiblePaths {
 		content, err := os.ReadFile(path)
 		if err == nil {
 			return a.ParseCSV(string(content))
 		}
 	}
-	
+
 	return nil, fmt.Errorf("dataset file not found: %s", filename)
 }

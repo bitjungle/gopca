@@ -9,5 +9,12 @@
   "author": {
     "name": "Rune Mathisen",
     "email": "rune@bitjungle.com"
+  },
+  "info": {
+    "companyName": "BitJungle",
+    "productName": "GoPCA Desktop",
+    "productVersion": "1.0.0",
+    "copyright": "Copyright © 2024 BitJungle",
+    "comments": "Professional PCA Analysis Tool"
   }
 }

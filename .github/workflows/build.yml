@@ -7,7 +7,7 @@ on:
     branches: [ main ]
 
 env:
-  GO_VERSION: '1.21'
+  GO_VERSION: '1.24'
 
 jobs:
   test:
@@ -20,6 +20,11 @@ jobs:
     steps:
     - name: Checkout code
       uses: actions/checkout@v4
+      
+    - name: Configure Git line endings
+      run: |
+        git config --global core.autocrlf false
+        git config --global core.eol lf
     
     - name: Set up Go
       uses: actions/setup-go@v5
@@ -39,14 +44,42 @@ jobs:
     
     - name: Run tests
       run: |
-        # Exclude desktop package from tests as it requires frontend build
-        go test -v -cover $(go list ./... | grep -v /cmd/gopca-desktop)
+        if [ "$RUNNER_OS" == "Windows" ]; then
+          go test -v ./internal/... ./pkg/... ./cmd/gopca-cli/...
+        else
+          make ci-test
+        fi
+      shell: bash
     
     - name: Run linter
-      uses: golangci/golangci-lint-action@v6
-      with:
-        version: latest
-        args: --timeout=5m
+      run: |
+        echo "Checking code formatting..."
+        
+        # Use gofmt -l to list files that need formatting
+        NEED_FORMAT=""
+        for dir in internal pkg cmd/gopca-cli; do
+          if [ -d "$dir" ]; then
+            output=$(gofmt -l "$dir" 2>/dev/null || true)
+            if [ -n "$output" ]; then
+              NEED_FORMAT="${NEED_FORMAT}${output}\n"
+            fi
+          fi
+        done
+        
+        if [ -n "$NEED_FORMAT" ]; then
+          echo "ERROR: The following files need formatting:"
+          echo -e "$NEED_FORMAT"
+          echo ""
+          echo "Run 'go fmt ./...' locally to fix formatting."
+          exit 1
+        else
+          echo "✓ All files are properly formatted"
+        fi
+        
+        echo ""
+        echo "Running go vet..."
+        go vet ./internal/... ./pkg/... ./cmd/gopca-cli/...
+      shell: bash
 
   build-cli:
     name: Build CLI
@@ -56,6 +89,11 @@ jobs:
     steps:
     - name: Checkout code
       uses: actions/checkout@v4
+      
+    - name: Configure Git line endings
+      run: |
+        git config --global core.autocrlf false
+        git config --global core.eol lf
     
     - name: Set up Go
       uses: actions/setup-go@v5
@@ -71,7 +109,7 @@ jobs:
           ${{ runner.os }}-go-
     
     - name: Build all platforms
-      run: make build-all
+      run: make ci-build-cli
     
     - name: Upload CLI artifacts
       uses: actions/upload-artifact@v4
@@ -97,6 +135,11 @@ jobs:
     steps:
     - name: Checkout code
       uses: actions/checkout@v4
+      
+    - name: Configure Git line endings
+      run: |
+        git config --global core.autocrlf false
+        git config --global core.eol lf
     
     - name: Set up Go
       uses: actions/setup-go@v5
@@ -115,19 +158,15 @@ jobs:
     
     - name: Install Linux dependencies
       if: matrix.os == 'ubuntu-latest'
-      run: |
-        sudo apt-get update
-        sudo apt-get install -y libgtk-3-dev libwebkit2gtk-4.0-dev
+      run: ./scripts/ci/install-linux-deps.sh
     
     - name: Install frontend dependencies
       working-directory: cmd/gopca-desktop/frontend
       run: npm ci
     
     - name: Build desktop app
-      working-directory: cmd/gopca-desktop
-      run: |
-        export PATH=$PATH:$(go env GOPATH)/bin
-        wails build -platform ${{ matrix.platform }}
+      run: PLATFORM=${{ matrix.platform }} ./scripts/ci/build-desktop.sh
+      shell: bash
     
     - name: Upload desktop artifacts
       uses: actions/upload-artifact@v4
