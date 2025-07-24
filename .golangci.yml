@@ -1,0 +1,67 @@
+# golangci-lint configuration
+# This file configures the golangci-lint tool for the GoPCA project
+
+run:
+  # Timeout for analysis
+  timeout: 5m
+  
+  # Skip directories
+  skip-dirs:
+    - cmd/gopca-desktop
+  
+  # Skip files
+  skip-files:
+    - ".*_test\\.go$"
+  
+  # Modules download mode
+  modules-download-mode: readonly
+
+linters:
+  enable:
+    - gofmt
+    - govet
+    - errcheck
+    - staticcheck
+    - unused
+    - gosimple
+    - ineffassign
+    - typecheck
+    - gocritic
+    - goimports
+    - revive
+    - misspell
+
+linters-settings:
+  govet:
+    check-shadowing: true
+  
+  gocritic:
+    enabled-tags:
+      - diagnostic
+      - experimental
+      - opinionated
+      - performance
+      - style
+  
+  revive:
+    rules:
+      - name: package-comments
+        disabled: true
+
+issues:
+  # Exclude some linters from running on tests files
+  exclude-rules:
+    - path: _test\.go
+      linters:
+        - gocritic
+        - errcheck
+        - dupl
+  
+  # Maximum issues count per one linter
+  max-issues-per-linter: 50
+  
+  # Maximum count of issues with the same text
+  max-same-issues: 10
+  
+  # Show only new issues in pull requests
+  new: false
