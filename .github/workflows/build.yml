@@ -49,17 +49,37 @@ jobs:
     - name: Run linter
       run: |
         echo "Checking code formatting..."
-        # Use gofmt -l to list files that need formatting, excluding desktop package
-        NEED_FORMAT=$(gofmt -l internal pkg cmd/gopca-cli 2>/dev/null)
-        if [ -n "$NEED_FORMAT" ]; then
-          echo "ERROR: The following files need formatting:"
-          echo "$NEED_FORMAT"
-          echo ""
-          echo "Run 'go fmt ./...' locally to fix formatting."
-          exit 1
+        # Use gofmt -d to check formatting (exit code indicates if files need formatting)
+        # This avoids path separator issues on Windows
+        echo "Checking internal directory..."
+        if ! gofmt -d internal | grep -q '^'; then
+          echo "✓ internal: properly formatted"
         else
-          echo "All files are properly formatted"
+          echo "ERROR: Files in internal need formatting"
+          gofmt -d internal
+          exit 1
         fi
+        
+        echo "Checking pkg directory..."
+        if ! gofmt -d pkg | grep -q '^'; then
+          echo "✓ pkg: properly formatted"
+        else
+          echo "ERROR: Files in pkg need formatting"
+          gofmt -d pkg
+          exit 1
+        fi
+        
+        echo "Checking cmd/gopca-cli directory..."
+        if ! gofmt -d cmd/gopca-cli | grep -q '^'; then
+          echo "✓ cmd/gopca-cli: properly formatted"
+        else
+          echo "ERROR: Files in cmd/gopca-cli need formatting"
+          gofmt -d cmd/gopca-cli
+          exit 1
+        fi
+        
+        echo ""
+        echo "All files are properly formatted"
         
         echo ""
         echo "Running go vet..."
