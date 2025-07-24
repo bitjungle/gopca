@@ -209,6 +209,40 @@ deps:
 	$(GOMOD) tidy
 	@echo "Dependencies updated"
 
+## ci-test: Run tests for CI (excluding desktop)
+ci-test:
+	@echo "Running CI tests (excluding desktop)..."
+	@./scripts/ci/test-core.sh
+
+## ci-lint: Run linter for CI (excluding desktop)
+ci-lint:
+	@echo "Running CI linter (excluding desktop)..."
+ifdef GOLINT
+	golangci-lint run --timeout=5m ./internal/... ./pkg/... ./cmd/gopca-cli/...
+else
+	@echo "golangci-lint not found, skipping..."
+endif
+
+## ci-build-cli: Build CLI for all platforms in CI
+ci-build-cli: build-all
+
+## ci-build-desktop: Build desktop app in CI
+ci-build-desktop:
+	@echo "Building desktop app for CI..."
+	@PLATFORM=$(GOOS) ./scripts/ci/build-desktop.sh
+
+## ci-setup: Setup CI environment
+ci-setup:
+	@./scripts/ci/setup-environment.sh
+
+## ci-install-deps: Install platform-specific dependencies
+ci-install-deps:
+ifeq ($(shell uname -s),Linux)
+	@./scripts/ci/install-linux-deps.sh
+else
+	@echo "No special dependencies needed for $(shell uname -s)"
+endif
+
 ## help: Display this help message
 help:
 	@echo "Available targets:"
@@ -235,6 +269,13 @@ help:
 	@echo "  make gui-dev      # Run GUI in development mode"
 	@echo "  make gui-build    # Build GUI for production"
 	@echo "  make gui-run      # Run the built GUI application"
+	@echo ""
+	@echo "CI targets:"
+	@echo "  make ci-setup     # Show CI environment info"
+	@echo "  make ci-test      # Run tests for CI"
+	@echo "  make ci-lint      # Run linter for CI"
+	@echo "  make ci-build-cli # Build CLI for CI"
+	@echo "  make ci-build-desktop # Build desktop for CI"
 	@echo ""
 	@echo "Other targets:"
 	@echo "  make test         # Run tests with coverage"
