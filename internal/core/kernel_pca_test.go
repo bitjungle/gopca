@@ -38,12 +38,12 @@ func generateCircleData() types.Matrix {
 func generateLinearData() types.Matrix {
 	// Simple linearly separable data
 	return types.Matrix{
-		{1.0, 2.0},
-		{2.0, 3.0},
-		{3.0, 4.0},
-		{4.0, 5.0},
-		{5.0, 6.0},
-		{6.0, 7.0},
+		[]float64{1.0, 2.0},
+		[]float64{2.0, 3.0},
+		[]float64{3.0, 4.0},
+		[]float64{4.0, 5.0},
+		[]float64{5.0, 6.0},
+		[]float64{6.0, 7.0},
 	}
 }
 

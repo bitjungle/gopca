@@ -43,8 +43,7 @@ jobs:
     - name: Run linter
       uses: golangci/golangci-lint-action@v6
       with:
-        version: v1.55.2
-        args: --timeout=5m ./internal/... ./pkg/... ./cmd/gopca-cli/...
+        version: v2.2.2
 
   build-cli:
     name: Build CLI

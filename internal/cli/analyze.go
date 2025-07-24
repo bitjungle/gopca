@@ -7,7 +7,7 @@ import (
 	"github.com/bitjungle/gopca/internal/core"
 	"github.com/bitjungle/gopca/internal/utils"
 	"github.com/bitjungle/gopca/pkg/types"
-	"github.com/urfave/cli/v2"
+	cli "github.com/urfave/cli/v2"
 )
 
 func analyzeCommand() *cli.Command {

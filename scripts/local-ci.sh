@@ -31,7 +31,7 @@ echo ""
 # Run linter if available
 echo "3. Running linter..."
 if command -v golangci-lint &> /dev/null; then
-    if golangci-lint run --timeout=5m ./internal/... ./pkg/... ./cmd/gopca-cli/...; then
+    if golangci-lint run; then
         echo "✓ Linter passed"
     else
         echo "✗ Linter failed"

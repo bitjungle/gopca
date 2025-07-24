@@ -5,7 +5,7 @@ import (
 	"math"
 	"strings"
 
-	"github.com/urfave/cli/v2"
+	cli "github.com/urfave/cli/v2"
 )
 
 func validateCommand() *cli.Command {
