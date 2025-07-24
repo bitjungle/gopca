@@ -129,6 +129,7 @@ jobs:
     
     - name: Build desktop app
       working-directory: cmd/gopca-desktop
+      shell: bash
       run: |
         export PATH=$PATH:$(go env GOPATH)/bin
         wails build -platform ${{ matrix.platform }}
