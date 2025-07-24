@@ -39,14 +39,14 @@ jobs:
     
     - name: Run tests
       run: |
-        # Exclude desktop package from tests as it requires frontend build
-        go test -v -cover $(go list ./... | grep -v /cmd/gopca-desktop)
+        # Run tests for all packages except desktop (which requires frontend build)
+        go test -v -cover ./internal/... ./pkg/... ./cmd/gopca-cli/...
     
     - name: Run linter
       uses: golangci/golangci-lint-action@v6
       with:
         version: latest
-        args: --timeout=5m
+        args: --timeout=5m ./internal/... ./pkg/... ./cmd/gopca-cli/...
 
   build-cli:
     name: Build CLI
