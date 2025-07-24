@@ -33,6 +33,11 @@ func (a *App) startup(ctx context.Context) {
 	a.ctx = ctx
 }
 
+// GetVersion returns the application version
+func (a *App) GetVersion() string {
+	return Version
+}
+
 // FileData represents the structure of CSV data for the frontend
 type FileData struct {
 	Headers            []string            `json:"headers"`
