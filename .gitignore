@@ -39,6 +39,10 @@ docs_tmp/
 
 # Build artifacts
 build/
+!cmd/gopca-desktop/build/appicon.png
+!cmd/gopca-desktop/build/darwin/
+!cmd/gopca-desktop/build/windows/
+!cmd/gopca-desktop/build/icons/
 results/
 
 # Node modules
