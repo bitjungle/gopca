@@ -20,6 +20,11 @@ jobs:
     steps:
     - name: Checkout code
       uses: actions/checkout@v4
+      
+    - name: Configure Git line endings
+      run: |
+        git config --global core.autocrlf false
+        git config --global core.eol lf
     
     - name: Set up Go
       uses: actions/setup-go@v5
@@ -49,37 +54,27 @@ jobs:
     - name: Run linter
       run: |
         echo "Checking code formatting..."
-        # Use gofmt -d to check formatting (exit code indicates if files need formatting)
-        # This avoids path separator issues on Windows
-        echo "Checking internal directory..."
-        if ! gofmt -d internal | grep -q '^'; then
-          echo "✓ internal: properly formatted"
-        else
-          echo "ERROR: Files in internal need formatting"
-          gofmt -d internal
-          exit 1
-        fi
         
-        echo "Checking pkg directory..."
-        if ! gofmt -d pkg | grep -q '^'; then
-          echo "✓ pkg: properly formatted"
-        else
-          echo "ERROR: Files in pkg need formatting"
-          gofmt -d pkg
-          exit 1
-        fi
+        # Use gofmt -l to list files that need formatting
+        NEED_FORMAT=""
+        for dir in internal pkg cmd/gopca-cli; do
+          if [ -d "$dir" ]; then
+            output=$(gofmt -l "$dir" 2>/dev/null || true)
+            if [ -n "$output" ]; then
+              NEED_FORMAT="${NEED_FORMAT}${output}\n"
+            fi
+          fi
+        done
         
-        echo "Checking cmd/gopca-cli directory..."
-        if ! gofmt -d cmd/gopca-cli | grep -q '^'; then
-          echo "✓ cmd/gopca-cli: properly formatted"
-        else
-          echo "ERROR: Files in cmd/gopca-cli need formatting"
-          gofmt -d cmd/gopca-cli
+        if [ -n "$NEED_FORMAT" ]; then
+          echo "ERROR: The following files need formatting:"
+          echo -e "$NEED_FORMAT"
+          echo ""
+          echo "Run 'go fmt ./...' locally to fix formatting."
           exit 1
+        else
+          echo "✓ All files are properly formatted"
         fi
-        
-        echo ""
-        echo "All files are properly formatted"
         
         echo ""
         echo "Running go vet..."
@@ -94,6 +89,11 @@ jobs:
     steps:
     - name: Checkout code
       uses: actions/checkout@v4
+      
+    - name: Configure Git line endings
+      run: |
+        git config --global core.autocrlf false
+        git config --global core.eol lf
     
     - name: Set up Go
       uses: actions/setup-go@v5
@@ -135,6 +135,11 @@ jobs:
     steps:
     - name: Checkout code
       uses: actions/checkout@v4
+      
+    - name: Configure Git line endings
+      run: |
+        git config --global core.autocrlf false
+        git config --global core.eol lf
     
     - name: Set up Go
       uses: actions/setup-go@v5
