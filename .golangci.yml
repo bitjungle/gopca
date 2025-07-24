@@ -5,16 +5,11 @@ run:
   # Timeout for analysis
   timeout: 5m
   
-  # Skip directories
-  skip-dirs:
-    - cmd/gopca-desktop
-  
-  # Skip files
-  skip-files:
-    - ".*_test\\.go$"
-  
   # Modules download mode
   modules-download-mode: readonly
+  
+  # Exclude directories using issues configuration instead
+  # as skip-dirs is deprecated
 
 linters:
   enable:
@@ -33,7 +28,8 @@ linters:
 
 linters-settings:
   govet:
-    check-shadowing: true
+    enable:
+      - shadow
   
   gocritic:
     enabled-tags:
@@ -49,6 +45,10 @@ linters-settings:
         disabled: true
 
 issues:
+  # Exclude desktop package from all linters
+  exclude-dirs:
+    - cmd/gopca-desktop
+  
   # Exclude some linters from running on tests files
   exclude-rules:
     - path: _test\.go
@@ -56,6 +56,10 @@ issues:
         - gocritic
         - errcheck
         - dupl
+    - path: cmd/gopca-desktop
+      linters:
+        - typecheck
+        - unused
   
   # Maximum issues count per one linter
   max-issues-per-linter: 50
