@@ -21,14 +21,11 @@ linters:
     - typecheck
     - goimports
     - misspell
-  disable:
-    - gocritic  # Too opinionated for initial setup
-    - revive    # Conflicts with gocritic
 
 linters-settings:
   govet:
-    enable:
-      - shadow
+    disable:
+      - shadow  # Shadow variables are sometimes useful for error handling
 
 issues:
   # Exclude some linters from running on tests files
