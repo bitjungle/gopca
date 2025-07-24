@@ -8,9 +8,9 @@ run:
   # Modules download mode
   modules-download-mode: readonly
   
-  # Build tags to skip desktop package
-  build-tags:
-    - test_without_gui
+  # Skip analysis of desktop package
+  skip-dirs:
+    - cmd/gopca-desktop
 
 linters:
   enable:
