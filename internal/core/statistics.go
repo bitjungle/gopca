@@ -106,7 +106,7 @@ func CalculateGroupEllipses(scores mat.Matrix, groups []string, pcX, pcY int, co
 	}
 
 	// Group the data
-	groupData := make(map[string]struct {
+	groupData := make(map[string]*struct {
 		x []float64
 		y []float64
 	})
@@ -114,7 +114,7 @@ func CalculateGroupEllipses(scores mat.Matrix, groups []string, pcX, pcY int, co
 	for i := 0; i < rows; i++ {
 		group := groups[i]
 		if _, exists := groupData[group]; !exists {
-			groupData[group] = struct {
+			groupData[group] = &struct {
 				x []float64
 				y []float64
 			}{
@@ -122,10 +122,8 @@ func CalculateGroupEllipses(scores mat.Matrix, groups []string, pcX, pcY int, co
 				y: make([]float64, 0),
 			}
 		}
-		data := groupData[group]
-		data.x = append(data.x, scores.At(i, pcX))
-		data.y = append(data.y, scores.At(i, pcY))
-		groupData[group] = data
+		groupData[group].x = append(groupData[group].x, scores.At(i, pcX))
+		groupData[group].y = append(groupData[group].y, scores.At(i, pcY))
 	}
 
 	// Calculate ellipse for each group
