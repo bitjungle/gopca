@@ -37,13 +37,13 @@ export const useZoomPan = ({
       if (maintainAspectRatio) {
         const avgRange = (xRange + yRange) / 2;
         return {
-          x: [xCenter - avgRange / 2, xCenter + avgRange / 2],
-          y: [yCenter - avgRange / 2, yCenter + avgRange / 2]
+          x: [xCenter - avgRange / 2, xCenter + avgRange / 2] as [number, number],
+          y: [yCenter - avgRange / 2, yCenter + avgRange / 2] as [number, number]
         };
       } else {
         return {
-          x: [xCenter - xRange / 2, xCenter + xRange / 2],
-          y: [yCenter - yRange / 2, yCenter + yRange / 2]
+          x: [xCenter - xRange / 2, xCenter + xRange / 2] as [number, number],
+          y: [yCenter - yRange / 2, yCenter + yRange / 2] as [number, number]
         };
       }
     });

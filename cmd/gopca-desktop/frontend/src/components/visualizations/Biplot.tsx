@@ -83,13 +83,14 @@ export const Biplot: React.FC<BiplotProps> = ({
   const scoreYMax = Math.max(...scoreYValues);
   
   // Calculate plot bounds (including some padding)
-  // Ensure minimum range to handle tightly clustered data
-  const scoreRange = Math.max(scoreXMax - scoreXMin, scoreYMax - scoreYMin);
-  const maxAbsValue = Math.max(Math.abs(scoreXMin), Math.abs(scoreXMax), Math.abs(scoreYMin), Math.abs(scoreYMax));
-  const minRange = Math.max(scoreRange * 0.1, maxAbsValue * 0.02, 0.1);
-  const xRange = Math.max(Math.abs(scoreXMin), Math.abs(scoreXMax), minRange) * 1.2;
-  const yRange = Math.max(Math.abs(scoreYMin), Math.abs(scoreYMax), minRange) * 1.2;
-  const plotMax = Math.max(xRange, yRange);
+  // For biplot, we need symmetric axes centered at origin
+  const scoreXRange = scoreXMax - scoreXMin;
+  const scoreYRange = scoreYMax - scoreYMin;
+  const maxAbsScore = Math.max(Math.abs(scoreXMin), Math.abs(scoreXMax), Math.abs(scoreYMin), Math.abs(scoreYMax));
+  
+  // Use the maximum absolute value to ensure we capture all points
+  // Add 20% padding, but ensure minimum visibility
+  const plotMax = Math.max(maxAbsScore * 1.2, 1.0);
 
   // Calculate loading vectors and find the maximum
   const loadingVectors = pcaResult.loadings.map(row => {
