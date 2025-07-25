@@ -82,7 +82,7 @@
     },
     "missing-strategy": {
       "title": "Missing Data Strategy",
-      "text": "Drop: Remove incomplete rows. Mean: Impute with column average. Iterative: Advanced imputation.",
+      "text": "Drop: Remove incomplete rows. Mean: Impute with column average. Native: NIPALS handles missing values directly without imputation (NIPALS only).",
       "category": "preprocessing"
     },
     "diagnostic-metrics": {

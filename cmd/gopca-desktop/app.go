@@ -90,7 +90,7 @@ type EllipseParams struct {
 type PCAResponse struct {
 	Success         bool                     `json:"success"`
 	Error           string                   `json:"error,omitempty"`
-	Result          *types.PCAResult         `json:"result,omitempty"`
+	Result          *PCAResultJSON           `json:"result,omitempty"`
 	Info            string                   `json:"info,omitempty"`
 	GroupEllipses90 map[string]EllipseParams `json:"groupEllipses90,omitempty"`
 	GroupEllipses95 map[string]EllipseParams `json:"groupEllipses95,omitempty"`
@@ -187,8 +187,18 @@ func (a *App) RunPCA(request PCARequest) (response PCAResponse) {
 		case "error":
 			return PCAResponse{
 				Success: false,
-				Error:   fmt.Sprintf("Missing values detected (%d values). Please select a strategy to handle them: 'drop' to remove rows, or 'mean' to impute with column means.", missingInfo.TotalMissing),
+				Error:   fmt.Sprintf("Missing values detected (%d values). Please select a strategy to handle them: 'drop' to remove rows, 'mean' to impute with column means, or 'native' for NIPALS native handling.", missingInfo.TotalMissing),
 			}
+		case "native":
+			// For native handling with NIPALS, we don't pre-process missing values
+			// Validate that NIPALS method is selected
+			if strings.ToLower(request.Method) != "nipals" {
+				return PCAResponse{
+					Success: false,
+					Error:   "Native missing value handling is only supported with the NIPALS method",
+				}
+			}
+			// Data remains unchanged, NIPALS will handle missing values internally
 		case "drop", "mean", "median":
 			// Create missing value handler
 			strategy := types.MissingValueStrategy(request.MissingStrategy)
@@ -290,6 +300,7 @@ func (a *App) RunPCA(request PCARequest) (response PCAResponse) {
 		Method:          strings.ToLower(request.Method),
 		ExcludedRows:    request.ExcludedRows,
 		ExcludedColumns: request.ExcludedColumns,
+		MissingStrategy: types.MissingValueStrategy(request.MissingStrategy),
 	}
 
 	// Add kernel parameters if using kernel PCA
@@ -434,7 +445,7 @@ func (a *App) RunPCA(request PCARequest) (response PCAResponse) {
 
 	return PCAResponse{
 		Success:         true,
-		Result:          result,
+		Result:          ConvertPCAResultToJSON(result),
 		Info:            infoMsg,
 		GroupEllipses90: groupEllipses90,
 		GroupEllipses95: groupEllipses95,
