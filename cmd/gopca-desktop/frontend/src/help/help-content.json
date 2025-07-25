@@ -110,6 +110,16 @@
       "text": "Shows feature contributions. Features far from origin contribute most to selected PCs.",
       "category": "visualization"
     },
+    "biplot-plot": {
+      "title": "Biplot",
+      "text": "Combines scores and loadings. See sample-feature relationships. Arrows show feature influence.",
+      "category": "visualization"
+    },
+    "correlations-plot": {
+      "title": "Circle of Correlations",
+      "text": "Feature correlations with PCs. Vectors near circle edge = well-represented features.",
+      "category": "visualization"
+    },
     "biplot": {
       "title": "Biplot",
       "text": "Combines scores and loadings. See sample-feature relationships. Arrows show feature influence.",
