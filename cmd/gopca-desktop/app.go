@@ -300,6 +300,7 @@ func (a *App) RunPCA(request PCARequest) (response PCAResponse) {
 		Method:          strings.ToLower(request.Method),
 		ExcludedRows:    request.ExcludedRows,
 		ExcludedColumns: request.ExcludedColumns,
+		MissingStrategy: types.MissingValueStrategy(request.MissingStrategy),
 	}
 
 	// Add kernel parameters if using kernel PCA
