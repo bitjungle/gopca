@@ -83,8 +83,12 @@ export const Biplot: React.FC<BiplotProps> = ({
   const scoreYMax = Math.max(...scoreYValues);
   
   // Calculate plot bounds (including some padding)
-  const xRange = Math.max(Math.abs(scoreXMin), Math.abs(scoreXMax)) * 1.2;
-  const yRange = Math.max(Math.abs(scoreYMin), Math.abs(scoreYMax)) * 1.2;
+  // Ensure minimum range to handle tightly clustered data
+  const scoreRange = Math.max(scoreXMax - scoreXMin, scoreYMax - scoreYMin);
+  const maxAbsValue = Math.max(Math.abs(scoreXMin), Math.abs(scoreXMax), Math.abs(scoreYMin), Math.abs(scoreYMax));
+  const minRange = Math.max(scoreRange * 0.1, maxAbsValue * 0.02, 0.1);
+  const xRange = Math.max(Math.abs(scoreXMin), Math.abs(scoreXMax), minRange) * 1.2;
+  const yRange = Math.max(Math.abs(scoreYMin), Math.abs(scoreYMax), minRange) * 1.2;
   const plotMax = Math.max(xRange, yRange);
 
   // Calculate loading vectors and find the maximum

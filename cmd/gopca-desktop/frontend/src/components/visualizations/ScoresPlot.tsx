@@ -107,8 +107,11 @@ export const ScoresPlot: React.FC<ScoresPlotProps> = ({
   const yMax = Math.max(0, ...yValues);
   
   // Add padding to the range
-  const xPadding = (xMax - xMin) * 0.1 || 1;
-  const yPadding = (yMax - yMin) * 0.1 || 1;
+  // Use a minimum percentage of the absolute max value to handle tightly clustered data
+  const xRange = xMax - xMin;
+  const yRange = yMax - yMin;
+  const xPadding = Math.max(xRange * 0.1, Math.abs(xMax) * 0.01, Math.abs(xMin) * 0.01, 0.1);
+  const yPadding = Math.max(yRange * 0.1, Math.abs(yMax) * 0.01, Math.abs(yMin) * 0.01, 0.1);
   
   // Default domain (full range)
   const defaultXDomain: [number, number] = [xMin - xPadding, xMax + xPadding];
