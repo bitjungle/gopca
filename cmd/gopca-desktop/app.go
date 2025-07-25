@@ -90,7 +90,7 @@ type EllipseParams struct {
 type PCAResponse struct {
 	Success         bool                     `json:"success"`
 	Error           string                   `json:"error,omitempty"`
-	Result          *types.PCAResult         `json:"result,omitempty"`
+	Result          *PCAResultJSON           `json:"result,omitempty"`
 	Info            string                   `json:"info,omitempty"`
 	GroupEllipses90 map[string]EllipseParams `json:"groupEllipses90,omitempty"`
 	GroupEllipses95 map[string]EllipseParams `json:"groupEllipses95,omitempty"`
@@ -445,7 +445,7 @@ func (a *App) RunPCA(request PCARequest) (response PCAResponse) {
 
 	return PCAResponse{
 		Success:         true,
-		Result:          result,
+		Result:          ConvertPCAResultToJSON(result),
 		Info:            infoMsg,
 		GroupEllipses90: groupEllipses90,
 		GroupEllipses95: groupEllipses95,
