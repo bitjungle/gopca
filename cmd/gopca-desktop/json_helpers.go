@@ -66,23 +66,23 @@ func (fd *FileData) ToJSONSafe() *FileDataJSON {
 
 // PCAResultJSON is a JSON-safe version of types.PCAResult
 type PCAResultJSON struct {
-	Scores               [][]JSONFloat64       `json:"scores"`
-	Loadings             [][]JSONFloat64       `json:"loadings"`
-	ExplainedVar         []JSONFloat64         `json:"explained_variance"`
-	ExplainedVarRatio    []JSONFloat64         `json:"explained_variance_ratio"`
-	CumulativeVar        []JSONFloat64         `json:"cumulative_variance"`
-	ComponentLabels      []string              `json:"component_labels"`
-	VariableLabels       []string              `json:"variable_labels,omitempty"`
-	ComponentsComputed   int                   `json:"components_computed"`
-	Method               string                `json:"method"`
-	PreprocessingApplied bool                  `json:"preprocessing_applied"`
-	Means                []JSONFloat64         `json:"means,omitempty"`
-	StdDevs              []JSONFloat64         `json:"stddevs,omitempty"`
-	Metrics              []SampleMetricsJSON   `json:"metrics,omitempty"`
-	T2Limit95            JSONFloat64           `json:"t2_limit_95,omitempty"`
-	T2Limit99            JSONFloat64           `json:"t2_limit_99,omitempty"`
-	QLimit95             JSONFloat64           `json:"q_limit_95,omitempty"`
-	QLimit99             JSONFloat64           `json:"q_limit_99,omitempty"`
+	Scores               [][]JSONFloat64     `json:"scores"`
+	Loadings             [][]JSONFloat64     `json:"loadings"`
+	ExplainedVar         []JSONFloat64       `json:"explained_variance"`
+	ExplainedVarRatio    []JSONFloat64       `json:"explained_variance_ratio"`
+	CumulativeVar        []JSONFloat64       `json:"cumulative_variance"`
+	ComponentLabels      []string            `json:"component_labels"`
+	VariableLabels       []string            `json:"variable_labels,omitempty"`
+	ComponentsComputed   int                 `json:"components_computed"`
+	Method               string              `json:"method"`
+	PreprocessingApplied bool                `json:"preprocessing_applied"`
+	Means                []JSONFloat64       `json:"means,omitempty"`
+	StdDevs              []JSONFloat64       `json:"stddevs,omitempty"`
+	Metrics              []SampleMetricsJSON `json:"metrics,omitempty"`
+	T2Limit95            JSONFloat64         `json:"t2_limit_95,omitempty"`
+	T2Limit99            JSONFloat64         `json:"t2_limit_99,omitempty"`
+	QLimit95             JSONFloat64         `json:"q_limit_95,omitempty"`
+	QLimit99             JSONFloat64         `json:"q_limit_99,omitempty"`
 }
 
 // SampleMetricsJSON is a JSON-safe version of types.SampleMetrics

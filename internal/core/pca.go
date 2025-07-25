@@ -122,14 +122,21 @@ func (p *PCAImpl) Fit(data types.Matrix, config types.PCAConfig) (*types.PCAResu
 	}
 
 	// Calculate explained variance ratio
-	totalVar := 0.0
-	for _, v := range explainedVar {
-		totalVar += v
-	}
 	explainedVarRatio := make([]float64, len(explainedVar))
-	for i, v := range explainedVar {
-		if totalVar > 0 {
-			explainedVarRatio[i] = v / totalVar * 100
+	if p.config.Method == "nipals" && p.config.MissingStrategy == types.MissingNative {
+		// For NIPALS with missing values, we report eigenvalues, not percentages
+		// Set ratio to eigenvalues for now (the UI should handle this differently)
+		copy(explainedVarRatio, explainedVar)
+	} else {
+		// Traditional percentage calculation for complete data
+		totalVar := 0.0
+		for _, v := range explainedVar {
+			totalVar += v
+		}
+		for i, v := range explainedVar {
+			if totalVar > 0 {
+				explainedVarRatio[i] = v / totalVar * 100
+			}
 		}
 	}
 
@@ -542,7 +549,36 @@ func (p *PCAImpl) calculateVariance(X, scores, loadings *mat.Dense) ([]float64, 
 	n, m := X.Dims()
 	_, k := scores.Dims()
 
-	// Total variance (after preprocessing)
+	// For NIPALS with missing values, we cannot calculate traditional explained variance
+	// because the total variance of the data with missing values is not well-defined.
+	// Instead, we return the eigenvalues (variance of each component) directly.
+	if p.config.Method == "nipals" && p.config.MissingStrategy == types.MissingNative {
+		explainedVar := make([]float64, k)
+
+		// Calculate eigenvalues from scores
+		for i := 0; i < k; i++ {
+			scoreCol := mat.Col(nil, i, scores)
+			var eigenvalue float64
+			for _, v := range scoreCol {
+				eigenvalue += v * v
+			}
+			eigenvalue /= float64(n - 1)
+			explainedVar[i] = eigenvalue
+		}
+
+		// For cumulative variance with missing data, we just sum the eigenvalues
+		// Note: These are not percentages but absolute values
+		cumulativeVar := make([]float64, k)
+		cumSum := 0.0
+		for i := 0; i < k; i++ {
+			cumSum += explainedVar[i]
+			cumulativeVar[i] = cumSum
+		}
+
+		return explainedVar, cumulativeVar
+	}
+
+	// Original variance calculation for complete data
 	totalVar := 0.0
 	for j := 0; j < m; j++ {
 		col := mat.Col(nil, j, X)
