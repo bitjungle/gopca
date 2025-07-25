@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { 
   BarChart, 
   Bar, 
@@ -14,6 +14,7 @@ import {
 } from 'recharts';
 import { PCAResult } from '../../types';
 import { ExportButton } from '../ExportButton';
+import { PlotControls } from '../PlotControls';
 import { useChartTheme } from '../../hooks/useChartTheme';
 
 interface LoadingsPlotProps {
@@ -28,6 +29,8 @@ export const LoadingsPlot: React.FC<LoadingsPlotProps> = ({
   variableThreshold = 50
 }) => {
   const chartRef = useRef<HTMLDivElement>(null);
+  const fullscreenRef = useRef<HTMLDivElement>(null);
+  const [isFullscreen, setIsFullscreen] = useState(false);
   const chartTheme = useChartTheme();
   
   // Check if loadings are available (not available for Kernel PCA)
@@ -108,13 +111,34 @@ export const LoadingsPlot: React.FC<LoadingsPlotProps> = ({
     return null;
   };
 
+  const handleToggleFullscreen = useCallback(() => {
+    if (!fullscreenRef.current) return;
+    
+    if (!isFullscreen) {
+      if (fullscreenRef.current.requestFullscreen) {
+        fullscreenRef.current.requestFullscreen();
+      }
+    } else {
+      if (document.exitFullscreen) {
+        document.exitFullscreen();
+      }
+    }
+    
+    setIsFullscreen(!isFullscreen);
+  }, [isFullscreen]);
+
+  const handleResetView = useCallback(() => {
+    // No zoom functionality for this plot, but keeping for consistency
+  }, []);
+
   return (
-    <div className="w-full h-full" ref={chartRef}>
-      {/* Header with plot type selector and export button */}
-      <div className="flex items-center justify-between mb-4">
-        <h4 className="text-md font-medium text-gray-700 dark:text-gray-300">
-          {componentLabel} Loadings ({variance}% variance)
-        </h4>
+    <div ref={fullscreenRef} className={`w-full h-full ${isFullscreen ? 'fixed inset-0 z-50 bg-white dark:bg-gray-900 p-4' : ''}`}>
+      <div className="w-full h-full" ref={chartRef}>
+        {/* Header with plot type selector and export button */}
+        <div className="flex items-center justify-between mb-4">
+          <h4 className="text-md font-medium text-gray-700 dark:text-gray-300">
+            {componentLabel} Loadings ({variance}% variance)
+          </h4>
         <div className="flex items-center gap-4">
           <div className="flex items-center gap-2">
             <span className="text-sm text-gray-600 dark:text-gray-400">Plot type:</span>
@@ -130,6 +154,11 @@ export const LoadingsPlot: React.FC<LoadingsPlotProps> = ({
               <span className="text-xs text-yellow-500">(manual)</span>
             )}
           </div>
+          <PlotControls 
+            onResetView={handleResetView}
+            onToggleFullscreen={handleToggleFullscreen}
+            isFullscreen={isFullscreen}
+          />
           <ExportButton 
             chartRef={chartRef} 
             fileName={`loadings-plot-${componentLabel}`}
@@ -219,6 +248,7 @@ export const LoadingsPlot: React.FC<LoadingsPlotProps> = ({
           </LineChart>
         )}
       </ResponsiveContainer>
+    </div>
     </div>
   );
 };
