@@ -1,13 +1,16 @@
 import React, { useState, useRef } from 'react';
 import './App.css';
 import { ParseCSV, RunPCA, LoadIrisDataset, LoadDatasetFile } from "../wailsjs/go/main/App";
-import { DataTable, SelectionTable, ThemeToggle, MatrixIllustration } from './components';
+import { DataTable, SelectionTable, ThemeToggle, MatrixIllustration, HelpWrapper } from './components';
 import { ScoresPlot, ScreePlot, LoadingsPlot, Biplot, CircleOfCorrelations, DiagnosticScatterPlot } from './components/visualizations';
 import { FileData, PCARequest, PCAResponse } from './types';
 import { ThemeProvider } from './contexts/ThemeContext';
+import { HelpProvider, useHelp } from './contexts/HelpContext';
+import { HelpDisplay } from './components/HelpDisplay';
 import logo from './assets/images/GoPCA-logo-1024-transp.png';
 
-function App() {
+function AppContent() {
+    const { currentHelp, currentHelpKey } = useHelp();
     const [fileData, setFileData] = useState<FileData | null>(null);
     const [pcaResponse, setPcaResponse] = useState<PCAResponse | null>(null);
     const [loading, setLoading] = useState(false);
@@ -156,19 +159,25 @@ function App() {
     };
     
     return (
-        <ThemeProvider>
-            <div className="flex flex-col h-screen bg-gray-50 dark:bg-gray-900 text-gray-900 dark:text-white transition-colors duration-200">
-                <header className="sticky top-0 z-50 bg-white dark:bg-gray-800 p-4 shadow-lg backdrop-blur-sm bg-opacity-95 dark:bg-opacity-95">
-                    <div className="flex items-center justify-between max-w-7xl mx-auto">
-                        <img 
-                            src={logo} 
-                            alt="GoPCA - Principal Component Analysis Tool" 
-                            className="h-12 cursor-pointer hover:opacity-90 transition-opacity"
-                            onClick={scrollToTop}
+        <div className="flex flex-col h-screen bg-gray-50 dark:bg-gray-900 text-gray-900 dark:text-white transition-colors duration-200">
+            <header className="sticky top-0 z-50 bg-white dark:bg-gray-800 p-4 shadow-lg backdrop-blur-sm bg-opacity-95 dark:bg-opacity-95">
+                <div className="flex items-center justify-between max-w-7xl mx-auto">
+                    <img 
+                        src={logo} 
+                        alt="GoPCA - Principal Component Analysis Tool" 
+                        className="h-12 cursor-pointer hover:opacity-90 transition-opacity"
+                        onClick={scrollToTop}
+                    />
+                    <div className="flex-1 mx-8">
+                        <HelpDisplay 
+                            helpKey={currentHelpKey}
+                            title={currentHelp?.title || ''}
+                            text={currentHelp?.text || ''}
                         />
-                        <ThemeToggle />
                     </div>
-                </header>
+                    <ThemeToggle />
+                </div>
+            </header>
             
             <main ref={mainScrollRef} className="flex-1 overflow-auto p-6">
                 <div className="max-w-7xl mx-auto space-y-6">
@@ -177,7 +186,7 @@ function App() {
                         <h2 className="text-xl font-semibold mb-6">Step 1: Load Data</h2>
                         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-[1fr_2fr_1fr] gap-6">
                             {/* Column 1: File Upload */}
-                            <div className="flex flex-col justify-center">
+                            <HelpWrapper helpKey="data-upload" className="flex flex-col justify-center">
                                 <label className="block text-sm font-medium mb-3">
                                     Upload Your CSV File
                                 </label>
@@ -196,7 +205,7 @@ function App() {
                                 <p className="mt-2 text-xs text-gray-500 dark:text-gray-400">
                                     Accepts CSV files with headers
                                 </p>
-                            </div>
+                            </HelpWrapper>
 
                             {/* Column 2: Matrix Illustration */}
                             <div className="flex items-center justify-center border-0 md:border-x lg:border-x border-gray-200 dark:border-gray-700 px-4 py-6 md:py-0">
@@ -204,7 +213,7 @@ function App() {
                             </div>
 
                             {/* Column 3: Sample Datasets */}
-                            <div className="flex flex-col justify-center md:col-span-2 lg:col-span-1">
+                            <HelpWrapper helpKey="sample-datasets" className="flex flex-col justify-center md:col-span-2 lg:col-span-1">
                                 <label className="block text-sm font-medium mb-3">
                                     Or Try Sample Datasets
                                 </label>
@@ -279,7 +288,7 @@ function App() {
                                         Wine
                                     </button>
                                 </div>
-                            </div>
+                            </HelpWrapper>
                         </div>
                     </div>
                     
@@ -328,7 +337,7 @@ function App() {
                             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
                                 {/* Left Column - Core PCA Configuration */}
                                 <div className="space-y-4">
-                                    <div>
+                                    <HelpWrapper helpKey="num-components">
                                         <label className="block text-sm font-medium mb-2">
                                             Number of Components
                                         </label>
@@ -340,9 +349,9 @@ function App() {
                                             onChange={(e) => setConfig({...config, components: parseInt(e.target.value) || 2})}
                                             className="w-full px-3 py-2 bg-gray-100 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg text-gray-900 dark:text-white"
                                         />
-                                    </div>
+                                    </HelpWrapper>
                                     
-                                    <div>
+                                    <HelpWrapper helpKey="pca-method">
                                         <label className="block text-sm font-medium mb-2">
                                             Method
                                         </label>
@@ -355,7 +364,7 @@ function App() {
                                             <option value="NIPALS">NIPALS</option>
                                             <option value="kernel">Kernel PCA</option>
                                         </select>
-                                    </div>
+                                    </HelpWrapper>
                                     
                                     {/* Kernel PCA Options - moved to left column */}
                                     {config.method === 'kernel' && (
@@ -789,7 +798,16 @@ function App() {
                     )}
                 </div>
             </main>
-            </div>
+        </div>
+    );
+}
+
+function App() {
+    return (
+        <ThemeProvider>
+            <HelpProvider>
+                <AppContent />
+            </HelpProvider>
         </ThemeProvider>
     );
 }
