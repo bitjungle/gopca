@@ -366,7 +366,56 @@ function AppContent() {
                                         </select>
                                     </HelpWrapper>
                                     
-                                    {/* Kernel PCA Options - moved to left column */}
+                                    {/* Method-specific information */}
+                                    {config.method === 'SVD' && (
+                                        <div className="p-4 bg-blue-50 dark:bg-blue-900/20 rounded-lg space-y-3">
+                                            <h4 className="font-medium text-sm text-blue-900 dark:text-blue-100">SVD Method</h4>
+                                            <div className="space-y-2 text-sm text-blue-800 dark:text-blue-200">
+                                                <p className="flex items-start">
+                                                    <span className="mr-2">•</span>
+                                                    <span>Gold standard for PCA using Singular Value Decomposition</span>
+                                                </p>
+                                                <p className="flex items-start">
+                                                    <span className="mr-2">•</span>
+                                                    <span>Fast and numerically stable for complete datasets</span>
+                                                </p>
+                                                <p className="flex items-start">
+                                                    <span className="mr-2">•</span>
+                                                    <span>Computes all components simultaneously</span>
+                                                </p>
+                                                <p className="flex items-start">
+                                                    <span className="mr-2">•</span>
+                                                    <span>Best choice for most applications</span>
+                                                </p>
+                                            </div>
+                                        </div>
+                                    )}
+                                    
+                                    {config.method === 'NIPALS' && (
+                                        <div className="p-4 bg-green-50 dark:bg-green-900/20 rounded-lg space-y-3">
+                                            <h4 className="font-medium text-sm text-green-900 dark:text-green-100">NIPALS Method</h4>
+                                            <div className="space-y-2 text-sm text-green-800 dark:text-green-200">
+                                                <p className="flex items-start">
+                                                    <span className="mr-2">•</span>
+                                                    <span>Nonlinear Iterative Partial Least Squares algorithm</span>
+                                                </p>
+                                                <p className="flex items-start">
+                                                    <span className="mr-2">•</span>
+                                                    <span>Handles missing data gracefully</span>
+                                                </p>
+                                                <p className="flex items-start">
+                                                    <span className="mr-2">•</span>
+                                                    <span>Computes components sequentially</span>
+                                                </p>
+                                                <p className="flex items-start">
+                                                    <span className="mr-2">•</span>
+                                                    <span>Ideal for large datasets when only few components needed</span>
+                                                </p>
+                                            </div>
+                                        </div>
+                                    )}
+                                    
+                                    {/* Kernel PCA Options */}
                                     {config.method === 'kernel' && (
                                         <div className="p-4 bg-gray-50 dark:bg-gray-700/50 rounded-lg space-y-4">
                                             <h4 className="font-medium text-sm">Kernel PCA Options</h4>
