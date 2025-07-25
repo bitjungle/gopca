@@ -147,16 +147,16 @@ export const DiagnosticScatterPlot: React.FC<DiagnosticScatterPlotProps> = ({
             Diagnostic Plot: Mahalanobis Distance vs Residual Sum of Squares
           </h4>
           <div className="flex items-center gap-2">
-            <ExportButton 
-              chartRef={chartRef} 
-              fileName="diagnostic-plot-mahalanobis-rss"
-            />
             <PlotControls
               onZoomIn={handleZoomIn}
               onZoomOut={handleZoomOut}
               onResetView={handleResetView}
               onToggleFullscreen={() => setIsFullscreen(!isFullscreen)}
               isFullscreen={isFullscreen}
+            />
+            <ExportButton 
+              chartRef={chartRef} 
+              fileName="diagnostic-plot-mahalanobis-rss"
             />
           </div>
         </div>
