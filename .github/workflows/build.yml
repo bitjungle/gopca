@@ -2,7 +2,7 @@ name: Build and Test
 
 on:
   push:
-    branches: [ main ]
+    branches: [ '**' ]  # Run tests on all branches
   pull_request:
     branches: [ main ]
   workflow_dispatch:  # Allow manual triggering
@@ -96,6 +96,7 @@ jobs:
   build-cli:
     name: Build CLI
     needs: test
+    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
     runs-on: ubuntu-latest
     
     steps:
@@ -133,6 +134,7 @@ jobs:
   build-desktop:
     name: Build Desktop App
     needs: test
+    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
     strategy:
       fail-fast: false  # Continue building other platforms even if one fails
       matrix:
