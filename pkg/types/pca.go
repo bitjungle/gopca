@@ -23,6 +23,7 @@ type PCAConfig struct {
 	MeanCenter      bool   `json:"mean_center"`
 	StandardScale   bool   `json:"standard_scale"`
 	RobustScale     bool   `json:"robust_scale"`               // Robust scaling (median/MAD)
+	ScaleOnly       bool   `json:"scale_only"`                 // Variance scaling: divide by std dev without mean centering
 	SNV             bool   `json:"snv"`                        // Standard Normal Variate (row-wise normalization)
 	VectorNorm      bool   `json:"vector_norm"`                // L2 normalization (row-wise)
 	Method          string `json:"method"`                     // "svd", "eigen", "nipals", or "kernel"

@@ -52,6 +52,15 @@ gopca-cli analyze --method kernel --kernel-type poly \
 gopca-cli analyze --method kernel --kernel-type linear data.csv
 ```
 
+### Kernel PCA with Variance Scaling
+```bash
+# Scale features by standard deviation without centering
+gopca-cli analyze --method kernel --kernel-type rbf --kernel-gamma 0.1 --scale-only data.csv
+
+# Combine with row-wise preprocessing
+gopca-cli analyze --method kernel --kernel-type rbf --snv --scale-only spectral_data.csv
+```
+
 ## GUI Usage
 
 1. Load your data file
@@ -62,7 +71,9 @@ gopca-cli analyze --method kernel --kernel-type linear data.csv
    - Set degree and coef0 (for Polynomial only)
 4. Click "Run PCA Analysis"
 
-**Note**: Standard preprocessing options (mean centering, scaling) are ignored for Kernel PCA as it performs its own centering in kernel space.
+**Note**: Kernel PCA performs its own centering in kernel space, so standard preprocessing options that include mean centering (standard scale, robust scale) are not recommended. However, you can use:
+- **Variance scaling**: Divides features by their standard deviation without centering - useful when features have different scales
+- **Row-wise preprocessing**: SNV and vector normalization are fully compatible with Kernel PCA
 
 ## Parameter Guidelines
 

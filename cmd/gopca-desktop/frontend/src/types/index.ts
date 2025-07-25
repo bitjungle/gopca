@@ -17,6 +17,7 @@ export interface PCARequest {
   meanCenter: boolean;
   standardScale: boolean;
   robustScale: boolean;
+  scaleOnly: boolean;
   snv: boolean;
   vectorNorm: boolean;
   method: string;

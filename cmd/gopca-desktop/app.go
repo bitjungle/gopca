@@ -58,6 +58,7 @@ type PCARequest struct {
 	MeanCenter       bool        `json:"meanCenter"`
 	StandardScale    bool        `json:"standardScale"`
 	RobustScale      bool        `json:"robustScale"`
+	ScaleOnly        bool        `json:"scaleOnly"`
 	SNV              bool        `json:"snv"`
 	VectorNorm       bool        `json:"vectorNorm"`
 	Method           string      `json:"method"`
@@ -283,6 +284,7 @@ func (a *App) RunPCA(request PCARequest) (response PCAResponse) {
 		MeanCenter:      request.MeanCenter,
 		StandardScale:   request.StandardScale,
 		RobustScale:     request.RobustScale,
+		ScaleOnly:       request.ScaleOnly,
 		SNV:             request.SNV,
 		VectorNorm:      request.VectorNorm,
 		Method:          strings.ToLower(request.Method),
@@ -297,9 +299,13 @@ func (a *App) RunPCA(request PCARequest) (response PCAResponse) {
 		config.KernelDegree = request.KernelDegree
 		config.KernelCoef0 = request.KernelCoef0
 
-		// Skip standard preprocessing for kernel PCA
-		config.MeanCenter = false
-		config.StandardScale = false
+		// Skip preprocessing that involves centering for kernel PCA
+		// But allow scale-only, SNV, and vector normalization
+		if !config.ScaleOnly {
+			config.MeanCenter = false
+			config.StandardScale = false
+			config.RobustScale = false
+		}
 	}
 
 	// Perform PCA
@@ -345,9 +351,9 @@ func (a *App) RunPCA(request PCARequest) (response PCAResponse) {
 				fmt.Printf("Warning: Failed to apply row preprocessing for metrics: %v\n", err)
 				preprocessedData = dataToAnalyze // Fallback to original data
 			}
-		} else if config.MeanCenter || config.StandardScale || config.RobustScale {
+		} else if config.MeanCenter || config.StandardScale || config.RobustScale || config.ScaleOnly {
 			// For column-wise preprocessing only, use the fully preprocessed data
-			colPreprocessor := core.NewPreprocessorFull(config.MeanCenter, config.StandardScale, config.RobustScale, false, false)
+			colPreprocessor := core.NewPreprocessorWithScaleOnly(config.MeanCenter, config.StandardScale, config.RobustScale, config.ScaleOnly, false, false)
 			var err error
 			preprocessedData, err = colPreprocessor.FitTransform(dataToAnalyze)
 			if err != nil {
