@@ -3,6 +3,7 @@ package core
 import (
 	"fmt"
 	"math"
+	"os"
 
 	"gonum.org/v1/gonum/mat"
 	"gonum.org/v1/gonum/stat"
@@ -129,6 +130,10 @@ func CalculateGroupEllipses(scores mat.Matrix, groups []string, pcX, pcY int, co
 	// Calculate ellipse for each group
 	ellipses := make(map[string]EllipseParams)
 	for group, data := range groupData {
+		// Debug logging can be enabled with environment variable
+		if os.Getenv("GOPCA_DEBUG") != "" {
+			fmt.Printf("DEBUG: Group %s has %d points\n", group, len(data.x))
+		}
 		if len(data.x) < 3 {
 			// Skip groups with too few points
 			continue
@@ -137,6 +142,9 @@ func CalculateGroupEllipses(scores mat.Matrix, groups []string, pcX, pcY int, co
 		centerX, centerY, majorAxis, minorAxis, angle, err := CalculateConfidenceEllipse(data.x, data.y, confidenceLevel)
 		if err != nil {
 			// Skip this group if ellipse calculation fails
+			if os.Getenv("GOPCA_DEBUG") != "" {
+				fmt.Printf("DEBUG: Skipping group %s due to error: %v\n", group, err)
+			}
 			continue
 		}
 

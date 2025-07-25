@@ -195,9 +195,15 @@ func TestCalculateGroupEllipsesEdgeCases(t *testing.T) {
 				if err != nil {
 					t.Errorf("Unexpected error: %v", err)
 				}
+				// Debug: print what we got
+				t.Logf("Ellipses returned: %v", ellipses)
+				for group, ellipse := range ellipses {
+					t.Logf("Group %s: center=(%.3f, %.3f), axes=(%.3f, %.3f)",
+						group, ellipse.CenterX, ellipse.CenterY, ellipse.MajorAxis, ellipse.MinorAxis)
+				}
 				// Should only have ellipse for group A
 				if len(ellipses) != 1 {
-					t.Errorf("Expected 1 ellipse, got %d", len(ellipses))
+					t.Errorf("Expected 1 ellipse, got %d. Ellipses: %+v", len(ellipses), ellipses)
 				}
 				if _, ok := ellipses["A"]; !ok {
 					t.Error("Missing ellipse for group A")
