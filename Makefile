@@ -52,7 +52,7 @@ WAILS := $(shell which wails 2> /dev/null || echo "$${HOME}/go/bin/wails")
 .DEFAULT_GOAL := all
 
 # Phony targets
-.PHONY: all build cli cli-all build-cross build-darwin-amd64 build-darwin-arm64 build-linux-amd64 build-linux-arm64 build-windows-amd64 build-all gui-dev gui-build gui-run gui-deps test test-verbose test-coverage fmt lint run-pca-iris clean clean-cross install deps help
+.PHONY: all build cli cli-all build-cross build-darwin-amd64 build-darwin-arm64 build-linux-amd64 build-linux-arm64 build-windows-amd64 build-all gui-dev gui-build gui-run gui-deps test test-verbose test-coverage fmt lint run-pca-iris clean clean-cross install deps install-hooks help
 
 ## all: Build the binary and run tests
 all: build test
@@ -208,6 +208,11 @@ deps:
 	$(GOMOD) download
 	$(GOMOD) tidy
 	@echo "Dependencies updated"
+
+## install-hooks: Install git pre-commit hooks
+install-hooks:
+	@echo "Installing git hooks..."
+	@./scripts/install-hooks.sh
 
 ## ci-test: Run tests for CI (excluding desktop)
 ci-test:

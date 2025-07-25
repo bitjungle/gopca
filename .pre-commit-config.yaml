@@ -1,0 +1,62 @@
+# Pre-commit configuration for GoPCA
+# Install with: pip install pre-commit && pre-commit install
+repos:
+  # Go formatting
+  - repo: local
+    hooks:
+      - id: go-fmt
+        name: Go Format
+        entry: bash -c 'go fmt ./...'
+        language: system
+        types: [go]
+        pass_filenames: false
+
+  # Go vet
+  - repo: local
+    hooks:
+      - id: go-vet
+        name: Go Vet
+        entry: bash -c 'go vet ./internal/... ./pkg/... ./cmd/gopca-cli/...'
+        language: system
+        types: [go]
+        pass_filenames: false
+
+  # Go tests
+  - repo: local
+    hooks:
+      - id: go-test
+        name: Go Test
+        entry: bash -c 'go test -race -timeout 5m ./internal/... ./pkg/... ./cmd/gopca-cli/...'
+        language: system
+        types: [go]
+        pass_filenames: false
+
+  # Go mod tidy
+  - repo: local
+    hooks:
+      - id: go-mod-tidy
+        name: Go Mod Tidy
+        entry: bash -c 'go mod tidy && git diff --exit-code go.mod go.sum'
+        language: system
+        pass_filenames: false
+        files: 'go\.(mod|sum)$'
+
+  # Check for TODO/FIXME comments
+  - repo: local
+    hooks:
+      - id: check-todos
+        name: Check TODOs
+        entry: bash -c 'if grep -r "TODO\|FIXME" --include="*.go" internal pkg cmd; then echo "Found TODO/FIXME comments. Please address or create issues."; exit 1; fi || exit 0'
+        language: system
+        pass_filenames: false
+        types: [go]
+
+  # Trailing whitespace
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v4.5.0
+    hooks:
+      - id: trailing-whitespace
+      - id: end-of-file-fixer
+      - id: check-yaml
+      - id: check-added-large-files
+        args: ['--maxkb=1024']
