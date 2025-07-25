@@ -50,6 +50,7 @@ func (p *PCAImpl) Fit(data types.Matrix, config types.PCAConfig) (*types.PCAResu
 	usingNativeMissing := config.Method == "nipals" && config.MissingStrategy == types.MissingNative
 
 	// Preprocessing using the Preprocessor class (skip if using native missing value handling)
+	// Note: For NIPALS with missing values, mean centering is handled within the algorithm
 	if !usingNativeMissing && (config.MeanCenter || config.StandardScale || config.RobustScale || config.ScaleOnly || config.SNV || config.VectorNorm) {
 		// Create preprocessor with the appropriate settings
 		p.preprocessor = NewPreprocessorWithScaleOnly(config.MeanCenter, config.StandardScale, config.RobustScale, config.ScaleOnly, config.SNV, config.VectorNorm)
@@ -329,6 +330,35 @@ func (p *PCAImpl) nipalsAlgorithmWithMissing(X *mat.Dense, nComponents int) (*ma
 	// Working copy of X for deflation
 	Xwork := mat.NewDense(n, m, nil)
 	Xwork.Copy(X)
+
+	// Calculate column means using only non-missing values if mean centering is requested
+	columnMeans := make([]float64, m)
+	if p.config.MeanCenter {
+		for j := 0; j < m; j++ {
+			sum := 0.0
+			count := 0
+			for i := 0; i < n; i++ {
+				val := Xwork.At(i, j)
+				if !math.IsNaN(val) {
+					sum += val
+					count++
+				}
+			}
+			if count > 0 {
+				columnMeans[j] = sum / float64(count)
+			}
+		}
+
+		// Center the data by subtracting column means from non-missing values
+		for i := 0; i < n; i++ {
+			for j := 0; j < m; j++ {
+				val := Xwork.At(i, j)
+				if !math.IsNaN(val) {
+					Xwork.Set(i, j, val-columnMeans[j])
+				}
+			}
+		}
+	}
 
 	// Tolerance for convergence
 	const tolerance = 1e-8
