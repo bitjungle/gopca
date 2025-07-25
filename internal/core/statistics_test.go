@@ -159,14 +159,17 @@ func TestCalculateGroupEllipsesEdgeCases(t *testing.T) {
 	}{
 		{
 			name: "group with too few points",
-			scores: mat.NewDense(5, 2, []float64{
-				1.0, 1.1,
-				1.2, 0.9,
-				3.0, 3.0, // Group B has only 1 point
-				0.8, 1.3,
-				1.1, 1.0,
+			scores: mat.NewDense(6, 2, []float64{
+				// Group A - well-separated points for robust covariance
+				0.0, 0.0,
+				1.0, 0.0,
+				0.0, 1.0,
+				1.0, 1.0,
+				// Group B - only 2 points (< 3 required)
+				5.0, 5.0,
+				5.1, 5.1,
 			}),
-			groups: []string{"A", "A", "B", "A", "A"},
+			groups: []string{"A", "A", "A", "A", "B", "B"},
 			pcX:    0,
 			pcY:    1,
 		},
@@ -195,15 +198,9 @@ func TestCalculateGroupEllipsesEdgeCases(t *testing.T) {
 				if err != nil {
 					t.Errorf("Unexpected error: %v", err)
 				}
-				// Debug: print what we got
-				t.Logf("Ellipses returned: %v", ellipses)
-				for group, ellipse := range ellipses {
-					t.Logf("Group %s: center=(%.3f, %.3f), axes=(%.3f, %.3f)",
-						group, ellipse.CenterX, ellipse.CenterY, ellipse.MajorAxis, ellipse.MinorAxis)
-				}
 				// Should only have ellipse for group A
 				if len(ellipses) != 1 {
-					t.Errorf("Expected 1 ellipse, got %d. Ellipses: %+v", len(ellipses), ellipses)
+					t.Errorf("Expected 1 ellipse, got %d", len(ellipses))
 				}
 				if _, ok := ellipses["A"]; !ok {
 					t.Error("Missing ellipse for group A")
