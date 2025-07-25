@@ -151,7 +151,7 @@ The analysis includes:
 			},
 			&cli.StringFlag{
 				Name:  "missing-strategy",
-				Usage: "How to handle missing values: error, drop, mean, median",
+				Usage: "How to handle missing values: error, drop, mean, median, native (NIPALS only)",
 				Value: "error",
 			},
 
@@ -291,8 +291,13 @@ func validateAnalyzeFlags(c *cli.Context) error {
 
 	// Validate missing strategy
 	missingStrategy := c.String("missing-strategy")
-	if missingStrategy != "error" && missingStrategy != "drop" && missingStrategy != "mean" && missingStrategy != "median" {
-		return fmt.Errorf("missing-strategy must be one of: error, drop, mean, median")
+	if missingStrategy != "error" && missingStrategy != "drop" && missingStrategy != "mean" && missingStrategy != "median" && missingStrategy != "native" {
+		return fmt.Errorf("missing-strategy must be one of: error, drop, mean, median, native")
+	}
+
+	// Validate native missing strategy is only used with NIPALS
+	if missingStrategy == "native" && method != "nipals" {
+		return fmt.Errorf("native missing value handling is only supported with NIPALS method")
 	}
 
 	// Validate kernel parameters if kernel method is selected
@@ -491,6 +496,12 @@ func runAnalyze(c *cli.Context) error {
 		switch missingStrategy {
 		case "error":
 			return fmt.Errorf("missing values found in selected columns - use --missing-strategy to specify handling")
+		case "native":
+			// For native handling, we don't pre-process missing values
+			// The NIPALS algorithm will handle them internally
+			if verbose {
+				fmt.Println("Using NIPALS native missing value handling")
+			}
 		case "drop", "mean", "median":
 			handler := core.NewMissingValueHandler(types.MissingValueStrategy(missingStrategy))
 			cleanData, err := handler.HandleMissingValues(data.Matrix, missingInfo, selectedCols)

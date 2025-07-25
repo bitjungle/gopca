@@ -575,6 +575,7 @@ function AppContent() {
                                             <option value="drop">Drop Rows with Missing Values</option>
                                             <option value="mean">Impute with Column Mean</option>
                                             <option value="median">Impute with Column Median</option>
+                                            <option value="native">Native NIPALS Handling (NIPALS only)</option>
                                         </select>
                                         <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
                                             Choose how to handle missing values (NaN) in your data

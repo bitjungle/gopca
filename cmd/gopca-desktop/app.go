@@ -187,8 +187,18 @@ func (a *App) RunPCA(request PCARequest) (response PCAResponse) {
 		case "error":
 			return PCAResponse{
 				Success: false,
-				Error:   fmt.Sprintf("Missing values detected (%d values). Please select a strategy to handle them: 'drop' to remove rows, or 'mean' to impute with column means.", missingInfo.TotalMissing),
+				Error:   fmt.Sprintf("Missing values detected (%d values). Please select a strategy to handle them: 'drop' to remove rows, 'mean' to impute with column means, or 'native' for NIPALS native handling.", missingInfo.TotalMissing),
 			}
+		case "native":
+			// For native handling with NIPALS, we don't pre-process missing values
+			// Validate that NIPALS method is selected
+			if strings.ToLower(request.Method) != "nipals" {
+				return PCAResponse{
+					Success: false,
+					Error:   "Native missing value handling is only supported with the NIPALS method",
+				}
+			}
+			// Data remains unchanged, NIPALS will handle missing values internally
 		case "drop", "mean", "median":
 			// Create missing value handler
 			strategy := types.MissingValueStrategy(request.MissingStrategy)
