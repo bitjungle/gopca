@@ -1,13 +1,16 @@
 import React, { useState, useRef } from 'react';
 import './App.css';
 import { ParseCSV, RunPCA, LoadIrisDataset, LoadDatasetFile } from "../wailsjs/go/main/App";
-import { DataTable, SelectionTable, ThemeToggle, MatrixIllustration } from './components';
+import { DataTable, SelectionTable, ThemeToggle, MatrixIllustration, HelpWrapper } from './components';
 import { ScoresPlot, ScreePlot, LoadingsPlot, Biplot, CircleOfCorrelations, DiagnosticScatterPlot } from './components/visualizations';
 import { FileData, PCARequest, PCAResponse } from './types';
 import { ThemeProvider } from './contexts/ThemeContext';
+import { HelpProvider, useHelp } from './contexts/HelpContext';
+import { HelpDisplay } from './components/HelpDisplay';
 import logo from './assets/images/GoPCA-logo-1024-transp.png';
 
-function App() {
+function AppContent() {
+    const { currentHelp, currentHelpKey } = useHelp();
     const [fileData, setFileData] = useState<FileData | null>(null);
     const [pcaResponse, setPcaResponse] = useState<PCAResponse | null>(null);
     const [loading, setLoading] = useState(false);
@@ -156,19 +159,25 @@ function App() {
     };
     
     return (
-        <ThemeProvider>
-            <div className="flex flex-col h-screen bg-gray-50 dark:bg-gray-900 text-gray-900 dark:text-white transition-colors duration-200">
-                <header className="sticky top-0 z-50 bg-white dark:bg-gray-800 p-4 shadow-lg backdrop-blur-sm bg-opacity-95 dark:bg-opacity-95">
-                    <div className="flex items-center justify-between max-w-7xl mx-auto">
-                        <img 
-                            src={logo} 
-                            alt="GoPCA - Principal Component Analysis Tool" 
-                            className="h-12 cursor-pointer hover:opacity-90 transition-opacity"
-                            onClick={scrollToTop}
+        <div className="flex flex-col h-screen bg-gray-50 dark:bg-gray-900 text-gray-900 dark:text-white transition-colors duration-200">
+            <header className="sticky top-0 z-50 bg-white dark:bg-gray-800 shadow-lg backdrop-blur-sm bg-opacity-95 dark:bg-opacity-95">
+                <div className="flex items-center justify-between max-w-7xl mx-auto px-4 py-3 h-20">
+                    <img 
+                        src={logo} 
+                        alt="GoPCA - Principal Component Analysis Tool" 
+                        className="h-12 cursor-pointer hover:opacity-90 transition-opacity flex-shrink-0"
+                        onClick={scrollToTop}
+                    />
+                    <div className="flex-1 mx-8 overflow-hidden">
+                        <HelpDisplay 
+                            helpKey={currentHelpKey}
+                            title={currentHelp?.title || ''}
+                            text={currentHelp?.text || ''}
                         />
-                        <ThemeToggle />
                     </div>
-                </header>
+                    <ThemeToggle />
+                </div>
+            </header>
             
             <main ref={mainScrollRef} className="flex-1 overflow-auto p-6">
                 <div className="max-w-7xl mx-auto space-y-6">
@@ -177,7 +186,7 @@ function App() {
                         <h2 className="text-xl font-semibold mb-6">Step 1: Load Data</h2>
                         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-[1fr_2fr_1fr] gap-6">
                             {/* Column 1: File Upload */}
-                            <div className="flex flex-col justify-center">
+                            <HelpWrapper helpKey="data-upload" className="flex flex-col justify-center">
                                 <label className="block text-sm font-medium mb-3">
                                     Upload Your CSV File
                                 </label>
@@ -196,7 +205,7 @@ function App() {
                                 <p className="mt-2 text-xs text-gray-500 dark:text-gray-400">
                                     Accepts CSV files with headers
                                 </p>
-                            </div>
+                            </HelpWrapper>
 
                             {/* Column 2: Matrix Illustration */}
                             <div className="flex items-center justify-center border-0 md:border-x lg:border-x border-gray-200 dark:border-gray-700 px-4 py-6 md:py-0">
@@ -204,7 +213,7 @@ function App() {
                             </div>
 
                             {/* Column 3: Sample Datasets */}
-                            <div className="flex flex-col justify-center md:col-span-2 lg:col-span-1">
+                            <HelpWrapper helpKey="sample-datasets" className="flex flex-col justify-center md:col-span-2 lg:col-span-1">
                                 <label className="block text-sm font-medium mb-3">
                                     Or Try Sample Datasets
                                 </label>
@@ -279,7 +288,7 @@ function App() {
                                         Wine
                                     </button>
                                 </div>
-                            </div>
+                            </HelpWrapper>
                         </div>
                     </div>
                     
@@ -328,7 +337,7 @@ function App() {
                             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
                                 {/* Left Column - Core PCA Configuration */}
                                 <div className="space-y-4">
-                                    <div>
+                                    <HelpWrapper helpKey="num-components">
                                         <label className="block text-sm font-medium mb-2">
                                             Number of Components
                                         </label>
@@ -340,9 +349,9 @@ function App() {
                                             onChange={(e) => setConfig({...config, components: parseInt(e.target.value) || 2})}
                                             className="w-full px-3 py-2 bg-gray-100 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg text-gray-900 dark:text-white"
                                         />
-                                    </div>
+                                    </HelpWrapper>
                                     
-                                    <div>
+                                    <HelpWrapper helpKey="pca-method">
                                         <label className="block text-sm font-medium mb-2">
                                             Method
                                         </label>
@@ -355,9 +364,58 @@ function App() {
                                             <option value="NIPALS">NIPALS</option>
                                             <option value="kernel">Kernel PCA</option>
                                         </select>
-                                    </div>
+                                    </HelpWrapper>
                                     
-                                    {/* Kernel PCA Options - moved to left column */}
+                                    {/* Method-specific information */}
+                                    {config.method === 'SVD' && (
+                                        <div className="p-4 bg-blue-50 dark:bg-blue-900/20 rounded-lg space-y-3">
+                                            <h4 className="font-medium text-sm text-blue-900 dark:text-blue-100">SVD Method</h4>
+                                            <div className="space-y-2 text-sm text-blue-800 dark:text-blue-200">
+                                                <p className="flex items-start">
+                                                    <span className="mr-2">•</span>
+                                                    <span>Gold standard for PCA using Singular Value Decomposition</span>
+                                                </p>
+                                                <p className="flex items-start">
+                                                    <span className="mr-2">•</span>
+                                                    <span>Fast and numerically stable for complete datasets</span>
+                                                </p>
+                                                <p className="flex items-start">
+                                                    <span className="mr-2">•</span>
+                                                    <span>Computes all components simultaneously</span>
+                                                </p>
+                                                <p className="flex items-start">
+                                                    <span className="mr-2">•</span>
+                                                    <span>Best choice for most applications</span>
+                                                </p>
+                                            </div>
+                                        </div>
+                                    )}
+                                    
+                                    {config.method === 'NIPALS' && (
+                                        <div className="p-4 bg-green-50 dark:bg-green-900/20 rounded-lg space-y-3">
+                                            <h4 className="font-medium text-sm text-green-900 dark:text-green-100">NIPALS Method</h4>
+                                            <div className="space-y-2 text-sm text-green-800 dark:text-green-200">
+                                                <p className="flex items-start">
+                                                    <span className="mr-2">•</span>
+                                                    <span>Nonlinear Iterative Partial Least Squares algorithm</span>
+                                                </p>
+                                                <p className="flex items-start">
+                                                    <span className="mr-2">•</span>
+                                                    <span>Handles missing data gracefully</span>
+                                                </p>
+                                                <p className="flex items-start">
+                                                    <span className="mr-2">•</span>
+                                                    <span>Computes components sequentially</span>
+                                                </p>
+                                                <p className="flex items-start">
+                                                    <span className="mr-2">•</span>
+                                                    <span>Ideal for large datasets when only few components needed</span>
+                                                </p>
+                                            </div>
+                                        </div>
+                                    )}
+                                    
+                                    {/* Kernel PCA Options */}
                                     {config.method === 'kernel' && (
                                         <div className="p-4 bg-gray-50 dark:bg-gray-700/50 rounded-lg space-y-4">
                                             <h4 className="font-medium text-sm">Kernel PCA Options</h4>
@@ -431,7 +489,7 @@ function App() {
                                     <h3 className="text-sm font-semibold text-gray-700 dark:text-gray-300">Preprocessing Options</h3>
                                     
                                     {/* Step 1: Row-wise preprocessing */}
-                                    <div className="p-3 bg-gray-50 dark:bg-gray-700/50 rounded-lg">
+                                    <HelpWrapper helpKey="row-preprocessing" className="p-3 bg-gray-50 dark:bg-gray-700/50 rounded-lg">
                                         <label className="block text-sm font-medium mb-2">
                                             Step 1: Row-wise Preprocessing (optional)
                                         </label>
@@ -458,10 +516,10 @@ function App() {
                                         <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
                                             Normalizes each row/sample independently (useful for spectral data)
                                         </p>
-                                    </div>
+                                    </HelpWrapper>
                                     
                                     {/* Step 2: Column-wise preprocessing */}
-                                    <div className="p-3 bg-gray-50 dark:bg-gray-700/50 rounded-lg">
+                                    <HelpWrapper helpKey="column-preprocessing" className="p-3 bg-gray-50 dark:bg-gray-700/50 rounded-lg">
                                         <label className="block text-sm font-medium mb-2">
                                             Step 2: Column-wise Preprocessing
                                         </label>
@@ -501,10 +559,10 @@ function App() {
                                                     : 'Kernel PCA performs centering in kernel space. Consider Variance Scale if features have different scales.'
                                                 : 'Normalizes each column/feature across all samples'}
                                         </p>
-                                    </div>
+                                    </HelpWrapper>
                                     
                                     {/* Missing Data Strategy */}
-                                    <div>
+                                    <HelpWrapper helpKey="missing-strategy">
                                         <label className="block text-sm font-medium mb-2">
                                             Missing Data Strategy
                                         </label>
@@ -521,11 +579,11 @@ function App() {
                                         <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
                                             Choose how to handle missing values (NaN) in your data
                                         </p>
-                                    </div>
+                                    </HelpWrapper>
                                     
                                     {/* Diagnostic Metrics Option */}
                                     {config.method !== 'kernel' && (
-                                        <div>
+                                        <HelpWrapper helpKey="diagnostic-metrics">
                                             <label className="flex items-center gap-2">
                                                 <input
                                                     type="checkbox"
@@ -540,7 +598,7 @@ function App() {
                                             <p className="text-xs text-gray-500 dark:text-gray-400 mt-1 ml-6">
                                                 Enable calculation of Mahalanobis distances, Hotelling's T², and residuals for outlier detection
                                             </p>
-                                        </div>
+                                        </HelpWrapper>
                                     )}
                                 </div>
                             </div>
@@ -611,7 +669,7 @@ function App() {
                                         {/* Group selection for color coding */}
                                         {(selectedPlot === 'scores' || selectedPlot === 'biplot') && fileData?.categoricalColumns && Object.keys(fileData.categoricalColumns).length > 0 && (
                                             <>
-                                                <div className="flex items-center gap-2">
+                                                <HelpWrapper helpKey="group-coloring" className="flex items-center gap-2">
                                                     <label className="text-sm text-gray-600 dark:text-gray-400">Color by:</label>
                                                     <select
                                                         value={selectedGroupColumn || ''}
@@ -625,10 +683,10 @@ function App() {
                                                             </option>
                                                         ))}
                                                     </select>
-                                                </div>
+                                                </HelpWrapper>
                                                 {selectedPlot === 'scores' && selectedGroupColumn && (
                                                     <>
-                                                        <div className="flex items-center gap-2">
+                                                        <HelpWrapper helpKey="confidence-ellipses" className="flex items-center gap-2">
                                                             <label className="text-sm text-gray-600 dark:text-gray-400">
                                                                 <input
                                                                     type="checkbox"
@@ -638,7 +696,7 @@ function App() {
                                                                 />
                                                                 Confidence ellipses
                                                             </label>
-                                                        </div>
+                                                        </HelpWrapper>
                                                         {showEllipses && (
                                                             <div className="flex items-center gap-2">
                                                                 <label className="text-sm text-gray-600 dark:text-gray-400">Level:</label>
@@ -659,7 +717,7 @@ function App() {
                                         )}
                                         {(selectedPlot === 'scores' || selectedPlot === 'biplot' || selectedPlot === 'correlations') && pcaResponse.result.scores[0]?.length > 2 && (
                                             <>
-                                                <div className="flex items-center gap-2">
+                                                <HelpWrapper helpKey="component-selector" className="flex items-center gap-2">
                                                     <label className="text-sm text-gray-600 dark:text-gray-400">X-axis:</label>
                                                     <select
                                                         value={selectedXComponent}
@@ -672,8 +730,8 @@ function App() {
                                                             </option>
                                                         ))}
                                                     </select>
-                                                </div>
-                                                <div className="flex items-center gap-2">
+                                                </HelpWrapper>
+                                                <HelpWrapper helpKey="component-selector" className="flex items-center gap-2">
                                                     <label className="text-sm text-gray-600 dark:text-gray-400">Y-axis:</label>
                                                     <select
                                                         value={selectedYComponent}
@@ -686,7 +744,7 @@ function App() {
                                                             </option>
                                                         ))}
                                                     </select>
-                                                </div>
+                                                </HelpWrapper>
                                             </>
                                         )}
                                         {selectedPlot === 'loadings' && (
@@ -705,18 +763,20 @@ function App() {
                                                 </select>
                                             </div>
                                         )}
-                                        <select
-                                            value={selectedPlot}
-                                            onChange={(e) => setSelectedPlot(e.target.value as 'scores' | 'scree' | 'loadings' | 'biplot' | 'correlations' | 'diagnostics')}
-                                            className="px-3 py-2 bg-gray-100 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg text-gray-900 dark:text-white"
-                                        >
-                                            <option value="scores">Scores Plot</option>
-                                            <option value="scree">Scree Plot</option>
-                                            <option value="loadings">Loadings Plot</option>
-                                            <option value="biplot">Biplot</option>
-                                            <option value="correlations">Circle of Correlations</option>
-                                            <option value="diagnostics">Diagnostics (Mahalanobis vs RSS)</option>
-                                        </select>
+                                        <HelpWrapper helpKey={`${selectedPlot}-plot`}>
+                                            <select
+                                                value={selectedPlot}
+                                                onChange={(e) => setSelectedPlot(e.target.value as 'scores' | 'scree' | 'loadings' | 'biplot' | 'correlations' | 'diagnostics')}
+                                                className="px-3 py-2 bg-gray-100 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg text-gray-900 dark:text-white"
+                                            >
+                                                <option value="scores">Scores Plot</option>
+                                                <option value="scree">Scree Plot</option>
+                                                <option value="loadings">Loadings Plot</option>
+                                                <option value="biplot">Biplot</option>
+                                                <option value="correlations">Circle of Correlations</option>
+                                                <option value="diagnostics">Diagnostics (Mahalanobis vs RSS)</option>
+                                            </select>
+                                        </HelpWrapper>
                                     </div>
                                 </div>
                                 
@@ -789,7 +849,16 @@ function App() {
                     )}
                 </div>
             </main>
-            </div>
+        </div>
+    );
+}
+
+function App() {
+    return (
+        <ThemeProvider>
+            <HelpProvider>
+                <AppContent />
+            </HelpProvider>
         </ThemeProvider>
     );
 }

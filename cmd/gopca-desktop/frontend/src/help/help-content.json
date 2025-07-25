@@ -1,0 +1,223 @@
+{
+  "help": {
+    "data-upload": {
+      "title": "Upload CSV Data",
+      "text": "Select a CSV file with numeric data. First row should contain column headers. Missing values are handled based on your preprocessing settings.",
+      "category": "data-input"
+    },
+    "sample-datasets": {
+      "title": "Sample Datasets",
+      "text": "Try PCA with built-in datasets: Corn NIR (spectroscopy), Iris (classic ML), or Wine (chemometrics).",
+      "category": "data-input"
+    },
+    "num-components": {
+      "title": "Number of Components",
+      "text": "Principal components to extract. Default: min(samples-1, features). Start with 2-3 for visualization.",
+      "category": "configuration"
+    },
+    "pca-method": {
+      "title": "PCA Method",
+      "text": "SVD: Fast, exact for complete data. NIPALS: Handles missing data, iterative. Kernel: Non-linear relationships.",
+      "category": "configuration"
+    },
+    "kernel-type": {
+      "title": "Kernel Type",
+      "text": "RBF: General non-linear patterns. Linear: Standard PCA. Polynomial: Specific degree relationships.",
+      "category": "configuration"
+    },
+    "kernel-gamma": {
+      "title": "Gamma Parameter",
+      "text": "Controls RBF kernel width. Higher values = tighter clusters. Start with 1/n_features.",
+      "category": "configuration"
+    },
+    "kernel-degree": {
+      "title": "Polynomial Degree",
+      "text": "Polynomial kernel degree. Higher = more complex patterns. Usually 2-4.",
+      "category": "configuration"
+    },
+    "kernel-coef0": {
+      "title": "Polynomial Coefficient",
+      "text": "Independent term in polynomial kernel. Usually 0 or 1.",
+      "category": "configuration"
+    },
+    "row-preprocessing": {
+      "title": "Row-wise Preprocessing",
+      "text": "Applied per sample: SNV removes scatter effects, L2 normalizes to unit length.",
+      "category": "preprocessing"
+    },
+    "snv": {
+      "title": "Standard Normal Variate",
+      "text": "Removes multiplicative scatter in spectroscopy. Centers and scales each sample independently.",
+      "category": "preprocessing"
+    },
+    "l2-norm": {
+      "title": "L2 Normalization",
+      "text": "Scales each sample to unit length. Useful when magnitude differences should be ignored.",
+      "category": "preprocessing"
+    },
+    "column-preprocessing": {
+      "title": "Column-wise Preprocessing",
+      "text": "Applied per feature: Mean center (required for PCA), scale for equal feature importance.",
+      "category": "preprocessing"
+    },
+    "mean-center": {
+      "title": "Mean Center Only",
+      "text": "Subtracts column mean. Essential for PCA to find principal axes through data center.",
+      "category": "preprocessing"
+    },
+    "standard-scale": {
+      "title": "Standard Scale",
+      "text": "Centers and divides by std dev. Use when features have different units/scales.",
+      "category": "preprocessing"
+    },
+    "robust-scale": {
+      "title": "Robust Scale",
+      "text": "Uses median/MAD instead of mean/std. Better with outliers.",
+      "category": "preprocessing"
+    },
+    "variance-scale": {
+      "title": "Variance Scale",
+      "text": "Divides by std dev only (no centering). Rarely used, preserves zero baseline.",
+      "category": "preprocessing"
+    },
+    "missing-strategy": {
+      "title": "Missing Data Strategy",
+      "text": "Drop: Remove incomplete rows. Mean: Impute with column average. Iterative: Advanced imputation.",
+      "category": "preprocessing"
+    },
+    "diagnostic-metrics": {
+      "title": "Diagnostic Metrics",
+      "text": "Calculates Hotelling's T² and Q residuals for outlier detection. Adds computation time.",
+      "category": "configuration"
+    },
+    "explained-variance": {
+      "title": "Explained Variance",
+      "text": "Percentage of total data variance captured by each component. Higher = more information retained.",
+      "category": "results"
+    },
+    "scores-plot": {
+      "title": "Scores Plot",
+      "text": "Shows samples in PC space. Similar samples cluster together. Look for groups and outliers.",
+      "category": "visualization"
+    },
+    "scree-plot": {
+      "title": "Scree Plot",
+      "text": "Variance by component. 'Elbow' suggests optimal component count. Aim for 70-90% cumulative.",
+      "category": "visualization"
+    },
+    "loadings-plot": {
+      "title": "Loadings Plot",
+      "text": "Shows feature contributions. Features far from origin contribute most to selected PCs.",
+      "category": "visualization"
+    },
+    "biplot-plot": {
+      "title": "Biplot",
+      "text": "Combines scores and loadings. See sample-feature relationships. Arrows show feature influence.",
+      "category": "visualization"
+    },
+    "correlations-plot": {
+      "title": "Circle of Correlations",
+      "text": "Feature correlations with PCs. Vectors near circle edge = well-represented features.",
+      "category": "visualization"
+    },
+    "biplot": {
+      "title": "Biplot",
+      "text": "Combines scores and loadings. See sample-feature relationships. Arrows show feature influence.",
+      "category": "visualization"
+    },
+    "circle-correlations": {
+      "title": "Circle of Correlations",
+      "text": "Feature correlations with PCs. Vectors near circle edge = well-represented features.",
+      "category": "visualization"
+    },
+    "diagnostics-plot": {
+      "title": "Diagnostics Plot",
+      "text": "T² vs Q residuals. Upper-right points are potential outliers. Requires diagnostic metrics enabled.",
+      "category": "visualization"
+    },
+    "component-selector": {
+      "title": "Component Selection",
+      "text": "Choose which PCs to plot. PC1 usually most important. Try different combinations.",
+      "category": "visualization"
+    },
+    "group-coloring": {
+      "title": "Color by Group",
+      "text": "Color points by categorical column. Reveals group separation in PC space.",
+      "category": "visualization"
+    },
+    "confidence-ellipses": {
+      "title": "Confidence Ellipses",
+      "text": "Statistical regions containing specified % of group points. Assumes normal distribution.",
+      "category": "visualization"
+    },
+    "export-plot": {
+      "title": "Export Plot",
+      "text": "Save as PNG (raster) or SVG (vector). SVG better for publications.",
+      "category": "visualization"
+    },
+    "zoom-controls": {
+      "title": "Zoom Controls",
+      "text": "Zoom in/out, reset view, or fullscreen. Drag to pan when zoomed.",
+      "category": "visualization"
+    },
+    "data-selection": {
+      "title": "Data Selection",
+      "text": "Click rows/columns to exclude from analysis. Useful for outlier investigation.",
+      "category": "interaction"
+    },
+    "theme-toggle": {
+      "title": "Theme Toggle",
+      "text": "Switch between light and dark modes. Preference saved locally.",
+      "category": "interface"
+    },
+    "preprocessing-order": {
+      "title": "Preprocessing Order",
+      "text": "Row-wise (SNV/L2) applied first, then column-wise (centering/scaling). Order matters!",
+      "category": "preprocessing"
+    },
+    "outlier-detection": {
+      "title": "Outlier Detection",
+      "text": "High T²: unusual but follows model. High Q: doesn't fit model. Both high: strong outlier.",
+      "category": "analysis"
+    }
+  },
+  "categories": {
+    "data-input": {
+      "name": "Data Input",
+      "description": "Loading and preparing your data"
+    },
+    "configuration": {
+      "name": "Configuration",
+      "description": "PCA algorithm settings"
+    },
+    "preprocessing": {
+      "name": "Preprocessing",
+      "description": "Data transformation options"
+    },
+    "results": {
+      "name": "Results",
+      "description": "Understanding PCA output"
+    },
+    "visualization": {
+      "name": "Visualization",
+      "description": "Plotting and interpretation"
+    },
+    "interaction": {
+      "name": "Interaction",
+      "description": "Interactive features"
+    },
+    "interface": {
+      "name": "Interface",
+      "description": "UI controls"
+    },
+    "analysis": {
+      "name": "Analysis",
+      "description": "Advanced interpretation"
+    }
+  },
+  "metadata": {
+    "version": "1.0.0",
+    "lastUpdated": "2025-01-25",
+    "application": "GoPCA Desktop"
+  }
+}

@@ -4,10 +4,10 @@ export const MatrixIllustration: React.FC = () => {
   return (
     <div className="flex flex-col items-center justify-center h-full">
       <svg 
-        width="320" 
+        width="340" 
         height="200" 
-        viewBox="0 0 320 200" 
-        className="w-full max-w-[320px] h-auto"
+        viewBox="0 0 340 200" 
+        className="w-full max-w-[340px] h-auto"
       >
         {/* Background grid */}
         <rect x="70" y="40" width="200" height="120" fill="none" stroke="#e5e7eb" strokeWidth="1" className="dark:stroke-gray-600"/>
