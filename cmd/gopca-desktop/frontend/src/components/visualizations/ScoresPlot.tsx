@@ -1,6 +1,6 @@
 import React, { useRef, useState, useCallback, useMemo } from 'react';
-import { ScatterChart, Scatter, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, ReferenceLine, Cell } from 'recharts';
-import { PCAResult } from '../../types';
+import { ComposedChart, Scatter, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, ReferenceLine, Cell } from 'recharts';
+import { PCAResult, EllipseParams } from '../../types';
 import { ExportButton } from '../ExportButton';
 import { PlotControls } from '../PlotControls';
 import { useZoomPan } from '../../hooks/useZoomPan';
@@ -14,6 +14,8 @@ interface ScoresPlotProps {
   yComponent?: number; // 0-based index
   groupColumn?: string | null;
   groupLabels?: string[];
+  groupEllipses?: Record<string, EllipseParams>;
+  showEllipses?: boolean;
 }
 
 export const ScoresPlot: React.FC<ScoresPlotProps> = ({ 
@@ -22,13 +24,15 @@ export const ScoresPlot: React.FC<ScoresPlotProps> = ({
   xComponent = 0, 
   yComponent = 1,
   groupColumn,
-  groupLabels
+  groupLabels,
+  groupEllipses,
+  showEllipses = false
 }) => {
-  const chartRef = useRef<HTMLDivElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
   const fullscreenRef = useRef<HTMLDivElement>(null);
   
   const [isFullscreen, setIsFullscreen] = useState(false);
+  const [containerSize, setContainerSize] = useState({ width: 0, height: 0 });
   const chartTheme = useChartTheme();
   
   // Create color map for groups
@@ -60,6 +64,32 @@ export const ScoresPlot: React.FC<ScoresPlotProps> = ({
       color: group && groupColorMap ? groupColorMap.get(group) : '#3B82F6'
     };
   }).filter(point => point !== null);
+  
+  // Generate ellipse path points for Line rendering
+  const generateEllipsePoints = useCallback((ellipse: EllipseParams) => {
+    const { centerX, centerY, majorAxis, minorAxis, angle } = ellipse;
+    const points = [];
+    const steps = 50;
+    
+    for (let i = 0; i <= steps; i++) {
+      const t = (i / steps) * 2 * Math.PI;
+      // Ellipse in local coordinates
+      const x = majorAxis * Math.cos(t);
+      const y = minorAxis * Math.sin(t);
+      
+      // Apply rotation
+      const rotatedX = x * Math.cos(angle) - y * Math.sin(angle);
+      const rotatedY = x * Math.sin(angle) + y * Math.cos(angle);
+      
+      // Translate to center
+      points.push({
+        x: centerX + rotatedX,
+        y: centerY + rotatedY
+      });
+    }
+    
+    return points;
+  }, []);
 
   // Get variance percentages for axis labels
   const xVariance = pcaResult.explained_variance[xComponent]?.toFixed(1) || '0';
@@ -135,6 +165,26 @@ export const ScoresPlot: React.FC<ScoresPlotProps> = ({
       document.removeEventListener('webkitfullscreenchange', handleFullscreenChange);
     };
   }, []);
+  
+  // Update container size on resize
+  React.useEffect(() => {
+    if (!containerRef.current) return;
+    
+    const resizeObserver = new ResizeObserver((entries) => {
+      for (const entry of entries) {
+        setContainerSize({
+          width: entry.contentRect.width,
+          height: entry.contentRect.height
+        });
+      }
+    });
+    
+    resizeObserver.observe(containerRef.current);
+    
+    return () => {
+      resizeObserver.disconnect();
+    };
+  }, []);
 
   // Handle case where there's no data
   if (data.length === 0) {
@@ -186,15 +236,71 @@ export const ScoresPlot: React.FC<ScoresPlotProps> = ({
       </div>
       <div 
         ref={containerRef} 
-        className={`w-full ${isZoomed ? (isPanning ? 'cursor-grabbing' : 'cursor-grab') : ''}`}
+        className={`w-full relative ${isZoomed ? (isPanning ? 'cursor-grabbing' : 'cursor-grab') : ''}`}
         style={{ height: isFullscreen ? 'calc(100vh - 80px)' : 'calc(100% - 40px)' }}
         onMouseDown={handlePanStart}
         onMouseMove={handlePanMove}
         onMouseUp={handlePanEnd}
         onMouseLeave={handlePanEnd}
       >
+        {/* SVG Overlay for confidence ellipses */}
+        {showEllipses && groupEllipses && groupColorMap && (
+          <svg 
+            className="absolute inset-0 pointer-events-none" 
+            style={{ width: '100%', height: '100%' }}
+          >
+            {Object.entries(groupEllipses).map(([group, ellipse]) => {
+              const color = groupColorMap.get(group) || '#888888';
+              const points = generateEllipsePoints(ellipse);
+              
+              // Calculate scale based on current domain and chart dimensions
+              const chartMargins = { top: 20, right: 20, bottom: 60, left: 80 };
+              const currentXDomain = zoomDomain.x || defaultXDomain;
+              const currentYDomain = zoomDomain.y || defaultYDomain;
+              
+              // Convert data coordinates to pixel coordinates
+              const xScale = (value: number) => {
+                const range = currentXDomain[1] - currentXDomain[0];
+                const ratio = (value - currentXDomain[0]) / range;
+                // Account for margins
+                const plotWidth = containerSize.width - chartMargins.left - chartMargins.right;
+                return chartMargins.left + ratio * plotWidth;
+              };
+              
+              const yScale = (value: number) => {
+                const range = currentYDomain[1] - currentYDomain[0];
+                const ratio = (value - currentYDomain[0]) / range;
+                // Y is inverted in SVG, account for margins
+                const plotHeight = containerSize.height - chartMargins.top - chartMargins.bottom;
+                return chartMargins.top + plotHeight - ratio * plotHeight;
+              };
+              
+              // Convert points to SVG path
+              const pathData = points
+                .map((point, index) => {
+                  const x = xScale(point.x);
+                  const y = yScale(point.y);
+                  return index === 0 ? `M ${x} ${y}` : `L ${x} ${y}`;
+                })
+                .join(' ') + ' Z';
+              
+              return (
+                <path
+                  key={`ellipse-${group}`}
+                  d={pathData}
+                  fill={color}
+                  fillOpacity={0.1}
+                  stroke={color}
+                  strokeWidth={2}
+                  strokeOpacity={0.8}
+                  strokeDasharray="5,5"
+                />
+              );
+            })}
+          </svg>
+        )}
         <ResponsiveContainer width="100%" height="100%">
-        <ScatterChart
+        <ComposedChart
           data={data}
           margin={{ top: 20, right: 20, bottom: 60, left: 80 }}
         >
@@ -250,7 +356,7 @@ export const ScoresPlot: React.FC<ScoresPlotProps> = ({
             }}
           />
           <Scatter 
-            name="Scores" 
+            name="Scores"
             fill="#3B82F6"
             fillOpacity={0.8}
             strokeWidth={1}
@@ -262,7 +368,7 @@ export const ScoresPlot: React.FC<ScoresPlotProps> = ({
               ))
             ) : null}
           </Scatter>
-        </ScatterChart>
+        </ComposedChart>
         </ResponsiveContainer>
       </div>
     </div>

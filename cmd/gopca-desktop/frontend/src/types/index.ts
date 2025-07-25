@@ -29,6 +29,9 @@ export interface PCARequest {
   kernelGamma?: number;
   kernelDegree?: number;
   kernelCoef0?: number;
+  // Grouping parameters for confidence ellipses
+  groupColumn?: string;
+  groupLabels?: string[];
 }
 
 export interface SampleMetrics {
@@ -70,9 +73,21 @@ export interface PCAMetrics {
   };
 }
 
+export interface EllipseParams {
+  centerX: number;
+  centerY: number;
+  majorAxis: number;
+  minorAxis: number;
+  angle: number;
+  confidenceLevel: number;
+}
+
 export interface PCAResponse {
   success: boolean;
   error?: string;
   result?: PCAResult;
   info?: string;
+  groupEllipses90?: Record<string, EllipseParams>;
+  groupEllipses95?: Record<string, EllipseParams>;
+  groupEllipses99?: Record<string, EllipseParams>;
 }
