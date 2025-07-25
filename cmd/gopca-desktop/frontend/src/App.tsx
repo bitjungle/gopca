@@ -669,7 +669,7 @@ function AppContent() {
                                         {/* Group selection for color coding */}
                                         {(selectedPlot === 'scores' || selectedPlot === 'biplot') && fileData?.categoricalColumns && Object.keys(fileData.categoricalColumns).length > 0 && (
                                             <>
-                                                <div className="flex items-center gap-2">
+                                                <HelpWrapper helpKey="group-coloring" className="flex items-center gap-2">
                                                     <label className="text-sm text-gray-600 dark:text-gray-400">Color by:</label>
                                                     <select
                                                         value={selectedGroupColumn || ''}
@@ -683,10 +683,10 @@ function AppContent() {
                                                             </option>
                                                         ))}
                                                     </select>
-                                                </div>
+                                                </HelpWrapper>
                                                 {selectedPlot === 'scores' && selectedGroupColumn && (
                                                     <>
-                                                        <div className="flex items-center gap-2">
+                                                        <HelpWrapper helpKey="confidence-ellipses" className="flex items-center gap-2">
                                                             <label className="text-sm text-gray-600 dark:text-gray-400">
                                                                 <input
                                                                     type="checkbox"
@@ -696,7 +696,7 @@ function AppContent() {
                                                                 />
                                                                 Confidence ellipses
                                                             </label>
-                                                        </div>
+                                                        </HelpWrapper>
                                                         {showEllipses && (
                                                             <div className="flex items-center gap-2">
                                                                 <label className="text-sm text-gray-600 dark:text-gray-400">Level:</label>
@@ -717,7 +717,7 @@ function AppContent() {
                                         )}
                                         {(selectedPlot === 'scores' || selectedPlot === 'biplot' || selectedPlot === 'correlations') && pcaResponse.result.scores[0]?.length > 2 && (
                                             <>
-                                                <div className="flex items-center gap-2">
+                                                <HelpWrapper helpKey="component-selector" className="flex items-center gap-2">
                                                     <label className="text-sm text-gray-600 dark:text-gray-400">X-axis:</label>
                                                     <select
                                                         value={selectedXComponent}
@@ -730,8 +730,8 @@ function AppContent() {
                                                             </option>
                                                         ))}
                                                     </select>
-                                                </div>
-                                                <div className="flex items-center gap-2">
+                                                </HelpWrapper>
+                                                <HelpWrapper helpKey="component-selector" className="flex items-center gap-2">
                                                     <label className="text-sm text-gray-600 dark:text-gray-400">Y-axis:</label>
                                                     <select
                                                         value={selectedYComponent}
@@ -744,7 +744,7 @@ function AppContent() {
                                                             </option>
                                                         ))}
                                                     </select>
-                                                </div>
+                                                </HelpWrapper>
                                             </>
                                         )}
                                         {selectedPlot === 'loadings' && (
@@ -763,18 +763,20 @@ function AppContent() {
                                                 </select>
                                             </div>
                                         )}
-                                        <select
-                                            value={selectedPlot}
-                                            onChange={(e) => setSelectedPlot(e.target.value as 'scores' | 'scree' | 'loadings' | 'biplot' | 'correlations' | 'diagnostics')}
-                                            className="px-3 py-2 bg-gray-100 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg text-gray-900 dark:text-white"
-                                        >
-                                            <option value="scores">Scores Plot</option>
-                                            <option value="scree">Scree Plot</option>
-                                            <option value="loadings">Loadings Plot</option>
-                                            <option value="biplot">Biplot</option>
-                                            <option value="correlations">Circle of Correlations</option>
-                                            <option value="diagnostics">Diagnostics (Mahalanobis vs RSS)</option>
-                                        </select>
+                                        <HelpWrapper helpKey={`${selectedPlot}-plot`}>
+                                            <select
+                                                value={selectedPlot}
+                                                onChange={(e) => setSelectedPlot(e.target.value as 'scores' | 'scree' | 'loadings' | 'biplot' | 'correlations' | 'diagnostics')}
+                                                className="px-3 py-2 bg-gray-100 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg text-gray-900 dark:text-white"
+                                            >
+                                                <option value="scores">Scores Plot</option>
+                                                <option value="scree">Scree Plot</option>
+                                                <option value="loadings">Loadings Plot</option>
+                                                <option value="biplot">Biplot</option>
+                                                <option value="correlations">Circle of Correlations</option>
+                                                <option value="diagnostics">Diagnostics (Mahalanobis vs RSS)</option>
+                                            </select>
+                                        </HelpWrapper>
                                     </div>
                                 </div>
                                 
