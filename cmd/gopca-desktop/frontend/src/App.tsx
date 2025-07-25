@@ -22,6 +22,8 @@ function App() {
     const [selectedYComponent, setSelectedYComponent] = useState(1);
     const [selectedLoadingComponent, setSelectedLoadingComponent] = useState(0);
     const [selectedGroupColumn, setSelectedGroupColumn] = useState<string | null>(null);
+    const [showEllipses, setShowEllipses] = useState(false);
+    const [confidenceLevel, setConfidenceLevel] = useState<0.90 | 0.95 | 0.99>(0.95);
     
     // Refs for smooth scrolling
     const pcaErrorRef = useRef<HTMLDivElement>(null);
@@ -43,7 +45,8 @@ function App() {
         kernelType: 'rbf',
         kernelGamma: 1.0,
         kernelDegree: 3,
-        kernelCoef0: 0.0
+        kernelCoef0: 0.0,
+        // Confidence ellipse parameters
     });
     
     const handleFileUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
@@ -111,7 +114,12 @@ function App() {
                 rowNames: fileData.rowNames,
                 ...config,
                 excludedRows,
-                excludedColumns
+                excludedColumns,
+                // Add group information if a group column is selected
+                ...(selectedGroupColumn && fileData.categoricalColumns && {
+                    groupColumn: selectedGroupColumn,
+                    groupLabels: fileData.categoricalColumns[selectedGroupColumn]
+                })
             };
             const result = await RunPCA(request);
             if (result.success) {
@@ -597,21 +605,52 @@ function App() {
                                     <div className="flex items-center gap-4">
                                         {/* Group selection for color coding */}
                                         {(selectedPlot === 'scores' || selectedPlot === 'biplot') && fileData?.categoricalColumns && Object.keys(fileData.categoricalColumns).length > 0 && (
-                                            <div className="flex items-center gap-2">
-                                                <label className="text-sm text-gray-600 dark:text-gray-400">Color by:</label>
-                                                <select
-                                                    value={selectedGroupColumn || ''}
-                                                    onChange={(e) => setSelectedGroupColumn(e.target.value || null)}
-                                                    className="px-2 py-1 bg-gray-100 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded text-sm text-gray-900 dark:text-white"
-                                                >
-                                                    <option value="">None</option>
-                                                    {Object.keys(fileData.categoricalColumns).map((colName) => (
-                                                        <option key={colName} value={colName}>
-                                                            {colName}
-                                                        </option>
-                                                    ))}
-                                                </select>
-                                            </div>
+                                            <>
+                                                <div className="flex items-center gap-2">
+                                                    <label className="text-sm text-gray-600 dark:text-gray-400">Color by:</label>
+                                                    <select
+                                                        value={selectedGroupColumn || ''}
+                                                        onChange={(e) => setSelectedGroupColumn(e.target.value || null)}
+                                                        className="px-2 py-1 bg-gray-100 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded text-sm text-gray-900 dark:text-white"
+                                                    >
+                                                        <option value="">None</option>
+                                                        {Object.keys(fileData.categoricalColumns).map((colName) => (
+                                                            <option key={colName} value={colName}>
+                                                                {colName}
+                                                            </option>
+                                                        ))}
+                                                    </select>
+                                                </div>
+                                                {selectedPlot === 'scores' && selectedGroupColumn && (
+                                                    <>
+                                                        <div className="flex items-center gap-2">
+                                                            <label className="text-sm text-gray-600 dark:text-gray-400">
+                                                                <input
+                                                                    type="checkbox"
+                                                                    checked={showEllipses}
+                                                                    onChange={(e) => setShowEllipses(e.target.checked)}
+                                                                    className="mr-1"
+                                                                />
+                                                                Confidence ellipses
+                                                            </label>
+                                                        </div>
+                                                        {showEllipses && (
+                                                            <div className="flex items-center gap-2">
+                                                                <label className="text-sm text-gray-600 dark:text-gray-400">Level:</label>
+                                                                <select
+                                                                    value={confidenceLevel}
+                                                                    onChange={(e) => setConfidenceLevel(parseFloat(e.target.value) as 0.90 | 0.95 | 0.99)}
+                                                                    className="px-2 py-1 bg-gray-100 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded text-sm text-gray-900 dark:text-white"
+                                                                >
+                                                                    <option value="0.90">90%</option>
+                                                                    <option value="0.95">95%</option>
+                                                                    <option value="0.99">99%</option>
+                                                                </select>
+                                                            </div>
+                                                        )}
+                                                    </>
+                                                )}
+                                            </>
                                         )}
                                         {(selectedPlot === 'scores' || selectedPlot === 'biplot' || selectedPlot === 'correlations') && pcaResponse.result.scores[0]?.length > 2 && (
                                             <>
@@ -685,6 +724,12 @@ function App() {
                                             yComponent={selectedYComponent}
                                             groupColumn={selectedGroupColumn}
                                             groupLabels={selectedGroupColumn && fileData?.categoricalColumns ? fileData.categoricalColumns[selectedGroupColumn] : undefined}
+                                            groupEllipses={
+                                                confidenceLevel === 0.90 ? pcaResponse.groupEllipses90 :
+                                                confidenceLevel === 0.95 ? pcaResponse.groupEllipses95 :
+                                                pcaResponse.groupEllipses99
+                                            }
+                                            showEllipses={showEllipses && !!selectedGroupColumn}
                                         />
                                     ) : selectedPlot === 'scree' ? (
                                         <ScreePlot

@@ -15,6 +15,7 @@ import (
 	"github.com/bitjungle/gopca/internal/utils"
 	"github.com/bitjungle/gopca/pkg/types"
 	"github.com/wailsapp/wails/v2/pkg/runtime"
+	"gonum.org/v1/gonum/mat"
 )
 
 // App struct
@@ -69,14 +70,30 @@ type PCARequest struct {
 	KernelGamma  float64 `json:"kernelGamma,omitempty"`
 	KernelDegree int     `json:"kernelDegree,omitempty"`
 	KernelCoef0  float64 `json:"kernelCoef0,omitempty"`
+	// Grouping parameters for confidence ellipses
+	GroupColumn      string   `json:"groupColumn,omitempty"`
+	GroupLabels      []string `json:"groupLabels,omitempty"`
+}
+
+// EllipseParams represents confidence ellipse parameters for a group
+type EllipseParams struct {
+	CenterX         float64 `json:"centerX"`
+	CenterY         float64 `json:"centerY"`
+	MajorAxis       float64 `json:"majorAxis"`
+	MinorAxis       float64 `json:"minorAxis"`
+	Angle           float64 `json:"angle"`
+	ConfidenceLevel float64 `json:"confidenceLevel"`
 }
 
 // PCAResponse represents the PCA analysis results
 type PCAResponse struct {
-	Success bool             `json:"success"`
-	Error   string           `json:"error,omitempty"`
-	Result  *types.PCAResult `json:"result,omitempty"`
-	Info    string           `json:"info,omitempty"`
+	Success         bool                      `json:"success"`
+	Error           string                    `json:"error,omitempty"`
+	Result          *types.PCAResult          `json:"result,omitempty"`
+	Info            string                    `json:"info,omitempty"`
+	GroupEllipses90 map[string]EllipseParams  `json:"groupEllipses90,omitempty"`
+	GroupEllipses95 map[string]EllipseParams  `json:"groupEllipses95,omitempty"`
+	GroupEllipses99 map[string]EllipseParams  `json:"groupEllipses99,omitempty"`
 }
 
 // RunPCA performs PCA analysis on the provided data
@@ -127,6 +144,17 @@ func (a *App) RunPCA(request PCARequest) (response PCAResponse) {
 			}
 		}
 		dataToAnalyze = filteredData
+
+		// Filter group labels if rows are excluded
+		if len(request.ExcludedRows) > 0 && len(request.GroupLabels) > 0 {
+			newGroupLabels := make([]string, 0)
+			for i := 0; i < len(request.GroupLabels); i++ {
+				if !contains(request.ExcludedRows, i) {
+					newGroupLabels = append(newGroupLabels, request.GroupLabels[i])
+				}
+			}
+			request.GroupLabels = newGroupLabels
+		}
 
 		// Note: We don't need to filter headers and row names for PCA computation
 		// The frontend handles the display of selected data
@@ -229,6 +257,17 @@ func (a *App) RunPCA(request PCARequest) (response PCAResponse) {
 					}
 				}
 				request.RowNames = newRowNames
+
+				// Also filter group labels if provided
+				if len(request.GroupLabels) > 0 {
+					newGroupLabels := []string{}
+					for i := 0; i < len(request.GroupLabels); i++ {
+						if keepRows[i] {
+							newGroupLabels = append(newGroupLabels, request.GroupLabels[i])
+						}
+					}
+					request.GroupLabels = newGroupLabels
+				}
 			}
 		default:
 			return PCAResponse{
@@ -346,10 +385,54 @@ func (a *App) RunPCA(request PCARequest) (response PCAResponse) {
 		}
 	}
 
+	// Calculate confidence ellipses for all confidence levels if groups are provided
+	var groupEllipses90, groupEllipses95, groupEllipses99 map[string]EllipseParams
+	if len(request.GroupLabels) > 0 && len(result.Scores) > 0 {
+		// Convert scores to matrix once
+		scoresMatrix := mat.NewDense(len(result.Scores), len(result.Scores[0]), nil)
+		for i, row := range result.Scores {
+			for j, val := range row {
+				scoresMatrix.Set(i, j, val)
+			}
+		}
+
+		// Calculate ellipses for all three confidence levels (default to PC1 vs PC2)
+		confidenceLevels := []float64{0.90, 0.95, 0.99}
+		for _, confidenceLevel := range confidenceLevels {
+			coreEllipses, err := core.CalculateGroupEllipses(scoresMatrix, request.GroupLabels, 0, 1, confidenceLevel)
+			if err == nil && len(coreEllipses) > 0 {
+				ellipses := make(map[string]EllipseParams)
+				for group, ellipse := range coreEllipses {
+					ellipses[group] = EllipseParams{
+						CenterX:         ellipse.CenterX,
+						CenterY:         ellipse.CenterY,
+						MajorAxis:       ellipse.MajorAxis,
+						MinorAxis:       ellipse.MinorAxis,
+						Angle:           ellipse.Angle,
+						ConfidenceLevel: ellipse.ConfidenceLevel,
+					}
+				}
+				
+				// Assign to appropriate variable
+				switch confidenceLevel {
+				case 0.90:
+					groupEllipses90 = ellipses
+				case 0.95:
+					groupEllipses95 = ellipses
+				case 0.99:
+					groupEllipses99 = ellipses
+				}
+			}
+		}
+	}
+
 	return PCAResponse{
-		Success: true,
-		Result:  result,
-		Info:    infoMsg,
+		Success:         true,
+		Result:          result,
+		Info:            infoMsg,
+		GroupEllipses90: groupEllipses90,
+		GroupEllipses95: groupEllipses95,
+		GroupEllipses99: groupEllipses99,
 	}
 }
 
