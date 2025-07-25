@@ -440,7 +440,7 @@ function AppContent() {
                                     <h3 className="text-sm font-semibold text-gray-700 dark:text-gray-300">Preprocessing Options</h3>
                                     
                                     {/* Step 1: Row-wise preprocessing */}
-                                    <div className="p-3 bg-gray-50 dark:bg-gray-700/50 rounded-lg">
+                                    <HelpWrapper helpKey="row-preprocessing" className="p-3 bg-gray-50 dark:bg-gray-700/50 rounded-lg">
                                         <label className="block text-sm font-medium mb-2">
                                             Step 1: Row-wise Preprocessing (optional)
                                         </label>
@@ -467,10 +467,10 @@ function AppContent() {
                                         <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
                                             Normalizes each row/sample independently (useful for spectral data)
                                         </p>
-                                    </div>
+                                    </HelpWrapper>
                                     
                                     {/* Step 2: Column-wise preprocessing */}
-                                    <div className="p-3 bg-gray-50 dark:bg-gray-700/50 rounded-lg">
+                                    <HelpWrapper helpKey="column-preprocessing" className="p-3 bg-gray-50 dark:bg-gray-700/50 rounded-lg">
                                         <label className="block text-sm font-medium mb-2">
                                             Step 2: Column-wise Preprocessing
                                         </label>
@@ -510,10 +510,10 @@ function AppContent() {
                                                     : 'Kernel PCA performs centering in kernel space. Consider Variance Scale if features have different scales.'
                                                 : 'Normalizes each column/feature across all samples'}
                                         </p>
-                                    </div>
+                                    </HelpWrapper>
                                     
                                     {/* Missing Data Strategy */}
-                                    <div>
+                                    <HelpWrapper helpKey="missing-strategy">
                                         <label className="block text-sm font-medium mb-2">
                                             Missing Data Strategy
                                         </label>
@@ -530,11 +530,11 @@ function AppContent() {
                                         <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
                                             Choose how to handle missing values (NaN) in your data
                                         </p>
-                                    </div>
+                                    </HelpWrapper>
                                     
                                     {/* Diagnostic Metrics Option */}
                                     {config.method !== 'kernel' && (
-                                        <div>
+                                        <HelpWrapper helpKey="diagnostic-metrics">
                                             <label className="flex items-center gap-2">
                                                 <input
                                                     type="checkbox"
@@ -549,7 +549,7 @@ function AppContent() {
                                             <p className="text-xs text-gray-500 dark:text-gray-400 mt-1 ml-6">
                                                 Enable calculation of Mahalanobis distances, Hotelling's T², and residuals for outlier detection
                                             </p>
-                                        </div>
+                                        </HelpWrapper>
                                     )}
                                 </div>
                             </div>
