@@ -160,15 +160,15 @@ function AppContent() {
     
     return (
         <div className="flex flex-col h-screen bg-gray-50 dark:bg-gray-900 text-gray-900 dark:text-white transition-colors duration-200">
-            <header className="sticky top-0 z-50 bg-white dark:bg-gray-800 p-4 shadow-lg backdrop-blur-sm bg-opacity-95 dark:bg-opacity-95">
-                <div className="flex items-center justify-between max-w-7xl mx-auto">
+            <header className="sticky top-0 z-50 bg-white dark:bg-gray-800 shadow-lg backdrop-blur-sm bg-opacity-95 dark:bg-opacity-95">
+                <div className="flex items-center justify-between max-w-7xl mx-auto px-4 py-3 h-20">
                     <img 
                         src={logo} 
                         alt="GoPCA - Principal Component Analysis Tool" 
-                        className="h-12 cursor-pointer hover:opacity-90 transition-opacity"
+                        className="h-12 cursor-pointer hover:opacity-90 transition-opacity flex-shrink-0"
                         onClick={scrollToTop}
                     />
-                    <div className="flex-1 mx-8">
+                    <div className="flex-1 mx-8 overflow-hidden">
                         <HelpDisplay 
                             helpKey={currentHelpKey}
                             title={currentHelp?.title || ''}
