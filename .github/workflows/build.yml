@@ -5,6 +5,7 @@ on:
     branches: [ main ]
   pull_request:
     branches: [ main ]
+  workflow_dispatch:  # Allow manual triggering
 
 env:
   GO_VERSION: '1.24'
@@ -14,6 +15,7 @@ jobs:
     name: Test
     runs-on: ${{ matrix.os }}
     strategy:
+      fail-fast: false  # Continue running other jobs even if one fails
       matrix:
         os: [ubuntu-latest, macos-latest, windows-latest]
     
@@ -45,11 +47,13 @@ jobs:
     - name: Run tests
       run: |
         if [ "$RUNNER_OS" == "Windows" ]; then
-          go test -v ./internal/... ./pkg/... ./cmd/gopca-cli/...
+          go test -v -race -timeout 10m ./internal/... ./pkg/... ./cmd/gopca-cli/...
         else
           make ci-test
         fi
       shell: bash
+      env:
+        GOPCA_TEST_TIMEOUT: 10m
     
     - name: Run linter
       run: |
@@ -79,6 +83,14 @@ jobs:
         echo ""
         echo "Running go vet..."
         go vet ./internal/... ./pkg/... ./cmd/gopca-cli/...
+        
+        echo ""
+        echo "Checking for inefficient assignments..."
+        if command -v ineffassign &> /dev/null; then
+          ineffassign ./...
+        else
+          echo "ineffassign not found, skipping"
+        fi
       shell: bash
 
   build-cli:
@@ -122,6 +134,7 @@ jobs:
     name: Build Desktop App
     needs: test
     strategy:
+      fail-fast: false  # Continue building other platforms even if one fails
       matrix:
         include:
           - os: ubuntu-latest
