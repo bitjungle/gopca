@@ -154,15 +154,17 @@ export const LoadingsPlot: React.FC<LoadingsPlotProps> = ({
               <span className="text-xs text-yellow-500">(manual)</span>
             )}
           </div>
-          <PlotControls 
-            onResetView={handleResetView}
-            onToggleFullscreen={handleToggleFullscreen}
-            isFullscreen={isFullscreen}
-          />
-          <ExportButton 
-            chartRef={chartRef} 
-            fileName={`loadings-plot-${componentLabel}`}
-          />
+          <div className="flex items-center gap-2">
+            <PlotControls 
+              onResetView={handleResetView}
+              onToggleFullscreen={handleToggleFullscreen}
+              isFullscreen={isFullscreen}
+            />
+            <ExportButton 
+              chartRef={chartRef} 
+              fileName={`loadings-plot-${componentLabel}`}
+            />
+          </div>
         </div>
       </div>
 
