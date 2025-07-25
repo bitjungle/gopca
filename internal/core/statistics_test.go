@@ -159,14 +159,17 @@ func TestCalculateGroupEllipsesEdgeCases(t *testing.T) {
 	}{
 		{
 			name: "group with too few points",
-			scores: mat.NewDense(5, 2, []float64{
-				1.0, 1.1,
-				1.2, 0.9,
-				3.0, 3.0, // Group B has only 1 point
-				0.8, 1.3,
-				1.1, 1.0,
+			scores: mat.NewDense(6, 2, []float64{
+				// Group A - well-separated points for robust covariance
+				0.0, 0.0,
+				1.0, 0.0,
+				0.0, 1.0,
+				1.0, 1.0,
+				// Group B - only 2 points (< 3 required)
+				5.0, 5.0,
+				5.1, 5.1,
 			}),
-			groups: []string{"A", "A", "B", "A", "A"},
+			groups: []string{"A", "A", "A", "A", "B", "B"},
 			pcX:    0,
 			pcY:    1,
 		},

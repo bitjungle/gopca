@@ -71,8 +71,8 @@ type PCARequest struct {
 	KernelDegree int     `json:"kernelDegree,omitempty"`
 	KernelCoef0  float64 `json:"kernelCoef0,omitempty"`
 	// Grouping parameters for confidence ellipses
-	GroupColumn      string   `json:"groupColumn,omitempty"`
-	GroupLabels      []string `json:"groupLabels,omitempty"`
+	GroupColumn string   `json:"groupColumn,omitempty"`
+	GroupLabels []string `json:"groupLabels,omitempty"`
 }
 
 // EllipseParams represents confidence ellipse parameters for a group
@@ -87,13 +87,13 @@ type EllipseParams struct {
 
 // PCAResponse represents the PCA analysis results
 type PCAResponse struct {
-	Success         bool                      `json:"success"`
-	Error           string                    `json:"error,omitempty"`
-	Result          *types.PCAResult          `json:"result,omitempty"`
-	Info            string                    `json:"info,omitempty"`
-	GroupEllipses90 map[string]EllipseParams  `json:"groupEllipses90,omitempty"`
-	GroupEllipses95 map[string]EllipseParams  `json:"groupEllipses95,omitempty"`
-	GroupEllipses99 map[string]EllipseParams  `json:"groupEllipses99,omitempty"`
+	Success         bool                     `json:"success"`
+	Error           string                   `json:"error,omitempty"`
+	Result          *types.PCAResult         `json:"result,omitempty"`
+	Info            string                   `json:"info,omitempty"`
+	GroupEllipses90 map[string]EllipseParams `json:"groupEllipses90,omitempty"`
+	GroupEllipses95 map[string]EllipseParams `json:"groupEllipses95,omitempty"`
+	GroupEllipses99 map[string]EllipseParams `json:"groupEllipses99,omitempty"`
 }
 
 // RunPCA performs PCA analysis on the provided data
@@ -412,7 +412,7 @@ func (a *App) RunPCA(request PCARequest) (response PCAResponse) {
 						ConfidenceLevel: ellipse.ConfidenceLevel,
 					}
 				}
-				
+
 				// Assign to appropriate variable
 				switch confidenceLevel {
 				case 0.90:

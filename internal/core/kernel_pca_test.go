@@ -327,12 +327,15 @@ func TestNewPCAEngineForMethod(t *testing.T) {
 		t.Run(tt.method, func(t *testing.T) {
 			engine := NewPCAEngineForMethod(tt.method)
 
-			// Try to fit with kernel-specific config
+			// Try to fit with appropriate config
 			config := types.PCAConfig{
-				Components:  2,
-				Method:      "kernel",
-				KernelType:  "rbf",
-				KernelGamma: 1.0,
+				Components: 2,
+				Method:     tt.method,
+			}
+
+			if tt.expectKernel {
+				config.KernelType = "rbf"
+				config.KernelGamma = 1.0
 			}
 
 			data := generateLinearData()
