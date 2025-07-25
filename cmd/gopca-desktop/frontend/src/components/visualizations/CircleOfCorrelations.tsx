@@ -1,6 +1,7 @@
-import React, { useRef } from 'react';
+import React, { useRef, useState, useCallback } from 'react';
 import { PCAResult } from '../../types';
 import { ExportButton } from '../ExportButton';
+import { PlotControls } from '../PlotControls';
 import { useChartTheme } from '../../hooks/useChartTheme';
 
 interface CircleOfCorrelationsProps {
@@ -17,6 +18,8 @@ export const CircleOfCorrelations: React.FC<CircleOfCorrelationsProps> = ({
   threshold = 0.3
 }) => {
   const chartRef = useRef<HTMLDivElement>(null);
+  const fullscreenRef = useRef<HTMLDivElement>(null);
+  const [isFullscreen, setIsFullscreen] = useState(false);
   const chartTheme = useChartTheme();
   
   // Check if loadings are available (not available for Kernel PCA)
@@ -64,18 +67,46 @@ export const CircleOfCorrelations: React.FC<CircleOfCorrelationsProps> = ({
     return `hsl(${hue}, 70%, 50%)`;
   };
 
+  const handleToggleFullscreen = useCallback(() => {
+    if (!fullscreenRef.current) return;
+    
+    if (!isFullscreen) {
+      if (fullscreenRef.current.requestFullscreen) {
+        fullscreenRef.current.requestFullscreen();
+      }
+    } else {
+      if (document.exitFullscreen) {
+        document.exitFullscreen();
+      }
+    }
+    
+    setIsFullscreen(!isFullscreen);
+  }, [isFullscreen]);
+
+  const handleResetView = useCallback(() => {
+    // No zoom functionality for this plot, but keeping for consistency
+  }, []);
+
   return (
-    <div className="w-full h-full" ref={chartRef}>
-      {/* Header with export button */}
-      <div className="flex items-center justify-between mb-4">
-        <h4 className="text-md font-medium text-gray-700 dark:text-gray-300">
-          Circle of Correlations: {xLabel} ({xVariance}%) vs {yLabel} ({yVariance}%)
-        </h4>
-        <ExportButton 
-          chartRef={chartRef} 
-          fileName={`circle-of-correlations-${xLabel}-${yLabel}`}
-        />
-      </div>
+    <div ref={fullscreenRef} className={`w-full h-full ${isFullscreen ? 'fixed inset-0 z-50 bg-white dark:bg-gray-900 p-4' : ''}`}>
+      <div className="w-full h-full" ref={chartRef}>
+        {/* Header with export button */}
+        <div className="flex items-center justify-between mb-4">
+          <h4 className="text-md font-medium text-gray-700 dark:text-gray-300">
+            Circle of Correlations: {xLabel} ({xVariance}%) vs {yLabel} ({yVariance}%)
+          </h4>
+          <div className="flex items-center gap-2">
+            <PlotControls 
+              onResetView={handleResetView}
+              onToggleFullscreen={handleToggleFullscreen}
+              isFullscreen={isFullscreen}
+            />
+            <ExportButton 
+              chartRef={chartRef} 
+              fileName={`circle-of-correlations-${xLabel}-${yLabel}`}
+            />
+          </div>
+        </div>
 
       {/* SVG visualization */}
       <div className="flex justify-center items-center h-full">
@@ -266,6 +297,7 @@ export const CircleOfCorrelations: React.FC<CircleOfCorrelationsProps> = ({
            <span style={{ color: 'hsl(120, 70%, 50%)' }}> ■</span> Medium → 
            <span style={{ color: 'hsl(0, 70%, 50%)' }}> ■</span> High correlation</p>
       </div>
+    </div>
     </div>
   );
 };

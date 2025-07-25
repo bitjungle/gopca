@@ -1,4 +1,4 @@
-import React, { useRef } from 'react';
+import React, { useRef, useState, useCallback } from 'react';
 import { 
   ComposedChart, 
   Bar, 
@@ -13,6 +13,7 @@ import {
 } from 'recharts';
 import { PCAResult } from '../../types';
 import { ExportButton } from '../ExportButton';
+import { PlotControls } from '../PlotControls';
 import { useChartTheme } from '../../hooks/useChartTheme';
 
 interface ScreePlotProps {
@@ -28,6 +29,8 @@ export const ScreePlot: React.FC<ScreePlotProps> = ({
 }) => {
   const chartRef = useRef<HTMLDivElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
+  const fullscreenRef = useRef<HTMLDivElement>(null);
+  const [isFullscreen, setIsFullscreen] = useState(false);
   const chartTheme = useChartTheme();
   // Transform variance data for Recharts
   const data = pcaResult.explained_variance.map((variance, index) => ({
@@ -50,15 +53,41 @@ export const ScreePlot: React.FC<ScreePlotProps> = ({
     );
   }
 
+  const handleToggleFullscreen = useCallback(() => {
+    if (!fullscreenRef.current) return;
+    
+    if (!isFullscreen) {
+      if (fullscreenRef.current.requestFullscreen) {
+        fullscreenRef.current.requestFullscreen();
+      }
+    } else {
+      if (document.exitFullscreen) {
+        document.exitFullscreen();
+      }
+    }
+    
+    setIsFullscreen(!isFullscreen);
+  }, [isFullscreen]);
+
+  const handleResetView = useCallback(() => {
+    // No zoom functionality for this plot, but keeping for consistency
+  }, []);
+
   return (
-    <div className="w-full h-full">
-      <div className="flex justify-end mb-2">
-        <ExportButton 
-          chartRef={containerRef} 
-          fileName="scree-plot"
-        />
-      </div>
-      <div ref={containerRef} className="w-full" style={{ height: 'calc(100% - 40px)' }}>
+    <div ref={fullscreenRef} className={`w-full h-full ${isFullscreen ? 'fixed inset-0 z-50 bg-white dark:bg-gray-900 p-4' : ''}`}>
+      <div className="w-full h-full">
+        <div className="flex justify-end mb-2 gap-2">
+          <PlotControls 
+            onResetView={handleResetView}
+            onToggleFullscreen={handleToggleFullscreen}
+            isFullscreen={isFullscreen}
+          />
+          <ExportButton 
+            chartRef={containerRef} 
+            fileName="scree-plot"
+          />
+        </div>
+      <div ref={containerRef} className="w-full" style={{ height: isFullscreen ? 'calc(100vh - 80px)' : 'calc(100% - 40px)' }}>
         <ResponsiveContainer width="100%" height="100%">
         <ComposedChart 
           data={data} 
@@ -186,6 +215,7 @@ export const ScreePlot: React.FC<ScreePlotProps> = ({
         </ComposedChart>
         </ResponsiveContainer>
       </div>
+    </div>
     </div>
   );
 };
