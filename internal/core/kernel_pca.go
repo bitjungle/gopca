@@ -33,6 +33,8 @@ type KernelPCAImpl struct {
 	// Precomputed values for centering
 	trainKernelMeans []float64
 	totalKernelMean  float64
+	// Preprocessor for variance scaling
+	preprocessor *Preprocessor
 }
 
 // NewKernelPCAEngine creates a new Kernel PCA engine
@@ -237,15 +239,36 @@ func (kpca *KernelPCAImpl) Fit(data types.Matrix, config types.PCAConfig) (*type
 			config.Components, nSamples)
 	}
 
-	// Store training data for transform
-	kpca.trainingData = make(types.Matrix, nSamples)
-	for i := range data {
-		kpca.trainingData[i] = make([]float64, nFeatures)
-		copy(kpca.trainingData[i], data[i])
+	// Apply preprocessing if needed (only variance scaling, SNV, or vector norm for kernel PCA)
+	processedData := data
+	if config.ScaleOnly || config.SNV || config.VectorNorm {
+		// Create preprocessor with only the allowed preprocessing options
+		kpca.preprocessor = NewPreprocessorWithScaleOnly(
+			false,             // no mean centering for kernel PCA
+			false,             // no standard scale (includes centering)
+			false,             // no robust scale (includes centering)
+			config.ScaleOnly,  // variance scaling allowed
+			config.SNV,        // SNV allowed
+			config.VectorNorm, // vector norm allowed
+		)
+
+		// Fit and transform
+		var err error
+		processedData, err = kpca.preprocessor.FitTransform(data)
+		if err != nil {
+			return nil, fmt.Errorf("preprocessing failed: %w", err)
+		}
 	}
 
-	// Compute kernel matrix
-	K, err := kpca.computeKernelMatrix(data)
+	// Store preprocessed training data for transform
+	kpca.trainingData = make(types.Matrix, nSamples)
+	for i := range processedData {
+		kpca.trainingData[i] = make([]float64, nFeatures)
+		copy(kpca.trainingData[i], processedData[i])
+	}
+
+	// Compute kernel matrix using preprocessed data
+	K, err := kpca.computeKernelMatrix(processedData)
 	if err != nil {
 		return nil, fmt.Errorf("error computing kernel matrix: %w", err)
 	}
@@ -314,7 +337,7 @@ func (kpca *KernelPCAImpl) Fit(data types.Matrix, config types.PCAConfig) (*type
 		CumulativeVar:        cumulativeVar,
 		ComponentsComputed:   config.Components,
 		Method:               "kernel",
-		PreprocessingApplied: false, // Kernel PCA doesn't use standard preprocessing
+		PreprocessingApplied: config.ScaleOnly || config.SNV || config.VectorNorm,
 	}, nil
 }
 
@@ -324,7 +347,17 @@ func (kpca *KernelPCAImpl) Transform(data types.Matrix) (types.Matrix, error) {
 		return nil, errors.New("model must be fitted before transform")
 	}
 
-	nTest := len(data)
+	// Apply the same preprocessing as during fit
+	processedData := data
+	if kpca.preprocessor != nil {
+		var err error
+		processedData, err = kpca.preprocessor.Transform(data)
+		if err != nil {
+			return nil, fmt.Errorf("preprocessing failed: %w", err)
+		}
+	}
+
+	nTest := len(processedData)
 	nTrain := len(kpca.trainingData)
 	nComponents := kpca.config.Components
 
@@ -332,7 +365,7 @@ func (kpca *KernelPCAImpl) Transform(data types.Matrix) (types.Matrix, error) {
 	K := mat.NewDense(nTest, nTrain, nil)
 	for i := 0; i < nTest; i++ {
 		for j := 0; j < nTrain; j++ {
-			val, err := kpca.computeKernel(data[i], kpca.trainingData[j])
+			val, err := kpca.computeKernel(processedData[i], kpca.trainingData[j])
 			if err != nil {
 				return nil, fmt.Errorf("error computing kernel at (%d, %d): %w", i, j, err)
 			}

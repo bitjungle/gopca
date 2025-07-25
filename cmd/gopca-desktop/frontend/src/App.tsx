@@ -36,6 +36,7 @@ function App() {
         meanCenter: true,
         standardScale: false,
         robustScale: false,
+        scaleOnly: false,
         snv: false,
         vectorNorm: false,
         method: 'SVD',
@@ -448,17 +449,14 @@ function App() {
                                                     vectorNorm: value === 'vector-norm'
                                                 });
                                             }}
-                                            disabled={config.method === 'kernel'}
-                                            className="w-full px-3 py-2 bg-gray-100 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg text-gray-900 dark:text-white disabled:opacity-50 disabled:cursor-not-allowed"
+                                            className="w-full px-3 py-2 bg-gray-100 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg text-gray-900 dark:text-white"
                                         >
                                             <option value="none">None</option>
                                             <option value="snv">SNV (Standard Normal Variate)</option>
                                             <option value="vector-norm">L2 Vector Normalization</option>
                                         </select>
                                         <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
-                                            {config.method === 'kernel' 
-                                                ? 'Kernel PCA uses its own preprocessing'
-                                                : 'Normalizes each row/sample independently (useful for spectral data)'}
+                                            Normalizes each row/sample independently (useful for spectral data)
                                         </p>
                                     </div>
                                     
@@ -469,31 +467,38 @@ function App() {
                                         </label>
                                         <select
                                             value={
-                                                config.method === 'kernel' ? 'none' :
+                                                config.scaleOnly ? 'scale-only' :
                                                 config.robustScale ? 'robust' :
                                                 config.standardScale ? 'standard' :
                                                 config.meanCenter ? 'center' : 'none'
                                             }
                                             onChange={(e) => {
                                                 const value = e.target.value;
+                                                // For kernel PCA, only allow none or scale-only
+                                                if (config.method === 'kernel' && !['none', 'scale-only'].includes(value)) {
+                                                    return;
+                                                }
                                                 setConfig({
                                                     ...config,
                                                     meanCenter: value === 'center' || value === 'standard',
                                                     standardScale: value === 'standard',
-                                                    robustScale: value === 'robust'
+                                                    robustScale: value === 'robust',
+                                                    scaleOnly: value === 'scale-only'
                                                 });
                                             }}
-                                            disabled={config.method === 'kernel'}
-                                            className="w-full px-3 py-2 bg-gray-100 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg text-gray-900 dark:text-white disabled:opacity-50 disabled:cursor-not-allowed"
+                                            className="w-full px-3 py-2 bg-gray-100 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg text-gray-900 dark:text-white"
                                         >
                                             <option value="none">None (Raw Data)</option>
-                                            <option value="center">Mean Center Only</option>
-                                            <option value="standard">Standard Scale (Mean + Std Dev)</option>
-                                            <option value="robust">Robust Scale (Median + MAD)</option>
+                                            <option value="center" disabled={config.method === 'kernel'}>Mean Center Only</option>
+                                            <option value="standard" disabled={config.method === 'kernel'}>Standard Scale (Mean + Std Dev)</option>
+                                            <option value="robust" disabled={config.method === 'kernel'}>Robust Scale (Median + MAD)</option>
+                                            <option value="scale-only">Variance Scale (Std Dev Only)</option>
                                         </select>
                                         <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
                                             {config.method === 'kernel' 
-                                                ? 'Kernel PCA uses its own centering in kernel space'
+                                                ? config.scaleOnly 
+                                                    ? 'Variance scaling divides by standard deviation without centering - suitable for Kernel PCA'
+                                                    : 'Kernel PCA performs centering in kernel space. Consider Variance Scale if features have different scales.'
                                                 : 'Normalizes each column/feature across all samples'}
                                         </p>
                                     </div>

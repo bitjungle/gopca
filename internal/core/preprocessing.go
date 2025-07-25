@@ -20,6 +20,7 @@ type Preprocessor struct {
 	MeanCenter    bool
 	StandardScale bool
 	RobustScale   bool
+	ScaleOnly     bool
 	SNV           bool
 	VectorNorm    bool
 
@@ -51,6 +52,18 @@ func NewPreprocessorFull(meanCenter, standardScale, robustScale, snv, vectorNorm
 		MeanCenter:    meanCenter,
 		StandardScale: standardScale,
 		RobustScale:   robustScale,
+		SNV:           snv,
+		VectorNorm:    vectorNorm,
+	}
+}
+
+// NewPreprocessorWithScaleOnly creates a new preprocessor instance with scale-only option
+func NewPreprocessorWithScaleOnly(meanCenter, standardScale, robustScale, scaleOnly, snv, vectorNorm bool) *Preprocessor {
+	return &Preprocessor{
+		MeanCenter:    meanCenter,
+		StandardScale: standardScale,
+		RobustScale:   robustScale,
+		ScaleOnly:     scaleOnly,
 		SNV:           snv,
 		VectorNorm:    vectorNorm,
 	}
@@ -158,7 +171,7 @@ func (p *Preprocessor) Fit(data types.Matrix) error {
 		p.originalStd[j] = stat.StdDev(col, nil)
 
 		// Standard deviation for scaling
-		if p.StandardScale {
+		if p.StandardScale || p.ScaleOnly {
 			p.scale[j] = p.originalStd[j]
 			if p.scale[j] < MinVarianceThreshold {
 				p.scale[j] = 1.0 // Avoid division by zero
@@ -230,6 +243,9 @@ func (p *Preprocessor) Transform(data types.Matrix) (types.Matrix, error) {
 			if p.RobustScale {
 				// Robust scaling: (x - median) / MAD
 				val = (val - p.median[j]) / p.mad[j]
+			} else if p.ScaleOnly {
+				// Scale-only (variance scaling): divide by std dev without mean centering
+				val /= p.scale[j]
 			} else {
 				// Standard scaling
 				if p.MeanCenter {
@@ -272,6 +288,9 @@ func (p *Preprocessor) InverseTransform(data types.Matrix) (types.Matrix, error)
 			if p.RobustScale {
 				// Reverse robust scaling
 				val = val*p.mad[j] + p.median[j]
+			} else if p.ScaleOnly {
+				// Reverse scale-only
+				val *= p.scale[j]
 			} else {
 				// Reverse standard scaling
 				if p.StandardScale {

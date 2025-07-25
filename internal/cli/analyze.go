@@ -54,6 +54,9 @@ EXAMPLES:
   # Apply L2 vector normalization
   gopca-cli analyze --vector-norm data/data.csv
 
+  # Kernel PCA with variance scaling (divide by std dev, no mean centering)
+  gopca-cli analyze --method kernel --kernel-type rbf --scale-only data/data.csv
+
 The analysis includes:
   - Data preprocessing (SNV, vector normalization, mean centering, scaling)
   - PCA computation using SVD, NIPALS, or Kernel methods
@@ -116,6 +119,10 @@ The analysis includes:
 			&cli.BoolFlag{
 				Name:  "vector-norm",
 				Usage: "Apply L2 vector normalization (row-wise) before column preprocessing",
+			},
+			&cli.BoolFlag{
+				Name:  "scale-only",
+				Usage: "Apply variance scaling only (divide by std dev without mean centering, suitable for Kernel PCA)",
 			},
 
 			// Data format
@@ -245,6 +252,18 @@ func validateAnalyzeFlags(c *cli.Context) error {
 		return fmt.Errorf("invalid scaling method: %s (must be none, standard, or robust)", scale)
 	}
 
+	// Validate scale-only option
+	scaleOnly := c.Bool("scale-only")
+	if scaleOnly {
+		// scale-only is mutually exclusive with other scaling options
+		if scale != "none" {
+			return fmt.Errorf("cannot use --scale-only with --scale %s (variance scaling is a standalone option)", scale)
+		}
+		if c.Bool("no-mean-centering") {
+			return fmt.Errorf("--scale-only already excludes mean centering, --no-mean-centering is redundant")
+		}
+	}
+
 	// Validate components
 	if c.Int("components") < 1 {
 		return fmt.Errorf("number of components must be at least 1")
@@ -300,6 +319,21 @@ func validateAnalyzeFlags(c *cli.Context) error {
 		if kernelType == "poly" {
 			if c.Int("kernel-degree") < 1 {
 				return fmt.Errorf("kernel-degree must be at least 1 for polynomial kernel")
+			}
+		}
+	}
+
+	// Warn about preprocessing options with kernel PCA
+	if method == "kernel" {
+		// Check for preprocessing that involves centering
+		if scale == "standard" || scale == "robust" {
+			if !c.Bool("quiet") {
+				fmt.Printf("Warning: %s scaling includes mean centering which will be ignored for kernel PCA. Consider using --scale-only for variance scaling instead.\n", scale)
+			}
+		}
+		if !c.Bool("no-mean-centering") && scale == "none" && !scaleOnly {
+			if !c.Bool("quiet") {
+				fmt.Printf("Note: Mean centering will be ignored for kernel PCA as it performs its own centering in kernel space.\n")
 			}
 		}
 	}
@@ -498,6 +532,7 @@ func runAnalyze(c *cli.Context) error {
 		MeanCenter:      !c.Bool("no-mean-centering"),
 		StandardScale:   c.String("scale") == "standard",
 		RobustScale:     c.String("scale") == "robust",
+		ScaleOnly:       c.Bool("scale-only"),
 		Method:          c.String("method"),
 		ExcludedRows:    excludedRows,
 		ExcludedColumns: excludedCols,
@@ -524,16 +559,47 @@ func runAnalyze(c *cli.Context) error {
 	var preprocessor *core.Preprocessor
 
 	if pcaConfig.Method == "kernel" {
-		// Kernel PCA handles its own centering in the kernel space
-		processedData = data.Matrix
-		if verbose {
-			fmt.Println("\nSkipping standard preprocessing for kernel PCA")
+		// Check if scale-only or row-wise preprocessing is requested
+		if c.Bool("scale-only") || c.Bool("snv") || c.Bool("vector-norm") {
+			// Allow scale-only and row-wise preprocessing for kernel PCA
+			preprocessor = core.NewPreprocessorWithScaleOnly(
+				false, // no mean centering for kernel PCA
+				false, // no standard scale (includes centering)
+				false, // no robust scale (includes centering)
+				c.Bool("scale-only"),
+				c.Bool("snv"),
+				c.Bool("vector-norm"),
+			)
+			processedData, err = preprocessor.FitTransform(data.Matrix)
+			if err != nil {
+				return fmt.Errorf("error preprocessing data: %v", err)
+			}
+			if verbose {
+				preprocessingTypes := []string{}
+				if c.Bool("scale-only") {
+					preprocessingTypes = append(preprocessingTypes, "variance scaling")
+				}
+				if c.Bool("snv") {
+					preprocessingTypes = append(preprocessingTypes, "SNV")
+				}
+				if c.Bool("vector-norm") {
+					preprocessingTypes = append(preprocessingTypes, "vector normalization")
+				}
+				fmt.Printf("\nApplied preprocessing for kernel PCA: %s\n", strings.Join(preprocessingTypes, ", "))
+			}
+		} else {
+			// No preprocessing for kernel PCA
+			processedData = data.Matrix
+			if verbose {
+				fmt.Println("\nNo preprocessing applied for kernel PCA")
+			}
 		}
 	} else {
-		preprocessor = core.NewPreprocessorFull(
+		preprocessor = core.NewPreprocessorWithScaleOnly(
 			pcaConfig.MeanCenter,
 			pcaConfig.StandardScale,
 			c.String("scale") == "robust",
+			c.Bool("scale-only"),
 			c.Bool("snv"),
 			c.Bool("vector-norm"),
 		)
