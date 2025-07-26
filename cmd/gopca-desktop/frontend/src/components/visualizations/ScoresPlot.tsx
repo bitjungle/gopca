@@ -4,8 +4,9 @@ import { PCAResult, EllipseParams } from '../../types';
 import { ExportButton } from '../ExportButton';
 import { PlotControls } from '../PlotControls';
 import { useZoomPan } from '../../hooks/useZoomPan';
-import { createGroupColorMap } from '../../utils/colors';
 import { useChartTheme } from '../../hooks/useChartTheme';
+import { usePalette } from '../../contexts/PaletteContext';
+import { getQualitativeColor, getSequentialColor } from '../../utils/colorPalettes';
 
 interface ScoresPlotProps {
   pcaResult: PCAResult;
@@ -34,14 +35,33 @@ export const ScoresPlot: React.FC<ScoresPlotProps> = ({
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [containerSize, setContainerSize] = useState({ width: 0, height: 0 });
   const chartTheme = useChartTheme();
+  const { paletteType } = usePalette();
   
-  // Create color map for groups
+  // Create color map for groups based on selected palette type
   const groupColorMap = useMemo(() => {
     if (groupLabels && groupColumn) {
-      return createGroupColorMap(groupLabels);
+      const uniqueGroups = [...new Set(groupLabels)].sort();
+      const colorMap = new Map<string, string>();
+      
+      if (paletteType === 'sequential') {
+        // For sequential palette, distribute colors across the gradient
+        uniqueGroups.forEach((group, index) => {
+          const normalizedValue = uniqueGroups.length > 1 
+            ? index / (uniqueGroups.length - 1) 
+            : 0.5;
+          colorMap.set(group, getSequentialColor(normalizedValue));
+        });
+      } else {
+        // For qualitative palette, use distinct colors
+        uniqueGroups.forEach((group, index) => {
+          colorMap.set(group, getQualitativeColor(index));
+        });
+      }
+      
+      return colorMap;
     }
     return null;
-  }, [groupLabels, groupColumn]);
+  }, [groupLabels, groupColumn, paletteType]);
   
   // Transform scores data for Recharts
   const data = pcaResult.scores.map((row, index) => {

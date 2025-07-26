@@ -9,12 +9,15 @@ import {
   Tooltip, 
   ResponsiveContainer,
   Legend,
-  ReferenceLine
+  ReferenceLine,
+  Cell
 } from 'recharts';
 import { PCAResult } from '../../types';
 import { ExportButton } from '../ExportButton';
 import { PlotControls } from '../PlotControls';
 import { useChartTheme } from '../../hooks/useChartTheme';
+import { usePalette } from '../../contexts/PaletteContext';
+import { getSequentialColorScale, QUALITATIVE_PALETTE } from '../../utils/colorPalettes';
 
 interface ScreePlotProps {
   pcaResult: PCAResult;
@@ -32,6 +35,8 @@ export const ScreePlot: React.FC<ScreePlotProps> = ({
   const fullscreenRef = useRef<HTMLDivElement>(null);
   const [isFullscreen, setIsFullscreen] = useState(false);
   const chartTheme = useChartTheme();
+  const { paletteType } = usePalette();
+  
   // Transform variance data for Recharts
   const data = pcaResult.explained_variance.map((variance, index) => ({
     component: pcaResult.component_labels?.[index] || `PC${index + 1}`,
@@ -199,7 +204,19 @@ export const ScreePlot: React.FC<ScreePlotProps> = ({
             fill="#3B82F6"
             name="Explained Variance"
             radius={[4, 4, 0, 0]}
-          />
+          >
+            {paletteType === 'sequential' ? (
+              data.map((entry, index) => {
+                const maxVariance = Math.max(...pcaResult.explained_variance);
+                const color = getSequentialColorScale(entry.variance, 0, maxVariance);
+                return <Cell key={`cell-${index}`} fill={color} />;
+              })
+            ) : (
+              data.map((entry, index) => (
+                <Cell key={`cell-${index}`} fill={QUALITATIVE_PALETTE[0]} />
+              ))
+            )}
+          </Bar>
           
           {showCumulative && (
             <Line 
