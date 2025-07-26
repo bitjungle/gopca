@@ -269,6 +269,56 @@ func TestRSSWithMeanCenteredData(t *testing.T) {
 	}
 }
 
+func TestRSSWithSNVPreprocessing(t *testing.T) {
+	// Test that verifies RSS calculation works correctly with SNV preprocessing
+	// This addresses the issue where SNV-only preprocessing was broken
+
+	// 3 samples, 4 features (simulating spectral data), 2 components
+	scores := mat.NewDense(3, 2, []float64{
+		1.8, -0.5,
+		-1.2, 0.8,
+		-0.6, -0.3,
+	})
+
+	loadings := mat.NewDense(4, 2, []float64{
+		0.6, 0.2,
+		0.5, -0.4,
+		0.4, 0.5,
+		0.3, -0.3,
+	})
+
+	// No column means stored (SNV doesn't remove column means)
+	mean := []float64{}
+	stdDev := []float64{}
+
+	// SNV-preprocessed data (each row normalized to mean=0, std=1)
+	// This simulates spectral data after SNV
+	snvData := types.Matrix{
+		{1.2, -0.8, 0.3, -0.7},  // Row mean=0, std≈1
+		{-0.5, 1.5, -0.6, -0.4}, // Row mean=0, std≈1
+		{0.2, 0.9, -1.3, 0.2},   // Row mean=0, std≈1
+	}
+
+	calc := NewPCAMetricsCalculator(scores, loadings, mean, stdDev)
+
+	// Calculate RSS for all samples
+	for i := 0; i < 3; i++ {
+		rss, err := calc.calculateRSS(i, snvData)
+		if err != nil {
+			t.Fatalf("Failed to calculate RSS for sample %d: %v", i, err)
+		}
+
+		// With SNV preprocessing and 2 components out of 4 features,
+		// there will be reconstruction error. The key is that RSS should be reasonable,
+		// not in the hundreds or thousands as it was with the bug
+		if rss > 10.0 {
+			t.Errorf("RSS for sample %d is too high (%f), indicating a preprocessing mismatch", i, rss)
+		}
+
+		t.Logf("Sample %d RSS with SNV: %f", i, rss)
+	}
+}
+
 func TestMetricsWithReferenceValues(t *testing.T) {
 	// Test case based on Python reference implementation
 	// Using 2 components as in the Python example

@@ -189,8 +189,8 @@ func (m *PCAMetricsCalculator) calculateRSS(sampleIdx int, originalData types.Ma
 	// where X_reconstructed = scores × loadings^T
 	//
 	// IMPORTANT: We calculate RSS in the preprocessed space to ensure consistency.
-	// Both the data and reconstruction must be in the same space (e.g., mean-centered).
-	// This matches sklearn and other standard implementations.
+	// Both the data and reconstruction must be in the same space.
+	// The input data should already be preprocessed exactly as it was during PCA fitting.
 
 	// Get the score vector for this sample
 	scoreVec := mat.NewVecDense(m.nComponents, nil)
@@ -199,7 +199,7 @@ func (m *PCAMetricsCalculator) calculateRSS(sampleIdx int, originalData types.Ma
 	}
 
 	// Reconstruct the data: X_reconstructed = scores × loadings^T
-	// Note: We do NOT add back the mean - we stay in the preprocessed space
+	// We stay in the preprocessed space (no mean adding)
 	reconstructed := mat.NewVecDense(m.nFeatures, nil)
 	reconstructed.MulVec(m.loadings, scoreVec)
 
