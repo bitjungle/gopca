@@ -186,10 +186,11 @@ func (m *PCAMetricsCalculator) calculateMahalanobisDistance(scoreVec *mat.VecDen
 // calculateRSS computes the Residual Sum of Squares
 func (m *PCAMetricsCalculator) calculateRSS(sampleIdx int, originalData types.Matrix) (float64, error) {
 	// RSS measures the reconstruction error: sum((X_preprocessed - X_reconstructed)²)
-	// where X_reconstructed = scores × loadings^T + mean
+	// where X_reconstructed = scores × loadings^T
 	//
-	// IMPORTANT: The key insight is that we're measuring RSS in the preprocessed space,
-	// not the original space. This matches sklearn's approach.
+	// IMPORTANT: We calculate RSS in the preprocessed space to ensure consistency.
+	// Both the data and reconstruction must be in the same space.
+	// The input data should already be preprocessed exactly as it was during PCA fitting.
 
 	// Get the score vector for this sample
 	scoreVec := mat.NewVecDense(m.nComponents, nil)
@@ -198,18 +199,12 @@ func (m *PCAMetricsCalculator) calculateRSS(sampleIdx int, originalData types.Ma
 	}
 
 	// Reconstruct the data: X_reconstructed = scores × loadings^T
+	// We stay in the preprocessed space (no mean adding)
 	reconstructed := mat.NewVecDense(m.nFeatures, nil)
 	reconstructed.MulVec(m.loadings, scoreVec)
 
-	// Add back the mean (this is what sklearn's inverse_transform does)
-	if len(m.mean) > 0 {
-		for j := 0; j < m.nFeatures; j++ {
-			reconstructed.SetVec(j, reconstructed.AtVec(j)+m.mean[j])
-		}
-	}
-
 	// Get the data point - this should already be preprocessed
-	// (SNV applied if it was used during fitting)
+	// (mean-centered, scaled, SNV applied, etc. as was done during PCA fitting)
 	dataPoint := make([]float64, m.nFeatures)
 	for j := 0; j < m.nFeatures; j++ {
 		dataPoint[j] = originalData[sampleIdx][j]

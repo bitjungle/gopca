@@ -83,12 +83,13 @@ func TestCalculateMetricsFromPCAResult(t *testing.T) {
 		StdDevs:         []float64{1.2, 0.9, 1.0},
 	}
 
-	// Original data
+	// Mean-centered data (original data - means)
+	// Note: means are {5.5, 3.2, 2.1}
 	originalData := types.Matrix{
-		{6.5, 3.8, 3.0},
-		{3.5, 2.8, 1.2},
-		{6.0, 2.5, 2.8},
-		{4.8, 3.0, 1.8},
+		{1.0, 0.6, 0.9},    // {6.5-5.5, 3.8-3.2, 3.0-2.1}
+		{-2.0, -0.4, -0.9}, // {3.5-5.5, 2.8-3.2, 1.2-2.1}
+		{0.5, -0.7, 0.7},   // {6.0-5.5, 2.5-3.2, 2.8-2.1}
+		{-0.7, -0.2, -0.3}, // {4.8-5.5, 3.0-3.2, 1.8-2.1}
 	}
 
 	// Calculate metrics
@@ -166,6 +167,7 @@ func TestOutlierDetection(t *testing.T) {
 
 func TestRSSCalculation(t *testing.T) {
 	// Simple test case where we can verify RSS manually
+	// Using mean-centered data as would be the case in real PCA
 	scores := mat.NewDense(2, 1, []float64{
 		1.0,
 		-1.0,
@@ -176,25 +178,26 @@ func TestRSSCalculation(t *testing.T) {
 		0.6,
 	})
 
+	// These would be the original means before centering
 	mean := []float64{5.0, 3.0}
 	stdDev := []float64{1.0, 1.0}
 
-	// Original data
-	originalData := types.Matrix{
-		{5.8, 3.6}, // Should reconstruct to approximately these values
-		{4.2, 2.4},
+	// Mean-centered data (originalData - mean)
+	centeredData := types.Matrix{
+		{0.8, 0.6},   // Original was {5.8, 3.6}, centered: {5.8-5.0, 3.6-3.0}
+		{-0.8, -0.6}, // Original was {4.2, 2.4}, centered: {4.2-5.0, 2.4-3.0}
 	}
 
 	calc := NewPCAMetricsCalculator(scores, loadings, mean, stdDev)
 
 	// Calculate RSS for first sample
-	rss0, err := calc.calculateRSS(0, originalData)
+	rss0, err := calc.calculateRSS(0, centeredData)
 	if err != nil {
 		t.Fatalf("Failed to calculate RSS: %v", err)
 	}
 
 	// Calculate RSS for second sample
-	rss1, err := calc.calculateRSS(1, originalData)
+	rss1, err := calc.calculateRSS(1, centeredData)
 	if err != nil {
 		t.Fatalf("Failed to calculate RSS: %v", err)
 	}
@@ -204,10 +207,116 @@ func TestRSSCalculation(t *testing.T) {
 		t.Errorf("RSS should be non-negative, got %f and %f", rss0, rss1)
 	}
 
-	// For perfect reconstruction, RSS should be close to 0
-	// In this case, we're using only 1 component, so there will be some RSS
-	// But due to numerical precision, very small RSS values are acceptable
+	// With perfect reconstruction in centered space:
+	// Sample 0: reconstruction = 1.0 * [0.8, 0.6] = [0.8, 0.6]
+	// Sample 1: reconstruction = -1.0 * [0.8, 0.6] = [-0.8, -0.6]
+	// These match the centered data exactly, so RSS should be 0
+	if math.Abs(rss0) > 1e-10 {
+		t.Errorf("RSS for sample 0 should be ~0, got %f", rss0)
+	}
+	if math.Abs(rss1) > 1e-10 {
+		t.Errorf("RSS for sample 1 should be ~0, got %f", rss1)
+	}
+
 	t.Logf("RSS values: sample 0 = %f, sample 1 = %f", rss0, rss1)
+}
+
+func TestRSSWithMeanCenteredData(t *testing.T) {
+	// Test that specifically verifies the fix for issue #83
+	// This simulates a scenario similar to the Iris dataset with mean centering
+
+	// 3 samples, 4 features, 2 components
+	scores := mat.NewDense(3, 2, []float64{
+		2.5, 0.5,
+		-1.5, 1.2,
+		-1.0, -1.7,
+	})
+
+	loadings := mat.NewDense(4, 2, []float64{
+		0.5, 0.3,
+		0.4, -0.5,
+		0.6, 0.4,
+		0.3, -0.6,
+	})
+
+	// Original means (similar to Iris scale)
+	mean := []float64{5.8, 3.0, 3.7, 1.2}
+	stdDev := []float64{0.8, 0.4, 1.7, 0.7}
+
+	// Mean-centered data
+	centeredData := types.Matrix{
+		{0.7, 0.4, 0.8, -0.2},   // Sample 1 centered
+		{-1.3, -0.5, -1.2, 0.3}, // Sample 2 centered
+		{0.2, 0.0, -0.7, -0.4},  // Sample 3 centered
+	}
+
+	calc := NewPCAMetricsCalculator(scores, loadings, mean, stdDev)
+
+	// Calculate RSS for all samples
+	for i := 0; i < 3; i++ {
+		rss, err := calc.calculateRSS(i, centeredData)
+		if err != nil {
+			t.Fatalf("Failed to calculate RSS for sample %d: %v", i, err)
+		}
+
+		// With 2 components out of 4 features, there will be some reconstruction error
+		// But RSS should be reasonable (not in the tens or hundreds)
+		if rss > 5.0 {
+			t.Errorf("RSS for sample %d is too high (%f), indicating the preprocessing space mismatch bug", i, rss)
+		}
+
+		t.Logf("Sample %d RSS: %f", i, rss)
+	}
+}
+
+func TestRSSWithSNVPreprocessing(t *testing.T) {
+	// Test that verifies RSS calculation works correctly with SNV preprocessing
+	// This addresses the issue where SNV-only preprocessing was broken
+
+	// 3 samples, 4 features (simulating spectral data), 2 components
+	scores := mat.NewDense(3, 2, []float64{
+		1.8, -0.5,
+		-1.2, 0.8,
+		-0.6, -0.3,
+	})
+
+	loadings := mat.NewDense(4, 2, []float64{
+		0.6, 0.2,
+		0.5, -0.4,
+		0.4, 0.5,
+		0.3, -0.3,
+	})
+
+	// No column means stored (SNV doesn't remove column means)
+	mean := []float64{}
+	stdDev := []float64{}
+
+	// SNV-preprocessed data (each row normalized to mean=0, std=1)
+	// This simulates spectral data after SNV
+	snvData := types.Matrix{
+		{1.2, -0.8, 0.3, -0.7},  // Row mean=0, std≈1
+		{-0.5, 1.5, -0.6, -0.4}, // Row mean=0, std≈1
+		{0.2, 0.9, -1.3, 0.2},   // Row mean=0, std≈1
+	}
+
+	calc := NewPCAMetricsCalculator(scores, loadings, mean, stdDev)
+
+	// Calculate RSS for all samples
+	for i := 0; i < 3; i++ {
+		rss, err := calc.calculateRSS(i, snvData)
+		if err != nil {
+			t.Fatalf("Failed to calculate RSS for sample %d: %v", i, err)
+		}
+
+		// With SNV preprocessing and 2 components out of 4 features,
+		// there will be reconstruction error. The key is that RSS should be reasonable,
+		// not in the hundreds or thousands as it was with the bug
+		if rss > 10.0 {
+			t.Errorf("RSS for sample %d is too high (%f), indicating a preprocessing mismatch", i, rss)
+		}
+
+		t.Logf("Sample %d RSS with SNV: %f", i, rss)
+	}
 }
 
 func TestMetricsWithReferenceValues(t *testing.T) {

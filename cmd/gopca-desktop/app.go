@@ -348,25 +348,16 @@ func (a *App) RunPCA(request PCARequest) (response PCAResponse) {
 
 	// Calculate diagnostic metrics if requested
 	if request.CalculateMetrics && strings.ToLower(request.Method) != "kernel" {
-		// For RSS calculation with row-wise preprocessing (SNV/VectorNorm),
-		// we need to use data that has ONLY the row-wise preprocessing applied,
-		// not the column-wise preprocessing (mean centering/scaling)
+		// For RSS calculation, we need to use data preprocessed exactly as it was for PCA fitting
+		// This ensures the data and reconstruction are in the same space
 		preprocessedData := dataToAnalyze
 
-		if config.SNV || config.VectorNorm {
-			// Apply only row-wise preprocessing for metrics
-			rowPreprocessor := core.NewPreprocessorFull(false, false, false, config.SNV, config.VectorNorm)
+		// Apply the same preprocessing that was used for PCA
+		if config.MeanCenter || config.StandardScale || config.RobustScale || config.ScaleOnly || config.SNV || config.VectorNorm {
+			// Create preprocessor with the same settings used for PCA
+			preprocessor := core.NewPreprocessorWithScaleOnly(config.MeanCenter, config.StandardScale, config.RobustScale, config.ScaleOnly, config.SNV, config.VectorNorm)
 			var err error
-			preprocessedData, err = rowPreprocessor.FitTransform(dataToAnalyze)
-			if err != nil {
-				fmt.Printf("Warning: Failed to apply row preprocessing for metrics: %v\n", err)
-				preprocessedData = dataToAnalyze // Fallback to original data
-			}
-		} else if config.MeanCenter || config.StandardScale || config.RobustScale || config.ScaleOnly {
-			// For column-wise preprocessing only, use the fully preprocessed data
-			colPreprocessor := core.NewPreprocessorWithScaleOnly(config.MeanCenter, config.StandardScale, config.RobustScale, config.ScaleOnly, false, false)
-			var err error
-			preprocessedData, err = colPreprocessor.FitTransform(dataToAnalyze)
+			preprocessedData, err = preprocessor.FitTransform(dataToAnalyze)
 			if err != nil {
 				fmt.Printf("Warning: Failed to preprocess data for metrics: %v\n", err)
 				preprocessedData = dataToAnalyze // Fallback to original data
