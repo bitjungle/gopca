@@ -6,7 +6,9 @@ import { ScoresPlot, ScreePlot, LoadingsPlot, Biplot, CircleOfCorrelations, Diag
 import { FileData, PCARequest, PCAResponse } from './types';
 import { ThemeProvider } from './contexts/ThemeContext';
 import { HelpProvider, useHelp } from './contexts/HelpContext';
+import { PaletteProvider } from './contexts/PaletteContext';
 import { HelpDisplay } from './components/HelpDisplay';
+import { PaletteSelector } from './components/PaletteSelector';
 import logo from './assets/images/GoPCA-logo-1024-transp.png';
 
 function AppContent() {
@@ -175,7 +177,10 @@ function AppContent() {
                             text={currentHelp?.text || ''}
                         />
                     </div>
-                    <ThemeToggle />
+                    <div className="flex items-center gap-2">
+                        <PaletteSelector />
+                        <ThemeToggle />
+                    </div>
                 </div>
             </header>
             
@@ -857,9 +862,11 @@ function AppContent() {
 function App() {
     return (
         <ThemeProvider>
-            <HelpProvider>
-                <AppContent />
-            </HelpProvider>
+            <PaletteProvider>
+                <HelpProvider>
+                    <AppContent />
+                </HelpProvider>
+            </PaletteProvider>
         </ThemeProvider>
     );
 }
