@@ -661,3 +661,40 @@ func GetColumnRanks(data types.Matrix) ([]int, error) {
 
 	return ranks, nil
 }
+
+// SetFittedParameters sets the fitted parameters for the preprocessor
+func (p *Preprocessor) SetFittedParameters(means, stdDevs, medians, mads, rowMeans, rowStdDevs []float64) error {
+	// Basic validation
+	if p.MeanCenter && (means == nil || len(means) == 0) {
+		return fmt.Errorf("means required when mean centering is enabled")
+	}
+	if p.StandardScale && (stdDevs == nil || len(stdDevs) == 0) {
+		return fmt.Errorf("standard deviations required when standard scaling is enabled")
+	}
+	if p.RobustScale && (medians == nil || len(medians) == 0 || mads == nil || len(mads) == 0) {
+		return fmt.Errorf("medians and MADs required when robust scaling is enabled")
+	}
+	if p.SNV && (rowMeans == nil || len(rowMeans) == 0 || rowStdDevs == nil || len(rowStdDevs) == 0) {
+		return fmt.Errorf("row means and standard deviations required when SNV is enabled")
+	}
+
+	// Set the parameters
+	p.mean = means
+	p.originalStd = stdDevs
+	p.median = medians
+	p.mad = mads
+	p.rowMeans = rowMeans
+	p.rowStdDevs = rowStdDevs
+
+	// Set scale based on the scaling method
+	if p.StandardScale && stdDevs != nil {
+		p.scale = make([]float64, len(stdDevs))
+		copy(p.scale, stdDevs)
+	} else if p.RobustScale && mads != nil {
+		p.scale = make([]float64, len(mads))
+		copy(p.scale, mads)
+	}
+
+	p.fitted = true
+	return nil
+}

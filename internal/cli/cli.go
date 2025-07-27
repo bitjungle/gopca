@@ -36,13 +36,15 @@ This CLI tool provides fast, scriptable PCA for power users and automation.
 QUICK START:
   Analyze a CSV file:     gopca-cli analyze data.csv
   With options:           gopca-cli analyze --scale standard -c 3 data.csv
-  Save results:           gopca-cli analyze -f csv -o results.csv data.csv
+  Save results:           gopca-cli analyze -f json -o results/ data.csv
   Validate data first:    gopca-cli validate data.csv
+  Apply saved model:      gopca-cli transform model.json new_data.csv
 
 For detailed help on any command, use: gopca-cli <command> --help`,
 		Commands: []*cli.Command{
 			analyzeCommand(),
 			validateCommand(),
+			transformCommand(),
 		},
 		Before: func(c *cli.Context) error {
 			// If no command is provided, show help
