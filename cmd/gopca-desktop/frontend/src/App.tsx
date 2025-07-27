@@ -55,6 +55,16 @@ function AppContent() {
         // Confidence ellipse parameters
     });
     
+    const updateGammaForData = (data: FileData) => {
+        if (data && data.data && data.data[0]) {
+            const numFeatures = data.data[0].length;
+            setConfig(prev => ({
+                ...prev,
+                kernelGamma: 1.0 / numFeatures
+            }));
+        }
+    };
+
     const handleFileUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
         const file = event.target.files?.[0];
         if (!file) return;
@@ -72,6 +82,9 @@ function AppContent() {
             setExcludedRows([]);
             setExcludedColumns([]);
             setSelectedGroupColumn(null);
+            
+            // Calculate and set default gamma for kernel PCA
+            updateGammaForData(result);
         } catch (err) {
             setFileError(`Failed to parse CSV: ${err}`);
         } finally {
@@ -235,6 +248,7 @@ function AppContent() {
                                                 setExcludedRows([]);
                                                 setExcludedColumns([]);
                                                 setSelectedGroupColumn(null);
+                                                updateGammaForData(result);
                                             } catch (err) {
                                                 setFileError(`Failed to load Corn dataset: ${err}`);
                                             } finally {
@@ -258,6 +272,7 @@ function AppContent() {
                                                 setExcludedRows([]);
                                                 setExcludedColumns([]);
                                                 setSelectedGroupColumn('species');
+                                                updateGammaForData(result);
                                             } catch (err) {
                                                 setFileError(`Failed to load Iris dataset: ${err}`);
                                             } finally {
@@ -281,6 +296,7 @@ function AppContent() {
                                                 setExcludedRows([]);
                                                 setExcludedColumns([]);
                                                 setSelectedGroupColumn('target');
+                                                updateGammaForData(result);
                                             } catch (err) {
                                                 setFileError(`Failed to load Wine dataset: ${err}`);
                                             } finally {
@@ -304,6 +320,7 @@ function AppContent() {
                                                 setExcludedRows([]);
                                                 setExcludedColumns([]);
                                                 setSelectedGroupColumn('color_category');
+                                                updateGammaForData(result);
                                             } catch (err) {
                                                 setFileError(`Failed to load Swiss Roll dataset: ${err}`);
                                             } finally {
