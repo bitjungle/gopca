@@ -57,11 +57,19 @@ func ParseCSVReader(r io.Reader, options CSVParseOptions) (*CSVData, error) {
 		NullValues:       options.NullValues,
 	}
 
-	// Use unified parser
-	parser := types.NewCSVParser(format)
-	unifiedData, err := parser.Parse(r)
+	// Use mixed parser that can handle both numeric and categorical columns
+	unifiedData, categoricalData, err := types.ParseCSVMixed(r, format)
 	if err != nil {
 		return nil, err
+	}
+
+	// If categorical columns were detected, notify the user
+	if len(categoricalData) > 0 {
+		fmt.Fprintf(os.Stderr, "\nNote: Detected and excluded %d categorical column(s):\n", len(categoricalData))
+		for colName := range categoricalData {
+			fmt.Fprintf(os.Stderr, "  - %s\n", colName)
+		}
+		fmt.Fprintf(os.Stderr, "\n")
 	}
 
 	// Wrap in CSVData for backward compatibility

@@ -573,6 +573,38 @@ func (p *Preprocessor) GetStdDevs() []float64 {
 	return p.originalStd
 }
 
+// GetMedians returns the fitted median values
+func (p *Preprocessor) GetMedians() []float64 {
+	if !p.fitted {
+		return nil
+	}
+	return p.median
+}
+
+// GetMADs returns the fitted MAD (Median Absolute Deviation) values
+func (p *Preprocessor) GetMADs() []float64 {
+	if !p.fitted {
+		return nil
+	}
+	return p.mad
+}
+
+// GetRowMeans returns the fitted row mean values (for SNV)
+func (p *Preprocessor) GetRowMeans() []float64 {
+	if !p.fitted || !p.SNV {
+		return nil
+	}
+	return p.rowMeans
+}
+
+// GetRowStdDevs returns the fitted row standard deviation values (for SNV)
+func (p *Preprocessor) GetRowStdDevs() []float64 {
+	if !p.fitted || !p.SNV {
+		return nil
+	}
+	return p.rowStdDevs
+}
+
 // IsSNVEnabled returns whether SNV preprocessing is enabled
 func (p *Preprocessor) IsSNVEnabled() bool {
 	return p.SNV

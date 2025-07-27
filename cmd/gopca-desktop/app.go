@@ -3,6 +3,7 @@ package main
 import (
 	"context"
 	"encoding/base64"
+	"encoding/json"
 	"fmt"
 	"math"
 	"net/url"
@@ -10,6 +11,7 @@ import (
 	"path/filepath"
 	"strings"
 
+	"github.com/bitjungle/gopca/internal/cli"
 	"github.com/bitjungle/gopca/internal/core"
 	"github.com/bitjungle/gopca/internal/datasets"
 	"github.com/bitjungle/gopca/internal/utils"
@@ -713,4 +715,117 @@ func (a *App) LoadDatasetFile(filename string) (*FileDataJSON, error) {
 	}
 
 	return nil, fmt.Errorf("dataset file not found: %s", filename)
+}
+
+// PCAConfig represents PCA configuration from the frontend
+type PCAConfig struct {
+	Components       int    `json:"components"`
+	MeanCenter       bool   `json:"meanCenter"`
+	StandardScale    bool   `json:"standardScale"`
+	RobustScale      bool   `json:"robustScale"`
+	ScaleOnly        bool   `json:"scaleOnly"`
+	SNV              bool   `json:"snv"`
+	VectorNorm       bool   `json:"vectorNorm"`
+	Method           string `json:"method"`
+	MissingStrategy  string `json:"missingStrategy"`
+	CalculateMetrics bool   `json:"calculateMetrics"`
+	// Kernel PCA parameters
+	KernelType   string  `json:"kernelType,omitempty"`
+	KernelGamma  float64 `json:"kernelGamma,omitempty"`
+	KernelDegree int     `json:"kernelDegree,omitempty"`
+	KernelCoef0  float64 `json:"kernelCoef0,omitempty"`
+}
+
+// ExportPCAModelRequest contains the data needed to export a PCA model
+type ExportPCAModelRequest struct {
+	Data            [][]float64      `json:"data"`
+	Headers         []string         `json:"headers"`
+	RowNames        []string         `json:"rowNames"`
+	PCAResult       *types.PCAResult `json:"pcaResult"`
+	Config          PCAConfig        `json:"config"`
+	ExcludedRows    []int            `json:"excludedRows"`
+	ExcludedColumns []int            `json:"excludedColumns"`
+}
+
+// ExportPCAModel exports the complete PCA model to a JSON file
+func (a *App) ExportPCAModel(request ExportPCAModelRequest) error {
+	// Show save dialog
+	filePath, err := runtime.SaveFileDialog(a.ctx, runtime.SaveDialogOptions{
+		DefaultFilename: "pca_model.json",
+		Title:           "Export PCA Model",
+		Filters: []runtime.FileFilter{
+			{
+				DisplayName: "JSON Files",
+				Pattern:     "*.json",
+			},
+		},
+	})
+
+	if err != nil {
+		return fmt.Errorf("failed to open save dialog: %v", err)
+	}
+
+	// User cancelled
+	if filePath == "" {
+		return nil
+	}
+
+	// Convert PCA config to types.PCAConfig
+	pcaConfig := types.PCAConfig{
+		Components:      request.Config.Components,
+		MeanCenter:      request.Config.MeanCenter,
+		StandardScale:   request.Config.StandardScale,
+		RobustScale:     request.Config.RobustScale,
+		ScaleOnly:       request.Config.ScaleOnly,
+		SNV:             request.Config.SNV,
+		VectorNorm:      request.Config.VectorNorm,
+		Method:          request.Config.Method,
+		ExcludedRows:    request.ExcludedRows,
+		ExcludedColumns: request.ExcludedColumns,
+		MissingStrategy: types.MissingValueStrategy(request.Config.MissingStrategy),
+		KernelType:      request.Config.KernelType,
+		KernelGamma:     request.Config.KernelGamma,
+		KernelDegree:    request.Config.KernelDegree,
+		KernelCoef0:     request.Config.KernelCoef0,
+	}
+
+	// Create preprocessor to get the preprocessing parameters
+	preprocessor := core.NewPreprocessorWithScaleOnly(
+		pcaConfig.MeanCenter,
+		pcaConfig.StandardScale,
+		pcaConfig.RobustScale,
+		pcaConfig.ScaleOnly,
+		pcaConfig.SNV,
+		pcaConfig.VectorNorm,
+	)
+
+	// We need to fit the preprocessor to get the parameters
+	// But we already have them in the PCAResult
+	// Create a mock CSVData structure for the output conversion
+	csvData := &cli.CSVData{
+		CSVData: &types.CSVData{
+			Headers:  request.Headers,
+			RowNames: request.RowNames,
+			Matrix:   request.Data,
+			Rows:     len(request.Data),
+			Columns:  len(request.Headers),
+		},
+	}
+
+	// Convert to PCAOutputData using the CLI function
+	outputData := cli.ConvertToPCAOutputData(request.PCAResult, csvData, true, pcaConfig, preprocessor)
+
+	// Marshal to JSON
+	jsonData, err := json.MarshalIndent(outputData, "", "  ")
+	if err != nil {
+		return fmt.Errorf("failed to marshal model data: %v", err)
+	}
+
+	// Write to file
+	err = os.WriteFile(filePath, jsonData, 0644)
+	if err != nil {
+		return fmt.Errorf("failed to write model file: %v", err)
+	}
+
+	return nil
 }
