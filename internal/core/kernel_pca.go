@@ -50,12 +50,12 @@ func (kpca *KernelPCAImpl) validateKernelConfig(config types.PCAConfig) error {
 
 	switch KernelType(config.KernelType) {
 	case KernelRBF:
-		if config.KernelGamma <= 0 {
-			return errors.New("gamma must be positive for RBF kernel")
+		if config.KernelGamma < 0 {
+			return errors.New("gamma must be non-negative for RBF kernel")
 		}
 	case KernelPoly:
-		if config.KernelGamma <= 0 {
-			return errors.New("gamma must be positive for polynomial kernel")
+		if config.KernelGamma < 0 {
+			return errors.New("gamma must be non-negative for polynomial kernel")
 		}
 		if config.KernelDegree < 1 {
 			return errors.New("degree must be at least 1 for polynomial kernel")
@@ -223,7 +223,6 @@ func (kpca *KernelPCAImpl) Fit(data types.Matrix, config types.PCAConfig) (*type
 		return nil, fmt.Errorf("invalid kernel configuration: %w", err)
 	}
 
-	kpca.config = config
 	kpca.kernelType = KernelType(config.KernelType)
 
 	// Validate data
@@ -238,6 +237,14 @@ func (kpca *KernelPCAImpl) Fit(data types.Matrix, config types.PCAConfig) (*type
 		return nil, fmt.Errorf("number of components (%d) cannot exceed number of samples (%d)",
 			config.Components, nSamples)
 	}
+
+	// Set default gamma to 1/n_features if not specified (for RBF and polynomial kernels)
+	if config.KernelGamma == 0 && (KernelType(config.KernelType) == KernelRBF || KernelType(config.KernelType) == KernelPoly) {
+		config.KernelGamma = 1.0 / float64(nFeatures)
+	}
+
+	// Store the configuration after setting defaults
+	kpca.config = config
 
 	// Apply preprocessing if needed (only variance scaling, SNV, or vector norm for kernel PCA)
 	processedData := data
