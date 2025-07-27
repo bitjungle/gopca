@@ -292,6 +292,29 @@ function AppContent() {
                                     >
                                         Wine
                                     </button>
+                                    <button
+                                        onClick={async () => {
+                                            setLoading(true);
+                                            setFileError(null);
+                                            setPcaError(null);
+                                            try {
+                                                const result = await LoadDatasetFile('swiss_roll.csv');
+                                                setFileData(result);
+                                                setPcaResponse(null);
+                                                setExcludedRows([]);
+                                                setExcludedColumns([]);
+                                                setSelectedGroupColumn('color_category');
+                                            } catch (err) {
+                                                setFileError(`Failed to load Swiss Roll dataset: ${err}`);
+                                            } finally {
+                                                setLoading(false);
+                                            }
+                                        }}
+                                        className="w-full px-4 py-2 text-sm bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors"
+                                        disabled={loading}
+                                    >
+                                        Swiss Roll
+                                    </button>
                                 </div>
                             </HelpWrapper>
                         </div>
