@@ -66,10 +66,10 @@ func (p *PCAImpl) Fit(data types.Matrix, config types.PCAConfig) (*types.PCAResu
 
 		// Convert back to mat.Dense
 		X = matrixToDense(processedData)
-	} else if usingNativeMissing && (config.MeanCenter || config.StandardScale || config.RobustScale || config.ScaleOnly || config.SNV || config.VectorNorm) {
-		// Warn that preprocessing is skipped with native missing value handling
-		// The NIPALS algorithm will handle centering internally if needed
 	}
+	// TODO: Add warning when preprocessing is requested with native missing value handling
+	// Currently, preprocessing is skipped when using NIPALS with native missing values
+	// as the NIPALS algorithm handles centering internally
 
 	// Select PCA method
 	var scores, loadings *mat.Dense
@@ -395,7 +395,6 @@ func (p *PCAImpl) nipalsAlgorithmWithMissing(X *mat.Dense, nComponents int) (*ma
 		// Check if remaining variance is too small
 		if maxVar < tolerance {
 			// No more meaningful components, reduce number of components
-			nComponents = k
 			T = T.Slice(0, n, 0, k).(*mat.Dense)
 			P = P.Slice(0, m, 0, k).(*mat.Dense)
 			break
@@ -666,7 +665,7 @@ func (p *PCAImpl) validateInput(data types.Matrix, config types.PCAConfig) error
 	}
 
 	// Check for NaN values (unless using NIPALS with native missing value handling)
-	if !(config.Method == "nipals" && config.MissingStrategy == types.MissingNative) {
+	if config.Method != "nipals" || config.MissingStrategy != types.MissingNative {
 		for i := 0; i < n; i++ {
 			for j := 0; j < m; j++ {
 				if math.IsNaN(data[i][j]) {
