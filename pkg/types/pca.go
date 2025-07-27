@@ -73,9 +73,11 @@ type PCAEngine interface {
 
 // PCAOutputData represents complete PCA results for output
 type PCAOutputData struct {
-	Samples  SampleData  `json:"samples"`
-	Features FeatureData `json:"features"`
-	Metadata PCAMetadata `json:"metadata"`
+	Metadata      ModelMetadata     `json:"metadata"`
+	Preprocessing PreprocessingInfo `json:"preprocessing"`
+	Model         ModelComponents   `json:"model"`
+	Results       ResultsData       `json:"results"`
+	Diagnostics   DiagnosticLimits  `json:"diagnostics,omitempty"`
 }
 
 // SampleData contains sample-space results
@@ -110,4 +112,85 @@ type PCAMetadata struct {
 	Preprocessing      string    `json:"preprocessing"`
 	ExplainedVariance  []float64 `json:"explained_variance"`
 	CumulativeVariance []float64 `json:"cumulative_variance"`
+}
+
+// ModelMetadata contains metadata about the model and analysis
+type ModelMetadata struct {
+	Version   string      `json:"version"`
+	CreatedAt string      `json:"created_at"`
+	Software  string      `json:"software"`
+	Config    ModelConfig `json:"config"`
+}
+
+// ModelConfig contains the configuration used for PCA
+type ModelConfig struct {
+	Method          string               `json:"method"`
+	NComponents     int                  `json:"n_components"`
+	MissingStrategy MissingValueStrategy `json:"missing_strategy"`
+	ExcludedRows    []int                `json:"excluded_rows,omitempty"`
+	ExcludedColumns []int                `json:"excluded_columns,omitempty"`
+	// Kernel PCA parameters
+	KernelType   string  `json:"kernel_type,omitempty"`
+	KernelGamma  float64 `json:"kernel_gamma,omitempty"`
+	KernelDegree int     `json:"kernel_degree,omitempty"`
+	KernelCoef0  float64 `json:"kernel_coef0,omitempty"`
+}
+
+// PreprocessingInfo contains all preprocessing configuration and parameters
+type PreprocessingInfo struct {
+	MeanCenter    bool                `json:"mean_center"`
+	StandardScale bool                `json:"standard_scale"`
+	RobustScale   bool                `json:"robust_scale"`
+	ScaleOnly     bool                `json:"scale_only"`
+	SNV           bool                `json:"snv"`
+	VectorNorm    bool                `json:"vector_norm"`
+	Parameters    PreprocessingParams `json:"parameters"`
+}
+
+// PreprocessingParams contains the fitted preprocessing parameters
+type PreprocessingParams struct {
+	FeatureMeans   []float64 `json:"feature_means,omitempty"`
+	FeatureStdDevs []float64 `json:"feature_stddevs,omitempty"`
+	FeatureMedians []float64 `json:"feature_medians,omitempty"`
+	FeatureMADs    []float64 `json:"feature_mads,omitempty"`
+	RowMeans       []float64 `json:"row_means,omitempty"`
+	RowStdDevs     []float64 `json:"row_stddevs,omitempty"`
+}
+
+// ModelComponents contains the core PCA model components
+type ModelComponents struct {
+	Loadings               Matrix    `json:"loadings"`
+	ExplainedVariance      []float64 `json:"explained_variance"`
+	ExplainedVarianceRatio []float64 `json:"explained_variance_ratio"`
+	CumulativeVariance     []float64 `json:"cumulative_variance"`
+	ComponentLabels        []string  `json:"component_labels"`
+	FeatureLabels          []string  `json:"feature_labels"`
+}
+
+// ResultsData contains the results of the PCA analysis
+type ResultsData struct {
+	Samples SamplesResults `json:"samples"`
+}
+
+// SamplesResults contains sample-specific results
+type SamplesResults struct {
+	Names   []string     `json:"names"`
+	Scores  Matrix       `json:"scores"`
+	Metrics *MetricsData `json:"metrics,omitempty"`
+}
+
+// MetricsData contains diagnostic metrics for samples
+type MetricsData struct {
+	HotellingT2 []float64 `json:"hotelling_t2"`
+	Mahalanobis []float64 `json:"mahalanobis"`
+	RSS         []float64 `json:"rss"`
+	IsOutlier   []bool    `json:"is_outlier"`
+}
+
+// DiagnosticLimits contains statistical limits for diagnostics
+type DiagnosticLimits struct {
+	T2Limit95 float64 `json:"t2_limit_95,omitempty"`
+	T2Limit99 float64 `json:"t2_limit_99,omitempty"`
+	QLimit95  float64 `json:"q_limit_95,omitempty"`
+	QLimit99  float64 `json:"q_limit_99,omitempty"`
 }

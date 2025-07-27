@@ -46,9 +46,15 @@ export interface PCAResult {
   scores: number[][];
   loadings: number[][];
   explained_variance: number[];
+  explained_variance_ratio: number[];
   cumulative_variance: number[];
   component_labels: string[];
   variable_labels?: string[];
+  components_computed: number;
+  method: string;
+  preprocessing_applied: boolean;
+  means?: number[];
+  stddevs?: number[];
   metrics?: SampleMetrics[];
   t2_limit_95?: number;
   t2_limit_99?: number;

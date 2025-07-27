@@ -30,14 +30,11 @@ EXAMPLES:
   # Standard scaling with 3 components
   gopca-cli analyze --scale standard -c 3 data/iris_data.csv
 
-  # Save results to CSV file
-  gopca-cli analyze -f csv -o results.csv data/iris_data.csv
-
   # JSON output with all results
   gopca-cli analyze -f json --output-all data/iris_data.csv
 
-  # Quiet mode for scripting (CSV to stdout)
-  gopca-cli analyze -f csv --quiet data/iris_data.csv
+  # JSON output to specific directory
+  gopca-cli analyze -f json -o results/ data/iris_data.csv
 
   # Exclude specific rows and columns
   gopca-cli analyze --exclude-rows 1,5-10 --exclude-cols 3,4 data/iris_data.csv
@@ -62,7 +59,7 @@ The analysis includes:
   - PCA computation using SVD, NIPALS, or Kernel methods
   - Kernel PCA for non-linear dimensionality reduction
   - Optional statistical metrics (Hotelling's T², Mahalanobis distances, RSS)
-  - Multiple output formats (table, CSV, JSON)`,
+  - Multiple output formats (table, JSON)`,
 		Flags: []cli.Flag{
 			// General flags
 			&cli.BoolFlag{
@@ -85,7 +82,7 @@ The analysis includes:
 			&cli.StringFlag{
 				Name:    "format",
 				Aliases: []string{"f"},
-				Usage:   "Output format: table, csv, json",
+				Usage:   "Output format: table, json",
 				Value:   "table",
 			},
 
@@ -228,10 +225,10 @@ func validateAnalyzeFlags(c *cli.Context) error {
 	// Validate format
 	format := c.String("format")
 	switch format {
-	case "table", "csv", "json":
+	case "table", "json":
 		// Valid formats
 	default:
-		return fmt.Errorf("invalid output format: %s (must be table, csv, or json)", format)
+		return fmt.Errorf("invalid output format: %s (must be table or json)", format)
 	}
 
 	// Validate method
@@ -545,6 +542,8 @@ func runAnalyze(c *cli.Context) error {
 		StandardScale:   c.String("scale") == "standard",
 		RobustScale:     c.String("scale") == "robust",
 		ScaleOnly:       c.Bool("scale-only"),
+		SNV:             c.Bool("snv"),
+		VectorNorm:      c.Bool("vector-norm"),
 		Method:          c.String("method"),
 		ExcludedRows:    excludedRows,
 		ExcludedColumns: excludedCols,
@@ -689,14 +688,10 @@ func runAnalyze(c *cli.Context) error {
 			err = outputTableFormat(result, data, outputScores, outputLoadings,
 				outputVariance, includeMetrics)
 		}
-	case "csv":
-		// CSV output is different - don't show table
-		err = outputCSVFormat(result, data, inputFile, outputDir, outputScores, outputLoadings,
-			outputVariance, includeMetrics)
 	case "json":
 		// JSON output is different - don't show table
 		err = outputJSONFormat(result, data, inputFile, outputDir, outputScores, outputLoadings,
-			outputVariance, includeMetrics)
+			outputVariance, includeMetrics, pcaConfig, preprocessor)
 	default:
 		return fmt.Errorf("unsupported output format: %s", outputFormat)
 	}

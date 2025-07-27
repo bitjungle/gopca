@@ -1,13 +1,12 @@
 package cli
 
 import (
-	"encoding/csv"
 	"encoding/json"
 	"fmt"
 	"os"
 	"path/filepath"
-	"strconv"
 	"strings"
+	"time"
 
 	"github.com/bitjungle/gopca/internal/core"
 	"github.com/bitjungle/gopca/pkg/types"
@@ -68,78 +67,113 @@ func generateOutputPaths(inputFile, outputDir, format string) map[string]string 
 	}
 
 	// Generate paths based on format
-	switch format {
-	case "csv":
-		paths["samples"] = filepath.Join(dir, baseName+"_pca_samples.csv")
-		paths["features"] = filepath.Join(dir, baseName+"_pca_features.csv")
-	case "json":
+	if format == "json" {
 		paths["output"] = filepath.Join(dir, baseName+"_pca.json")
 	}
 
 	return paths
 }
 
-// convertToPCAOutputData converts PCAResult and CSVData to PCAOutputData
-func convertToPCAOutputData(result *types.PCAResult, data *CSVData, includeMetrics bool) *types.PCAOutputData {
-	// Create sample data
-	sampleData := types.SampleData{
-		Names:  data.RowNames,
-		Scores: result.Scores,
+// ConvertToPCAOutputData converts PCAResult and CSVData to PCAOutputData
+func ConvertToPCAOutputData(result *types.PCAResult, data *CSVData, includeMetrics bool,
+	config types.PCAConfig, preprocessor *core.Preprocessor) *types.PCAOutputData {
+
+	// Create timestamp
+	createdAt := time.Now().Format(time.RFC3339)
+
+	// Create model metadata
+	metadata := types.ModelMetadata{
+		Version:   "1.0",
+		CreatedAt: createdAt,
+		Software:  "gopca",
+		Config: types.ModelConfig{
+			Method:          config.Method,
+			NComponents:     config.Components,
+			MissingStrategy: config.MissingStrategy,
+			ExcludedRows:    config.ExcludedRows,
+			ExcludedColumns: config.ExcludedColumns,
+			KernelType:      config.KernelType,
+			KernelGamma:     config.KernelGamma,
+			KernelDegree:    config.KernelDegree,
+			KernelCoef0:     config.KernelCoef0,
+		},
+	}
+
+	// Create preprocessing info
+	preprocessingInfo := types.PreprocessingInfo{
+		MeanCenter:    config.MeanCenter,
+		StandardScale: config.StandardScale,
+		RobustScale:   config.RobustScale,
+		ScaleOnly:     config.ScaleOnly,
+		SNV:           config.SNV,
+		VectorNorm:    config.VectorNorm,
+		Parameters:    types.PreprocessingParams{},
+	}
+
+	// Add preprocessing parameters if preprocessor was used
+	if preprocessor != nil {
+		preprocessingInfo.Parameters.FeatureMeans = preprocessor.GetMeans()
+		preprocessingInfo.Parameters.FeatureStdDevs = preprocessor.GetStdDevs()
+		preprocessingInfo.Parameters.FeatureMedians = preprocessor.GetMedians()
+		preprocessingInfo.Parameters.FeatureMADs = preprocessor.GetMADs()
+		preprocessingInfo.Parameters.RowMeans = preprocessor.GetRowMeans()
+		preprocessingInfo.Parameters.RowStdDevs = preprocessor.GetRowStdDevs()
+	}
+
+	// Create model components
+	modelComponents := types.ModelComponents{
+		Loadings:               result.Loadings,
+		ExplainedVariance:      result.ExplainedVar,
+		ExplainedVarianceRatio: result.ExplainedVarRatio,
+		CumulativeVariance:     result.CumulativeVar,
+		ComponentLabels:        result.ComponentLabels,
+		FeatureLabels:          data.Headers,
+	}
+
+	// Create results data
+	resultsData := types.ResultsData{
+		Samples: types.SamplesResults{
+			Names:  data.RowNames,
+			Scores: result.Scores,
+		},
 	}
 
 	// Add metrics if requested
 	if includeMetrics {
-		// Calculate actual metrics using the metrics calculator
 		metrics, err := core.CalculateMetricsFromPCAResult(result, data.Matrix)
 		if err != nil {
-			// If metrics calculation fails, use zero values
 			fmt.Fprintf(os.Stderr, "Warning: Failed to calculate metrics: %v\n", err)
-			sampleData.Metrics = make([]types.SampleMetrics, len(result.Scores))
-			for i := range sampleData.Metrics {
-				sampleData.Metrics[i] = types.SampleMetrics{
-					HotellingT2: 0.0,
-					Mahalanobis: 0.0,
-					RSS:         0.0,
-					IsOutlier:   false,
-				}
-			}
 		} else {
-			sampleData.Metrics = metrics
+			metricsData := &types.MetricsData{
+				HotellingT2: make([]float64, len(metrics)),
+				Mahalanobis: make([]float64, len(metrics)),
+				RSS:         make([]float64, len(metrics)),
+				IsOutlier:   make([]bool, len(metrics)),
+			}
+			for i, m := range metrics {
+				metricsData.HotellingT2[i] = m.HotellingT2
+				metricsData.Mahalanobis[i] = m.Mahalanobis
+				metricsData.RSS[i] = m.RSS
+				metricsData.IsOutlier[i] = m.IsOutlier
+			}
+			resultsData.Samples.Metrics = metricsData
 		}
 	}
 
-	// Create feature data
-	featureData := types.FeatureData{
-		Names:    data.Headers,
-		Loadings: result.Loadings,
-		Means:    result.Means,
-		StdDevs:  result.StdDevs,
-	}
-
-	// Determine preprocessing type
-	preprocessing := "none"
-	if len(result.Means) > 0 {
-		preprocessing = "mean_centered"
-		if len(result.StdDevs) > 0 {
-			preprocessing = "standard_scaled"
-		}
-	}
-
-	// Create metadata
-	metadata := types.PCAMetadata{
-		NSamples:           data.Rows,
-		NFeatures:          data.Columns,
-		NComponents:        len(result.ComponentLabels),
-		Method:             "svd", // TODO: Get from config
-		Preprocessing:      preprocessing,
-		ExplainedVariance:  result.ExplainedVar,
-		CumulativeVariance: result.CumulativeVar,
+	// Create diagnostic limits
+	diagnostics := types.DiagnosticLimits{
+		T2Limit95: result.T2Limit95,
+		T2Limit99: result.T2Limit99,
+		QLimit95:  result.QLimit95,
+		QLimit99:  result.QLimit99,
 	}
 
 	return &types.PCAOutputData{
-		Samples:  sampleData,
-		Features: featureData,
-		Metadata: metadata,
+		Metadata:      metadata,
+		Preprocessing: preprocessingInfo,
+		Model:         modelComponents,
+		Results:       resultsData,
+		Diagnostics:   diagnostics,
 	}
 }
 
@@ -272,162 +306,13 @@ func outputTableFormat(result *types.PCAResult, data *CSVData,
 	return nil
 }
 
-// outputCSVFormat outputs results in CSV format
-func outputCSVFormat(result *types.PCAResult, data *CSVData, inputFile, outputDir string,
-	outputScores, outputLoadings, outputVariance, includeMetrics bool) error {
-
-	// Convert to PCAOutputData
-	outputData := convertToPCAOutputData(result, data, includeMetrics)
-
-	// Generate output paths
-	paths := generateOutputPaths(inputFile, outputDir, "csv")
-
-	// Create output directory if needed
-	if outputDir != "" {
-		if err := os.MkdirAll(outputDir, 0755); err != nil {
-			return fmt.Errorf("failed to create output directory: %w", err)
-		}
-	}
-
-	// Write samples CSV
-	if err := writeSamplesCSV(outputData, paths["samples"], includeMetrics); err != nil {
-		return err
-	}
-
-	// Write features CSV
-	if err := writeFeaturesCSV(outputData, paths["features"]); err != nil {
-		return err
-	}
-
-	fmt.Printf("\nResults saved to:\n")
-	fmt.Printf("  Samples: %s\n", paths["samples"])
-	fmt.Printf("  Features: %s\n", paths["features"])
-
-	return nil
-}
-
-// writeSamplesCSV writes the samples data to a CSV file
-func writeSamplesCSV(data *types.PCAOutputData, filename string, includeMetrics bool) error {
-	file, err := os.Create(filename)
-	if err != nil {
-		return fmt.Errorf("failed to create samples file: %w", err)
-	}
-	defer func() { _ = file.Close() }()
-
-	writer := csv.NewWriter(file)
-	defer writer.Flush()
-
-	// Write header
-	headers := []string{""} // Index column
-	for i := 0; i < data.Metadata.NComponents; i++ {
-		headers = append(headers, fmt.Sprintf("PC%d", i+1))
-	}
-	if includeMetrics {
-		headers = append(headers, "hotelling_t2", "mahalanobis_distances",
-			"residual_sum_of_squares", "outlier_mask")
-	}
-
-	if err := writer.Write(headers); err != nil {
-		return fmt.Errorf("failed to write CSV header: %w", err)
-	}
-
-	// Write data rows
-	for i := 0; i < len(data.Samples.Scores); i++ {
-		row := []string{}
-
-		// Sample name
-		if i < len(data.Samples.Names) && data.Samples.Names[i] != "" {
-			row = append(row, data.Samples.Names[i])
-		} else {
-			row = append(row, fmt.Sprintf("Sample_%d", i+1))
-		}
-
-		// PC scores
-		for j := 0; j < data.Metadata.NComponents; j++ {
-			row = append(row, strconv.FormatFloat(data.Samples.Scores[i][j], 'f', -1, 64))
-		}
-
-		// Metrics
-		if includeMetrics && data.Samples.Metrics != nil {
-			metrics := data.Samples.Metrics[i]
-			row = append(row,
-				strconv.FormatFloat(metrics.HotellingT2, 'f', -1, 64),
-				strconv.FormatFloat(metrics.Mahalanobis, 'f', -1, 64),
-				strconv.FormatFloat(metrics.RSS, 'f', -1, 64),
-				strconv.FormatBool(metrics.IsOutlier))
-		}
-
-		if err := writer.Write(row); err != nil {
-			return fmt.Errorf("failed to write CSV row: %w", err)
-		}
-	}
-
-	return nil
-}
-
-// writeFeaturesCSV writes the features data to a CSV file
-func writeFeaturesCSV(data *types.PCAOutputData, filename string) error {
-	file, err := os.Create(filename)
-	if err != nil {
-		return fmt.Errorf("failed to create features file: %w", err)
-	}
-	defer func() { _ = file.Close() }()
-
-	writer := csv.NewWriter(file)
-	defer writer.Flush()
-
-	// Write header with feature names
-	headers := []string{""} // Index column
-	headers = append(headers, data.Features.Names...)
-
-	if err := writer.Write(headers); err != nil {
-		return fmt.Errorf("failed to write CSV header: %w", err)
-	}
-
-	// Write loadings for each PC
-	for i := 0; i < data.Metadata.NComponents; i++ {
-		row := []string{fmt.Sprintf("PC%d", i+1)}
-
-		for j := 0; j < data.Metadata.NFeatures; j++ {
-			row = append(row, strconv.FormatFloat(data.Features.Loadings[j][i], 'f', -1, 64))
-		}
-
-		if err := writer.Write(row); err != nil {
-			return fmt.Errorf("failed to write loadings row: %w", err)
-		}
-	}
-
-	// Write mean row
-	if len(data.Features.Means) > 0 {
-		row := []string{"mean"}
-		for _, mean := range data.Features.Means {
-			row = append(row, strconv.FormatFloat(mean, 'f', -1, 64))
-		}
-		if err := writer.Write(row); err != nil {
-			return fmt.Errorf("failed to write mean row: %w", err)
-		}
-	}
-
-	// Write stdev row
-	if len(data.Features.StdDevs) > 0 {
-		row := []string{"stdev"}
-		for _, stdev := range data.Features.StdDevs {
-			row = append(row, strconv.FormatFloat(stdev, 'f', -1, 64))
-		}
-		if err := writer.Write(row); err != nil {
-			return fmt.Errorf("failed to write stdev row: %w", err)
-		}
-	}
-
-	return nil
-}
-
 // outputJSONFormat outputs results in JSON format
 func outputJSONFormat(result *types.PCAResult, data *CSVData, inputFile, outputDir string,
-	outputScores, outputLoadings, outputVariance, includeMetrics bool) error {
+	outputScores, outputLoadings, outputVariance, includeMetrics bool,
+	config types.PCAConfig, preprocessor *core.Preprocessor) error {
 
 	// Convert to PCAOutputData
-	outputData := convertToPCAOutputData(result, data, includeMetrics)
+	outputData := ConvertToPCAOutputData(result, data, includeMetrics, config, preprocessor)
 
 	// Generate output paths
 	paths := generateOutputPaths(inputFile, outputDir, "json")

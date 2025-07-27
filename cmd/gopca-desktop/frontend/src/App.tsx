@@ -173,6 +173,30 @@ function AppContent() {
         }
     };
     
+    const handleExportModel = async () => {
+        if (!pcaResponse?.success || !pcaResponse.result || !fileData) return;
+        
+        try {
+            const { ExportPCAModel } = await import("../wailsjs/go/main/App");
+            const { ExportPCAModelRequest } = await import("../wailsjs/go/models").then(m => m.main);
+            
+            const request = new ExportPCAModelRequest({
+                data: fileData.data,
+                headers: fileData.headers,
+                rowNames: fileData.rowNames,
+                pcaResult: pcaResponse.result,
+                config,
+                excludedRows,
+                excludedColumns
+            });
+            
+            await ExportPCAModel(request);
+        } catch (err) {
+            console.error('Failed to export model:', err);
+            alert(`Failed to export model: ${err}`);
+        }
+    };
+    
     return (
         <div className="flex flex-col h-screen bg-gray-50 dark:bg-gray-900 text-gray-900 dark:text-white transition-colors duration-200">
             <header className="sticky top-0 z-50 bg-white dark:bg-gray-800 shadow-lg backdrop-blur-sm bg-opacity-95 dark:bg-opacity-95">
@@ -685,7 +709,15 @@ function AppContent() {
                             
                             {/* Explained Variance */}
                             <div className="bg-gray-100 dark:bg-gray-700 rounded-lg p-4">
-                                <h3 className="text-lg font-semibold mb-2">Explained Variance</h3>
+                                <div className="flex justify-between items-start mb-2">
+                                    <h3 className="text-lg font-semibold">Explained Variance</h3>
+                                    <button
+                                        onClick={handleExportModel}
+                                        className="px-3 py-1 bg-blue-500 hover:bg-blue-600 text-white text-sm rounded-lg transition-colors"
+                                    >
+                                        Export Model
+                                    </button>
+                                </div>
                                 <div className="space-y-2">
                                     {pcaResponse.result.explained_variance.map((variance, i) => {
                                         const percentage = variance;
