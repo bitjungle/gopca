@@ -22,11 +22,7 @@ func (a *App) ParseCSV(content string) (result *FileDataJSON, err error) {
 		return nil, fmt.Errorf("empty file content")
 	}
 
-	// Try to detect CSV format
-	sample := []byte(content)
-	if len(sample) > 1000 {
-		sample = sample[:1000] // Use first 1KB for detection
-	}
+	// Try to detect CSV format by attempting different formats
 
 	// Try multiple formats
 	defaultFormat := types.DefaultCSVFormat()
@@ -80,7 +76,7 @@ func (a *App) ParseCSV(content string) (result *FileDataJSON, err error) {
 	}
 
 	// Add categorical columns if there are any
-	if categoricalData != nil && len(categoricalData) > 0 {
+	if len(categoricalData) > 0 {
 		fileResult.CategoricalColumns = categoricalData
 	}
 

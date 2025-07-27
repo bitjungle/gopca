@@ -375,11 +375,12 @@ func runAnalyze(c *cli.Context) error {
 
 	// Handle decimal separator
 	decimalSep := c.String("decimal-separator")
-	if decimalSep == "dot" {
+	switch decimalSep {
+	case "dot":
 		parseOpts.DecimalSeparator = '.'
-	} else if decimalSep == "comma" || decimalSep == "," {
+	case "comma", ",":
 		parseOpts.DecimalSeparator = ','
-	} else {
+	default:
 		parseOpts.DecimalSeparator = rune(decimalSep[0])
 	}
 

@@ -190,11 +190,12 @@ func TestCalculateGroupEllipsesEdgeCases(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			ellipses, err := CalculateGroupEllipses(tt.scores, tt.groups, tt.pcX, tt.pcY, 0.95)
 
-			if tt.name == "PC indices out of bounds" {
+			switch tt.name {
+			case "PC indices out of bounds":
 				if err == nil {
 					t.Error("Expected error for out of bounds PC indices")
 				}
-			} else if tt.name == "group with too few points" {
+			case "group with too few points":
 				if err != nil {
 					t.Errorf("Unexpected error: %v", err)
 				}
