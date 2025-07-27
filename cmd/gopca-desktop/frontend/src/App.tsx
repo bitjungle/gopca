@@ -864,16 +864,6 @@ function AppContent() {
                                 </div>
                             </div>
                             
-                            {/* Scores Matrix */}
-                            <div className="mt-6">
-                                <DataTable
-                                    headers={pcaResponse.result.component_labels || []}
-                                    rowNames={fileData?.rowNames || []}
-                                    data={pcaResponse.result.scores}
-                                    title="Scores Matrix"
-                                />
-                            </div>
-                            
                         </div>
                     )}
                 </div>
