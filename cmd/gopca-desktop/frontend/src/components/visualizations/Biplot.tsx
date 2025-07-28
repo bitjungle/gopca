@@ -524,9 +524,9 @@ export const Biplot: React.FC<BiplotProps> = ({
             strokeWidth={1}
             stroke="#1E40AF"
           >
-            {groupColumn && groupLabels ? (
+            {groupColumn ? (
               scoresData.map((entry, index) => (
-                <Cell key={`cell-${index}`} fill={entry.color} />
+                <Cell key={`cell-${index}`} fill={entry.color} stroke={entry.color} />
               ))
             ) : null}
           </Scatter>
