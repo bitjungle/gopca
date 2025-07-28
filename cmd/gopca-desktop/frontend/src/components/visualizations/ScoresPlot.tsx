@@ -33,7 +33,6 @@ export const ScoresPlot: React.FC<ScoresPlotProps> = ({
   groupEllipses,
   showEllipses = false
 }) => {
-  console.log('ScoresPlot props:', { groupColumn, groupType, groupValues: groupValues?.slice(0, 5), groupLabels: groupLabels?.slice(0, 5) });
   const containerRef = useRef<HTMLDivElement>(null);
   const fullscreenRef = useRef<HTMLDivElement>(null);
   
@@ -71,14 +70,12 @@ export const ScoresPlot: React.FC<ScoresPlotProps> = ({
   // Calculate min/max for continuous values
   const continuousRange = useMemo(() => {
     if (groupType === 'continuous' && groupValues) {
-      console.log('ScoresPlot - groupType:', groupType, 'groupValues:', groupValues);
       const validValues = groupValues.filter(v => !isNaN(v) && isFinite(v));
       if (validValues.length > 0) {
         const range = {
           min: Math.min(...validValues),
           max: Math.max(...validValues)
         };
-        console.log('ScoresPlot - continuousRange:', range);
         return range;
       }
     }
