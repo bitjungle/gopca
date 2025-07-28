@@ -170,6 +170,11 @@
       "text": "Switch between light and dark modes. Preference saved locally.",
       "category": "interface"
     },
+    "plot-color-palette": {
+      "title": "Plot Color Palette",
+      "text": "Choose between Categorical (distinct colors for groups/categories) or Sequential (gradient for continuous values). Categorical is best for group comparisons, Sequential for visualizing gradients or intensities.",
+      "category": "interface"
+    },
     "preprocessing-order": {
       "title": "Preprocessing Order",
       "text": "Row-wise (SNV/L2) applied first, then column-wise (centering/scaling). Order matters!",

@@ -215,7 +215,9 @@ function AppContent() {
                         />
                     </div>
                     <div className="flex items-center gap-2">
-                        <PaletteSelector />
+                        <HelpWrapper helpKey="plot-color-palette">
+                            <PaletteSelector />
+                        </HelpWrapper>
                         <ThemeToggle />
                     </div>
                 </div>
