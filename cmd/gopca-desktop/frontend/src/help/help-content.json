@@ -171,8 +171,8 @@
       "category": "interface"
     },
     "plot-color-palette": {
-      "title": "Plot Color Palette",
-      "text": "Choose between Categorical (distinct colors for groups/categories) or Sequential (gradient for continuous values). Categorical is best for group comparisons, Sequential for visualizing gradients or intensities.",
+      "title": "Plot Palettes",
+      "text": "Choose between Categorical (distinct colors for groups/categories) or Sequential (gradient for continuous values).",
       "category": "interface"
     },
     "preprocessing-order": {
