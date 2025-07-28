@@ -6,7 +6,7 @@ import { PlotControls } from '../PlotControls';
 import { useZoomPan } from '../../hooks/useZoomPan';
 import { useChartTheme } from '../../hooks/useChartTheme';
 import { usePalette } from '../../contexts/PaletteContext';
-import { getQualitativeColor, getSequentialColor } from '../../utils/colorPalettes';
+import { getQualitativeColor, getSequentialColor, createQualitativeColorMap, getSequentialColorScale } from '../../utils/colorPalettes';
 
 interface ScoresPlotProps {
   pcaResult: PCAResult;
@@ -39,33 +39,15 @@ export const ScoresPlot: React.FC<ScoresPlotProps> = ({
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [containerSize, setContainerSize] = useState({ width: 0, height: 0 });
   const chartTheme = useChartTheme();
-  const { paletteType } = usePalette();
+  const { mode, qualitativePalette, sequentialPalette } = usePalette();
   
-  // Create color map for groups based on selected palette type
+  // Create color map for groups based on selected palette
   const groupColorMap = useMemo(() => {
     if (groupType === 'categorical' && groupLabels && groupColumn) {
-      const uniqueGroups = [...new Set(groupLabels)].sort();
-      const colorMap = new Map<string, string>();
-      
-      if (paletteType === 'sequential') {
-        // For sequential palette, distribute colors across the gradient
-        uniqueGroups.forEach((group, index) => {
-          const normalizedValue = uniqueGroups.length > 1 
-            ? index / (uniqueGroups.length - 1) 
-            : 0.5;
-          colorMap.set(group, getSequentialColor(normalizedValue));
-        });
-      } else {
-        // For qualitative palette, use distinct colors
-        uniqueGroups.forEach((group, index) => {
-          colorMap.set(group, getQualitativeColor(index));
-        });
-      }
-      
-      return colorMap;
+      return createQualitativeColorMap(groupLabels, qualitativePalette);
     }
     return null;
-  }, [groupLabels, groupColumn, paletteType, groupType]);
+  }, [groupLabels, groupColumn, qualitativePalette, groupType]);
   
   // Calculate min/max for continuous values
   const continuousRange = useMemo(() => {
@@ -106,8 +88,7 @@ export const ScoresPlot: React.FC<ScoresPlotProps> = ({
       const val = groupValues[index];
       value = val;
       if (!isNaN(val) && isFinite(val)) {
-        const normalized = (val - continuousRange.min) / (continuousRange.max - continuousRange.min);
-        color = getSequentialColor(normalized);
+        color = getSequentialColorScale(val, continuousRange.min, continuousRange.max, sequentialPalette);
         group = val.toFixed(2); // For display purposes
       }
     }
@@ -286,7 +267,7 @@ export const ScoresPlot: React.FC<ScoresPlotProps> = ({
                 <div 
                   className="w-32 h-4 rounded"
                   style={{
-                    background: `linear-gradient(to right, ${getSequentialColor(0)}, ${getSequentialColor(0.5)}, ${getSequentialColor(1)})`
+                    background: `linear-gradient(to right, ${getSequentialColor(0, sequentialPalette)}, ${getSequentialColor(0.5, sequentialPalette)}, ${getSequentialColor(1, sequentialPalette)})`
                   }}
                 />
                 <span className="text-gray-700 dark:text-gray-300">{continuousRange.max.toFixed(2)}</span>

@@ -1,70 +1,262 @@
 // Color palette definitions for data visualization
-// Based on seaborn color palettes
+// Based on seaborn color palettes and scientific visualization best practices
 
 export type PaletteType = 'qualitative' | 'sequential';
 
-// Seaborn default/deep palette - for categorical data
-export const QUALITATIVE_PALETTE = [
-  '#4C72B0', // blue
-  '#DD8452', // orange  
-  '#55A868', // green
-  '#C44E52', // red
-  '#8172B3', // purple
-  '#937860', // brown
-  '#DA8BC3', // pink
-  '#8C8C8C', // gray
-  '#CCB974', // tan
-  '#64B5CD', // light blue
-];
+// Palette names for user selection
+export type QualitativePaletteName = 'deep' | 'pastel' | 'dark' | 'colorblind' | 'husl';
+export type SequentialPaletteName = 'rocket' | 'viridis' | 'blues' | 'reds' | 'crest' | 'mako' | 'flare';
 
-// Rocket-inspired sequential palette - for continuous data
-// Dark to light gradient
-export const SEQUENTIAL_PALETTE = [
-  '#000428', // very dark blue
-  '#1a1f71', // dark blue
-  '#3d3393', // blue-purple
-  '#6b4c9a', // purple
-  '#9c6591', // pink-purple
-  '#c97d84', // pink
-  '#eb9f7e', // orange-pink
-  '#fdc086', // light orange
-  '#fee8b6', // light yellow
-  '#ffffd4', // very light yellow
-];
+// Qualitative palettes for categorical data
+export const QUALITATIVE_PALETTES: Record<QualitativePaletteName, string[]> = {
+  // Seaborn deep/default palette
+  deep: [
+    '#4C72B0', // blue
+    '#DD8452', // orange  
+    '#55A868', // green
+    '#C44E52', // red
+    '#8172B3', // purple
+    '#937860', // brown
+    '#DA8BC3', // pink
+    '#8C8C8C', // gray
+    '#CCB974', // tan
+    '#64B5CD', // light blue
+  ],
+  
+  // Seaborn pastel palette (lighter version)
+  pastel: [
+    '#A1C9F4', // light blue
+    '#FFB482', // light orange
+    '#8DE5A1', // light green
+    '#FF9F9B', // light red
+    '#D0BBFF', // light purple
+    '#DEBB9B', // light brown
+    '#FAB0E4', // light pink
+    '#CFCFCF', // light gray
+    '#FFFEA3', // light yellow
+    '#B9F2F0', // light cyan
+  ],
+  
+  // Seaborn dark palette (darker version)
+  dark: [
+    '#023EFF', // dark blue
+    '#FF7C00', // dark orange
+    '#1AC938', // dark green
+    '#E8000B', // dark red
+    '#8B2BE2', // dark purple
+    '#9F4800', // dark brown
+    '#F14CC1', // dark pink
+    '#4D4D4D', // dark gray
+    '#FFC400', // dark yellow
+    '#00D7FF', // dark cyan
+  ],
+  
+  // Colorblind safe palette (Paul Tol's palette)
+  colorblind: [
+    '#0173B2', // blue
+    '#DE8F05', // orange
+    '#029E73', // green
+    '#CC78BC', // pink
+    '#CA9161', // brown
+    '#FBAFE4', // light pink
+    '#949494', // gray
+    '#ECE133', // yellow
+    '#56B4E9', // light blue
+    '#208B3A', // dark green
+  ],
+  
+  // HUSL palette - perceptually uniform colors
+  husl: [
+    '#F77189', // red
+    '#BB9832', // yellow
+    '#50B131', // green
+    '#36ADA4', // cyan
+    '#3BA3EC', // blue
+    '#8B7AA8', // purple
+    '#E85B7A', // pink
+    '#9C9C9C', // gray
+    '#C29D4F', // tan
+    '#5FBCD3', // light blue
+  ]
+};
+
+// Sequential palettes for continuous data
+export const SEQUENTIAL_PALETTES: Record<SequentialPaletteName, string[]> = {
+  // Rocket palette - dark to light (seaborn's rocket)
+  rocket: [
+    '#000428', // very dark blue
+    '#1a1f71', // dark blue
+    '#3d3393', // blue-purple
+    '#6b4c9a', // purple
+    '#9c6591', // pink-purple
+    '#c97d84', // pink
+    '#eb9f7e', // orange-pink
+    '#fdc086', // light orange
+    '#fee8b6', // light yellow
+    '#ffffd4', // very light yellow
+  ],
+  
+  // Viridis palette - scientific standard
+  viridis: [
+    '#440154', // dark purple
+    '#482878', // purple
+    '#3e4989', // blue-purple
+    '#31688e', // blue
+    '#26828e', // blue-green
+    '#1f9e89', // green-blue
+    '#35b779', // green
+    '#6ece58', // light green
+    '#b5de2b', // yellow-green
+    '#fde725', // yellow
+  ],
+  
+  // Blues palette - single hue
+  blues: [
+    '#f7fbff', // very light blue
+    '#deebf7', // light blue
+    '#c6dbef', // 
+    '#9ecae1', // 
+    '#6baed6', // 
+    '#4292c6', // medium blue
+    '#2171b5', // 
+    '#08519c', // 
+    '#08306b', // dark blue
+  ],
+  
+  // Reds palette - single hue
+  reds: [
+    '#fff5f0', // very light red
+    '#fee0d2', // light red
+    '#fcbba1', // 
+    '#fc9272', // 
+    '#fb6a4a', // 
+    '#ef3b2c', // medium red
+    '#cb181d', // 
+    '#a50f15', // 
+    '#67000d', // dark red
+  ],
+  
+  // Crest palette - blue to purple (seaborn's crest)
+  crest: [
+    '#f0f9ff', // very light blue
+    '#d0e7f7', // light blue
+    '#a8d5e2', // 
+    '#7dc0d4', // 
+    '#4fa8c5', // 
+    '#2e8ab5', // medium blue
+    '#236ba3', // 
+    '#22508c', // blue-purple
+    '#1e3670', // dark blue-purple
+    '#071e58', // very dark purple
+  ],
+  
+  // Mako palette - blue to green (seaborn's mako)
+  mako: [
+    '#0B0405', // very dark
+    '#1A1A2D', // dark blue
+    '#233447', // 
+    '#1F5061', // 
+    '#166B7D', // blue-green
+    '#0C8B8C', // 
+    '#14A789', // green-blue
+    '#3DBC74', // green
+    '#85CE58', // light green
+    '#DEF5E5', // very light green
+  ],
+  
+  // Flare palette - yellow to purple (seaborn's flare)
+  flare: [
+    '#E3F2FD', // very light blue
+    '#E8D4F1', // light purple
+    '#F0B9D2', // light pink
+    '#F6A192', // light orange
+    '#F68C57', // orange
+    '#F47F17', // orange-yellow
+    '#F8870E', // yellow-orange
+    '#FA9B0E', // yellow
+    '#FDB417', // bright yellow
+    '#FFD125', // light yellow
+  ]
+};
+
+// Diverging palettes for data with meaningful center
+export const DIVERGING_PALETTES = {
+  // Blue to Red through white
+  coolwarm: [
+    '#3b4cc0', // blue
+    '#5b77d8',
+    '#7b9ff9',
+    '#9ebeff',
+    '#c5d8f4',
+    '#f7f7f7', // white center
+    '#f4c5c4',
+    '#ff9e9b',
+    '#f97b72',
+    '#dd5a4a',
+    '#b40426', // red
+  ],
+  
+  // Purple to Green through white
+  purplegreen: [
+    '#762a83', // purple
+    '#9970ab',
+    '#c2a5cf',
+    '#e7d4e8',
+    '#f7f7f7', // white center
+    '#d9f0d3',
+    '#a6dba0',
+    '#5aae61',
+    '#1b7837', // green
+  ]
+};
+
+// Helper function to get a qualitative palette
+export function getQualitativePalette(name: QualitativePaletteName = 'deep'): string[] {
+  return QUALITATIVE_PALETTES[name] || QUALITATIVE_PALETTES.deep;
+}
+
+// Helper function to get a sequential palette
+export function getSequentialPalette(name: SequentialPaletteName = 'rocket'): string[] {
+  return SEQUENTIAL_PALETTES[name] || SEQUENTIAL_PALETTES.rocket;
+}
 
 /**
- * Get a color from the qualitative palette
+ * Get a color from the specified qualitative palette
  * @param index - Index of the color (will wrap around if > palette length)
+ * @param paletteName - Name of the qualitative palette to use
  * @returns Hex color string
  */
-export function getQualitativeColor(index: number): string {
-  return QUALITATIVE_PALETTE[index % QUALITATIVE_PALETTE.length];
+export function getQualitativeColor(index: number, paletteName: QualitativePaletteName = 'deep'): string {
+  const palette = getQualitativePalette(paletteName);
+  return palette[index % palette.length];
 }
 
 /**
  * Interpolate a color from the sequential palette based on a normalized value
  * @param value - Normalized value between 0 and 1
+ * @param paletteName - Name of the sequential palette to use
  * @returns Hex color string
  */
-export function getSequentialColor(value: number): string {
+export function getSequentialColor(value: number, paletteName: SequentialPaletteName = 'rocket'): string {
   // Clamp value between 0 and 1
   const normalizedValue = Math.max(0, Math.min(1, value));
+  const palette = getSequentialPalette(paletteName);
   
   // Calculate position in palette
-  const paletteIndex = normalizedValue * (SEQUENTIAL_PALETTE.length - 1);
+  const paletteIndex = normalizedValue * (palette.length - 1);
   const lowerIndex = Math.floor(paletteIndex);
   const upperIndex = Math.ceil(paletteIndex);
   
   // If we're exactly on a color, return it
   if (lowerIndex === upperIndex) {
-    return SEQUENTIAL_PALETTE[lowerIndex];
+    return palette[lowerIndex];
   }
   
   // Otherwise, interpolate between two colors
   const ratio = paletteIndex - lowerIndex;
   return interpolateColors(
-    SEQUENTIAL_PALETTE[lowerIndex],
-    SEQUENTIAL_PALETTE[upperIndex],
+    palette[lowerIndex],
+    palette[upperIndex],
     ratio
   );
 }
@@ -120,55 +312,43 @@ function rgbToHex(r: number, g: number, b: number): string {
  * @param value - The data value
  * @param min - Minimum value in the data range
  * @param max - Maximum value in the data range
+ * @param paletteName - Name of the sequential palette to use
  * @returns Hex color string
  */
-export function getSequentialColorScale(value: number, min: number, max: number): string {
+export function getSequentialColorScale(
+  value: number, 
+  min: number, 
+  max: number,
+  paletteName: SequentialPaletteName = 'rocket'
+): string {
   if (max === min) {
-    return getSequentialColor(0.5); // Middle color if no range
+    return getSequentialColor(0.5, paletteName); // Middle color if no range
   }
   
   const normalized = (value - min) / (max - min);
-  return getSequentialColor(normalized);
+  return getSequentialColor(normalized, paletteName);
 }
 
 /**
- * Create a color map for groups using the qualitative palette
+ * Create a color map for groups using the specified qualitative palette
  * @param groupLabels - Array of group labels
+ * @param paletteName - Name of the qualitative palette to use
  * @returns Map of group label to color
  */
-export function createQualitativeColorMap(groupLabels: string[]): Map<string, string> {
+export function createQualitativeColorMap(
+  groupLabels: string[],
+  paletteName: QualitativePaletteName = 'deep'
+): Map<string, string> {
   const uniqueGroups = [...new Set(groupLabels)].sort();
   const colorMap = new Map<string, string>();
   
   uniqueGroups.forEach((group, index) => {
-    colorMap.set(group, getQualitativeColor(index));
+    colorMap.set(group, getQualitativeColor(index, paletteName));
   });
   
   return colorMap;
 }
 
-/**
- * Get color based on palette type
- * @param paletteType - Type of palette to use
- * @param index - Index or normalized value
- * @param min - Minimum value (for sequential)
- * @param max - Maximum value (for sequential)
- * @returns Hex color string
- */
-export function getColorFromPalette(
-  paletteType: PaletteType,
-  index: number,
-  min?: number,
-  max?: number
-): string {
-  if (paletteType === 'qualitative') {
-    return getQualitativeColor(Math.floor(index));
-  } else {
-    // For sequential, if min/max provided, use them for normalization
-    if (min !== undefined && max !== undefined) {
-      return getSequentialColorScale(index, min, max);
-    }
-    // Otherwise treat index as already normalized (0-1)
-    return getSequentialColor(index);
-  }
-}
+// For backward compatibility - keep old function signatures but use default palettes
+export const QUALITATIVE_PALETTE = QUALITATIVE_PALETTES.deep;
+export const SEQUENTIAL_PALETTE = SEQUENTIAL_PALETTES.rocket;

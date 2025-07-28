@@ -6,13 +6,14 @@ import { ScoresPlot, ScreePlot, LoadingsPlot, Biplot, CircleOfCorrelations, Diag
 import { FileData, PCARequest, PCAResponse } from './types';
 import { ThemeProvider } from './contexts/ThemeContext';
 import { HelpProvider, useHelp } from './contexts/HelpContext';
-import { PaletteProvider } from './contexts/PaletteContext';
+import { PaletteProvider, usePalette } from './contexts/PaletteContext';
 import { HelpDisplay } from './components/HelpDisplay';
 import { PaletteSelector } from './components/PaletteSelector';
 import logo from './assets/images/GoPCA-logo-1024-transp.png';
 
 function AppContent() {
     const { currentHelp, currentHelpKey } = useHelp();
+    const { setMode } = usePalette();
     const [fileData, setFileData] = useState<FileData | null>(null);
     const [pcaResponse, setPcaResponse] = useState<PCAResponse | null>(null);
     const [loading, setLoading] = useState(false);
@@ -774,10 +775,13 @@ function AppContent() {
                                                             const value = e.target.value || null;
                                                             setSelectedGroupColumn(value);
                                                             
-                                                            // Auto-switch palette based on column type
-                                                            if (value && fileData.numericTargetColumns && value in fileData.numericTargetColumns) {
-                                                                // This is a continuous column - switch to sequential palette if not already
-                                                                // Note: This would require access to the palette context
+                                                            // Auto-switch palette mode based on column type
+                                                            if (!value) {
+                                                                setMode('none');
+                                                            } else if (fileData.numericTargetColumns && value in fileData.numericTargetColumns) {
+                                                                setMode('continuous');
+                                                            } else if (fileData.categoricalColumns && value in fileData.categoricalColumns) {
+                                                                setMode('categorical');
                                                             }
                                                         }}
                                                         className="px-2 py-1 bg-gray-100 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded text-sm text-gray-900 dark:text-white"

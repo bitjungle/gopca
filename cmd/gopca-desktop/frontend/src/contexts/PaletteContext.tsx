@@ -1,32 +1,77 @@
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
-import { PaletteType } from '../utils/colorPalettes';
+import { 
+  QualitativePaletteName, 
+  SequentialPaletteName 
+} from '../utils/colorPalettes';
+
+type PaletteMode = 'categorical' | 'continuous' | 'none';
 
 interface PaletteContextType {
-  paletteType: PaletteType;
-  setPaletteType: (type: PaletteType) => void;
+  // Current mode based on selected column type
+  mode: PaletteMode;
+  setMode: (mode: PaletteMode) => void;
+  
+  // Selected palettes for each mode
+  qualitativePalette: QualitativePaletteName;
+  setQualitativePalette: (palette: QualitativePaletteName) => void;
+  
+  sequentialPalette: SequentialPaletteName;
+  setSequentialPalette: (palette: SequentialPaletteName) => void;
+  
+  // Legacy support - maps to current active palette
+  paletteType: 'qualitative' | 'sequential';
+  setPaletteType: (type: 'qualitative' | 'sequential') => void;
 }
 
 const PaletteContext = createContext<PaletteContextType | undefined>(undefined);
 
-const PALETTE_STORAGE_KEY = 'gopca-palette-type';
+const QUALITATIVE_STORAGE_KEY = 'gopca-qualitative-palette';
+const SEQUENTIAL_STORAGE_KEY = 'gopca-sequential-palette';
 
 export const PaletteProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
-  // Initialize from localStorage or default to qualitative
-  const [paletteType, setPaletteType] = useState<PaletteType>(() => {
-    const stored = localStorage.getItem(PALETTE_STORAGE_KEY);
-    return (stored === 'qualitative' || stored === 'sequential') ? stored : 'qualitative';
+  // Current mode based on selected column
+  const [mode, setMode] = useState<PaletteMode>('none');
+  
+  // Selected palette for each mode
+  const [qualitativePalette, setQualitativePalette] = useState<QualitativePaletteName>(() => {
+    const stored = localStorage.getItem(QUALITATIVE_STORAGE_KEY);
+    return (stored as QualitativePaletteName) || 'deep';
   });
-
-  // Save to localStorage whenever palette changes
+  
+  const [sequentialPalette, setSequentialPalette] = useState<SequentialPaletteName>(() => {
+    const stored = localStorage.getItem(SEQUENTIAL_STORAGE_KEY);
+    return (stored as SequentialPaletteName) || 'rocket';
+  });
+  
+  // Save palette selections to localStorage
   useEffect(() => {
-    localStorage.setItem(PALETTE_STORAGE_KEY, paletteType);
-  }, [paletteType]);
-
-  const value = {
+    localStorage.setItem(QUALITATIVE_STORAGE_KEY, qualitativePalette);
+  }, [qualitativePalette]);
+  
+  useEffect(() => {
+    localStorage.setItem(SEQUENTIAL_STORAGE_KEY, sequentialPalette);
+  }, [sequentialPalette]);
+  
+  // Legacy paletteType getter - returns the type based on current mode
+  const paletteType = mode === 'continuous' ? 'sequential' : 'qualitative';
+  
+  // Legacy setPaletteType - does nothing as mode is now controlled by column selection
+  const setPaletteType = () => {
+    // No-op for backward compatibility
+    console.warn('setPaletteType is deprecated. Palette type is now automatically determined by column type.');
+  };
+  
+  const value: PaletteContextType = {
+    mode,
+    setMode,
+    qualitativePalette,
+    setQualitativePalette,
+    sequentialPalette,
+    setSequentialPalette,
     paletteType,
     setPaletteType,
   };
-
+  
   return <PaletteContext.Provider value={value}>{children}</PaletteContext.Provider>;
 };
 
