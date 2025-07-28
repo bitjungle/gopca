@@ -46,14 +46,17 @@ func (a *App) ParseCSV(content string) (result *FileDataJSON, err error) {
 
 	var csvData *types.CSVData
 	var categoricalData map[string][]string
+	var numericTargetData map[string][]float64
 	var lastErr error
 
 	for _, format := range formats {
-		// Use the mixed parser that can handle both numeric and categorical columns
-		data, catData, err := types.ParseCSVMixed(strings.NewReader(content), format)
+		// Use the enhanced parser that can handle numeric, categorical, and target columns
+		// Columns ending with "_target" are automatically detected as target columns
+		data, catData, targetData, err := types.ParseCSVMixedWithTargets(strings.NewReader(content), format, nil)
 		if err == nil && data != nil && data.Columns > 0 {
 			csvData = data
 			categoricalData = catData
+			numericTargetData = targetData
 			break
 		}
 		if err != nil {
@@ -78,6 +81,11 @@ func (a *App) ParseCSV(content string) (result *FileDataJSON, err error) {
 	// Add categorical columns if there are any
 	if len(categoricalData) > 0 {
 		fileResult.CategoricalColumns = categoricalData
+	}
+
+	// Add numeric target columns if there are any
+	if len(numericTargetData) > 0 {
+		fileResult.NumericTargetColumns = numericTargetData
 	}
 
 	return fileResult.ToJSONSafe(), nil

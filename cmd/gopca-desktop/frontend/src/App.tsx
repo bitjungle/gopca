@@ -64,6 +64,21 @@ function AppContent() {
             }));
         }
     };
+    
+    // Helper function to get column data and type
+    const getColumnData = (columnName: string | null): { values?: string[] | number[], type?: 'categorical' | 'continuous' } => {
+        if (!columnName || !fileData) return {};
+        
+        if (fileData.categoricalColumns && columnName in fileData.categoricalColumns) {
+            return { values: fileData.categoricalColumns[columnName], type: 'categorical' };
+        }
+        
+        if (fileData.numericTargetColumns && columnName in fileData.numericTargetColumns) {
+            return { values: fileData.numericTargetColumns[columnName], type: 'continuous' };
+        }
+        
+        return {};
+    };
 
     const handleFileUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
         const file = event.target.files?.[0];
@@ -747,21 +762,47 @@ function AppContent() {
                                     <h3 className="text-lg font-semibold">Visualizations</h3>
                                     <div className="flex items-center gap-4">
                                         {/* Group selection for color coding */}
-                                        {(selectedPlot === 'scores' || selectedPlot === 'biplot') && fileData?.categoricalColumns && Object.keys(fileData.categoricalColumns).length > 0 && (
+                                        {(selectedPlot === 'scores' || selectedPlot === 'biplot') && fileData && 
+                                         ((fileData.categoricalColumns && Object.keys(fileData.categoricalColumns).length > 0) ||
+                                          (fileData.numericTargetColumns && Object.keys(fileData.numericTargetColumns).length > 0)) && (
                                             <>
                                                 <HelpWrapper helpKey="group-coloring" className="flex items-center gap-2">
                                                     <label className="text-sm text-gray-600 dark:text-gray-400">Color by:</label>
                                                     <select
                                                         value={selectedGroupColumn || ''}
-                                                        onChange={(e) => setSelectedGroupColumn(e.target.value || null)}
+                                                        onChange={(e) => {
+                                                            const value = e.target.value || null;
+                                                            setSelectedGroupColumn(value);
+                                                            
+                                                            // Auto-switch palette based on column type
+                                                            if (value && fileData.numericTargetColumns && value in fileData.numericTargetColumns) {
+                                                                // This is a continuous column - switch to sequential palette if not already
+                                                                // Note: This would require access to the palette context
+                                                            }
+                                                        }}
                                                         className="px-2 py-1 bg-gray-100 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded text-sm text-gray-900 dark:text-white"
                                                     >
                                                         <option value="">None</option>
-                                                        {Object.keys(fileData.categoricalColumns).map((colName) => (
-                                                            <option key={colName} value={colName}>
-                                                                {colName}
-                                                            </option>
-                                                        ))}
+                                                        {/* Categorical columns */}
+                                                        {fileData.categoricalColumns && Object.keys(fileData.categoricalColumns).length > 0 && (
+                                                            <optgroup label="Categorical">
+                                                                {Object.keys(fileData.categoricalColumns).map((colName) => (
+                                                                    <option key={`cat-${colName}`} value={colName}>
+                                                                        🏷️ {colName}
+                                                                    </option>
+                                                                ))}
+                                                            </optgroup>
+                                                        )}
+                                                        {/* Continuous columns */}
+                                                        {fileData.numericTargetColumns && Object.keys(fileData.numericTargetColumns).length > 0 && (
+                                                            <optgroup label="Continuous">
+                                                                {Object.keys(fileData.numericTargetColumns).map((colName) => (
+                                                                    <option key={`cont-${colName}`} value={colName}>
+                                                                        📊 {colName}
+                                                                    </option>
+                                                                ))}
+                                                            </optgroup>
+                                                        )}
                                                     </select>
                                                 </HelpWrapper>
                                                 {selectedPlot === 'scores' && selectedGroupColumn && (
@@ -868,13 +909,15 @@ function AppContent() {
                                             xComponent={selectedXComponent}
                                             yComponent={selectedYComponent}
                                             groupColumn={selectedGroupColumn}
-                                            groupLabels={selectedGroupColumn && fileData?.categoricalColumns ? fileData.categoricalColumns[selectedGroupColumn] : undefined}
+                                            groupLabels={getColumnData(selectedGroupColumn).type === 'categorical' ? getColumnData(selectedGroupColumn).values as string[] : undefined}
+                                            groupValues={getColumnData(selectedGroupColumn).type === 'continuous' ? getColumnData(selectedGroupColumn).values as number[] : undefined}
+                                            groupType={getColumnData(selectedGroupColumn).type}
                                             groupEllipses={
                                                 confidenceLevel === 0.90 ? pcaResponse.groupEllipses90 :
                                                 confidenceLevel === 0.95 ? pcaResponse.groupEllipses95 :
                                                 pcaResponse.groupEllipses99
                                             }
-                                            showEllipses={showEllipses && !!selectedGroupColumn}
+                                            showEllipses={showEllipses && !!selectedGroupColumn && getColumnData(selectedGroupColumn).type === 'categorical'}
                                         />
                                     ) : selectedPlot === 'scree' ? (
                                         <ScreePlot
@@ -894,7 +937,9 @@ function AppContent() {
                                             xComponent={selectedXComponent}
                                             yComponent={selectedYComponent}
                                             groupColumn={selectedGroupColumn}
-                                            groupLabels={selectedGroupColumn && fileData?.categoricalColumns ? fileData.categoricalColumns[selectedGroupColumn] : undefined}
+                                            groupLabels={getColumnData(selectedGroupColumn).type === 'categorical' ? getColumnData(selectedGroupColumn).values as string[] : undefined}
+                                            groupValues={getColumnData(selectedGroupColumn).type === 'continuous' ? getColumnData(selectedGroupColumn).values as number[] : undefined}
+                                            groupType={getColumnData(selectedGroupColumn).type}
                                         />
                                     ) : selectedPlot === 'correlations' ? (
                                         <CircleOfCorrelations

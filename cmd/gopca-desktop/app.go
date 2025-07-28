@@ -43,11 +43,12 @@ func (a *App) GetVersion() string {
 
 // FileData represents the structure of CSV data for the frontend
 type FileData struct {
-	Headers            []string            `json:"headers"`
-	RowNames           []string            `json:"rowNames"`
-	Data               [][]float64         `json:"data"`
-	MissingMask        [][]bool            `json:"missingMask,omitempty"`
-	CategoricalColumns map[string][]string `json:"categoricalColumns,omitempty"`
+	Headers              []string             `json:"headers"`
+	RowNames             []string             `json:"rowNames"`
+	Data                 [][]float64          `json:"data"`
+	MissingMask          [][]bool             `json:"missingMask,omitempty"`
+	CategoricalColumns   map[string][]string  `json:"categoricalColumns,omitempty"`
+	NumericTargetColumns map[string][]float64 `json:"numericTargetColumns,omitempty"`
 }
 
 // PCARequest represents a PCA analysis request from the frontend

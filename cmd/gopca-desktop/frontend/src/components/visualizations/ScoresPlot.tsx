@@ -15,6 +15,8 @@ interface ScoresPlotProps {
   yComponent?: number; // 0-based index
   groupColumn?: string | null;
   groupLabels?: string[];
+  groupValues?: number[]; // For continuous columns
+  groupType?: 'categorical' | 'continuous';
   groupEllipses?: Record<string, EllipseParams>;
   showEllipses?: boolean;
 }
@@ -26,6 +28,8 @@ export const ScoresPlot: React.FC<ScoresPlotProps> = ({
   yComponent = 1,
   groupColumn,
   groupLabels,
+  groupValues,
+  groupType = 'categorical',
   groupEllipses,
   showEllipses = false
 }) => {
@@ -39,7 +43,7 @@ export const ScoresPlot: React.FC<ScoresPlotProps> = ({
   
   // Create color map for groups based on selected palette type
   const groupColorMap = useMemo(() => {
-    if (groupLabels && groupColumn) {
+    if (groupType === 'categorical' && groupLabels && groupColumn) {
       const uniqueGroups = [...new Set(groupLabels)].sort();
       const colorMap = new Map<string, string>();
       
@@ -61,7 +65,21 @@ export const ScoresPlot: React.FC<ScoresPlotProps> = ({
       return colorMap;
     }
     return null;
-  }, [groupLabels, groupColumn, paletteType]);
+  }, [groupLabels, groupColumn, paletteType, groupType]);
+  
+  // Calculate min/max for continuous values
+  const continuousRange = useMemo(() => {
+    if (groupType === 'continuous' && groupValues) {
+      const validValues = groupValues.filter(v => !isNaN(v) && isFinite(v));
+      if (validValues.length > 0) {
+        return {
+          min: Math.min(...validValues),
+          max: Math.max(...validValues)
+        };
+      }
+    }
+    return null;
+  }, [groupValues, groupType]);
   
   // Transform scores data for Recharts
   const data = pcaResult.scores.map((row, index) => {
@@ -74,14 +92,32 @@ export const ScoresPlot: React.FC<ScoresPlotProps> = ({
       return null;
     }
     
-    const group = groupLabels?.[index];
+    let color = '#3B82F6'; // Default color
+    let group = 'Unknown';
+    let value: number | undefined;
+    
+    if (groupType === 'categorical') {
+      group = groupLabels?.[index] || 'Unknown';
+      if (group && groupColorMap) {
+        color = groupColorMap.get(group) || color;
+      }
+    } else if (groupType === 'continuous' && groupValues && continuousRange) {
+      const val = groupValues[index];
+      value = val;
+      if (!isNaN(val) && isFinite(val)) {
+        const normalized = (val - continuousRange.min) / (continuousRange.max - continuousRange.min);
+        color = getSequentialColor(normalized);
+        group = val.toFixed(2); // For display purposes
+      }
+    }
     
     return {
       x: xVal,
       y: yVal,
       name: rowNames[index] || `Sample ${index + 1}`,
-      group: group || 'Unknown',
-      color: group && groupColorMap ? groupColorMap.get(group) : '#3B82F6'
+      group: group,
+      color: color,
+      value: value
     };
   }).filter(point => point !== null);
   
@@ -226,7 +262,7 @@ export const ScoresPlot: React.FC<ScoresPlotProps> = ({
       <div className="flex justify-between items-center mb-2">
         <div className="flex items-center gap-4">
           {/* Group legend */}
-          {groupColumn && groupColorMap && (
+          {groupColumn && groupType === 'categorical' && groupColorMap && (
             <div className="flex items-center gap-3 text-sm">
               <span className="text-gray-600 dark:text-gray-400">{groupColumn}:</span>
               {Array.from(groupColorMap.entries()).map(([group, color]) => (
@@ -238,6 +274,22 @@ export const ScoresPlot: React.FC<ScoresPlotProps> = ({
                   <span className="text-gray-700 dark:text-gray-300">{group}</span>
                 </div>
               ))}
+            </div>
+          )}
+          {/* Continuous legend */}
+          {groupColumn && groupType === 'continuous' && continuousRange && (
+            <div className="flex items-center gap-3 text-sm">
+              <span className="text-gray-600 dark:text-gray-400">{groupColumn}:</span>
+              <div className="flex items-center gap-2">
+                <span className="text-gray-700 dark:text-gray-300">{continuousRange.min.toFixed(2)}</span>
+                <div 
+                  className="w-32 h-4 rounded"
+                  style={{
+                    background: `linear-gradient(to right, ${getSequentialColor(0)}, ${getSequentialColor(0.5)}, ${getSequentialColor(1)})`
+                  }}
+                />
+                <span className="text-gray-700 dark:text-gray-300">{continuousRange.max.toFixed(2)}</span>
+              </div>
             </div>
           )}
           {isZoomed && (
