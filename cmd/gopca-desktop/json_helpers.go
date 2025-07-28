@@ -19,11 +19,12 @@ func (f JSONFloat64) MarshalJSON() ([]byte, error) {
 
 // FileDataJSON is a JSON-safe version of FileData
 type FileDataJSON struct {
-	Headers            []string            `json:"headers"`
-	RowNames           []string            `json:"rowNames"`
-	Data               [][]JSONFloat64     `json:"data"`
-	MissingMask        [][]bool            `json:"missingMask,omitempty"`
-	CategoricalColumns map[string][]string `json:"categoricalColumns,omitempty"`
+	Headers              []string                 `json:"headers"`
+	RowNames             []string                 `json:"rowNames"`
+	Data                 [][]JSONFloat64          `json:"data"`
+	MissingMask          [][]bool                 `json:"missingMask,omitempty"`
+	CategoricalColumns   map[string][]string      `json:"categoricalColumns,omitempty"`
+	NumericTargetColumns map[string][]JSONFloat64 `json:"numericTargetColumns,omitempty"`
 }
 
 // ToJSONSafe converts FileData to a JSON-safe version
@@ -59,6 +60,18 @@ func (fd *FileData) ToJSONSafe() *FileDataJSON {
 	// Only include missing mask if there are missing values
 	if hasMissing {
 		result.MissingMask = missingMask
+	}
+
+	// Convert numeric target columns to JSON-safe format
+	if len(fd.NumericTargetColumns) > 0 {
+		result.NumericTargetColumns = make(map[string][]JSONFloat64)
+		for colName, values := range fd.NumericTargetColumns {
+			jsonValues := make([]JSONFloat64, len(values))
+			for i, val := range values {
+				jsonValues[i] = JSONFloat64(val)
+			}
+			result.NumericTargetColumns[colName] = jsonValues
+		}
 	}
 
 	return result

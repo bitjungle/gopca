@@ -97,8 +97,8 @@ func runValidate(c *cli.Context) error {
 
 	fmt.Printf("Validating file: %s\n", inputFile)
 
-	// Load CSV data
-	data, err := ParseCSV(inputFile, parseOpts)
+	// Load CSV data with target column detection
+	data, categoricalData, targetData, err := ParseCSVMixedWithTargets(inputFile, parseOpts, nil)
 	if err != nil {
 		return fmt.Errorf("failed to parse CSV: %w", err)
 	}
@@ -166,6 +166,22 @@ func runValidate(c *cli.Context) error {
 	// Display results
 	fmt.Println("\n✓ Data format validation passed")
 	fmt.Printf("  - Dimensions: %d rows × %d columns\n", data.Rows, data.Columns)
+
+	// Show categorical columns if any
+	if len(categoricalData) > 0 {
+		fmt.Printf("  - Categorical columns: %d\n", len(categoricalData))
+		for colName := range categoricalData {
+			fmt.Printf("    • %s\n", colName)
+		}
+	}
+
+	// Show numeric target columns if any
+	if len(targetData) > 0 {
+		fmt.Printf("  - Numeric target columns: %d (excluded from PCA)\n", len(targetData))
+		for colName := range targetData {
+			fmt.Printf("    • %s\n", colName)
+		}
+	}
 
 	if showSummary {
 		fmt.Println("\nData summary:")
