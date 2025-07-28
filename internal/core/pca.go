@@ -720,3 +720,23 @@ func denseToMatrix(d *mat.Dense) types.Matrix {
 	}
 	return m
 }
+
+// SetPreprocessor sets the preprocessor for the PCA engine
+func (p *PCAImpl) SetPreprocessor(preprocessor *Preprocessor) {
+	p.preprocessor = preprocessor
+}
+
+// SetLoadings sets the loadings matrix and marks the engine as fitted
+func (p *PCAImpl) SetLoadings(loadings types.Matrix, nComponents int) error {
+	if len(loadings) == 0 || len(loadings[0]) == 0 {
+		return fmt.Errorf("loadings matrix cannot be empty")
+	}
+
+	// The saved loadings matrix has shape (n_features, n_components)
+	// This is already the correct shape for X @ V multiplication
+	// Just convert to Dense matrix
+	p.loadings = matrixToDense(loadings)
+	p.nComponents = nComponents
+	p.fitted = true
+	return nil
+}
