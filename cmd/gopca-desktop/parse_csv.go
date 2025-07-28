@@ -51,7 +51,7 @@ func (a *App) ParseCSV(content string) (result *FileDataJSON, err error) {
 
 	for _, format := range formats {
 		// Use the enhanced parser that can handle numeric, categorical, and target columns
-		// Columns ending with "_target" are automatically detected as target columns
+		// Columns ending with "#target" (with or without space) are automatically detected as target columns
 		data, catData, targetData, err := types.ParseCSVMixedWithTargets(strings.NewReader(content), format, nil)
 		if err == nil && data != nil && data.Columns > 0 {
 			csvData = data

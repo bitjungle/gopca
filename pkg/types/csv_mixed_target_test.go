@@ -16,15 +16,26 @@ func TestParseCSVMixedWithTargets(t *testing.T) {
 		wantTargetCols int
 	}{
 		{
-			name: "column with _target suffix",
-			csvContent: `feature1,feature2,category,value_target
+			name: "column with #target suffix (no space)",
+			csvContent: `feature1,feature2,category,value#target
 1.0,2.0,A,10.5
 3.0,4.0,B,20.3
 5.0,6.0,A,15.7`,
 			targetColumns:  nil,
 			wantDataCols:   2, // feature1, feature2
 			wantCatCols:    1, // category
-			wantTargetCols: 1, // value_target
+			wantTargetCols: 1, // value#target
+		},
+		{
+			name: "column with #target suffix (with space)",
+			csvContent: `feature1,feature2,category,value #target
+1.0,2.0,A,10.5
+3.0,4.0,B,20.3
+5.0,6.0,A,15.7`,
+			targetColumns:  nil,
+			wantDataCols:   2, // feature1, feature2
+			wantCatCols:    1, // category
+			wantTargetCols: 1, // value #target
 		},
 		{
 			name: "explicit target column",
@@ -39,14 +50,14 @@ func TestParseCSVMixedWithTargets(t *testing.T) {
 		},
 		{
 			name: "mixed targets",
-			csvContent: `feature1,feature2,category,manual_target,auto_target
+			csvContent: `feature1,feature2,category,manual_target,auto#target
 1.0,2.0,A,10.5,100
 3.0,4.0,B,20.3,200
 5.0,6.0,A,15.7,300`,
 			targetColumns:  []string{"manual_target"},
 			wantDataCols:   2, // feature1, feature2
 			wantCatCols:    1, // category
-			wantTargetCols: 2, // manual_target, auto_target
+			wantTargetCols: 2, // manual_target, auto#target
 		},
 	}
 

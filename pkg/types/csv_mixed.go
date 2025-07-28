@@ -172,10 +172,12 @@ func ParseCSVMixed(r io.Reader, format CSVFormat) (*CSVData, map[string][]string
 }
 
 // isTargetColumn checks if a column name indicates it should be a target column
-// Target columns are marked with "_target" suffix or are in the provided target list
+// Target columns are marked with "#target" suffix (with or without space) or are in the provided target list
 func isTargetColumn(columnName string, targetColumns []string) bool {
-	// Check if column ends with "_target"
-	if strings.HasSuffix(strings.ToLower(columnName), "_target") {
+	lowerName := strings.ToLower(columnName)
+
+	// Check if column ends with "#target" (no space) or " #target" (with space)
+	if strings.HasSuffix(lowerName, "#target") || strings.HasSuffix(lowerName, " #target") {
 		return true
 	}
 
@@ -191,6 +193,7 @@ func isTargetColumn(columnName string, targetColumns []string) bool {
 
 // ParseCSVMixedWithTargets parses CSV data with support for numeric target columns
 // Target columns are numeric columns that should be available for visualization but not included in PCA
+// Columns with "#target" suffix (with or without space) are automatically detected as target columns
 func ParseCSVMixedWithTargets(r io.Reader, format CSVFormat, targetColumns []string) (*CSVData, map[string][]string, map[string][]float64, error) {
 	// First, read all records as strings
 	csvReader := csv.NewReader(r)
