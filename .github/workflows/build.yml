@@ -47,7 +47,7 @@ jobs:
     - name: Run tests
       run: |
         if [ "$RUNNER_OS" == "Windows" ]; then
-          go test -v -race -timeout 10m ./internal/... ./pkg/... ./cmd/gopca-cli/...
+          go test -v -race -timeout 10m ./internal/... ./pkg/...
         else
           make ci-test
         fi
@@ -82,7 +82,7 @@ jobs:
         
         echo ""
         echo "Running go vet..."
-        go vet ./internal/... ./pkg/... ./cmd/gopca-cli/...
+        go vet ./internal/... ./pkg/...
         
         echo ""
         echo "Checking for inefficient assignments..."
