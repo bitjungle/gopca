@@ -1,8 +1,6 @@
 // Color palette definitions for data visualization
 // Based on seaborn color palettes and scientific visualization best practices
 
-export type PaletteType = 'qualitative' | 'sequential';
-
 // Palette names for user selection
 export type QualitativePaletteName = 'deep' | 'pastel' | 'dark' | 'colorblind' | 'husl';
 export type SequentialPaletteName = 'rocket' | 'viridis' | 'blues' | 'reds' | 'crest' | 'mako' | 'flare';
@@ -179,36 +177,6 @@ export const SEQUENTIAL_PALETTES: Record<SequentialPaletteName, string[]> = {
   ]
 };
 
-// Diverging palettes for data with meaningful center
-export const DIVERGING_PALETTES = {
-  // Blue to Red through white
-  coolwarm: [
-    '#3b4cc0', // blue
-    '#5b77d8',
-    '#7b9ff9',
-    '#9ebeff',
-    '#c5d8f4',
-    '#f7f7f7', // white center
-    '#f4c5c4',
-    '#ff9e9b',
-    '#f97b72',
-    '#dd5a4a',
-    '#b40426', // red
-  ],
-  
-  // Purple to Green through white
-  purplegreen: [
-    '#762a83', // purple
-    '#9970ab',
-    '#c2a5cf',
-    '#e7d4e8',
-    '#f7f7f7', // white center
-    '#d9f0d3',
-    '#a6dba0',
-    '#5aae61',
-    '#1b7837', // green
-  ]
-};
 
 // Helper function to get a qualitative palette
 export function getQualitativePalette(name: QualitativePaletteName = 'deep'): string[] {
@@ -351,4 +319,3 @@ export function createQualitativeColorMap(
 
 // For backward compatibility - keep old function signatures but use default palettes
 export const QUALITATIVE_PALETTE = QUALITATIVE_PALETTES.deep;
-export const SEQUENTIAL_PALETTE = SEQUENTIAL_PALETTES.rocket;

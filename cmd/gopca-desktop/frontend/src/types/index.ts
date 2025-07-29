@@ -1,10 +1,3 @@
-export type ColumnType = 'categorical' | 'continuous';
-
-export interface ColumnInfo {
-  name: string;
-  type: ColumnType;
-}
-
 export interface FileData {
   headers: string[];
   rowNames: string[];
@@ -45,12 +38,6 @@ export interface PCARequest {
   groupLabels?: string[];
 }
 
-export interface SampleMetrics {
-  hotelling_t2: number;
-  mahalanobis: number;
-  rss: number;
-  is_outlier: boolean;
-}
 
 export interface PCAResult {
   scores: number[][];
@@ -72,22 +59,11 @@ export interface PCAResult {
   q_limit_99?: number;
 }
 
-export interface PCAMetrics {
-  mahalanobisDistances: number[];
-  hotellingT2: number[];
-  qResiduals: number[];
-  contributions: number[][];
-  outliersMahalanobis: boolean[];
-  outliersT2: boolean[];
-  outliersQResiduals: boolean[];
-  t2Threshold: number;
-  qThreshold: number;
-  ellipseParams?: {
-    center: [number, number];
-    width: number;
-    height: number;
-    angle: number;
-  };
+export interface SampleMetrics {
+  hotelling_t2: number;
+  mahalanobis: number;
+  rss: number;
+  is_outlier: boolean;
 }
 
 export interface EllipseParams {
