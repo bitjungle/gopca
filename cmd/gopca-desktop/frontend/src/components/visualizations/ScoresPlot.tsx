@@ -6,7 +6,7 @@ import { PlotControls } from '../PlotControls';
 import { useZoomPan } from '../../hooks/useZoomPan';
 import { useChartTheme } from '../../hooks/useChartTheme';
 import { usePalette } from '../../contexts/PaletteContext';
-import { getQualitativeColor, getSequentialColor } from '../../utils/colorPalettes';
+import { getQualitativeColor, getSequentialColor, createQualitativeColorMap, getSequentialColorScale } from '../../utils/colorPalettes';
 
 interface ScoresPlotProps {
   pcaResult: PCAResult;
@@ -15,6 +15,8 @@ interface ScoresPlotProps {
   yComponent?: number; // 0-based index
   groupColumn?: string | null;
   groupLabels?: string[];
+  groupValues?: number[]; // For continuous columns
+  groupType?: 'categorical' | 'continuous';
   groupEllipses?: Record<string, EllipseParams>;
   showEllipses?: boolean;
 }
@@ -26,6 +28,8 @@ export const ScoresPlot: React.FC<ScoresPlotProps> = ({
   yComponent = 1,
   groupColumn,
   groupLabels,
+  groupValues,
+  groupType = 'categorical',
   groupEllipses,
   showEllipses = false
 }) => {
@@ -35,33 +39,30 @@ export const ScoresPlot: React.FC<ScoresPlotProps> = ({
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [containerSize, setContainerSize] = useState({ width: 0, height: 0 });
   const chartTheme = useChartTheme();
-  const { paletteType } = usePalette();
+  const { mode, qualitativePalette, sequentialPalette } = usePalette();
   
-  // Create color map for groups based on selected palette type
+  // Create color map for groups based on selected palette
   const groupColorMap = useMemo(() => {
-    if (groupLabels && groupColumn) {
-      const uniqueGroups = [...new Set(groupLabels)].sort();
-      const colorMap = new Map<string, string>();
-      
-      if (paletteType === 'sequential') {
-        // For sequential palette, distribute colors across the gradient
-        uniqueGroups.forEach((group, index) => {
-          const normalizedValue = uniqueGroups.length > 1 
-            ? index / (uniqueGroups.length - 1) 
-            : 0.5;
-          colorMap.set(group, getSequentialColor(normalizedValue));
-        });
-      } else {
-        // For qualitative palette, use distinct colors
-        uniqueGroups.forEach((group, index) => {
-          colorMap.set(group, getQualitativeColor(index));
-        });
-      }
-      
-      return colorMap;
+    if (groupType === 'categorical' && groupLabels && groupColumn) {
+      return createQualitativeColorMap(groupLabels, qualitativePalette);
     }
     return null;
-  }, [groupLabels, groupColumn, paletteType]);
+  }, [groupLabels, groupColumn, qualitativePalette, groupType]);
+  
+  // Calculate min/max for continuous values
+  const continuousRange = useMemo(() => {
+    if (groupType === 'continuous' && groupValues) {
+      const validValues = groupValues.filter(v => !isNaN(v) && isFinite(v));
+      if (validValues.length > 0) {
+        const range = {
+          min: Math.min(...validValues),
+          max: Math.max(...validValues)
+        };
+        return range;
+      }
+    }
+    return null;
+  }, [groupValues, groupType]);
   
   // Transform scores data for Recharts
   const data = pcaResult.scores.map((row, index) => {
@@ -74,14 +75,31 @@ export const ScoresPlot: React.FC<ScoresPlotProps> = ({
       return null;
     }
     
-    const group = groupLabels?.[index];
+    let color = '#3B82F6'; // Default color
+    let group = 'Unknown';
+    let value: number | undefined;
+    
+    if (groupType === 'categorical') {
+      group = groupLabels?.[index] || 'Unknown';
+      if (group && groupColorMap) {
+        color = groupColorMap.get(group) || color;
+      }
+    } else if (groupType === 'continuous' && groupValues && continuousRange) {
+      const val = groupValues[index];
+      value = val;
+      if (!isNaN(val) && isFinite(val)) {
+        color = getSequentialColorScale(val, continuousRange.min, continuousRange.max, sequentialPalette);
+        group = val.toFixed(2); // For display purposes
+      }
+    }
     
     return {
       x: xVal,
       y: yVal,
       name: rowNames[index] || `Sample ${index + 1}`,
-      group: group || 'Unknown',
-      color: group && groupColorMap ? groupColorMap.get(group) : '#3B82F6'
+      group: group,
+      color: color,
+      value: value
     };
   }).filter(point => point !== null);
   
@@ -226,7 +244,7 @@ export const ScoresPlot: React.FC<ScoresPlotProps> = ({
       <div className="flex justify-between items-center mb-2">
         <div className="flex items-center gap-4">
           {/* Group legend */}
-          {groupColumn && groupColorMap && (
+          {groupColumn && groupType === 'categorical' && groupColorMap && (
             <div className="flex items-center gap-3 text-sm">
               <span className="text-gray-600 dark:text-gray-400">{groupColumn}:</span>
               {Array.from(groupColorMap.entries()).map(([group, color]) => (
@@ -238,6 +256,22 @@ export const ScoresPlot: React.FC<ScoresPlotProps> = ({
                   <span className="text-gray-700 dark:text-gray-300">{group}</span>
                 </div>
               ))}
+            </div>
+          )}
+          {/* Continuous legend */}
+          {groupColumn && groupType === 'continuous' && continuousRange && (
+            <div className="flex items-center gap-3 text-sm">
+              <span className="text-gray-600 dark:text-gray-400">{groupColumn}:</span>
+              <div className="flex items-center gap-2">
+                <span className="text-gray-700 dark:text-gray-300">{continuousRange.min.toFixed(2)}</span>
+                <div 
+                  className="w-32 h-4 rounded"
+                  style={{
+                    background: `linear-gradient(to right, ${getSequentialColor(0, sequentialPalette)}, ${getSequentialColor(0.5, sequentialPalette)}, ${getSequentialColor(1, sequentialPalette)})`
+                  }}
+                />
+                <span className="text-gray-700 dark:text-gray-300">{continuousRange.max.toFixed(2)}</span>
+              </div>
             </div>
           )}
           {isZoomed && (
@@ -388,9 +422,9 @@ export const ScoresPlot: React.FC<ScoresPlotProps> = ({
             strokeWidth={1}
             stroke="#1E40AF"
           >
-            {groupColumn && groupLabels ? (
+            {groupColumn ? (
               data.map((entry, index) => (
-                <Cell key={`cell-${index}`} fill={entry!.color} />
+                <Cell key={`cell-${index}`} fill={entry!.color} stroke={entry!.color} />
               ))
             ) : null}
           </Scatter>

@@ -166,3 +166,30 @@ func min(a, b int) int {
 	}
 	return b
 }
+
+// ParseCSVMixedWithTargets reads and parses a CSV file with support for target columns
+func ParseCSVMixedWithTargets(filename string, options CSVParseOptions, targetColumns []string) (*CSVData, map[string][]string, map[string][]float64, error) {
+	file, err := os.Open(filename)
+	if err != nil {
+		return nil, nil, nil, fmt.Errorf("failed to open file: %w", err)
+	}
+	defer func() { _ = file.Close() }()
+
+	// Convert options to types.CSVFormat
+	format := types.CSVFormat{
+		FieldDelimiter:   options.Delimiter,
+		DecimalSeparator: options.DecimalSeparator,
+		HasHeaders:       options.HasHeaders,
+		HasRowNames:      options.HasIndex,
+		NullValues:       options.NullValues,
+	}
+
+	// Use the types package function
+	data, catData, targetData, err := types.ParseCSVMixedWithTargets(file, format, targetColumns)
+	if err != nil {
+		return nil, nil, nil, err
+	}
+
+	// Wrap in CSVData for backward compatibility
+	return &CSVData{CSVData: data}, catData, targetData, nil
+}

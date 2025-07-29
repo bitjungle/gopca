@@ -1,3 +1,10 @@
+export type ColumnType = 'categorical' | 'continuous';
+
+export interface ColumnInfo {
+  name: string;
+  type: ColumnType;
+}
+
 export interface FileData {
   headers: string[];
   rowNames: string[];
@@ -5,6 +12,9 @@ export interface FileData {
   missingMask?: boolean[][];
   categoricalColumns?: {
     [columnName: string]: string[];  // Column name -> array of values for each row
+  };
+  numericTargetColumns?: {
+    [columnName: string]: number[];  // Column name -> array of numeric values for each row
   };
 }
 
