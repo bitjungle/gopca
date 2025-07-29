@@ -38,9 +38,20 @@ GOGET := $(GOCMD) get
 
 # Version information
 VERSION ?= $(shell git describe --tags --always --dirty 2>/dev/null || echo "dev")
+GIT_COMMIT := $(shell git rev-parse --short HEAD 2>/dev/null || echo "unknown")
+BUILD_DATE := $(shell date -u +"%Y-%m-%dT%H:%M:%SZ")
 
 # Build flags
-LDFLAGS := -ldflags="-s -w -X github.com/bitjungle/gopca/internal/cli.Version=$(VERSION)"
+LDFLAGS := -ldflags="-s -w \
+	-X github.com/bitjungle/gopca/internal/version.Version=$(VERSION) \
+	-X github.com/bitjungle/gopca/internal/version.GitCommit=$(GIT_COMMIT) \
+	-X github.com/bitjungle/gopca/internal/version.BuildDate=$(BUILD_DATE)"
+
+# Desktop build flags (for Wails)
+DESKTOP_LDFLAGS := -ldflags "-s -w \
+	-X github.com/bitjungle/gopca/internal/version.Version=$(VERSION) \
+	-X github.com/bitjungle/gopca/internal/version.GitCommit=$(GIT_COMMIT) \
+	-X github.com/bitjungle/gopca/internal/version.BuildDate=$(BUILD_DATE)"
 
 # Check if golangci-lint is installed
 GOLINT := $(shell which golangci-lint 2> /dev/null)
@@ -115,7 +126,7 @@ gui-dev:
 gui-build:
 	@if [ -x "$(WAILS)" ]; then \
 		echo "Building GUI application..."; \
-		cd $(DESKTOP_PATH) && $(WAILS) build; \
+		cd $(DESKTOP_PATH) && $(WAILS) build $(DESKTOP_LDFLAGS); \
 		echo "GUI build complete. Check $(DESKTOP_PATH)/build/bin/"; \
 	else \
 		echo "Wails not found. Install it with:"; \

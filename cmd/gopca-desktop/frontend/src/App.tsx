@@ -1,6 +1,6 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import './App.css';
-import { ParseCSV, RunPCA, LoadIrisDataset, LoadDatasetFile } from "../wailsjs/go/main/App";
+import { ParseCSV, RunPCA, LoadIrisDataset, LoadDatasetFile, GetVersion } from "../wailsjs/go/main/App";
 import { DataTable, SelectionTable, ThemeToggle, MatrixIllustration, HelpWrapper } from './components';
 import { ScoresPlot, ScreePlot, LoadingsPlot, Biplot, CircleOfCorrelations, DiagnosticScatterPlot } from './components/visualizations';
 import { FileData, PCARequest, PCAResponse } from './types';
@@ -19,6 +19,7 @@ function AppContent() {
     const [loading, setLoading] = useState(false);
     const [fileError, setFileError] = useState<string | null>(null);
     const [pcaError, setPcaError] = useState<string | null>(null);
+    const [version, setVersion] = useState<string>('');
     
     // Selection state
     const [excludedRows, setExcludedRows] = useState<number[]>([]);
@@ -65,6 +66,15 @@ function AppContent() {
             }));
         }
     };
+    
+    // Fetch version on mount
+    useEffect(() => {
+        GetVersion().then((v) => {
+            setVersion(v);
+        }).catch((err) => {
+            console.error('Failed to get version:', err);
+        });
+    }, []);
     
     // Helper function to get column data and type
     const getColumnData = (columnName: string | null): { values?: string[] | number[], type?: 'categorical' | 'continuous' } => {
@@ -217,12 +227,19 @@ function AppContent() {
         <div className="flex flex-col h-screen bg-gray-50 dark:bg-gray-900 text-gray-900 dark:text-white transition-colors duration-200">
             <header className="sticky top-0 z-50 bg-white dark:bg-gray-800 shadow-lg backdrop-blur-sm bg-opacity-95 dark:bg-opacity-95">
                 <div className="flex items-center justify-between max-w-7xl mx-auto px-4 py-3 h-20">
-                    <img 
-                        src={logo} 
-                        alt="GoPCA - Principal Component Analysis Tool" 
-                        className="h-12 cursor-pointer hover:opacity-90 transition-opacity flex-shrink-0"
-                        onClick={scrollToTop}
-                    />
+                    <div className="flex items-center gap-4">
+                        <img 
+                            src={logo} 
+                            alt="GoPCA - Principal Component Analysis Tool" 
+                            className="h-12 cursor-pointer hover:opacity-90 transition-opacity flex-shrink-0"
+                            onClick={scrollToTop}
+                        />
+                        {version && (
+                            <span className="text-xs text-gray-500 dark:text-gray-400">
+                                v{version}
+                            </span>
+                        )}
+                    </div>
                     <div className="flex-1 mx-8 overflow-hidden">
                         <HelpDisplay 
                             helpKey={currentHelpKey}
