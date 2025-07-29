@@ -181,14 +181,14 @@ export const ScoresPlot: React.FC<ScoresPlotProps> = ({
     if (!isFullscreen) {
       if (fullscreenRef.current.requestFullscreen) {
         fullscreenRef.current.requestFullscreen();
-      } else if ((fullscreenRef.current as any).webkitRequestFullscreen) {
+      } else if ('webkitRequestFullscreen' in fullscreenRef.current) {
         (fullscreenRef.current as any).webkitRequestFullscreen();
       }
       setIsFullscreen(true);
     } else {
       if (document.exitFullscreen) {
         document.exitFullscreen();
-      } else if ((document as any).webkitExitFullscreen) {
+      } else if ('webkitExitFullscreen' in document) {
         (document as any).webkitExitFullscreen();
       }
       setIsFullscreen(false);

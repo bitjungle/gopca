@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"math"
 
+	"github.com/bitjungle/gopca/internal/utils"
 	"github.com/bitjungle/gopca/pkg/types"
 	"gonum.org/v1/gonum/mat"
 	"gonum.org/v1/gonum/stat/distuv"
@@ -221,6 +222,8 @@ func (m *PCAMetricsCalculator) calculateRSS(sampleIdx int, originalData types.Ma
 }
 
 // isOutlier determines if a sample is an outlier based on Hotelling's T²
+// Reference: Hotelling, H. (1931). The generalization of Student's ratio.
+// Annals of Mathematical Statistics, 2(3), 360-378.
 func (m *PCAMetricsCalculator) isOutlier(hotellingT2 float64) bool {
 	// Calculate critical value using F-distribution
 	// T²_critical = p(n-1)/(n-p) * F_{p,n-p}(1-α)
@@ -248,27 +251,81 @@ func (m *PCAMetricsCalculator) isOutlier(hotellingT2 float64) bool {
 	return hotellingT2 > t2Critical
 }
 
-// convertMatrixToDense converts a types.Matrix to a gonum Dense matrix
-func convertMatrixToDense(m types.Matrix) *mat.Dense {
-	if len(m) == 0 || len(m[0]) == 0 {
-		return mat.NewDense(0, 0, nil)
+// CalculateT2Limits calculates the confidence limits for Hotelling's T² statistic
+func (m *PCAMetricsCalculator) CalculateT2Limits() (limit95, limit99 float64) {
+	p := float64(m.nComponents)
+	n := float64(m.nSamples)
+
+	if n <= p {
+		// Cannot calculate threshold with insufficient samples
+		return 0, 0
 	}
 
-	rows, cols := len(m), len(m[0])
-	data := make([]float64, rows*cols)
-	for i := 0; i < rows; i++ {
-		for j := 0; j < cols; j++ {
-			data[i*cols+j] = m[i][j]
-		}
+	// Create F-distribution
+	fDist := distuv.F{
+		D1: p,
+		D2: n - p,
 	}
-	return mat.NewDense(rows, cols, data)
+
+	// Calculate critical values for 95% and 99% confidence levels
+	f95 := fDist.Quantile(0.95)
+	f99 := fDist.Quantile(0.99)
+
+	limit95 = p * (n - 1) / (n - p) * f95
+	limit99 = p * (n - 1) / (n - p) * f99
+
+	return limit95, limit99
+}
+
+// CalculateQLimits calculates the confidence limits for Q-residuals (SPE - Squared Prediction Error)
+// Reference: Jackson, J.E., & Mudholkar, G.S. (1979). Control procedures for residuals associated with principal component analysis.
+// Technometrics, 21(3), 341-349.
+func (m *PCAMetricsCalculator) CalculateQLimits(eigenvalues []float64, totalComponents int) (limit95, limit99 float64) {
+	// Q-statistic (SPE) limit calculation based on Jackson & Mudholkar (1979)
+	// Uses the Box's approximation for the distribution of Q
+
+	// Calculate theta values from eigenvalues of non-retained components
+	theta1, theta2, theta3 := 0.0, 0.0, 0.0
+
+	// Start from the first non-retained component
+	for i := m.nComponents; i < totalComponents && i < len(eigenvalues); i++ {
+		lambda := eigenvalues[i]
+		theta1 += lambda
+		theta2 += lambda * lambda
+		theta3 += lambda * lambda * lambda
+	}
+
+	if theta1 == 0 || theta2 == 0 {
+		// No variance in non-retained components
+		return 0, 0
+	}
+
+	// Calculate h0 parameter
+	h0 := 1 - (2*theta1*theta3)/(3*theta2*theta2)
+
+	// Calculate critical values from standard normal distribution
+	normDist := distuv.Normal{Mu: 0, Sigma: 1}
+	z95 := normDist.Quantile(0.95)
+	z99 := normDist.Quantile(0.99)
+
+	// Calculate Q limits
+	ca95 := z95 * math.Sqrt(2*theta2*h0*h0) / theta1
+	ca99 := z99 * math.Sqrt(2*theta2*h0*h0) / theta1
+
+	factor := theta1 * math.Pow(ca95*h0*(h0-1)/theta2+1+theta2*h0*(h0-1)/(theta1*theta1), 1/h0)
+	limit95 = math.Max(0, factor)
+
+	factor = theta1 * math.Pow(ca99*h0*(h0-1)/theta2+1+theta2*h0*(h0-1)/(theta1*theta1), 1/h0)
+	limit99 = math.Max(0, factor)
+
+	return limit95, limit99
 }
 
 // CalculateMetricsFromPCAResult is a convenience function that calculates metrics directly from PCAResult
 func CalculateMetricsFromPCAResult(result *types.PCAResult, preprocessedData types.Matrix) ([]types.SampleMetrics, error) {
 	// Convert result matrices to gonum matrices
-	scores := convertMatrixToDense(result.Scores)
-	loadings := convertMatrixToDense(result.Loadings)
+	scores := utils.MatrixToDense(result.Scores)
+	loadings := utils.MatrixToDense(result.Loadings)
 
 	// Create metrics calculator
 	calculator := NewPCAMetricsCalculator(scores, loadings, result.Means, result.StdDevs)

@@ -7,6 +7,12 @@ import {
   RowSelectionState,
 } from '@tanstack/react-table';
 
+// Interface for row data in the table
+interface TableRowData {
+  rowName?: string;
+  [key: string]: string | number | undefined;
+}
+
 interface DataTableProps {
   headers: string[];
   rowNames: string[];
@@ -82,8 +88,8 @@ export const DataTable: React.FC<DataTableProps> = ({
   }, [columnSelection, headers, onColumnSelectionChange]);
   
   // Create columns
-  const columns: ColumnDef<any>[] = React.useMemo(() => {
-    const cols: ColumnDef<any>[] = [];
+  const columns: ColumnDef<TableRowData>[] = React.useMemo(() => {
+    const cols: ColumnDef<TableRowData>[] = [];
     
     // Add selection column if enabled
     if (enableRowSelection) {
@@ -160,7 +166,7 @@ export const DataTable: React.FC<DataTableProps> = ({
   // Transform data for table
   const tableData = React.useMemo(() => {
     return data.map((row, rowIndex) => {
-      const rowData: any = {};
+      const rowData: TableRowData = {};
       if (hasRowNames) {
         rowData.rowName = rowNames[rowIndex];
       }

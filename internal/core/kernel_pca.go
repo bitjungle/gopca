@@ -1,7 +1,6 @@
 package core
 
 import (
-	"errors"
 	"fmt"
 	"math"
 	"sort"
@@ -23,6 +22,10 @@ const (
 )
 
 // KernelPCAImpl implements the PCAEngine interface for Kernel PCA
+// Kernel PCA performs nonlinear dimensionality reduction by projecting data into a higher-dimensional
+// feature space using kernel functions, then performing PCA in that space.
+// Reference: Schölkopf, B., Smola, A., & Müller, K.R. (1998). Nonlinear component analysis as a kernel eigenvalue problem.
+// Neural Computation, 10(5), 1299-1319.
 type KernelPCAImpl struct {
 	config       types.PCAConfig
 	kernelType   KernelType
@@ -45,20 +48,20 @@ func NewKernelPCAEngine() types.PCAEngine {
 // validateKernelConfig validates kernel-specific configuration
 func (kpca *KernelPCAImpl) validateKernelConfig(config types.PCAConfig) error {
 	if config.KernelType == "" {
-		return errors.New("kernel type must be specified for kernel PCA")
+		return fmt.Errorf("kernel type must be specified for kernel PCA")
 	}
 
 	switch KernelType(config.KernelType) {
 	case KernelRBF:
 		if config.KernelGamma < 0 {
-			return errors.New("gamma must be non-negative for RBF kernel")
+			return fmt.Errorf("gamma must be non-negative for RBF kernel")
 		}
 	case KernelPoly:
 		if config.KernelGamma < 0 {
-			return errors.New("gamma must be non-negative for polynomial kernel")
+			return fmt.Errorf("gamma must be non-negative for polynomial kernel")
 		}
 		if config.KernelDegree < 1 {
-			return errors.New("degree must be at least 1 for polynomial kernel")
+			return fmt.Errorf("degree must be at least 1 for polynomial kernel")
 		}
 	case KernelLinear:
 		// No specific validation needed
@@ -72,7 +75,7 @@ func (kpca *KernelPCAImpl) validateKernelConfig(config types.PCAConfig) error {
 // computeKernel computes the kernel function between two vectors
 func (kpca *KernelPCAImpl) computeKernel(x, y []float64) (float64, error) {
 	if len(x) != len(y) {
-		return 0, errors.New("vectors must have the same length")
+		return 0, fmt.Errorf("vectors must have the same length")
 	}
 
 	switch kpca.kernelType {
@@ -177,7 +180,7 @@ func (kpca *KernelPCAImpl) eigenDecomposition(K *mat.Dense, k int) ([]float64, *
 
 	var eig mat.EigenSym
 	if ok := eig.Factorize(symK, true); !ok {
-		return nil, nil, errors.New("eigendecomposition failed")
+		return nil, nil, fmt.Errorf("eigendecomposition failed")
 	}
 
 	vals := eig.Values(nil)
@@ -227,7 +230,7 @@ func (kpca *KernelPCAImpl) Fit(data types.Matrix, config types.PCAConfig) (*type
 
 	// Validate data
 	if len(data) == 0 || len(data[0]) == 0 {
-		return nil, errors.New("empty data matrix")
+		return nil, fmt.Errorf("empty data matrix")
 	}
 
 	nSamples := len(data)
@@ -351,7 +354,7 @@ func (kpca *KernelPCAImpl) Fit(data types.Matrix, config types.PCAConfig) (*type
 // Transform projects new data into the kernel PCA space
 func (kpca *KernelPCAImpl) Transform(data types.Matrix) (types.Matrix, error) {
 	if !kpca.fitted {
-		return nil, errors.New("model must be fitted before transform")
+		return nil, fmt.Errorf("model must be fitted before transform")
 	}
 
 	// Apply the same preprocessing as during fit

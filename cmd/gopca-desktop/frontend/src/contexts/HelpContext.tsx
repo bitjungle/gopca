@@ -29,6 +29,17 @@ interface HelpProviderProps {
   children: React.ReactNode;
 }
 
+// Interface to properly type the event handlers stored on elements
+interface HelpHandlers {
+  handleMouseEnter: () => void;
+  handleMouseLeave: () => void;
+}
+
+// Extend HTMLElement to include our custom property
+interface HTMLElementWithHelpHandlers extends HTMLElement {
+  _helpHandlers?: HelpHandlers;
+}
+
 export const HelpProvider: React.FC<HelpProviderProps> = ({ children }) => {
   const [currentHelpKey, setCurrentHelpKey] = useState<string | null>(null);
   const [currentHelp, setCurrentHelp] = useState<HelpItem | null>(null);
@@ -53,17 +64,17 @@ export const HelpProvider: React.FC<HelpProviderProps> = ({ children }) => {
     element.addEventListener('mouseleave', handleMouseLeave);
     
     // Store handlers for cleanup
-    (element as any)._helpHandlers = { handleMouseEnter, handleMouseLeave };
+    (element as HTMLElementWithHelpHandlers)._helpHandlers = { handleMouseEnter, handleMouseLeave };
   }, [helpElements, setHelpKey]);
 
   const unregisterHelpElement = useCallback((element: HTMLElement) => {
     helpElements.delete(element);
     
-    const handlers = (element as any)._helpHandlers;
+    const handlers = (element as HTMLElementWithHelpHandlers)._helpHandlers;
     if (handlers) {
       element.removeEventListener('mouseenter', handlers.handleMouseEnter);
       element.removeEventListener('mouseleave', handlers.handleMouseLeave);
-      delete (element as any)._helpHandlers;
+      delete (element as HTMLElementWithHelpHandlers)._helpHandlers;
     }
   }, [helpElements]);
 

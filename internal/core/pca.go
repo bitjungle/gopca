@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"math"
 
+	"github.com/bitjungle/gopca/internal/utils"
 	"github.com/bitjungle/gopca/pkg/types"
 	"gonum.org/v1/gonum/mat"
 )
@@ -44,7 +45,7 @@ func (p *PCAImpl) Fit(data types.Matrix, config types.PCAConfig) (*types.PCAResu
 	p.config = config
 
 	// Convert to gonum matrix
-	X := matrixToDense(data)
+	X := utils.MatrixToDense(data)
 
 	// Check if we're using NIPALS with native missing value handling
 	usingNativeMissing := config.Method == "nipals" && config.MissingStrategy == types.MissingNative
@@ -56,7 +57,7 @@ func (p *PCAImpl) Fit(data types.Matrix, config types.PCAConfig) (*types.PCAResu
 		p.preprocessor = NewPreprocessorWithScaleOnly(config.MeanCenter, config.StandardScale, config.RobustScale, config.ScaleOnly, config.SNV, config.VectorNorm)
 
 		// Convert to types.Matrix for preprocessor
-		typeMatrix := denseToMatrix(X)
+		typeMatrix := utils.DenseToMatrix(X)
 
 		// Fit and transform
 		processedData, err := p.preprocessor.FitTransform(typeMatrix)
@@ -65,11 +66,12 @@ func (p *PCAImpl) Fit(data types.Matrix, config types.PCAConfig) (*types.PCAResu
 		}
 
 		// Convert back to mat.Dense
-		X = matrixToDense(processedData)
+		X = utils.MatrixToDense(processedData)
+	} else if usingNativeMissing && (config.StandardScale || config.RobustScale || config.ScaleOnly || config.SNV || config.VectorNorm) {
+		// Log warning: preprocessing (except mean centering) is not supported with native missing value handling
+		// Mean centering is handled internally by the NIPALS algorithm for missing data
+		fmt.Printf("Warning: Preprocessing options (except mean centering) are not supported with NIPALS native missing value handling. These options were ignored.\n")
 	}
-	// TODO: Add warning when preprocessing is requested with native missing value handling
-	// Currently, preprocessing is skipped when using NIPALS with native missing values
-	// as the NIPALS algorithm handles centering internally
 
 	// Select PCA method
 	var scores, loadings *mat.Dense
@@ -149,8 +151,8 @@ func (p *PCAImpl) Fit(data types.Matrix, config types.PCAConfig) (*types.PCAResu
 	}
 
 	return &types.PCAResult{
-		Scores:               denseToMatrix(scores),
-		Loadings:             denseToMatrix(loadings),
+		Scores:               utils.DenseToMatrix(scores),
+		Loadings:             utils.DenseToMatrix(loadings),
 		ExplainedVar:         explainedVar,
 		ExplainedVarRatio:    explainedVarRatio,
 		CumulativeVar:        cumulativeVar,
@@ -170,12 +172,12 @@ func (p *PCAImpl) Transform(data types.Matrix) (types.Matrix, error) {
 	}
 
 	// Convert to gonum matrix
-	X := matrixToDense(data)
+	X := utils.MatrixToDense(data)
 
 	// Apply same preprocessing as during fit
 	if p.preprocessor != nil {
 		// Convert to types.Matrix for preprocessor
-		typeMatrix := denseToMatrix(X)
+		typeMatrix := utils.DenseToMatrix(X)
 
 		// Transform using preprocessor
 		processedData, err := p.preprocessor.Transform(typeMatrix)
@@ -184,7 +186,7 @@ func (p *PCAImpl) Transform(data types.Matrix) (types.Matrix, error) {
 		}
 
 		// Convert back to mat.Dense
-		X = matrixToDense(processedData)
+		X = utils.MatrixToDense(processedData)
 	}
 
 	// Project onto loadings
@@ -192,7 +194,7 @@ func (p *PCAImpl) Transform(data types.Matrix) (types.Matrix, error) {
 	scores := mat.NewDense(n, p.nComponents, nil)
 	scores.Mul(X, p.loadings)
 
-	return denseToMatrix(scores), nil
+	return utils.DenseToMatrix(scores), nil
 }
 
 // FitTransform fits the model and transforms the data in one step
@@ -200,7 +202,9 @@ func (p *PCAImpl) FitTransform(data types.Matrix, config types.PCAConfig) (*type
 	return p.Fit(data, config)
 }
 
-// nipalsAlgorithm implements the NIPALS algorithm for PCA
+// nipalsAlgorithm implements the NIPALS (Nonlinear Iterative Partial Least Squares) algorithm for PCA
+// Reference: Wold, H. (1966). Estimation of principal components and related models by iterative least squares.
+// In P.R. Krishnaiah (Ed.), Multivariate Analysis (pp. 391-420). Academic Press.
 func (p *PCAImpl) nipalsAlgorithm(X *mat.Dense, nComponents int) (*mat.Dense, *mat.Dense, error) {
 	n, m := X.Dims()
 
@@ -530,7 +534,9 @@ func (p *PCAImpl) nipalsAlgorithmWithMissing(X *mat.Dense, nComponents int) (*ma
 	return T, P, nil
 }
 
-// svdAlgorithm implements SVD-based PCA
+// svdAlgorithm implements SVD-based PCA using Singular Value Decomposition
+// The scores are computed as T = U * Σ and loadings as P = V
+// Reference: Jolliffe, I.T. (2002). Principal Component Analysis (2nd ed.). Springer.
 func (p *PCAImpl) svdAlgorithm(X *mat.Dense, nComponents int) (*mat.Dense, *mat.Dense, error) {
 	n, m := X.Dims()
 
@@ -692,35 +698,6 @@ func (p *PCAImpl) validateInput(data types.Matrix, config types.PCAConfig) error
 	return nil
 }
 
-// Helper functions for type conversion
-
-func matrixToDense(m types.Matrix) *mat.Dense {
-	if len(m) == 0 || len(m[0]) == 0 {
-		return mat.NewDense(0, 0, nil)
-	}
-
-	rows, cols := len(m), len(m[0])
-	data := make([]float64, rows*cols)
-	for i := 0; i < rows; i++ {
-		for j := 0; j < cols; j++ {
-			data[i*cols+j] = m[i][j]
-		}
-	}
-	return mat.NewDense(rows, cols, data)
-}
-
-func denseToMatrix(d *mat.Dense) types.Matrix {
-	r, c := d.Dims()
-	m := make(types.Matrix, r)
-	for i := 0; i < r; i++ {
-		m[i] = make([]float64, c)
-		for j := 0; j < c; j++ {
-			m[i][j] = d.At(i, j)
-		}
-	}
-	return m
-}
-
 // SetPreprocessor sets the preprocessor for the PCA engine
 func (p *PCAImpl) SetPreprocessor(preprocessor *Preprocessor) {
 	p.preprocessor = preprocessor
@@ -735,7 +712,7 @@ func (p *PCAImpl) SetLoadings(loadings types.Matrix, nComponents int) error {
 	// The saved loadings matrix has shape (n_features, n_components)
 	// This is already the correct shape for X @ V multiplication
 	// Just convert to Dense matrix
-	p.loadings = matrixToDense(loadings)
+	p.loadings = utils.MatrixToDense(loadings)
 	p.nComponents = nComponents
 	p.fitted = true
 	return nil

@@ -8,8 +8,8 @@ import (
 	"strings"
 )
 
-// columnTypeDetectionSampleSize defines how many rows to check when detecting column types
-const columnTypeDetectionSampleSize = 10
+// DefaultColumnTypeDetectionSampleSize defines the default number of rows to check when detecting column types
+const DefaultColumnTypeDetectionSampleSize = 10
 
 // isNumericValue checks if a string value represents a numeric value
 func isNumericValue(value string, format CSVFormat) (bool, float64) {
@@ -91,7 +91,7 @@ func DetectColumnTypes(r io.Reader, format CSVFormat) (numericCols []int, catego
 		hasAnyValue := false
 
 		// Check first N rows to determine type
-		for i := startRow; i < len(records) && i < startRow+columnTypeDetectionSampleSize; i++ {
+		for i := startRow; i < len(records) && i < startRow+DefaultColumnTypeDetectionSampleSize; i++ {
 			if j+startCol >= len(records[i]) {
 				continue
 			}

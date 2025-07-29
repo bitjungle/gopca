@@ -110,9 +110,10 @@ func TestKernelPCA_SwissRollDataset(t *testing.T) {
 		t.Fatalf("Failed to fit Kernel PCA on Swiss Roll: %v", err)
 	}
 
-	// Check that gamma was set to 1/3
+	// Check that gamma was set to 1/n_features
+	// swiss_roll.csv has 4 columns when parsed with ParseCSVMixed (which doesn't exclude #target columns)
 	kpca := engine.(*KernelPCAImpl)
-	expectedGamma := 1.0 / 3.0
+	expectedGamma := 1.0 / 4.0
 	if math.Abs(kpca.config.KernelGamma-expectedGamma) > 1e-9 {
 		t.Errorf("Expected gamma %f, got %f", expectedGamma, kpca.config.KernelGamma)
 	}

@@ -362,7 +362,7 @@ func (a *App) RunPCA(request PCARequest) (response PCAResponse) {
 			var err error
 			preprocessedData, err = preprocessor.FitTransform(dataToAnalyze)
 			if err != nil {
-				fmt.Printf("Warning: Failed to preprocess data for metrics: %v\n", err)
+				fmt.Printf("Warning: failed to preprocess data for metrics: %v\n", err)
 				preprocessedData = dataToAnalyze // Fallback to original data
 			}
 		}
@@ -371,13 +371,20 @@ func (a *App) RunPCA(request PCARequest) (response PCAResponse) {
 		metrics, err := core.CalculateMetricsFromPCAResult(result, preprocessedData)
 		if err != nil {
 			// Don't fail the whole PCA, just log the error
-			fmt.Printf("Warning: Failed to calculate diagnostic metrics: %v\n", err)
+			fmt.Printf("Warning: failed to calculate diagnostic metrics: %v\n", err)
 		} else {
 			result.Metrics = metrics
-			// TODO: Add confidence limit calculations
-			// For now, set placeholder values
-			result.T2Limit95 = 0.0
-			result.T2Limit99 = 0.0
+
+			// Calculate confidence limits
+			scores := utils.MatrixToDense(result.Scores)
+			loadings := utils.MatrixToDense(result.Loadings)
+			calculator := core.NewPCAMetricsCalculator(scores, loadings, result.Means, result.StdDevs)
+
+			// Calculate T² limits
+			result.T2Limit95, result.T2Limit99 = calculator.CalculateT2Limits()
+
+			// For Q limits calculation, we need all eigenvalues including non-retained ones
+			// Since we don't have them in the current implementation, we'll use a simplified approach
 			result.QLimit95 = 0.0
 			result.QLimit99 = 0.0
 		}

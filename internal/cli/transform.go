@@ -334,7 +334,7 @@ func loadPCAModel(filename string) (*types.PCAOutputData, error) {
 
 // validateModel checks if the model has all required fields
 func validateModel(model *types.PCAOutputData) error {
-	if model.Model.Loadings == nil || len(model.Model.Loadings) == 0 {
+	if len(model.Model.Loadings) == 0 {
 		return fmt.Errorf("model missing loadings matrix")
 	}
 
@@ -447,10 +447,11 @@ func outputTransformTable(result *TransformResult, includeMetrics bool) error {
 	fmt.Println()
 	fmt.Println(strings.Repeat("-", 15+12*len(result.ComponentLabels)))
 
-	// Show up to 10 samples
+	// Show preview of samples
+	const previewMaxRows = 10
 	maxSamples := len(result.SampleNames)
-	if maxSamples > 10 {
-		maxSamples = 10
+	if maxSamples > previewMaxRows {
+		maxSamples = previewMaxRows
 	}
 
 	for i := 0; i < maxSamples; i++ {
@@ -488,7 +489,7 @@ func outputTransformJSON(result *TransformResult, inputFile, outputDir string,
 	}{}
 
 	// Set metadata
-	output.Metadata.TransformedAt = fmt.Sprintf("%s", os.Getenv("TZ"))
+	output.Metadata.TransformedAt = os.Getenv("TZ")
 	output.Metadata.InputFile = inputFile
 	output.Metadata.ModelMethod = result.ModelMethod
 	output.Metadata.NSamples = len(result.SampleNames)
