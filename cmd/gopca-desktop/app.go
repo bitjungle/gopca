@@ -362,7 +362,7 @@ func (a *App) RunPCA(request PCARequest) (response PCAResponse) {
 			var err error
 			preprocessedData, err = preprocessor.FitTransform(dataToAnalyze)
 			if err != nil {
-				fmt.Printf("Warning: Failed to preprocess data for metrics: %v\n", err)
+				fmt.Printf("Warning: failed to preprocess data for metrics: %v\n", err)
 				preprocessedData = dataToAnalyze // Fallback to original data
 			}
 		}
@@ -371,7 +371,7 @@ func (a *App) RunPCA(request PCARequest) (response PCAResponse) {
 		metrics, err := core.CalculateMetricsFromPCAResult(result, preprocessedData)
 		if err != nil {
 			// Don't fail the whole PCA, just log the error
-			fmt.Printf("Warning: Failed to calculate diagnostic metrics: %v\n", err)
+			fmt.Printf("Warning: failed to calculate diagnostic metrics: %v\n", err)
 		} else {
 			result.Metrics = metrics
 
