@@ -83,7 +83,7 @@ func TestKernelPCA_DefaultGamma(t *testing.T) {
 // TestKernelPCA_SwissRollDataset tests Kernel PCA with the Swiss Roll dataset
 func TestKernelPCA_SwissRollDataset(t *testing.T) {
 	// Load Swiss Roll dataset
-	swissRollCSV, ok := datasets.GetDataset("swiss_roll_color.csv")
+	swissRollCSV, ok := datasets.GetDataset("swiss_roll.csv")
 	if !ok {
 		t.Fatal("Failed to load Swiss Roll dataset")
 	}
@@ -111,7 +111,7 @@ func TestKernelPCA_SwissRollDataset(t *testing.T) {
 	}
 
 	// Check that gamma was set to 1/n_features
-	// swiss_roll_color.csv has 4 features when parsed without target column handling
+	// swiss_roll.csv has 4 columns when parsed with ParseCSVMixed (which doesn't exclude #target columns)
 	kpca := engine.(*KernelPCAImpl)
 	expectedGamma := 1.0 / 4.0
 	if math.Abs(kpca.config.KernelGamma-expectedGamma) > 1e-9 {

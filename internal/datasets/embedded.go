@@ -15,7 +15,7 @@ var (
 	//go:embed wine.csv
 	WineCSV string
 
-	//go:embed swiss_roll_color.csv
+	//go:embed swiss_roll.csv
 	SwissRollCSV string
 )
 
@@ -28,7 +28,7 @@ func GetDataset(filename string) (string, bool) {
 		return IrisCSV, true
 	case "wine.csv":
 		return WineCSV, true
-	case "swiss_roll_color.csv":
+	case "swiss_roll.csv":
 		return SwissRollCSV, true
 	default:
 		return "", false

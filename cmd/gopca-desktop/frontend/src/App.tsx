@@ -351,7 +351,7 @@ function AppContent() {
                                             setFileError(null);
                                             setPcaError(null);
                                             try {
-                                                const result = await LoadDatasetFile('swiss_roll_color.csv');
+                                                const result = await LoadDatasetFile('swiss_roll.csv');
                                                 setFileData(result);
                                                 setPcaResponse(null);
                                                 setExcludedRows([]);
