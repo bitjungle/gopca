@@ -202,7 +202,9 @@ func (p *PCAImpl) FitTransform(data types.Matrix, config types.PCAConfig) (*type
 	return p.Fit(data, config)
 }
 
-// nipalsAlgorithm implements the NIPALS algorithm for PCA
+// nipalsAlgorithm implements the NIPALS (Nonlinear Iterative Partial Least Squares) algorithm for PCA
+// Reference: Wold, H. (1966). Estimation of principal components and related models by iterative least squares.
+// In P.R. Krishnaiah (Ed.), Multivariate Analysis (pp. 391-420). Academic Press.
 func (p *PCAImpl) nipalsAlgorithm(X *mat.Dense, nComponents int) (*mat.Dense, *mat.Dense, error) {
 	n, m := X.Dims()
 
@@ -532,7 +534,9 @@ func (p *PCAImpl) nipalsAlgorithmWithMissing(X *mat.Dense, nComponents int) (*ma
 	return T, P, nil
 }
 
-// svdAlgorithm implements SVD-based PCA
+// svdAlgorithm implements SVD-based PCA using Singular Value Decomposition
+// The scores are computed as T = U * Σ and loadings as P = V
+// Reference: Jolliffe, I.T. (2002). Principal Component Analysis (2nd ed.). Springer.
 func (p *PCAImpl) svdAlgorithm(X *mat.Dense, nComponents int) (*mat.Dense, *mat.Dense, error) {
 	n, m := X.Dims()
 

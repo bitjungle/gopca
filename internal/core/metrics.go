@@ -222,6 +222,8 @@ func (m *PCAMetricsCalculator) calculateRSS(sampleIdx int, originalData types.Ma
 }
 
 // isOutlier determines if a sample is an outlier based on Hotelling's T²
+// Reference: Hotelling, H. (1931). The generalization of Student's ratio.
+// Annals of Mathematical Statistics, 2(3), 360-378.
 func (m *PCAMetricsCalculator) isOutlier(hotellingT2 float64) bool {
 	// Calculate critical value using F-distribution
 	// T²_critical = p(n-1)/(n-p) * F_{p,n-p}(1-α)
@@ -275,7 +277,9 @@ func (m *PCAMetricsCalculator) CalculateT2Limits() (limit95, limit99 float64) {
 	return limit95, limit99
 }
 
-// CalculateQLimits calculates the confidence limits for Q-residuals (SPE)
+// CalculateQLimits calculates the confidence limits for Q-residuals (SPE - Squared Prediction Error)
+// Reference: Jackson, J.E., & Mudholkar, G.S. (1979). Control procedures for residuals associated with principal component analysis.
+// Technometrics, 21(3), 341-349.
 func (m *PCAMetricsCalculator) CalculateQLimits(eigenvalues []float64, totalComponents int) (limit95, limit99 float64) {
 	// Q-statistic (SPE) limit calculation based on Jackson & Mudholkar (1979)
 	// Uses the Box's approximation for the distribution of Q

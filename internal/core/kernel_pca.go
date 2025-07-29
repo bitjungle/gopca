@@ -22,6 +22,10 @@ const (
 )
 
 // KernelPCAImpl implements the PCAEngine interface for Kernel PCA
+// Kernel PCA performs nonlinear dimensionality reduction by projecting data into a higher-dimensional
+// feature space using kernel functions, then performing PCA in that space.
+// Reference: Schölkopf, B., Smola, A., & Müller, K.R. (1998). Nonlinear component analysis as a kernel eigenvalue problem.
+// Neural Computation, 10(5), 1299-1319.
 type KernelPCAImpl struct {
 	config       types.PCAConfig
 	kernelType   KernelType

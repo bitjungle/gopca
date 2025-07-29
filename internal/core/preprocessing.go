@@ -75,7 +75,10 @@ func (p *Preprocessor) applyRowWisePreprocessing(row []float64, rowIndex int) []
 	copy(result, row)
 
 	if p.SNV {
-		// Apply SNV: (x - row_mean) / row_std
+		// Apply Standard Normal Variate (SNV): (x - row_mean) / row_std
+		// SNV is commonly used in spectroscopy to remove multiplicative scatter effects
+		// Reference: Barnes, R.J., Dhanoa, M.S., & Lister, S.J. (1989). Standard normal variate transformation
+		// and de-trending of near-infrared diffuse reflectance spectra. Applied Spectroscopy, 43(5), 772-777.
 		rowMean := stat.Mean(result, nil)
 		rowStdDev := stat.StdDev(result, nil)
 
