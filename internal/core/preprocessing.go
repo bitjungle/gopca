@@ -665,16 +665,16 @@ func GetColumnRanks(data types.Matrix) ([]int, error) {
 // SetFittedParameters sets the fitted parameters for the preprocessor
 func (p *Preprocessor) SetFittedParameters(means, stdDevs, medians, mads, rowMeans, rowStdDevs []float64) error {
 	// Basic validation
-	if p.MeanCenter && (means == nil || len(means) == 0) {
+	if p.MeanCenter && len(means) == 0 {
 		return fmt.Errorf("means required when mean centering is enabled")
 	}
-	if p.StandardScale && (stdDevs == nil || len(stdDevs) == 0) {
+	if p.StandardScale && len(stdDevs) == 0 {
 		return fmt.Errorf("standard deviations required when standard scaling is enabled")
 	}
-	if p.RobustScale && (medians == nil || len(medians) == 0 || mads == nil || len(mads) == 0) {
+	if p.RobustScale && (len(medians) == 0 || len(mads) == 0) {
 		return fmt.Errorf("medians and MADs required when robust scaling is enabled")
 	}
-	if p.SNV && (rowMeans == nil || len(rowMeans) == 0 || rowStdDevs == nil || len(rowStdDevs) == 0) {
+	if p.SNV && (len(rowMeans) == 0 || len(rowStdDevs) == 0) {
 		return fmt.Errorf("row means and standard deviations required when SNV is enabled")
 	}
 
