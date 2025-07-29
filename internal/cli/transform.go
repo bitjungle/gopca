@@ -447,10 +447,11 @@ func outputTransformTable(result *TransformResult, includeMetrics bool) error {
 	fmt.Println()
 	fmt.Println(strings.Repeat("-", 15+12*len(result.ComponentLabels)))
 
-	// Show up to 10 samples
+	// Show preview of samples
+	const previewMaxRows = 10
 	maxSamples := len(result.SampleNames)
-	if maxSamples > 10 {
-		maxSamples = 10
+	if maxSamples > previewMaxRows {
+		maxSamples = previewMaxRows
 	}
 
 	for i := 0; i < maxSamples; i++ {

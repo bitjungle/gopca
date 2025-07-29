@@ -67,8 +67,9 @@ func generateOutputPaths(inputFile, outputDir, format string) map[string]string 
 	}
 
 	// Generate paths based on format
+	const outputFileSuffix = "_pca"
 	if format == "json" {
-		paths["output"] = filepath.Join(dir, baseName+"_pca.json")
+		paths["output"] = filepath.Join(dir, baseName+outputFileSuffix+".json")
 	}
 
 	return paths

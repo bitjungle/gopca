@@ -69,7 +69,7 @@ func ParseCSVMixed(r io.Reader, format CSVFormat) (*CSVData, map[string][]string
 		hasAnyValue := false
 
 		// Check first N rows to determine type
-		for i := startRow; i < len(records) && i < startRow+columnTypeDetectionSampleSize; i++ {
+		for i := startRow; i < len(records) && i < startRow+DefaultColumnTypeDetectionSampleSize; i++ {
 			if j+startCol >= len(records[i]) {
 				continue
 			}
@@ -252,7 +252,7 @@ func ParseCSVMixedWithTargets(r io.Reader, format CSVFormat, targetColumns []str
 		hasAnyValue := false
 
 		// Check first N rows to determine type
-		for i := startRow; i < len(records) && i < startRow+columnTypeDetectionSampleSize; i++ {
+		for i := startRow; i < len(records) && i < startRow+DefaultColumnTypeDetectionSampleSize; i++ {
 			if j+startCol >= len(records[i]) {
 				continue
 			}
