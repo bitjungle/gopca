@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"math"
 
+	"github.com/bitjungle/gopca/internal/utils"
 	"github.com/bitjungle/gopca/pkg/types"
 	"gonum.org/v1/gonum/mat"
 	"gonum.org/v1/gonum/stat/distuv"
@@ -248,27 +249,11 @@ func (m *PCAMetricsCalculator) isOutlier(hotellingT2 float64) bool {
 	return hotellingT2 > t2Critical
 }
 
-// convertMatrixToDense converts a types.Matrix to a gonum Dense matrix
-func convertMatrixToDense(m types.Matrix) *mat.Dense {
-	if len(m) == 0 || len(m[0]) == 0 {
-		return mat.NewDense(0, 0, nil)
-	}
-
-	rows, cols := len(m), len(m[0])
-	data := make([]float64, rows*cols)
-	for i := 0; i < rows; i++ {
-		for j := 0; j < cols; j++ {
-			data[i*cols+j] = m[i][j]
-		}
-	}
-	return mat.NewDense(rows, cols, data)
-}
-
 // CalculateMetricsFromPCAResult is a convenience function that calculates metrics directly from PCAResult
 func CalculateMetricsFromPCAResult(result *types.PCAResult, preprocessedData types.Matrix) ([]types.SampleMetrics, error) {
 	// Convert result matrices to gonum matrices
-	scores := convertMatrixToDense(result.Scores)
-	loadings := convertMatrixToDense(result.Loadings)
+	scores := utils.MatrixToDense(result.Scores)
+	loadings := utils.MatrixToDense(result.Loadings)
 
 	// Create metrics calculator
 	calculator := NewPCAMetricsCalculator(scores, loadings, result.Means, result.StdDevs)

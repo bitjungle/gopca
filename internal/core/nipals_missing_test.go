@@ -4,6 +4,7 @@ import (
 	"math"
 	"testing"
 
+	"github.com/bitjungle/gopca/internal/utils"
 	"github.com/bitjungle/gopca/pkg/types"
 	"gonum.org/v1/gonum/floats"
 	"gonum.org/v1/gonum/mat"
@@ -212,7 +213,7 @@ func TestNIPALSConvergenceWithMissing(t *testing.T) {
 	}
 
 	impl := &PCAImpl{}
-	X := matrixToDense(data)
+	X := utils.MatrixToDense(data)
 
 	scores, loadings, err := impl.nipalsAlgorithmWithMissing(X, 3)
 	if err != nil {
