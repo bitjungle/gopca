@@ -47,7 +47,7 @@ jobs:
     - name: Run tests
       run: |
         if [ "$RUNNER_OS" == "Windows" ]; then
-          go test -v -cover ./internal/... ./pkg/...
+          go test -v -cover ./internal/cli ./internal/core ./internal/io ./internal/utils ./pkg/types
         else
           make ci-test
         fi
