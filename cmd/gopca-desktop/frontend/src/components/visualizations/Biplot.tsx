@@ -11,6 +11,7 @@ import {
   Cell
 } from 'recharts';
 import { PCAResult } from '../../types';
+import { TooltipProps, LoadingEndpointProps } from '../../types/recharts';
 import { ExportButton } from '../ExportButton';
 import { PlotControls } from '../PlotControls';
 import { useZoomPan } from '../../hooks/useZoomPan';
@@ -200,14 +201,14 @@ export const Biplot: React.FC<BiplotProps> = ({
     if (!isFullscreen) {
       if (fullscreenRef.current.requestFullscreen) {
         fullscreenRef.current.requestFullscreen();
-      } else if ((fullscreenRef.current as any).webkitRequestFullscreen) {
+      } else if ('webkitRequestFullscreen' in fullscreenRef.current) {
         (fullscreenRef.current as any).webkitRequestFullscreen();
       }
       setIsFullscreen(true);
     } else {
       if (document.exitFullscreen) {
         document.exitFullscreen();
-      } else if ((document as any).webkitExitFullscreen) {
+      } else if ('webkitExitFullscreen' in document) {
         (document as any).webkitExitFullscreen();
       }
       setIsFullscreen(false);
@@ -238,7 +239,7 @@ export const Biplot: React.FC<BiplotProps> = ({
   // Custom dot for loading endpoints
   const LoadingEndpoint = (props: any) => {
     const { cx, cy, payload } = props;
-    if (!payload || !payload.isLoadingEnd) return null;
+    if (!payload || !payload.isLoadingEnd) return <g />;
     
     const { index, label } = payload;
     const isHovered = hoveredVariable === index;
@@ -318,7 +319,7 @@ export const Biplot: React.FC<BiplotProps> = ({
   };
 
   // Custom tooltip
-  const CustomTooltip = ({ active, payload }: any) => {
+  const CustomTooltip = ({ active, payload }: TooltipProps) => {
     if (active && payload && payload.length) {
       const data = payload[0].payload;
       
@@ -517,7 +518,7 @@ export const Biplot: React.FC<BiplotProps> = ({
             name="LoadingEnds"
             data={loadingEndpoints}
             fill="transparent"
-            shape={<LoadingEndpoint />}
+            shape={LoadingEndpoint}
           />
         </ScatterChart>
         </ResponsiveContainer>

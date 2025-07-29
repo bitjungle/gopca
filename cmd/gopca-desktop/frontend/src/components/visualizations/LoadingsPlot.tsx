@@ -13,6 +13,7 @@ import {
   Cell
 } from 'recharts';
 import { PCAResult } from '../../types';
+import { TooltipProps } from '../../types/recharts';
 import { ExportButton } from '../ExportButton';
 import { PlotControls } from '../PlotControls';
 import { useChartTheme } from '../../hooks/useChartTheme';
@@ -90,7 +91,7 @@ export const LoadingsPlot: React.FC<LoadingsPlotProps> = ({
   }
 
   // Custom tooltip
-  const CustomTooltip = ({ active, payload }: any) => {
+  const CustomTooltip = ({ active, payload }: TooltipProps) => {
     if (active && payload && payload.length) {
       const data = payload[0].payload;
       return (

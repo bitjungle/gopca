@@ -12,6 +12,7 @@ import {
   Label
 } from 'recharts';
 import { PCAResult } from '../../types';
+import { TooltipProps } from '../../types/recharts';
 import { ExportButton } from '../ExportButton';
 import { PlotControls } from '../PlotControls';
 import { useZoomPan } from '../../hooks/useZoomPan';
@@ -111,7 +112,7 @@ export const DiagnosticScatterPlot: React.FC<DiagnosticScatterPlotProps> = ({
   };
 
   // Custom tooltip
-  const CustomTooltip = ({ active, payload }: any) => {
+  const CustomTooltip = ({ active, payload }: TooltipProps) => {
     if (active && payload && payload.length) {
       const data = payload[0].payload;
       return (
