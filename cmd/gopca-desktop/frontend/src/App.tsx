@@ -230,12 +230,7 @@ function AppContent() {
                             text={currentHelp?.text || ''}
                         />
                     </div>
-                    <div className="flex items-center gap-2">
-                        <HelpWrapper helpKey="plot-color-palette">
-                            <PaletteSelector />
-                        </HelpWrapper>
-                        <ThemeToggle />
-                    </div>
+                    <ThemeToggle />
                 </div>
             </header>
             
@@ -809,6 +804,9 @@ function AppContent() {
                                                         )}
                                                     </select>
                                                 </HelpWrapper>
+                                                {selectedGroupColumn && (
+                                                    <PaletteSelector />
+                                                )}
                                                 {selectedPlot === 'scores' && selectedGroupColumn && (
                                                     <>
                                                         <HelpWrapper helpKey="confidence-ellipses" className="flex items-center gap-2">
