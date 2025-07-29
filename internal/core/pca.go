@@ -67,10 +67,11 @@ func (p *PCAImpl) Fit(data types.Matrix, config types.PCAConfig) (*types.PCAResu
 
 		// Convert back to mat.Dense
 		X = utils.MatrixToDense(processedData)
+	} else if usingNativeMissing && (config.StandardScale || config.RobustScale || config.ScaleOnly || config.SNV || config.VectorNorm) {
+		// Log warning: preprocessing (except mean centering) is not supported with native missing value handling
+		// Mean centering is handled internally by the NIPALS algorithm for missing data
+		fmt.Printf("Warning: Preprocessing options (except mean centering) are not supported with NIPALS native missing value handling. These options were ignored.\n")
 	}
-	// TODO: Add warning when preprocessing is requested with native missing value handling
-	// Currently, preprocessing is skipped when using NIPALS with native missing values
-	// as the NIPALS algorithm handles centering internally
 
 	// Select PCA method
 	var scores, loadings *mat.Dense

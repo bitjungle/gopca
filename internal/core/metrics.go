@@ -249,6 +249,74 @@ func (m *PCAMetricsCalculator) isOutlier(hotellingT2 float64) bool {
 	return hotellingT2 > t2Critical
 }
 
+// CalculateT2Limits calculates the confidence limits for Hotelling's T² statistic
+func (m *PCAMetricsCalculator) CalculateT2Limits() (limit95, limit99 float64) {
+	p := float64(m.nComponents)
+	n := float64(m.nSamples)
+
+	if n <= p {
+		// Cannot calculate threshold with insufficient samples
+		return 0, 0
+	}
+
+	// Create F-distribution
+	fDist := distuv.F{
+		D1: p,
+		D2: n - p,
+	}
+
+	// Calculate critical values for 95% and 99% confidence levels
+	f95 := fDist.Quantile(0.95)
+	f99 := fDist.Quantile(0.99)
+
+	limit95 = p * (n - 1) / (n - p) * f95
+	limit99 = p * (n - 1) / (n - p) * f99
+
+	return limit95, limit99
+}
+
+// CalculateQLimits calculates the confidence limits for Q-residuals (SPE)
+func (m *PCAMetricsCalculator) CalculateQLimits(eigenvalues []float64, totalComponents int) (limit95, limit99 float64) {
+	// Q-statistic (SPE) limit calculation based on Jackson & Mudholkar (1979)
+	// Uses the Box's approximation for the distribution of Q
+
+	// Calculate theta values from eigenvalues of non-retained components
+	theta1, theta2, theta3 := 0.0, 0.0, 0.0
+
+	// Start from the first non-retained component
+	for i := m.nComponents; i < totalComponents && i < len(eigenvalues); i++ {
+		lambda := eigenvalues[i]
+		theta1 += lambda
+		theta2 += lambda * lambda
+		theta3 += lambda * lambda * lambda
+	}
+
+	if theta1 == 0 || theta2 == 0 {
+		// No variance in non-retained components
+		return 0, 0
+	}
+
+	// Calculate h0 parameter
+	h0 := 1 - (2*theta1*theta3)/(3*theta2*theta2)
+
+	// Calculate critical values from standard normal distribution
+	normDist := distuv.Normal{Mu: 0, Sigma: 1}
+	z95 := normDist.Quantile(0.95)
+	z99 := normDist.Quantile(0.99)
+
+	// Calculate Q limits
+	ca95 := z95 * math.Sqrt(2*theta2*h0*h0) / theta1
+	ca99 := z99 * math.Sqrt(2*theta2*h0*h0) / theta1
+
+	factor := theta1 * math.Pow(ca95*h0*(h0-1)/theta2+1+theta2*h0*(h0-1)/(theta1*theta1), 1/h0)
+	limit95 = math.Max(0, factor)
+
+	factor = theta1 * math.Pow(ca99*h0*(h0-1)/theta2+1+theta2*h0*(h0-1)/(theta1*theta1), 1/h0)
+	limit99 = math.Max(0, factor)
+
+	return limit95, limit99
+}
+
 // CalculateMetricsFromPCAResult is a convenience function that calculates metrics directly from PCAResult
 func CalculateMetricsFromPCAResult(result *types.PCAResult, preprocessedData types.Matrix) ([]types.SampleMetrics, error) {
 	// Convert result matrices to gonum matrices
