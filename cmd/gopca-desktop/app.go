@@ -383,26 +383,8 @@ func (a *App) RunPCA(request PCARequest) (response PCAResponse) {
 			// Calculate T² limits
 			result.T2Limit95, result.T2Limit99 = calculator.CalculateT2Limits()
 
-			// For Q limits, we need eigenvalues. Calculate them from the explained variance
-			// Note: For NIPALS with missing values, ExplainedVar contains eigenvalues directly
-			var eigenvalues []float64
-			if config.Method == "nipals" && config.MissingStrategy == types.MissingNative {
-				eigenvalues = result.ExplainedVar
-			} else {
-				// For regular PCA, convert explained variance percentages back to eigenvalues
-				// This is approximate since we don't have all eigenvalues
-				totalVar := 0.0
-				for _, v := range result.ExplainedVar {
-					totalVar += v
-				}
-				eigenvalues = make([]float64, len(result.ExplainedVar))
-				for i, v := range result.ExplainedVar {
-					eigenvalues[i] = v * totalVar / 100.0
-				}
-			}
-
 			// For Q limits calculation, we need all eigenvalues including non-retained ones
-			// Since we don't have them, we'll use a simplified approach
+			// Since we don't have them in the current implementation, we'll use a simplified approach
 			result.QLimit95 = 0.0
 			result.QLimit99 = 0.0
 		}
