@@ -15,6 +15,7 @@ import (
 	"github.com/bitjungle/gopca/internal/core"
 	"github.com/bitjungle/gopca/internal/datasets"
 	"github.com/bitjungle/gopca/internal/utils"
+	"github.com/bitjungle/gopca/internal/version"
 	"github.com/bitjungle/gopca/pkg/types"
 	"github.com/wailsapp/wails/v2/pkg/runtime"
 	"gonum.org/v1/gonum/mat"
@@ -38,7 +39,7 @@ func (a *App) startup(ctx context.Context) {
 
 // GetVersion returns the application version
 func (a *App) GetVersion() string {
-	return Version
+	return version.Get().Short()
 }
 
 // FileData represents the structure of CSV data for the frontend

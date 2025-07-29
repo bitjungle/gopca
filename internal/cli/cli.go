@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"os"
 
+	"github.com/bitjungle/gopca/internal/version"
 	cli "github.com/urfave/cli/v2"
 )
 
@@ -11,17 +12,12 @@ const (
 	AppName = "gopca-cli"
 )
 
-var (
-	// Version is set at build time via ldflags
-	Version = "dev"
-)
-
 // NewApp creates and configures the CLI application
 func NewApp() *cli.App {
 	app := &cli.App{
 		Name:    AppName,
 		Usage:   "Professional-grade PCA (Principal Component Analysis) toolkit",
-		Version: Version,
+		Version: version.Get().Short(),
 		Authors: []*cli.Author{
 			{
 				Name:  "GoPCA Team",
@@ -45,6 +41,7 @@ For detailed help on any command, use: gopca-cli <command> --help`,
 			analyzeCommand(),
 			validateCommand(),
 			transformCommand(),
+			versionCommand(),
 		},
 		Before: func(c *cli.Context) error {
 			// If no command is provided, show help
@@ -103,5 +100,18 @@ func RunWithOSExit() {
 	if err := Run(os.Args); err != nil {
 		fmt.Fprintf(os.Stderr, "Error: %v\n", err)
 		os.Exit(1)
+	}
+}
+
+// versionCommand returns the version command
+func versionCommand() *cli.Command {
+	return &cli.Command{
+		Name:  "version",
+		Usage: "Display version information",
+		Action: func(c *cli.Context) error {
+			info := version.Get()
+			fmt.Println(info.String())
+			return nil
+		},
 	}
 }
