@@ -47,7 +47,8 @@ jobs:
     - name: Run tests
       run: |
         if [ "$RUNNER_OS" == "Windows" ]; then
-          go test -v -cover ./internal/cli ./internal/core ./internal/io ./internal/utils ./pkg/types
+          # Run tests without listing packages - let Go find them
+          go test -v -race -timeout 10m ./internal/... ./pkg/...
         else
           make ci-test
         fi
