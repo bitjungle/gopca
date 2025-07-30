@@ -116,8 +116,9 @@ export const ScoresPlot: React.FC<ScoresPlotProps> = ({
       const y = minorAxis * Math.sin(t);
       
       // Apply rotation
-      const rotatedX = x * Math.cos(angle) - y * Math.sin(angle);
-      const rotatedY = x * Math.sin(angle) + y * Math.cos(angle);
+      // Note: angle is negated to account for SVG coordinate system (Y-axis points down)
+      const rotatedX = x * Math.cos(-angle) - y * Math.sin(-angle);
+      const rotatedY = x * Math.sin(-angle) + y * Math.cos(-angle);
       
       // Translate to center
       points.push({
