@@ -790,10 +790,13 @@ function AppContent() {
                                                             // Auto-switch palette mode based on column type
                                                             if (!value) {
                                                                 setMode('none');
+                                                                setShowEllipses(false);
                                                             } else if (fileData.numericTargetColumns && value in fileData.numericTargetColumns) {
                                                                 setMode('continuous');
+                                                                setShowEllipses(false); // Ellipses only work with categorical data
                                                             } else if (fileData.categoricalColumns && value in fileData.categoricalColumns) {
                                                                 setMode('categorical');
+                                                                // Keep current showEllipses state for categorical columns
                                                             }
                                                         }}
                                                         className="px-2 py-1 bg-gray-100 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded text-sm text-gray-900 dark:text-white"
@@ -824,7 +827,7 @@ function AppContent() {
                                                 {selectedGroupColumn && (
                                                     <PaletteSelector />
                                                 )}
-                                                {selectedPlot === 'scores' && selectedGroupColumn && (
+                                                {selectedPlot === 'scores' && selectedGroupColumn && getColumnData(selectedGroupColumn).type === 'categorical' && (
                                                     <>
                                                         <HelpWrapper helpKey="confidence-ellipses" className="flex items-center gap-2">
                                                             <label className="text-sm text-gray-600 dark:text-gray-400">
