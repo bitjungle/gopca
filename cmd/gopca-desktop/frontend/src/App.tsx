@@ -1,6 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react';
 import './App.css';
-import { ParseCSV, RunPCA, LoadIrisDataset, LoadDatasetFile, GetVersion } from "../wailsjs/go/main/App";
+import { ParseCSV, RunPCA, LoadIrisDataset, LoadDatasetFile, GetVersion, CalculateEllipses } from "../wailsjs/go/main/App";
 import { DataTable, SelectionTable, ThemeToggle, MatrixIllustration, HelpWrapper } from './components';
 import { ScoresPlot, ScreePlot, LoadingsPlot, Biplot, CircleOfCorrelations, DiagnosticScatterPlot } from './components/visualizations';
 import { FileData, PCARequest, PCAResponse } from './types';
@@ -937,6 +937,7 @@ function AppContent() {
                                                 pcaResponse.groupEllipses99
                                             }
                                             showEllipses={showEllipses && !!selectedGroupColumn && getColumnData(selectedGroupColumn).type === 'categorical'}
+                                            confidenceLevel={confidenceLevel}
                                         />
                                     ) : selectedPlot === 'scree' ? (
                                         <ScreePlot

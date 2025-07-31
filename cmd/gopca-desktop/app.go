@@ -42,6 +42,90 @@ func (a *App) GetVersion() string {
 	return version.Get().Short()
 }
 
+// CalculateEllipsesRequest represents a request to calculate confidence ellipses
+type CalculateEllipsesRequest struct {
+	Scores      [][]float64 `json:"scores"`
+	GroupLabels []string    `json:"groupLabels"`
+	XComponent  int         `json:"xComponent"`
+	YComponent  int         `json:"yComponent"`
+}
+
+// CalculateEllipsesResponse represents the response with calculated ellipses
+type CalculateEllipsesResponse struct {
+	GroupEllipses90 map[string]EllipseParams `json:"groupEllipses90"`
+	GroupEllipses95 map[string]EllipseParams `json:"groupEllipses95"`
+	GroupEllipses99 map[string]EllipseParams `json:"groupEllipses99"`
+	Success         bool                     `json:"success"`
+	Error           string                   `json:"error,omitempty"`
+}
+
+// CalculateEllipses calculates confidence ellipses for given scores and groups
+func (a *App) CalculateEllipses(request CalculateEllipsesRequest) CalculateEllipsesResponse {
+	// Validate input
+	if len(request.Scores) == 0 || len(request.GroupLabels) == 0 {
+		return CalculateEllipsesResponse{
+			Success: false,
+			Error:   "Invalid input: scores and group labels are required",
+		}
+	}
+
+	if len(request.Scores) != len(request.GroupLabels) {
+		return CalculateEllipsesResponse{
+			Success: false,
+			Error:   "Scores and group labels must have the same length",
+		}
+	}
+
+	// Convert scores to matrix
+	scoresMatrix := mat.NewDense(len(request.Scores), len(request.Scores[0]), nil)
+	for i, row := range request.Scores {
+		for j, val := range row {
+			scoresMatrix.Set(i, j, val)
+		}
+	}
+
+	// Calculate ellipses for all three confidence levels
+	response := CalculateEllipsesResponse{
+		Success:         true,
+		GroupEllipses90: make(map[string]EllipseParams),
+		GroupEllipses95: make(map[string]EllipseParams),
+		GroupEllipses99: make(map[string]EllipseParams),
+	}
+
+	confidenceLevels := []float64{0.90, 0.95, 0.99}
+	for _, confidenceLevel := range confidenceLevels {
+		coreEllipses, err := core.CalculateGroupEllipses(scoresMatrix, request.GroupLabels, request.XComponent, request.YComponent, confidenceLevel)
+		if err != nil {
+			// Log error but continue with other confidence levels
+			// Errors are expected for groups with too few points or degenerate distributions
+		}
+		if err == nil && len(coreEllipses) > 0 {
+			ellipses := make(map[string]EllipseParams)
+			for group, ellipse := range coreEllipses {
+				ellipses[group] = EllipseParams{
+					CenterX:         ellipse.CenterX,
+					CenterY:         ellipse.CenterY,
+					MajorAxis:       ellipse.MajorAxis,
+					MinorAxis:       ellipse.MinorAxis,
+					Angle:           ellipse.Angle,
+					ConfidenceLevel: ellipse.ConfidenceLevel,
+				}
+			}
+
+			switch confidenceLevel {
+			case 0.90:
+				response.GroupEllipses90 = ellipses
+			case 0.95:
+				response.GroupEllipses95 = ellipses
+			case 0.99:
+				response.GroupEllipses99 = ellipses
+			}
+		}
+	}
+
+	return response
+}
+
 // FileData represents the structure of CSV data for the frontend
 type FileData struct {
 	Headers              []string             `json:"headers"`
