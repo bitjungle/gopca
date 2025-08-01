@@ -2,7 +2,7 @@ import React, { useState, useRef, useEffect } from 'react';
 import './App.css';
 import { ParseCSV, RunPCA, LoadIrisDataset, LoadDatasetFile, GetVersion, CalculateEllipses, GetGUIConfig } from "../wailsjs/go/main/App";
 import { DataTable, SelectionTable, ThemeToggle, MatrixIllustration, HelpWrapper } from './components';
-import { ScoresPlot, ScreePlot, LoadingsPlot, Biplot, CircleOfCorrelations, DiagnosticScatterPlot } from './components/visualizations';
+import { ScoresPlot, ScreePlot, LoadingsPlot, Biplot, CircleOfCorrelations, DiagnosticScatterPlot, EigencorrelationPlot } from './components/visualizations';
 import { FileData, PCARequest, PCAResponse } from './types';
 import { ThemeProvider } from './contexts/ThemeContext';
 import { HelpProvider, useHelp } from './contexts/HelpContext';
@@ -26,7 +26,7 @@ function AppContent() {
     // Selection state
     const [excludedRows, setExcludedRows] = useState<number[]>([]);
     const [excludedColumns, setExcludedColumns] = useState<number[]>([]);
-    const [selectedPlot, setSelectedPlot] = useState<'scores' | 'scree' | 'loadings' | 'biplot' | 'correlations' | 'diagnostics'>('scores');
+    const [selectedPlot, setSelectedPlot] = useState<'scores' | 'scree' | 'loadings' | 'biplot' | 'correlations' | 'diagnostics' | 'eigencorrelation'>('scores');
     const [selectedXComponent, setSelectedXComponent] = useState(0);
     const [selectedYComponent, setSelectedYComponent] = useState(1);
     const [selectedLoadingComponent, setSelectedLoadingComponent] = useState(0);
@@ -958,7 +958,7 @@ function AppContent() {
                                         <HelpWrapper helpKey={`${selectedPlot}-plot`}>
                                             <select
                                                 value={selectedPlot}
-                                                onChange={(e) => setSelectedPlot(e.target.value as 'scores' | 'scree' | 'loadings' | 'biplot' | 'correlations' | 'diagnostics')}
+                                                onChange={(e) => setSelectedPlot(e.target.value as 'scores' | 'scree' | 'loadings' | 'biplot' | 'correlations' | 'diagnostics' | 'eigencorrelation')}
                                                 className="px-3 py-2 bg-gray-100 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg text-gray-900 dark:text-white"
                                             >
                                                 <option value="scores">Scores Plot</option>
@@ -967,6 +967,7 @@ function AppContent() {
                                                 <option value="biplot">Biplot</option>
                                                 <option value="correlations">Circle of Correlations</option>
                                                 <option value="diagnostics">Diagnostics (Mahalanobis vs RSS)</option>
+                                                <option value="eigencorrelation">Eigencorrelation Plot</option>
                                             </select>
                                         </HelpWrapper>
                                     </div>
@@ -1026,6 +1027,11 @@ function AppContent() {
                                         <DiagnosticScatterPlot
                                             pcaResult={pcaResponse.result}
                                             rowNames={fileData?.rowNames || []}
+                                        />
+                                    ) : selectedPlot === 'eigencorrelation' ? (
+                                        <EigencorrelationPlot
+                                            pcaResult={pcaResponse.result}
+                                            fileData={fileData!}
                                         />
                                     ) : (
                                         <div className="w-full h-full flex items-center justify-center text-gray-500 dark:text-gray-400">

@@ -4,3 +4,4 @@ export { LoadingsPlot } from './LoadingsPlot';
 export { Biplot } from './Biplot';
 export { CircleOfCorrelations } from './CircleOfCorrelations';
 export { DiagnosticScatterPlot } from './DiagnosticScatterPlot';
+export { EigencorrelationPlot } from './EigencorrelationPlot';

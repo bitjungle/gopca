@@ -76,7 +76,7 @@ func (a *App) CalculateEllipses(request CalculateEllipsesRequest) CalculateEllip
 			Error:   fmt.Sprintf("Scores and group labels must have the same length (scores: %d, labels: %d)", len(request.Scores), len(request.GroupLabels)),
 		}
 	}
-	
+
 	// Validate scores structure
 	if len(request.Scores[0]) == 0 {
 		return CalculateEllipsesResponse{
@@ -84,7 +84,7 @@ func (a *App) CalculateEllipses(request CalculateEllipsesRequest) CalculateEllip
 			Error:   "Scores matrix has no columns",
 		}
 	}
-	
+
 	// Check component indices
 	maxComponent := len(request.Scores[0]) - 1
 	if request.XComponent < 0 || request.XComponent > maxComponent || request.YComponent < 0 || request.YComponent > maxComponent {
@@ -141,7 +141,7 @@ func (a *App) CalculateEllipses(request CalculateEllipsesRequest) CalculateEllip
 			}
 		}
 	}
-	
+
 	// If we have some ellipses but also some errors, include a warning
 	if len(allErrors) > 0 && (len(response.GroupEllipses90) > 0 || len(response.GroupEllipses95) > 0 || len(response.GroupEllipses99) > 0) {
 		// Some ellipses were calculated successfully, just log warnings
@@ -950,6 +950,71 @@ func (a *App) ExportPCAModel(request ExportPCAModelRequest) error {
 	}
 
 	return nil
+}
+
+// CalculateEigencorrelationsRequest contains the request for eigencorrelation calculation
+type CalculateEigencorrelationsRequest struct {
+	Scores              [][]float64          `json:"scores"`
+	MetadataNumeric     map[string][]float64 `json:"metadataNumeric"`
+	MetadataCategorical map[string][]string  `json:"metadataCategorical"`
+	Components          []int                `json:"components"`
+	Method              string               `json:"method"`
+}
+
+// CalculateEigencorrelationsResponse contains the eigencorrelation results
+type CalculateEigencorrelationsResponse struct {
+	Success      bool                 `json:"success"`
+	Error        string               `json:"error,omitempty"`
+	Correlations map[string][]float64 `json:"correlations,omitempty"`
+	PValues      map[string][]float64 `json:"pValues,omitempty"`
+	Variables    []string             `json:"variables,omitempty"`
+	Components   []string             `json:"components,omitempty"`
+}
+
+// CalculateEigencorrelations computes correlations between PC scores and metadata variables
+func (a *App) CalculateEigencorrelations(request CalculateEigencorrelationsRequest) CalculateEigencorrelationsResponse {
+	// Convert scores to mat.Matrix
+	if len(request.Scores) == 0 {
+		return CalculateEigencorrelationsResponse{
+			Success: false,
+			Error:   "No scores provided",
+		}
+	}
+
+	rows := len(request.Scores)
+	cols := len(request.Scores[0])
+	scoresMatrix := mat.NewDense(rows, cols, nil)
+	for i := 0; i < rows; i++ {
+		for j := 0; j < cols; j++ {
+			scoresMatrix.Set(i, j, request.Scores[i][j])
+		}
+	}
+
+	// Create correlation request
+	corrRequest := core.CorrelationRequest{
+		Scores:              scoresMatrix,
+		MetadataNumeric:     request.MetadataNumeric,
+		MetadataCategorical: request.MetadataCategorical,
+		Components:          request.Components,
+		Method:              request.Method,
+	}
+
+	// Calculate correlations
+	result, err := core.CalculateEigencorrelations(corrRequest)
+	if err != nil {
+		return CalculateEigencorrelationsResponse{
+			Success: false,
+			Error:   fmt.Sprintf("Failed to calculate correlations: %v", err),
+		}
+	}
+
+	return CalculateEigencorrelationsResponse{
+		Success:      true,
+		Correlations: result.Correlations,
+		PValues:      result.PValues,
+		Variables:    result.Variables,
+		Components:   result.Components,
+	}
 }
 
 // GetGUIConfig returns the GUI configuration

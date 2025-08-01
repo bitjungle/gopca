@@ -155,6 +155,11 @@
       "text": "T² vs Q residuals. Upper-right points are potential outliers. Requires diagnostic metrics enabled.",
       "category": "visualization"
     },
+    "eigencorrelation-plot": {
+      "title": "Eigencorrelation Plot",
+      "text": "Heatmap showing correlations between PC scores and metadata variables. Helps identify relationships between components and external factors like batch effects or biological conditions.",
+      "category": "visualization"
+    },
     "component-selector": {
       "title": "Component Selection",
       "text": "Choose which PCs to plot. PC1 usually most important. Try different combinations.",
