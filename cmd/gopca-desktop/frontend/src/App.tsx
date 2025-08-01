@@ -456,7 +456,26 @@ function AppContent() {
                                         </label>
                                         <select
                                             value={config.method}
-                                            onChange={(e) => setConfig({...config, method: e.target.value})}
+                                            onChange={(e) => {
+                                                const newMethod = e.target.value;
+                                                const newConfig = {...config, method: newMethod};
+                                                
+                                                // If switching to kernel PCA and current preprocessing is invalid
+                                                if (newMethod === 'kernel') {
+                                                    // Check if current preprocessing is invalid for kernel PCA
+                                                    // Valid options for kernel PCA are: none (all false) or scale-only
+                                                    if (newConfig.meanCenter || newConfig.standardScale || newConfig.robustScale) {
+                                                        // Reset to "None" - the default valid option
+                                                        newConfig.meanCenter = false;
+                                                        newConfig.standardScale = false;
+                                                        newConfig.robustScale = false;
+                                                        newConfig.scaleOnly = false;
+                                                    }
+                                                    // scaleOnly is valid, so we keep it as-is
+                                                }
+                                                
+                                                setConfig(newConfig);
+                                            }}
                                             className="w-full px-3 py-2 bg-gray-100 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg text-gray-900 dark:text-white"
                                         >
                                             <option value="SVD">SVD</option>
