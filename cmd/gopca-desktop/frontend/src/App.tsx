@@ -995,12 +995,14 @@ function AppContent() {
                                             groupLabels={getColumnData(selectedGroupColumn).type === 'categorical' ? getColumnData(selectedGroupColumn).values as string[] : undefined}
                                             groupValues={getColumnData(selectedGroupColumn).type === 'continuous' ? getColumnData(selectedGroupColumn).values as number[] : undefined}
                                             groupType={getColumnData(selectedGroupColumn).type}
+                                            maxVariables={guiConfig?.visualization?.biplot_max_variables || 100}
                                         />
                                     ) : selectedPlot === 'correlations' ? (
                                         <CircleOfCorrelations
                                             pcaResult={pcaResponse.result}
                                             xComponent={selectedXComponent}
                                             yComponent={selectedYComponent}
+                                            maxVariables={guiConfig?.visualization?.circle_max_variables || 100}
                                         />
                                     ) : selectedPlot === 'diagnostics' ? (
                                         <DiagnosticScatterPlot

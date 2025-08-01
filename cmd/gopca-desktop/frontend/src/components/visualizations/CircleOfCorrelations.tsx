@@ -9,13 +9,15 @@ interface CircleOfCorrelationsProps {
   xComponent?: number; // 0-based index
   yComponent?: number; // 0-based index
   threshold?: number; // Minimum loading magnitude to display label
+  maxVariables?: number; // Maximum number of variables to display
 }
 
 export const CircleOfCorrelations: React.FC<CircleOfCorrelationsProps> = ({ 
   pcaResult, 
   xComponent = 0,
   yComponent = 1,
-  threshold = 0.3
+  threshold = 0.3,
+  maxVariables = 100
 }) => {
   const chartRef = useRef<HTMLDivElement>(null);
   const fullscreenRef = useRef<HTMLDivElement>(null);
@@ -32,7 +34,7 @@ export const CircleOfCorrelations: React.FC<CircleOfCorrelationsProps> = ({
   }
 
   // Extract loadings for selected components
-  const loadings = pcaResult.loadings.map((row, index) => {
+  const allLoadings = pcaResult.loadings.map((row, index) => {
     const x = row[xComponent] || 0;
     const y = row[yComponent] || 0;
     const magnitude = Math.sqrt(x * x + y * y);
@@ -45,6 +47,16 @@ export const CircleOfCorrelations: React.FC<CircleOfCorrelationsProps> = ({
       angle: Math.atan2(y, x) * 180 / Math.PI
     };
   });
+
+  // Check if filtering is needed
+  const needsFiltering = pcaResult.loadings.length > maxVariables;
+  
+  // Filter loadings if needed
+  const loadings = needsFiltering
+    ? [...allLoadings]
+        .sort((a, b) => b.magnitude - a.magnitude)
+        .slice(0, maxVariables)
+    : allLoadings;
 
   // Get component labels and variance
   const xLabel = pcaResult.component_labels?.[xComponent] || `PC${xComponent + 1}`;
@@ -94,6 +106,11 @@ export const CircleOfCorrelations: React.FC<CircleOfCorrelationsProps> = ({
         <div className="flex items-center justify-between mb-4">
           <h4 className="text-md font-medium text-gray-700 dark:text-gray-300">
             Circle of Correlations: {xLabel} ({xVariance}%) vs {yLabel} ({yVariance}%)
+            {needsFiltering && (
+              <span className="ml-2 text-sm text-amber-600 dark:text-amber-400">
+                (showing top {maxVariables} of {pcaResult.loadings.length} variables)
+              </span>
+            )}
           </h4>
           <div className="flex items-center gap-2">
             <PlotControls 

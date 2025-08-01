@@ -29,6 +29,7 @@ interface BiplotProps {
   groupLabels?: string[];
   groupValues?: number[]; // For continuous columns
   groupType?: 'categorical' | 'continuous';
+  maxVariables?: number; // Maximum number of variables to display
 }
 
 export const Biplot: React.FC<BiplotProps> = ({ 
@@ -40,7 +41,8 @@ export const Biplot: React.FC<BiplotProps> = ({
   groupColumn,
   groupLabels,
   groupValues,
-  groupType = 'categorical'
+  groupType = 'categorical',
+  maxVariables = 100
 }) => {
   const [hoveredVariable, setHoveredVariable] = useState<number | null>(null);
   const chartRef = useRef<HTMLDivElement>(null);
@@ -148,14 +150,14 @@ export const Biplot: React.FC<BiplotProps> = ({
   const scaleFactor = maxLoadingMagnitude > 0 ? (plotMax * 0.7) / maxLoadingMagnitude : 1;
 
   // Transform loadings data for display
-  const loadingsData = pcaResult.loadings.map((row, index) => {
+  const allLoadingsData = pcaResult.loadings.map((row, index) => {
     const originalX = row[xComponent] || 0;
     const originalY = row[yComponent] || 0;
     
     // Scale loadings to be visible
     const scaledX = originalX * scaleFactor;
     const scaledY = originalY * scaleFactor;
-    const magnitude = Math.sqrt(scaledX * scaledX + scaledY * scaledY);
+    const magnitude = Math.sqrt(originalX * originalX + originalY * originalY); // Use original magnitude for filtering
     
     return {
       index,
@@ -167,6 +169,16 @@ export const Biplot: React.FC<BiplotProps> = ({
       originalY
     };
   });
+
+  // Check if filtering is needed
+  const needsFiltering = pcaResult.loadings.length > maxVariables;
+  
+  // Filter loadings if needed
+  const loadingsData = needsFiltering
+    ? [...allLoadingsData]
+        .sort((a, b) => b.magnitude - a.magnitude)
+        .slice(0, maxVariables)
+    : allLoadingsData;
 
   // Sort loadings by magnitude and get top N for labeling
   const topLoadings = [...loadingsData]
@@ -366,6 +378,11 @@ export const Biplot: React.FC<BiplotProps> = ({
         <div className="flex items-center gap-4">
           <h4 className="text-md font-medium text-gray-700 dark:text-gray-300">
             Biplot: {xLabel} vs {yLabel}
+            {needsFiltering && (
+              <span className="ml-2 text-sm text-amber-600 dark:text-amber-400">
+                (showing top {maxVariables} of {pcaResult.loadings.length} variables)
+              </span>
+            )}
           </h4>
           {/* Group legend */}
           {groupColumn && groupType === 'categorical' && groupColorMap ? (
