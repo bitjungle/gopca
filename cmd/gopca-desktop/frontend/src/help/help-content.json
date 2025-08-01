@@ -105,11 +105,6 @@
       "text": "Drop: Remove incomplete rows. Mean: Impute with column average. Native: NIPALS handles missing values directly without imputation (NIPALS only).",
       "category": "preprocessing"
     },
-    "diagnostic-metrics": {
-      "title": "Diagnostic Metrics",
-      "text": "Calculates Hotelling's T² and Q residuals for outlier detection. Adds computation time.",
-      "category": "configuration"
-    },
     "explained-variance": {
       "title": "Explained Variance",
       "text": "Percentage of total data variance captured by each component. Higher = more information retained.",
@@ -152,7 +147,12 @@
     },
     "diagnostics-plot": {
       "title": "Diagnostics Plot",
-      "text": "T² vs Q residuals. Upper-right points are potential outliers. Requires diagnostic metrics enabled.",
+      "text": "T² vs Q residuals. Upper-right points are potential outliers. Not available for Kernel PCA.",
+      "category": "visualization"
+    },
+    "eigencorrelation-plot": {
+      "title": "Eigencorrelation Plot",
+      "text": "Heatmap showing correlations between PC scores and metadata variables. Helps identify relationships between components and external factors like batch effects or biological conditions.",
       "category": "visualization"
     },
     "component-selector": {

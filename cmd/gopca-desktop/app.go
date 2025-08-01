@@ -76,7 +76,7 @@ func (a *App) CalculateEllipses(request CalculateEllipsesRequest) CalculateEllip
 			Error:   fmt.Sprintf("Scores and group labels must have the same length (scores: %d, labels: %d)", len(request.Scores), len(request.GroupLabels)),
 		}
 	}
-	
+
 	// Validate scores structure
 	if len(request.Scores[0]) == 0 {
 		return CalculateEllipsesResponse{
@@ -84,7 +84,7 @@ func (a *App) CalculateEllipses(request CalculateEllipsesRequest) CalculateEllip
 			Error:   "Scores matrix has no columns",
 		}
 	}
-	
+
 	// Check component indices
 	maxComponent := len(request.Scores[0]) - 1
 	if request.XComponent < 0 || request.XComponent > maxComponent || request.YComponent < 0 || request.YComponent > maxComponent {
@@ -141,7 +141,7 @@ func (a *App) CalculateEllipses(request CalculateEllipsesRequest) CalculateEllip
 			}
 		}
 	}
-	
+
 	// If we have some ellipses but also some errors, include a warning
 	if len(allErrors) > 0 && (len(response.GroupEllipses90) > 0 || len(response.GroupEllipses95) > 0 || len(response.GroupEllipses99) > 0) {
 		// Some ellipses were calculated successfully, just log warnings
@@ -167,22 +167,21 @@ type FileData struct {
 
 // PCARequest represents a PCA analysis request from the frontend
 type PCARequest struct {
-	Data             [][]float64 `json:"data"`
-	MissingMask      [][]bool    `json:"missingMask,omitempty"`
-	Headers          []string    `json:"headers"`
-	RowNames         []string    `json:"rowNames"`
-	Components       int         `json:"components"`
-	MeanCenter       bool        `json:"meanCenter"`
-	StandardScale    bool        `json:"standardScale"`
-	RobustScale      bool        `json:"robustScale"`
-	ScaleOnly        bool        `json:"scaleOnly"`
-	SNV              bool        `json:"snv"`
-	VectorNorm       bool        `json:"vectorNorm"`
-	Method           string      `json:"method"`
-	ExcludedRows     []int       `json:"excludedRows,omitempty"`
-	ExcludedColumns  []int       `json:"excludedColumns,omitempty"`
-	MissingStrategy  string      `json:"missingStrategy,omitempty"`
-	CalculateMetrics bool        `json:"calculateMetrics,omitempty"`
+	Data            [][]float64 `json:"data"`
+	MissingMask     [][]bool    `json:"missingMask,omitempty"`
+	Headers         []string    `json:"headers"`
+	RowNames        []string    `json:"rowNames"`
+	Components      int         `json:"components"`
+	MeanCenter      bool        `json:"meanCenter"`
+	StandardScale   bool        `json:"standardScale"`
+	RobustScale     bool        `json:"robustScale"`
+	ScaleOnly       bool        `json:"scaleOnly"`
+	SNV             bool        `json:"snv"`
+	VectorNorm      bool        `json:"vectorNorm"`
+	Method          string      `json:"method"`
+	ExcludedRows    []int       `json:"excludedRows,omitempty"`
+	ExcludedColumns []int       `json:"excludedColumns,omitempty"`
+	MissingStrategy string      `json:"missingStrategy,omitempty"`
 	// Kernel PCA parameters
 	KernelType   string  `json:"kernelType,omitempty"`
 	KernelGamma  float64 `json:"kernelGamma,omitempty"`
@@ -191,6 +190,10 @@ type PCARequest struct {
 	// Grouping parameters for confidence ellipses
 	GroupColumn string   `json:"groupColumn,omitempty"`
 	GroupLabels []string `json:"groupLabels,omitempty"`
+	// Metadata for eigencorrelations
+	MetadataNumeric            map[string][]float64 `json:"metadataNumeric,omitempty"`
+	MetadataCategorical        map[string][]string  `json:"metadataCategorical,omitempty"`
+	CalculateEigencorrelations bool                 `json:"calculateEigencorrelations,omitempty"`
 }
 
 // EllipseParams represents confidence ellipse parameters for a group
@@ -463,8 +466,8 @@ func (a *App) RunPCA(request PCARequest) (response PCAResponse) {
 	}
 	result.VariableLabels = filteredHeaders
 
-	// Calculate diagnostic metrics if requested
-	if request.CalculateMetrics && strings.ToLower(request.Method) != "kernel" {
+	// Calculate diagnostic metrics (not applicable for Kernel PCA)
+	if strings.ToLower(request.Method) != "kernel" {
 		// For RSS calculation, we need to use data preprocessed exactly as it was for PCA fitting
 		// This ensures the data and reconstruction are in the same space
 		preprocessedData := dataToAnalyze
@@ -501,6 +504,41 @@ func (a *App) RunPCA(request PCARequest) (response PCAResponse) {
 			// Since we don't have them in the current implementation, we'll use a simplified approach
 			result.QLimit95 = 0.0
 			result.QLimit99 = 0.0
+		}
+	}
+
+	// Calculate eigencorrelations if requested
+	if request.CalculateEigencorrelations && (len(request.MetadataNumeric) > 0 || len(request.MetadataCategorical) > 0) {
+
+		// Convert scores to mat.Matrix
+		scoresMatrix := mat.NewDense(len(result.Scores), len(result.Scores[0]), nil)
+		for i, row := range result.Scores {
+			for j, val := range row {
+				scoresMatrix.Set(i, j, val)
+			}
+		}
+
+		// Create correlation request
+		corrRequest := core.CorrelationRequest{
+			Scores:              scoresMatrix,
+			MetadataNumeric:     request.MetadataNumeric,
+			MetadataCategorical: request.MetadataCategorical,
+			Components:          nil,       // Use all components
+			Method:              "pearson", // Default to Pearson
+		}
+
+		// Calculate correlations
+		corrResult, err := core.CalculateEigencorrelations(corrRequest)
+		if err != nil {
+			fmt.Printf("Warning: failed to calculate eigencorrelations: %v\n", err)
+		} else {
+			result.Eigencorrelations = &types.EigencorrelationResult{
+				Correlations: corrResult.Correlations,
+				PValues:      corrResult.PValues,
+				Variables:    corrResult.Variables,
+				Components:   corrResult.Components,
+				Method:       "pearson",
+			}
 		}
 	}
 
@@ -841,16 +879,15 @@ func (a *App) LoadDatasetFile(filename string) (*FileDataJSON, error) {
 
 // PCAConfig represents PCA configuration from the frontend
 type PCAConfig struct {
-	Components       int    `json:"components"`
-	MeanCenter       bool   `json:"meanCenter"`
-	StandardScale    bool   `json:"standardScale"`
-	RobustScale      bool   `json:"robustScale"`
-	ScaleOnly        bool   `json:"scaleOnly"`
-	SNV              bool   `json:"snv"`
-	VectorNorm       bool   `json:"vectorNorm"`
-	Method           string `json:"method"`
-	MissingStrategy  string `json:"missingStrategy"`
-	CalculateMetrics bool   `json:"calculateMetrics"`
+	Components      int    `json:"components"`
+	MeanCenter      bool   `json:"meanCenter"`
+	StandardScale   bool   `json:"standardScale"`
+	RobustScale     bool   `json:"robustScale"`
+	ScaleOnly       bool   `json:"scaleOnly"`
+	SNV             bool   `json:"snv"`
+	VectorNorm      bool   `json:"vectorNorm"`
+	Method          string `json:"method"`
+	MissingStrategy string `json:"missingStrategy"`
 	// Kernel PCA parameters
 	KernelType   string  `json:"kernelType,omitempty"`
 	KernelGamma  float64 `json:"kernelGamma,omitempty"`

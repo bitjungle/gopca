@@ -40,7 +40,7 @@ export const DiagnosticScatterPlot: React.FC<DiagnosticScatterPlotProps> = ({
   if (!pcaResult.metrics || pcaResult.metrics.length === 0) {
     return (
       <div className="w-full h-full flex items-center justify-center text-gray-400">
-        <p>Diagnostic metrics are not available. Enable metrics calculation in PCA configuration.</p>
+        <p>Diagnostic metrics are not available for Kernel PCA.</p>
       </div>
     );
   }

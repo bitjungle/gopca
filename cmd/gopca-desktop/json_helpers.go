@@ -79,23 +79,33 @@ func (fd *FileData) ToJSONSafe() *FileDataJSON {
 
 // PCAResultJSON is a JSON-safe version of types.PCAResult
 type PCAResultJSON struct {
-	Scores               [][]JSONFloat64     `json:"scores"`
-	Loadings             [][]JSONFloat64     `json:"loadings"`
-	ExplainedVar         []JSONFloat64       `json:"explained_variance"`
-	ExplainedVarRatio    []JSONFloat64       `json:"explained_variance_ratio"`
-	CumulativeVar        []JSONFloat64       `json:"cumulative_variance"`
-	ComponentLabels      []string            `json:"component_labels"`
-	VariableLabels       []string            `json:"variable_labels,omitempty"`
-	ComponentsComputed   int                 `json:"components_computed"`
-	Method               string              `json:"method"`
-	PreprocessingApplied bool                `json:"preprocessing_applied"`
-	Means                []JSONFloat64       `json:"means,omitempty"`
-	StdDevs              []JSONFloat64       `json:"stddevs,omitempty"`
-	Metrics              []SampleMetricsJSON `json:"metrics,omitempty"`
-	T2Limit95            JSONFloat64         `json:"t2_limit_95,omitempty"`
-	T2Limit99            JSONFloat64         `json:"t2_limit_99,omitempty"`
-	QLimit95             JSONFloat64         `json:"q_limit_95,omitempty"`
-	QLimit99             JSONFloat64         `json:"q_limit_99,omitempty"`
+	Scores               [][]JSONFloat64             `json:"scores"`
+	Loadings             [][]JSONFloat64             `json:"loadings"`
+	ExplainedVar         []JSONFloat64               `json:"explained_variance"`
+	ExplainedVarRatio    []JSONFloat64               `json:"explained_variance_ratio"`
+	CumulativeVar        []JSONFloat64               `json:"cumulative_variance"`
+	ComponentLabels      []string                    `json:"component_labels"`
+	VariableLabels       []string                    `json:"variable_labels,omitempty"`
+	ComponentsComputed   int                         `json:"components_computed"`
+	Method               string                      `json:"method"`
+	PreprocessingApplied bool                        `json:"preprocessing_applied"`
+	Means                []JSONFloat64               `json:"means,omitempty"`
+	StdDevs              []JSONFloat64               `json:"stddevs,omitempty"`
+	Metrics              []SampleMetricsJSON         `json:"metrics,omitempty"`
+	T2Limit95            JSONFloat64                 `json:"t2_limit_95,omitempty"`
+	T2Limit99            JSONFloat64                 `json:"t2_limit_99,omitempty"`
+	QLimit95             JSONFloat64                 `json:"q_limit_95,omitempty"`
+	QLimit99             JSONFloat64                 `json:"q_limit_99,omitempty"`
+	Eigencorrelations    *EigencorrelationResultJSON `json:"eigencorrelations,omitempty"`
+}
+
+// EigencorrelationResultJSON is a JSON-safe version of types.EigencorrelationResult
+type EigencorrelationResultJSON struct {
+	Correlations map[string][]JSONFloat64 `json:"correlations"`
+	PValues      map[string][]JSONFloat64 `json:"pValues"`
+	Variables    []string                 `json:"variables"`
+	Components   []string                 `json:"components"`
+	Method       string                   `json:"method"`
 }
 
 // SampleMetricsJSON is a JSON-safe version of types.SampleMetrics
@@ -168,6 +178,36 @@ func ConvertPCAResultToJSON(result *types.PCAResult) *PCAResultJSON {
 		}
 	}
 
+	// Convert eigencorrelations if present
+	var eigencorrelations *EigencorrelationResultJSON
+	if result.Eigencorrelations != nil {
+		eigencorrelations = &EigencorrelationResultJSON{
+			Variables:  result.Eigencorrelations.Variables,
+			Components: result.Eigencorrelations.Components,
+			Method:     result.Eigencorrelations.Method,
+		}
+
+		// Convert correlations map
+		eigencorrelations.Correlations = make(map[string][]JSONFloat64)
+		for variable, values := range result.Eigencorrelations.Correlations {
+			jsonValues := make([]JSONFloat64, len(values))
+			for i, val := range values {
+				jsonValues[i] = JSONFloat64(val)
+			}
+			eigencorrelations.Correlations[variable] = jsonValues
+		}
+
+		// Convert p-values map
+		eigencorrelations.PValues = make(map[string][]JSONFloat64)
+		for variable, values := range result.Eigencorrelations.PValues {
+			jsonValues := make([]JSONFloat64, len(values))
+			for i, val := range values {
+				jsonValues[i] = JSONFloat64(val)
+			}
+			eigencorrelations.PValues[variable] = jsonValues
+		}
+	}
+
 	return &PCAResultJSON{
 		Scores:               scores,
 		Loadings:             loadings,
@@ -186,5 +226,6 @@ func ConvertPCAResultToJSON(result *types.PCAResult) *PCAResultJSON {
 		T2Limit99:            JSONFloat64(result.T2Limit99),
 		QLimit95:             JSONFloat64(result.QLimit95),
 		QLimit99:             JSONFloat64(result.QLimit99),
+		Eigencorrelations:    eigencorrelations,
 	}
 }
