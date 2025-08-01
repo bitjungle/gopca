@@ -182,6 +182,16 @@ function AppContent() {
                 setSelectedYComponent(1);
                 // Clear any previous errors
                 setPcaError(null);
+                
+                // Check if Kernel PCA is selected with unsupported visualization
+                if (config.method === 'kernel' && 
+                    (selectedPlot === 'correlations' || selectedPlot === 'biplot')) {
+                    // Switch to scores plot
+                    setSelectedPlot('scores');
+                    // Alert user about the automatic switch
+                    alert('The selected visualization is not supported for Kernel PCA. Switching to Scores Plot.');
+                }
+                
                 // Smooth scroll to results
                 setTimeout(() => {
                     pcaResultsRef.current?.scrollIntoView({ 
