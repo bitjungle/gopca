@@ -215,7 +215,7 @@ func TestNIPALSConvergenceWithMissing(t *testing.T) {
 	impl := &PCAImpl{}
 	X := utils.MatrixToDense(data)
 
-	scores, loadings, err := impl.nipalsAlgorithmWithMissing(X, 3)
+	scores, loadings, _, err := impl.nipalsAlgorithmWithMissing(X, 3)
 	if err != nil {
 		t.Fatalf("NIPALS failed to converge: %v", err)
 	}

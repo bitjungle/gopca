@@ -305,6 +305,21 @@ func outputTableFormat(result *types.PCAResult, data *CSVData,
 		}
 	}
 
+	// Output diagnostic limits if available
+	if includeMetrics && (result.T2Limit95 > 0 || result.QLimit95 > 0) {
+		fmt.Println("\nDiagnostic Confidence Limits:")
+		fmt.Println("──────────────────────────────────────────────────────────────")
+		fmt.Printf("%-30s%20s%20s\n", "Metric", "95% Limit", "99% Limit")
+		fmt.Println("──────────────────────────────────────────────────────────────")
+
+		if result.T2Limit95 > 0 {
+			fmt.Printf("%-30s%20.4f%20.4f\n", "Hotelling's T²", result.T2Limit95, result.T2Limit99)
+		}
+		if result.QLimit95 > 0 {
+			fmt.Printf("%-30s%20.4f%20.4f\n", "Q-residuals (SPE)", result.QLimit95, result.QLimit99)
+		}
+	}
+
 	return nil
 }
 

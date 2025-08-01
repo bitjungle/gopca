@@ -97,6 +97,7 @@ type PCAResultJSON struct {
 	QLimit95             JSONFloat64                 `json:"q_limit_95,omitempty"`
 	QLimit99             JSONFloat64                 `json:"q_limit_99,omitempty"`
 	Eigencorrelations    *EigencorrelationResultJSON `json:"eigencorrelations,omitempty"`
+	AllEigenvalues       []JSONFloat64               `json:"all_eigenvalues,omitempty"`
 }
 
 // EigencorrelationResultJSON is a JSON-safe version of types.EigencorrelationResult
@@ -208,6 +209,15 @@ func ConvertPCAResultToJSON(result *types.PCAResult) *PCAResultJSON {
 		}
 	}
 
+	// Convert all eigenvalues
+	var allEigenvalues []JSONFloat64
+	if result.AllEigenvalues != nil {
+		allEigenvalues = make([]JSONFloat64, len(result.AllEigenvalues))
+		for i, val := range result.AllEigenvalues {
+			allEigenvalues[i] = JSONFloat64(val)
+		}
+	}
+
 	return &PCAResultJSON{
 		Scores:               scores,
 		Loadings:             loadings,
@@ -227,5 +237,6 @@ func ConvertPCAResultToJSON(result *types.PCAResult) *PCAResultJSON {
 		QLimit95:             JSONFloat64(result.QLimit95),
 		QLimit99:             JSONFloat64(result.QLimit99),
 		Eigencorrelations:    eigencorrelations,
+		AllEigenvalues:       allEigenvalues,
 	}
 }

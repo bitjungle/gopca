@@ -439,3 +439,111 @@ func TestHighDimensionalData(t *testing.T) {
 
 	t.Logf("High-dimensional test passed with %d samples, %d components, %d features", nSamples, nComponents, nFeatures)
 }
+
+func TestCalculateT2Limits(t *testing.T) {
+	// Test T² confidence limits calculation
+	nSamples := 100
+	nComponents := 3
+	nFeatures := 10
+
+	// Create sample data
+	scores := mat.NewDense(nSamples, nComponents, nil)
+	loadings := mat.NewDense(nFeatures, nComponents, nil)
+
+	calc := NewPCAMetricsCalculator(scores, loadings, nil, nil)
+
+	// Calculate T² limits
+	limit95, limit99 := calc.CalculateT2Limits()
+
+	// Basic validation
+	if limit95 <= 0 {
+		t.Errorf("95%% T² limit should be positive, got %f", limit95)
+	}
+	if limit99 <= 0 {
+		t.Errorf("99%% T² limit should be positive, got %f", limit99)
+	}
+	if limit99 <= limit95 {
+		t.Errorf("99%% limit (%f) should be greater than 95%% limit (%f)", limit99, limit95)
+	}
+
+	// Test with known values
+	// For n=100, p=3, expected approximate values based on F-distribution
+	expectedLimit95 := 3.0 * 99.0 / 97.0 * 2.70 // F(3,97,0.95) ≈ 2.70
+	expectedLimit99 := 3.0 * 99.0 / 97.0 * 3.98 // F(3,97,0.99) ≈ 3.98
+
+	// Allow some tolerance
+	if math.Abs(limit95-expectedLimit95) > 0.5 {
+		t.Logf("Warning: 95%% limit %f differs from expected %f", limit95, expectedLimit95)
+	}
+	if math.Abs(limit99-expectedLimit99) > 0.5 {
+		t.Logf("Warning: 99%% limit %f differs from expected %f", limit99, expectedLimit99)
+	}
+
+	t.Logf("T² limits calculated: 95%%=%f, 99%%=%f", limit95, limit99)
+}
+
+func TestCalculateQLimits(t *testing.T) {
+	// Test Q-residual confidence limits calculation
+	nSamples := 100
+	nComponents := 3
+	nFeatures := 10
+	totalComponents := 8 // Less than features, more than retained
+
+	// Create sample eigenvalues
+	// Typical pattern: decreasing eigenvalues
+	eigenvalues := []float64{
+		5.0, 3.0, 1.5, // Retained components
+		0.8, 0.5, 0.3, 0.1, 0.05, // Non-retained components
+	}
+
+	scores := mat.NewDense(nSamples, nComponents, nil)
+	loadings := mat.NewDense(nFeatures, nComponents, nil)
+
+	calc := NewPCAMetricsCalculator(scores, loadings, nil, nil)
+
+	// Calculate Q limits
+	limit95, limit99 := calc.CalculateQLimits(eigenvalues, totalComponents)
+
+	// Basic validation
+	if limit95 <= 0 {
+		t.Errorf("95%% Q limit should be positive, got %f", limit95)
+	}
+	if limit99 <= 0 {
+		t.Errorf("99%% Q limit should be positive, got %f", limit99)
+	}
+	if limit99 <= limit95 {
+		t.Errorf("99%% limit (%f) should be greater than 95%% limit (%f)", limit99, limit95)
+	}
+
+	t.Logf("Q limits calculated: 95%%=%f, 99%%=%f", limit95, limit99)
+
+	// Test edge case: all variance in retained components
+	eigenvaluesNoResidual := []float64{5.0, 3.0, 1.5, 0.0, 0.0, 0.0}
+	limit95Zero, limit99Zero := calc.CalculateQLimits(eigenvaluesNoResidual, 6)
+
+	if limit95Zero != 0 || limit99Zero != 0 {
+		t.Errorf("Q limits should be 0 when all variance is retained, got 95%%=%f, 99%%=%f",
+			limit95Zero, limit99Zero)
+	}
+}
+
+func TestCalculateLimitsEdgeCases(t *testing.T) {
+	// Test edge cases for limit calculations
+
+	// Case 1: More components than samples
+	scores1 := mat.NewDense(5, 10, nil) // 5 samples, 10 components (invalid)
+	loadings1 := mat.NewDense(20, 10, nil)
+	calc1 := NewPCAMetricsCalculator(scores1, loadings1, nil, nil)
+
+	limit95, limit99 := calc1.CalculateT2Limits()
+	if limit95 != 0 || limit99 != 0 {
+		t.Errorf("T² limits should be 0 when n <= p, got 95%%=%f, 99%%=%f", limit95, limit99)
+	}
+
+	// Case 2: Empty eigenvalues
+	calc2 := NewPCAMetricsCalculator(mat.NewDense(10, 2, nil), mat.NewDense(5, 2, nil), nil, nil)
+	qLimit95, qLimit99 := calc2.CalculateQLimits([]float64{}, 0)
+	if qLimit95 != 0 || qLimit99 != 0 {
+		t.Errorf("Q limits should be 0 with empty eigenvalues, got 95%%=%f, 99%%=%f", qLimit95, qLimit99)
+	}
+}

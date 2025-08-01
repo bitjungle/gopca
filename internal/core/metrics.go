@@ -308,15 +308,16 @@ func (m *PCAMetricsCalculator) CalculateQLimits(eigenvalues []float64, totalComp
 	z95 := normDist.Quantile(0.95)
 	z99 := normDist.Quantile(0.99)
 
+	// Jackson & Mudholkar approximation formula:
+	// Q_α = θ₁[c_α√(2θ₂h₀)/θ₁ + 1 + θ₂h₀(h₀-1)/θ₁²]^(1/h₀)
+	// where c_α is the normal quantile
+
 	// Calculate Q limits
-	ca95 := z95 * math.Sqrt(2*theta2*h0*h0) / theta1
-	ca99 := z99 * math.Sqrt(2*theta2*h0*h0) / theta1
+	term95 := z95*math.Sqrt(2*theta2*h0)/theta1 + 1 + theta2*h0*(h0-1)/(theta1*theta1)
+	limit95 = theta1 * math.Pow(term95, 1/h0)
 
-	factor := theta1 * math.Pow(ca95*h0*(h0-1)/theta2+1+theta2*h0*(h0-1)/(theta1*theta1), 1/h0)
-	limit95 = math.Max(0, factor)
-
-	factor = theta1 * math.Pow(ca99*h0*(h0-1)/theta2+1+theta2*h0*(h0-1)/(theta1*theta1), 1/h0)
-	limit99 = math.Max(0, factor)
+	term99 := z99*math.Sqrt(2*theta2*h0)/theta1 + 1 + theta2*h0*(h0-1)/(theta1*theta1)
+	limit99 = theta1 * math.Pow(term99, 1/h0)
 
 	return limit95, limit99
 }
