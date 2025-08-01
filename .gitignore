@@ -46,8 +46,6 @@ build/
 !cmd/gopca-desktop/build/icons/
 results/
 bin/
-gopca-cli
-gopca-desktop
 
 # Node modules
 node_modules/
