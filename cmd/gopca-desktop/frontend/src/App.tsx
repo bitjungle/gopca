@@ -827,7 +827,11 @@ function AppContent() {
                                                 {selectedGroupColumn && (
                                                     <PaletteSelector />
                                                 )}
-                                                {selectedPlot === 'scores' && selectedGroupColumn && getColumnData(selectedGroupColumn).type === 'categorical' && (
+                                                {selectedPlot === 'scores' && 
+                                                 fileData.categoricalColumns && 
+                                                 Object.keys(fileData.categoricalColumns).length > 0 && 
+                                                 selectedGroupColumn && 
+                                                 getColumnData(selectedGroupColumn).type === 'categorical' && (
                                                     <>
                                                         <HelpWrapper helpKey="confidence-ellipses" className="flex items-center gap-2">
                                                             <label className="text-sm text-gray-600 dark:text-gray-400">
