@@ -27,7 +27,7 @@ interface LoadingsPlotProps {
 export const LoadingsPlot: React.FC<LoadingsPlotProps> = ({ 
   pcaResult, 
   selectedComponent = 0,
-  variableThreshold = 50
+  variableThreshold = 100
 }) => {
   const chartRef = useRef<HTMLDivElement>(null);
   const fullscreenRef = useRef<HTMLDivElement>(null);

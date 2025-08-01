@@ -1,6 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react';
 import './App.css';
-import { ParseCSV, RunPCA, LoadIrisDataset, LoadDatasetFile, GetVersion, CalculateEllipses } from "../wailsjs/go/main/App";
+import { ParseCSV, RunPCA, LoadIrisDataset, LoadDatasetFile, GetVersion, CalculateEllipses, GetGUIConfig } from "../wailsjs/go/main/App";
 import { DataTable, SelectionTable, ThemeToggle, MatrixIllustration, HelpWrapper } from './components';
 import { ScoresPlot, ScreePlot, LoadingsPlot, Biplot, CircleOfCorrelations, DiagnosticScatterPlot } from './components/visualizations';
 import { FileData, PCARequest, PCAResponse } from './types';
@@ -9,6 +9,7 @@ import { HelpProvider, useHelp } from './contexts/HelpContext';
 import { PaletteProvider, usePalette } from './contexts/PaletteContext';
 import { HelpDisplay } from './components/HelpDisplay';
 import { PaletteSelector } from './components/PaletteSelector';
+import { config } from '../wailsjs/go/models';
 import logo from './assets/images/GoPCA-logo-1024-transp.png';
 
 function AppContent() {
@@ -20,6 +21,7 @@ function AppContent() {
     const [fileError, setFileError] = useState<string | null>(null);
     const [pcaError, setPcaError] = useState<string | null>(null);
     const [version, setVersion] = useState<string>('');
+    const [guiConfig, setGuiConfig] = useState<config.GUIConfig | null>(null);
     
     // Selection state
     const [excludedRows, setExcludedRows] = useState<number[]>([]);
@@ -67,12 +69,18 @@ function AppContent() {
         }
     };
     
-    // Fetch version on mount
+    // Fetch version and GUI config on mount
     useEffect(() => {
         GetVersion().then((v) => {
             setVersion(v);
         }).catch((err) => {
             console.error('Failed to get version:', err);
+        });
+        
+        GetGUIConfig().then((config) => {
+            setGuiConfig(config);
+        }).catch((err) => {
+            console.error('Failed to get GUI config:', err);
         });
     }, []);
     
@@ -975,6 +983,7 @@ function AppContent() {
                                         <LoadingsPlot
                                             pcaResult={pcaResponse.result}
                                             selectedComponent={selectedLoadingComponent}
+                                            variableThreshold={guiConfig?.visualization?.loadings_variable_threshold || 100}
                                         />
                                     ) : selectedPlot === 'biplot' ? (
                                         <Biplot
