@@ -303,109 +303,117 @@ function AppContent() {
                             </div>
 
                             {/* Column 3: Sample Datasets */}
-                            <HelpWrapper helpKey="sample-datasets" className="flex flex-col justify-center md:col-span-2 lg:col-span-1">
+                            <div className="flex flex-col justify-center md:col-span-2 lg:col-span-1">
                                 <label className="block text-sm font-medium mb-3">
                                     Or Try Sample Datasets
                                 </label>
                                 <div className="space-y-2">
-                                    <button
-                                        onClick={async () => {
-                                            setLoading(true);
-                                            setFileError(null);
-                                            setPcaError(null);
-                                            try {
-                                                const result = await LoadDatasetFile('corn.csv');
-                                                setFileData(result);
-                                                setPcaResponse(null);
-                                                setExcludedRows([]);
-                                                setExcludedColumns([]);
-                                                setSelectedGroupColumn(null);
-                                                updateGammaForData(result);
-                                            } catch (err) {
-                                                setFileError(`Failed to load Corn dataset: ${err}`);
-                                            } finally {
-                                                setLoading(false);
-                                            }
-                                        }}
-                                        className="w-full px-4 py-2 text-sm bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors"
-                                        disabled={loading}
-                                    >
-                                        Corn (NIR)
-                                    </button>
-                                    <button
-                                        onClick={async () => {
-                                            setLoading(true);
-                                            setFileError(null);
-                                            setPcaError(null);
-                                            try {
-                                                const result = await LoadDatasetFile('iris.csv');
-                                                setFileData(result);
-                                                setPcaResponse(null);
-                                                setExcludedRows([]);
-                                                setExcludedColumns([]);
-                                                setSelectedGroupColumn('species');
-                                                updateGammaForData(result);
-                                            } catch (err) {
-                                                setFileError(`Failed to load Iris dataset: ${err}`);
-                                            } finally {
-                                                setLoading(false);
-                                            }
-                                        }}
-                                        className="w-full px-4 py-2 text-sm bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors"
-                                        disabled={loading}
-                                    >
-                                        Iris
-                                    </button>
-                                    <button
-                                        onClick={async () => {
-                                            setLoading(true);
-                                            setFileError(null);
-                                            setPcaError(null);
-                                            try {
-                                                const result = await LoadDatasetFile('wine.csv');
-                                                setFileData(result);
-                                                setPcaResponse(null);
-                                                setExcludedRows([]);
-                                                setExcludedColumns([]);
-                                                setSelectedGroupColumn('target');
-                                                updateGammaForData(result);
-                                            } catch (err) {
-                                                setFileError(`Failed to load Wine dataset: ${err}`);
-                                            } finally {
-                                                setLoading(false);
-                                            }
-                                        }}
-                                        className="w-full px-4 py-2 text-sm bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors"
-                                        disabled={loading}
-                                    >
-                                        Wine
-                                    </button>
-                                    <button
-                                        onClick={async () => {
-                                            setLoading(true);
-                                            setFileError(null);
-                                            setPcaError(null);
-                                            try {
-                                                const result = await LoadDatasetFile('swiss_roll.csv');
-                                                setFileData(result);
-                                                setPcaResponse(null);
-                                                setExcludedRows([]);
-                                                setExcludedColumns([]);
-                                                setSelectedGroupColumn('color_category');
-                                                updateGammaForData(result);
-                                            } catch (err) {
-                                                setFileError(`Failed to load Swiss Roll dataset: ${err}`);
-                                            } finally {
-                                                setLoading(false);
-                                            }
-                                        }}
-                                        className="w-full px-4 py-2 text-sm bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors"
-                                        disabled={loading}
-                                    >
-                                        Swiss Roll
-                                    </button>
+                                    <HelpWrapper helpKey="sample-dataset-corn">
+                                        <button
+                                            onClick={async () => {
+                                                setLoading(true);
+                                                setFileError(null);
+                                                setPcaError(null);
+                                                try {
+                                                    const result = await LoadDatasetFile('corn.csv');
+                                                    setFileData(result);
+                                                    setPcaResponse(null);
+                                                    setExcludedRows([]);
+                                                    setExcludedColumns([]);
+                                                    setSelectedGroupColumn(null);
+                                                    updateGammaForData(result);
+                                                } catch (err) {
+                                                    setFileError(`Failed to load Corn dataset: ${err}`);
+                                                } finally {
+                                                    setLoading(false);
+                                                }
+                                            }}
+                                            className="w-full px-4 py-2 text-sm bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors"
+                                            disabled={loading}
+                                        >
+                                            Corn (NIR)
+                                        </button>
+                                    </HelpWrapper>
+                                    <HelpWrapper helpKey="sample-dataset-iris">
+                                        <button
+                                            onClick={async () => {
+                                                setLoading(true);
+                                                setFileError(null);
+                                                setPcaError(null);
+                                                try {
+                                                    const result = await LoadDatasetFile('iris.csv');
+                                                    setFileData(result);
+                                                    setPcaResponse(null);
+                                                    setExcludedRows([]);
+                                                    setExcludedColumns([]);
+                                                    setSelectedGroupColumn('species');
+                                                    updateGammaForData(result);
+                                                } catch (err) {
+                                                    setFileError(`Failed to load Iris dataset: ${err}`);
+                                                } finally {
+                                                    setLoading(false);
+                                                }
+                                            }}
+                                            className="w-full px-4 py-2 text-sm bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors"
+                                            disabled={loading}
+                                        >
+                                            Iris
+                                        </button>
+                                    </HelpWrapper>
+                                    <HelpWrapper helpKey="sample-dataset-wine">
+                                        <button
+                                            onClick={async () => {
+                                                setLoading(true);
+                                                setFileError(null);
+                                                setPcaError(null);
+                                                try {
+                                                    const result = await LoadDatasetFile('wine.csv');
+                                                    setFileData(result);
+                                                    setPcaResponse(null);
+                                                    setExcludedRows([]);
+                                                    setExcludedColumns([]);
+                                                    setSelectedGroupColumn('target');
+                                                    updateGammaForData(result);
+                                                } catch (err) {
+                                                    setFileError(`Failed to load Wine dataset: ${err}`);
+                                                } finally {
+                                                    setLoading(false);
+                                                }
+                                            }}
+                                            className="w-full px-4 py-2 text-sm bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors"
+                                            disabled={loading}
+                                        >
+                                            Wine
+                                        </button>
+                                    </HelpWrapper>
+                                    <HelpWrapper helpKey="sample-dataset-swiss-roll">
+                                        <button
+                                            onClick={async () => {
+                                                setLoading(true);
+                                                setFileError(null);
+                                                setPcaError(null);
+                                                try {
+                                                    const result = await LoadDatasetFile('swiss_roll.csv');
+                                                    setFileData(result);
+                                                    setPcaResponse(null);
+                                                    setExcludedRows([]);
+                                                    setExcludedColumns([]);
+                                                    setSelectedGroupColumn('color_category');
+                                                    updateGammaForData(result);
+                                                } catch (err) {
+                                                    setFileError(`Failed to load Swiss Roll dataset: ${err}`);
+                                                } finally {
+                                                    setLoading(false);
+                                                }
+                                            }}
+                                            className="w-full px-4 py-2 text-sm bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors"
+                                            disabled={loading}
+                                        >
+                                            Swiss Roll
+                                        </button>
+                                    </HelpWrapper>
                                 </div>
-                            </HelpWrapper>
+                            </div>
                         </div>
                     </div>
                     
