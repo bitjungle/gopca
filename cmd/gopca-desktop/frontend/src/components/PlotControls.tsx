@@ -1,4 +1,6 @@
-import React from 'react';
+import React, { useState } from 'react';
+import ReactDOM from 'react-dom';
+import { useChartTheme } from '../hooks/useChartTheme';
 
 interface PlotControlsProps {
   onResetView: () => void;
@@ -9,6 +11,13 @@ interface PlotControlsProps {
   className?: string;
 }
 
+interface TooltipState {
+  show: boolean;
+  text: string;
+  x: number;
+  y: number;
+}
+
 export const PlotControls: React.FC<PlotControlsProps> = ({ 
   onResetView, 
   onToggleFullscreen,
@@ -17,6 +26,23 @@ export const PlotControls: React.FC<PlotControlsProps> = ({
   isFullscreen,
   className = '' 
 }) => {
+  const [tooltip, setTooltip] = useState<TooltipState>({ show: false, text: '', x: 0, y: 0 });
+  const chartTheme = useChartTheme();
+
+  const handleMouseEnter = (e: React.MouseEvent<HTMLButtonElement>, text: string) => {
+    const rect = e.currentTarget.getBoundingClientRect();
+    setTooltip({
+      show: true,
+      text,
+      x: rect.left + rect.width / 2,
+      y: rect.top - 10
+    });
+  };
+
+  const handleMouseLeave = () => {
+    setTooltip({ show: false, text: '', x: 0, y: 0 });
+  };
+
   return (
     <div className={`flex items-center gap-2 ${className}`}>
       {onZoomIn && onZoomOut && (
@@ -24,7 +50,8 @@ export const PlotControls: React.FC<PlotControlsProps> = ({
           <button
             onClick={onZoomIn}
             className="px-2 py-1 text-sm rounded-lg bg-gray-200 dark:bg-gray-700 hover:bg-gray-300 dark:hover:bg-gray-600 text-gray-700 dark:text-gray-300 transition-colors"
-            title="Zoom in"
+            onMouseEnter={(e) => handleMouseEnter(e, 'Zoom in')}
+            onMouseLeave={handleMouseLeave}
           >
             <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} 
@@ -36,7 +63,8 @@ export const PlotControls: React.FC<PlotControlsProps> = ({
           <button
             onClick={onZoomOut}
             className="px-2 py-1 text-sm rounded-lg bg-gray-200 dark:bg-gray-700 hover:bg-gray-300 dark:hover:bg-gray-600 text-gray-700 dark:text-gray-300 transition-colors"
-            title="Zoom out"
+            onMouseEnter={(e) => handleMouseEnter(e, 'Zoom out')}
+            onMouseLeave={handleMouseLeave}
           >
             <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} 
@@ -50,7 +78,8 @@ export const PlotControls: React.FC<PlotControlsProps> = ({
       <button
         onClick={onResetView}
         className="px-3 py-1 text-sm rounded-lg bg-gray-200 dark:bg-gray-700 hover:bg-gray-300 dark:hover:bg-gray-600 text-gray-700 dark:text-gray-300 transition-colors flex items-center gap-2"
-        title="Reset zoom"
+        onMouseEnter={(e) => handleMouseEnter(e, 'Reset zoom')}
+        onMouseLeave={handleMouseLeave}
       >
         <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} 
@@ -63,7 +92,8 @@ export const PlotControls: React.FC<PlotControlsProps> = ({
       <button
         onClick={onToggleFullscreen}
         className="px-3 py-1 text-sm rounded-lg bg-gray-200 dark:bg-gray-700 hover:bg-gray-300 dark:hover:bg-gray-600 text-gray-700 dark:text-gray-300 transition-colors flex items-center gap-2"
-        title={isFullscreen ? "Exit fullscreen" : "Enter fullscreen"}
+        onMouseEnter={(e) => handleMouseEnter(e, isFullscreen ? 'Exit fullscreen' : 'Enter fullscreen')}
+        onMouseLeave={handleMouseLeave}
       >
         {isFullscreen ? (
           <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -80,6 +110,24 @@ export const PlotControls: React.FC<PlotControlsProps> = ({
         )}
         {isFullscreen ? 'Exit' : 'Fullscreen'}
       </button>
+      
+      {/* Tooltip Portal */}
+      {tooltip.show && ReactDOM.createPortal(
+        <div
+          className="fixed z-50 px-2 py-1 text-xs rounded shadow-lg border pointer-events-none"
+          style={{
+            backgroundColor: chartTheme.tooltipBackgroundColor,
+            borderColor: chartTheme.tooltipBorderColor,
+            color: chartTheme.tooltipTextColor,
+            left: tooltip.x,
+            top: tooltip.y - 30,
+            transform: 'translateX(-50%)'
+          }}
+        >
+          {tooltip.text}
+        </div>,
+        document.body
+      )}
     </div>
   );
 };

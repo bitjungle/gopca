@@ -1,4 +1,5 @@
-import React, { useRef, useState, useCallback } from 'react';
+import React, { useRef, useState, useCallback, useEffect } from 'react';
+import ReactDOM from 'react-dom';
 import { PCAResult } from '../../types';
 import { ExportButton } from '../ExportButton';
 import { PlotControls } from '../PlotControls';
@@ -21,7 +22,10 @@ export const CircleOfCorrelations: React.FC<CircleOfCorrelationsProps> = ({
 }) => {
   const chartRef = useRef<HTMLDivElement>(null);
   const fullscreenRef = useRef<HTMLDivElement>(null);
+  const svgRef = useRef<SVGSVGElement>(null);
   const [isFullscreen, setIsFullscreen] = useState(false);
+  const [hoveredVariable, setHoveredVariable] = useState<number | null>(null);
+  const [tooltipPosition, setTooltipPosition] = useState({ x: 0, y: 0 });
   const chartTheme = useChartTheme();
   
   // Check if loadings are available (not available for Kernel PCA)
@@ -52,11 +56,28 @@ export const CircleOfCorrelations: React.FC<CircleOfCorrelationsProps> = ({
   const needsFiltering = pcaResult.loadings.length > maxVariables;
   
   // Filter loadings if needed
-  const loadings = needsFiltering
+  const filteredLoadings = needsFiltering
     ? [...allLoadings]
         .sort((a, b) => b.magnitude - a.magnitude)
         .slice(0, maxVariables)
     : allLoadings;
+
+  // Find maximum magnitude for scaling
+  const maxMagnitude = Math.max(...filteredLoadings.map(l => l.magnitude));
+  
+  // Scale factor to ensure visibility (scale so max magnitude reaches 90% of circle)
+  const scaleFactor = maxMagnitude > 0 ? 0.9 / maxMagnitude : 1;
+  
+  // Apply scaling to filtered loadings
+  const loadings = filteredLoadings.map((loading, idx) => ({
+    ...loading,
+    idx,  // Add index for hover tracking
+    originalX: loading.x,  // Preserve original values for tooltip
+    originalY: loading.y,
+    x: loading.x * scaleFactor,
+    y: loading.y * scaleFactor,
+    scaledMagnitude: loading.magnitude * scaleFactor
+  }));
 
   // Get component labels and variance
   const xLabel = pcaResult.component_labels?.[xComponent] || `PC${xComponent + 1}`;
@@ -72,10 +93,12 @@ export const CircleOfCorrelations: React.FC<CircleOfCorrelationsProps> = ({
   const centerX = width / 2;
   const centerY = height / 2;
 
-  // Color scale based on magnitude
-  const getColor = (magnitude: number) => {
+  // Color scale based on magnitude (use scaled magnitude for consistent coloring)
+  const getColor = (scaledMagnitude: number) => {
     // Use a gradient from blue (low) to red (high)
-    const hue = (1 - magnitude) * 240; // 240 is blue, 0 is red
+    // Clamp to [0, 1] range for safety
+    const normalizedMag = Math.min(1, Math.max(0, scaledMagnitude));
+    const hue = (1 - normalizedMag) * 240; // 240 is blue, 0 is red
     return `hsl(${hue}, 70%, 50%)`;
   };
 
@@ -126,8 +149,8 @@ export const CircleOfCorrelations: React.FC<CircleOfCorrelationsProps> = ({
         </div>
 
       {/* SVG visualization */}
-      <div className="flex justify-center items-center h-full">
-        <svg width={width} height={height} className="bg-white dark:bg-gray-800 rounded-lg shadow-lg">
+      <div className="flex justify-center items-center h-full relative">
+        <svg ref={svgRef} width={width} height={height} className="bg-white dark:bg-gray-800 rounded-lg shadow-lg">
           {/* Background circle */}
           <circle
             cx={centerX}
@@ -204,7 +227,8 @@ export const CircleOfCorrelations: React.FC<CircleOfCorrelationsProps> = ({
           {loadings.map((loading, index) => {
             const endX = centerX + loading.x * radius;
             const endY = centerY - loading.y * radius; // Invert Y for standard orientation
-            const color = getColor(loading.magnitude);
+            const isHovered = hoveredVariable === loading.idx;
+            const color = isHovered ? '#EF4444' : getColor(loading.scaledMagnitude);
             
             return (
               <g key={index}>
@@ -215,8 +239,9 @@ export const CircleOfCorrelations: React.FC<CircleOfCorrelationsProps> = ({
                   x2={endX}
                   y2={endY}
                   stroke={color}
-                  strokeWidth="2"
+                  strokeWidth={isHovered ? "3" : "2"}
                   markerEnd={`url(#arrowhead-${index})`}
+                  style={{ transition: 'stroke-width 0.2s, stroke 0.2s' }}
                 />
                 
                 {/* Arrowhead marker */}
@@ -253,22 +278,43 @@ export const CircleOfCorrelations: React.FC<CircleOfCorrelationsProps> = ({
                   </text>
                 )}
                 
-                {/* Tooltip on hover */}
+                {/* Hover target - larger invisible circle for easier hovering */}
                 <circle
                   cx={endX}
                   cy={endY}
-                  r="5"
-                  fill={color}
-                  opacity="0"
+                  r="10"
+                  fill="transparent"
                   className="cursor-pointer"
-                >
-                  <title>
-                    {loading.variable}&#10;
-                    {xLabel}: {loading.x.toFixed(3)}&#10;
-                    {yLabel}: {loading.y.toFixed(3)}&#10;
-                    Length: {loading.magnitude.toFixed(3)}
-                  </title>
-                </circle>
+                  onMouseEnter={(e) => {
+                    setHoveredVariable(loading.idx);
+                    // Get mouse position relative to the page
+                    const rect = e.currentTarget.getBoundingClientRect();
+                    setTooltipPosition({
+                      x: rect.left + rect.width / 2,
+                      y: rect.top
+                    });
+                  }}
+                  onMouseMove={(e) => {
+                    if (hoveredVariable === loading.idx) {
+                      const rect = e.currentTarget.getBoundingClientRect();
+                      setTooltipPosition({
+                        x: rect.left + rect.width / 2,
+                        y: rect.top
+                      });
+                    }
+                  }}
+                  onMouseLeave={() => setHoveredVariable(null)}
+                />
+                
+                {/* Visible dot at arrow end */}
+                <circle
+                  cx={endX}
+                  cy={endY}
+                  r={isHovered ? "4" : "2"}
+                  fill={color}
+                  style={{ transition: 'r 0.2s' }}
+                  pointerEvents="none"
+                />
               </g>
             );
           })}
@@ -305,11 +351,77 @@ export const CircleOfCorrelations: React.FC<CircleOfCorrelationsProps> = ({
             1.0
           </text>
         </svg>
+        
+        {/* Tooltip Portal */}
+        {hoveredVariable !== null && (() => {
+          const hoveredLoading = loadings.find(l => l.idx === hoveredVariable);
+          if (!hoveredLoading) return null;
+          
+          // Calculate tooltip position
+          const tooltipHeight = 120;
+          const tooltipWidth = 200;
+          const padding = 10;
+          
+          let x = tooltipPosition.x;
+          let y = tooltipPosition.y;
+          
+          // Adjust horizontal position
+          if (x + tooltipWidth / 2 > window.innerWidth - padding) {
+            x = window.innerWidth - tooltipWidth - padding;
+          } else if (x - tooltipWidth / 2 < padding) {
+            x = tooltipWidth / 2 + padding;
+          }
+          
+          // Always show above the point to avoid covering the arrow
+          y = y - tooltipHeight - 20;
+          
+          // If it would go off the top, show below instead
+          if (y < padding) {
+            y = tooltipPosition.y + 20;
+          }
+          
+          return ReactDOM.createPortal(
+            <div
+              className="fixed z-50 p-3 rounded shadow-lg border pointer-events-none"
+              style={{
+                backgroundColor: chartTheme.tooltipBackgroundColor,
+                borderColor: chartTheme.tooltipBorderColor,
+                left: x,
+                top: y,
+                transform: 'translateX(-50%)',
+                minWidth: '180px'
+              }}
+            >
+              <p className="font-semibold mb-1" style={{ color: chartTheme.tooltipTextColor }}>
+                {hoveredLoading.variable}
+              </p>
+              <div className="text-sm space-y-1">
+                <p style={{ color: chartTheme.tooltipTextColor }}>
+                  {xLabel}: {hoveredLoading.originalX.toFixed(4)}
+                </p>
+                <p style={{ color: chartTheme.tooltipTextColor }}>
+                  {yLabel}: {hoveredLoading.originalY.toFixed(4)}
+                </p>
+                <p style={{ color: chartTheme.tooltipTextColor }}>
+                  Magnitude: {hoveredLoading.magnitude.toFixed(4)}
+                </p>
+              </div>
+            </div>,
+            document.body
+          );
+        })()}
       </div>
       
       {/* Legend */}
       <div className="mt-4 text-sm text-gray-600 dark:text-gray-400 text-center">
-        <p>Arrow length indicates correlation strength with the PCs</p>
+        <p>
+          Arrow length indicates correlation strength with the PCs
+          {scaleFactor !== 1 && scaleFactor > 1.1 && (
+            <span className="ml-2 text-xs text-amber-600 dark:text-amber-400">
+              (scaled {scaleFactor.toFixed(1)}× for visibility)
+            </span>
+          )}
+        </p>
         <p>Color: <span style={{ color: 'hsl(240, 70%, 50%)' }}>■</span> Low correlation → 
            <span style={{ color: 'hsl(120, 70%, 50%)' }}> ■</span> Medium → 
            <span style={{ color: 'hsl(0, 70%, 50%)' }}> ■</span> High correlation</p>
