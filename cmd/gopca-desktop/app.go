@@ -42,6 +42,118 @@ func (a *App) GetVersion() string {
 	return version.Get().Short()
 }
 
+// CalculateEllipsesRequest represents a request to calculate confidence ellipses
+type CalculateEllipsesRequest struct {
+	Scores      [][]float64 `json:"scores"`
+	GroupLabels []string    `json:"groupLabels"`
+	XComponent  int         `json:"xComponent"`
+	YComponent  int         `json:"yComponent"`
+}
+
+// CalculateEllipsesResponse represents the response with calculated ellipses
+type CalculateEllipsesResponse struct {
+	GroupEllipses90 map[string]EllipseParams `json:"groupEllipses90"`
+	GroupEllipses95 map[string]EllipseParams `json:"groupEllipses95"`
+	GroupEllipses99 map[string]EllipseParams `json:"groupEllipses99"`
+	Success         bool                     `json:"success"`
+	Error           string                   `json:"error,omitempty"`
+}
+
+// CalculateEllipses calculates confidence ellipses for given scores and groups
+func (a *App) CalculateEllipses(request CalculateEllipsesRequest) CalculateEllipsesResponse {
+	// Validate input
+	if len(request.Scores) == 0 || len(request.GroupLabels) == 0 {
+		return CalculateEllipsesResponse{
+			Success: false,
+			Error:   "Invalid input: scores and group labels are required",
+		}
+	}
+
+	if len(request.Scores) != len(request.GroupLabels) {
+		return CalculateEllipsesResponse{
+			Success: false,
+			Error:   fmt.Sprintf("Scores and group labels must have the same length (scores: %d, labels: %d)", len(request.Scores), len(request.GroupLabels)),
+		}
+	}
+	
+	// Validate scores structure
+	if len(request.Scores[0]) == 0 {
+		return CalculateEllipsesResponse{
+			Success: false,
+			Error:   "Scores matrix has no columns",
+		}
+	}
+	
+	// Check component indices
+	maxComponent := len(request.Scores[0]) - 1
+	if request.XComponent < 0 || request.XComponent > maxComponent || request.YComponent < 0 || request.YComponent > maxComponent {
+		return CalculateEllipsesResponse{
+			Success: false,
+			Error:   fmt.Sprintf("Component indices out of bounds (x: %d, y: %d, max: %d)", request.XComponent, request.YComponent, maxComponent),
+		}
+	}
+
+	// Convert scores to matrix
+	scoresMatrix := mat.NewDense(len(request.Scores), len(request.Scores[0]), nil)
+	for i, row := range request.Scores {
+		for j, val := range row {
+			scoresMatrix.Set(i, j, val)
+		}
+	}
+
+	// Calculate ellipses for all three confidence levels
+	response := CalculateEllipsesResponse{
+		Success:         true,
+		GroupEllipses90: make(map[string]EllipseParams),
+		GroupEllipses95: make(map[string]EllipseParams),
+		GroupEllipses99: make(map[string]EllipseParams),
+	}
+
+	confidenceLevels := []float64{0.90, 0.95, 0.99}
+	allErrors := []string{}
+	for _, confidenceLevel := range confidenceLevels {
+		coreEllipses, err := core.CalculateGroupEllipses(scoresMatrix, request.GroupLabels, request.XComponent, request.YComponent, confidenceLevel)
+		if err != nil {
+			// Log error but continue with other confidence levels
+			allErrors = append(allErrors, fmt.Sprintf("%.0f%%: %v", confidenceLevel*100, err))
+		}
+		if err == nil && len(coreEllipses) > 0 {
+			ellipses := make(map[string]EllipseParams)
+			for group, ellipse := range coreEllipses {
+				ellipses[group] = EllipseParams{
+					CenterX:         ellipse.CenterX,
+					CenterY:         ellipse.CenterY,
+					MajorAxis:       ellipse.MajorAxis,
+					MinorAxis:       ellipse.MinorAxis,
+					Angle:           ellipse.Angle,
+					ConfidenceLevel: ellipse.ConfidenceLevel,
+				}
+			}
+
+			switch confidenceLevel {
+			case 0.90:
+				response.GroupEllipses90 = ellipses
+			case 0.95:
+				response.GroupEllipses95 = ellipses
+			case 0.99:
+				response.GroupEllipses99 = ellipses
+			}
+		}
+	}
+	
+	// If we have some ellipses but also some errors, include a warning
+	if len(allErrors) > 0 && (len(response.GroupEllipses90) > 0 || len(response.GroupEllipses95) > 0 || len(response.GroupEllipses99) > 0) {
+		// Some ellipses were calculated successfully, just log warnings
+		fmt.Printf("Warning: Some ellipse calculations failed: %v\n", allErrors)
+	} else if len(allErrors) > 0 && len(response.GroupEllipses90) == 0 && len(response.GroupEllipses95) == 0 && len(response.GroupEllipses99) == 0 {
+		// No ellipses were calculated
+		response.Success = false
+		response.Error = fmt.Sprintf("Failed to calculate any ellipses: %v", allErrors)
+	}
+
+	return response
+}
+
 // FileData represents the structure of CSV data for the frontend
 type FileData struct {
 	Headers              []string             `json:"headers"`

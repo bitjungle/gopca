@@ -1,6 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react';
 import './App.css';
-import { ParseCSV, RunPCA, LoadIrisDataset, LoadDatasetFile, GetVersion } from "../wailsjs/go/main/App";
+import { ParseCSV, RunPCA, LoadIrisDataset, LoadDatasetFile, GetVersion, CalculateEllipses } from "../wailsjs/go/main/App";
 import { DataTable, SelectionTable, ThemeToggle, MatrixIllustration, HelpWrapper } from './components';
 import { ScoresPlot, ScreePlot, LoadingsPlot, Biplot, CircleOfCorrelations, DiagnosticScatterPlot } from './components/visualizations';
 import { FileData, PCARequest, PCAResponse } from './types';
@@ -790,10 +790,13 @@ function AppContent() {
                                                             // Auto-switch palette mode based on column type
                                                             if (!value) {
                                                                 setMode('none');
+                                                                setShowEllipses(false);
                                                             } else if (fileData.numericTargetColumns && value in fileData.numericTargetColumns) {
                                                                 setMode('continuous');
+                                                                setShowEllipses(false); // Ellipses only work with categorical data
                                                             } else if (fileData.categoricalColumns && value in fileData.categoricalColumns) {
                                                                 setMode('categorical');
+                                                                // Keep current showEllipses state for categorical columns
                                                             }
                                                         }}
                                                         className="px-2 py-1 bg-gray-100 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded text-sm text-gray-900 dark:text-white"
@@ -824,7 +827,11 @@ function AppContent() {
                                                 {selectedGroupColumn && (
                                                     <PaletteSelector />
                                                 )}
-                                                {selectedPlot === 'scores' && selectedGroupColumn && (
+                                                {selectedPlot === 'scores' && 
+                                                 fileData.categoricalColumns && 
+                                                 Object.keys(fileData.categoricalColumns).length > 0 && 
+                                                 selectedGroupColumn && 
+                                                 getColumnData(selectedGroupColumn).type === 'categorical' && (
                                                     <>
                                                         <HelpWrapper helpKey="confidence-ellipses" className="flex items-center gap-2">
                                                             <label className="text-sm text-gray-600 dark:text-gray-400">
@@ -937,6 +944,7 @@ function AppContent() {
                                                 pcaResponse.groupEllipses99
                                             }
                                             showEllipses={showEllipses && !!selectedGroupColumn && getColumnData(selectedGroupColumn).type === 'categorical'}
+                                            confidenceLevel={confidenceLevel}
                                         />
                                     ) : selectedPlot === 'scree' ? (
                                         <ScreePlot
