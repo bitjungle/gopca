@@ -72,7 +72,24 @@ func (a *App) CalculateEllipses(request CalculateEllipsesRequest) CalculateEllip
 	if len(request.Scores) != len(request.GroupLabels) {
 		return CalculateEllipsesResponse{
 			Success: false,
-			Error:   "Scores and group labels must have the same length",
+			Error:   fmt.Sprintf("Scores and group labels must have the same length (scores: %d, labels: %d)", len(request.Scores), len(request.GroupLabels)),
+		}
+	}
+	
+	// Validate scores structure
+	if len(request.Scores[0]) == 0 {
+		return CalculateEllipsesResponse{
+			Success: false,
+			Error:   "Scores matrix has no columns",
+		}
+	}
+	
+	// Check component indices
+	maxComponent := len(request.Scores[0]) - 1
+	if request.XComponent < 0 || request.XComponent > maxComponent || request.YComponent < 0 || request.YComponent > maxComponent {
+		return CalculateEllipsesResponse{
+			Success: false,
+			Error:   fmt.Sprintf("Component indices out of bounds (x: %d, y: %d, max: %d)", request.XComponent, request.YComponent, maxComponent),
 		}
 	}
 
@@ -93,11 +110,12 @@ func (a *App) CalculateEllipses(request CalculateEllipsesRequest) CalculateEllip
 	}
 
 	confidenceLevels := []float64{0.90, 0.95, 0.99}
+	allErrors := []string{}
 	for _, confidenceLevel := range confidenceLevels {
 		coreEllipses, err := core.CalculateGroupEllipses(scoresMatrix, request.GroupLabels, request.XComponent, request.YComponent, confidenceLevel)
 		if err != nil {
 			// Log error but continue with other confidence levels
-			// Errors are expected for groups with too few points or degenerate distributions
+			allErrors = append(allErrors, fmt.Sprintf("%.0f%%: %v", confidenceLevel*100, err))
 		}
 		if err == nil && len(coreEllipses) > 0 {
 			ellipses := make(map[string]EllipseParams)
@@ -121,6 +139,16 @@ func (a *App) CalculateEllipses(request CalculateEllipsesRequest) CalculateEllip
 				response.GroupEllipses99 = ellipses
 			}
 		}
+	}
+	
+	// If we have some ellipses but also some errors, include a warning
+	if len(allErrors) > 0 && (len(response.GroupEllipses90) > 0 || len(response.GroupEllipses95) > 0 || len(response.GroupEllipses99) > 0) {
+		// Some ellipses were calculated successfully, just log warnings
+		fmt.Printf("Warning: Some ellipse calculations failed: %v\n", allErrors)
+	} else if len(allErrors) > 0 && len(response.GroupEllipses90) == 0 && len(response.GroupEllipses95) == 0 && len(response.GroupEllipses99) == 0 {
+		// No ellipses were calculated
+		response.Success = false
+		response.Error = fmt.Sprintf("Failed to calculate any ellipses: %v", allErrors)
 	}
 
 	return response

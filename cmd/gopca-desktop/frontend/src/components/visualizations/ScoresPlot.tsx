@@ -57,7 +57,9 @@ export const ScoresPlot: React.FC<ScoresPlotProps> = ({
   const { 
     ellipses90: dynamicEllipses90,
     ellipses95: dynamicEllipses95,
-    ellipses99: dynamicEllipses99
+    ellipses99: dynamicEllipses99,
+    isLoading: ellipsesLoading,
+    error: ellipsesError
   } = useEllipses({
     scores: pcaResult.scores,
     groupLabels: groupLabels || [],
@@ -329,8 +331,22 @@ export const ScoresPlot: React.FC<ScoresPlotProps> = ({
         onMouseUp={handlePanEnd}
         onMouseLeave={handlePanEnd}
       >
+        {/* Show ellipse error if any */}
+        {showEllipses && ellipsesError && (
+          <div className="absolute top-2 left-2 bg-red-100 dark:bg-red-900 text-red-700 dark:text-red-200 px-3 py-1 rounded text-sm z-10">
+            {ellipsesError}
+          </div>
+        )}
+        
+        {/* Show loading indicator for ellipses */}
+        {showEllipses && ellipsesLoading && (
+          <div className="absolute top-2 left-2 bg-blue-100 dark:bg-blue-900 text-blue-700 dark:text-blue-200 px-3 py-1 rounded text-sm z-10">
+            Calculating ellipses...
+          </div>
+        )}
+        
         {/* SVG Overlay for confidence ellipses */}
-        {showEllipses && effectiveGroupEllipses && groupColorMap && (
+        {showEllipses && effectiveGroupEllipses && groupColorMap && !ellipsesError && (
           <svg 
             className="absolute inset-0 pointer-events-none" 
             style={{ width: '100%', height: '100%' }}
