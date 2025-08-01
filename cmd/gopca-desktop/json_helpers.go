@@ -186,7 +186,7 @@ func ConvertPCAResultToJSON(result *types.PCAResult) *PCAResultJSON {
 			Components: result.Eigencorrelations.Components,
 			Method:     result.Eigencorrelations.Method,
 		}
-		
+
 		// Convert correlations map
 		eigencorrelations.Correlations = make(map[string][]JSONFloat64)
 		for variable, values := range result.Eigencorrelations.Correlations {
@@ -196,7 +196,7 @@ func ConvertPCAResultToJSON(result *types.PCAResult) *PCAResultJSON {
 			}
 			eigencorrelations.Correlations[variable] = jsonValues
 		}
-		
+
 		// Convert p-values map
 		eigencorrelations.PValues = make(map[string][]JSONFloat64)
 		for variable, values := range result.Eigencorrelations.PValues {

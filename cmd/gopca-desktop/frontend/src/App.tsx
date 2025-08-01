@@ -50,7 +50,6 @@ function AppContent() {
         vectorNorm: false,
         method: 'SVD',
         missingStrategy: 'error',
-        calculateMetrics: true,
         // Kernel PCA parameters
         kernelType: 'rbf',
         kernelGamma: 1.0,
@@ -732,24 +731,6 @@ function AppContent() {
                                     </HelpWrapper>
                                     
                                     {/* Diagnostic Metrics Option */}
-                                    {config.method !== 'kernel' && (
-                                        <HelpWrapper helpKey="diagnostic-metrics">
-                                            <label className="flex items-center gap-2">
-                                                <input
-                                                    type="checkbox"
-                                                    checked={config.calculateMetrics}
-                                                    onChange={(e) => setConfig({...config, calculateMetrics: e.target.checked})}
-                                                    className="w-4 h-4 text-blue-600 bg-gray-100 border-gray-300 rounded focus:ring-blue-500 dark:focus:ring-blue-600 dark:ring-offset-gray-800 focus:ring-2 dark:bg-gray-700 dark:border-gray-600"
-                                                />
-                                                <span className="text-sm font-medium text-gray-700 dark:text-gray-300">
-                                                    Calculate Diagnostic Metrics
-                                                </span>
-                                            </label>
-                                            <p className="text-xs text-gray-500 dark:text-gray-400 mt-1 ml-6">
-                                                Enable calculation of Mahalanobis distances, Hotelling's T², and residuals for outlier detection
-                                            </p>
-                                        </HelpWrapper>
-                                    )}
                                 </div>
                             </div>
                             

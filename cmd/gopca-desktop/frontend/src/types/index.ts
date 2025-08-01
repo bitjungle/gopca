@@ -27,7 +27,6 @@ export interface PCARequest {
   excludedRows?: number[];
   excludedColumns?: number[];
   missingStrategy?: string;
-  calculateMetrics?: boolean;
   // Kernel PCA parameters
   kernelType?: string;
   kernelGamma?: number;

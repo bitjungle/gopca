@@ -167,22 +167,21 @@ type FileData struct {
 
 // PCARequest represents a PCA analysis request from the frontend
 type PCARequest struct {
-	Data             [][]float64 `json:"data"`
-	MissingMask      [][]bool    `json:"missingMask,omitempty"`
-	Headers          []string    `json:"headers"`
-	RowNames         []string    `json:"rowNames"`
-	Components       int         `json:"components"`
-	MeanCenter       bool        `json:"meanCenter"`
-	StandardScale    bool        `json:"standardScale"`
-	RobustScale      bool        `json:"robustScale"`
-	ScaleOnly        bool        `json:"scaleOnly"`
-	SNV              bool        `json:"snv"`
-	VectorNorm       bool        `json:"vectorNorm"`
-	Method           string      `json:"method"`
-	ExcludedRows     []int       `json:"excludedRows,omitempty"`
-	ExcludedColumns  []int       `json:"excludedColumns,omitempty"`
-	MissingStrategy  string      `json:"missingStrategy,omitempty"`
-	CalculateMetrics bool        `json:"calculateMetrics,omitempty"`
+	Data            [][]float64 `json:"data"`
+	MissingMask     [][]bool    `json:"missingMask,omitempty"`
+	Headers         []string    `json:"headers"`
+	RowNames        []string    `json:"rowNames"`
+	Components      int         `json:"components"`
+	MeanCenter      bool        `json:"meanCenter"`
+	StandardScale   bool        `json:"standardScale"`
+	RobustScale     bool        `json:"robustScale"`
+	ScaleOnly       bool        `json:"scaleOnly"`
+	SNV             bool        `json:"snv"`
+	VectorNorm      bool        `json:"vectorNorm"`
+	Method          string      `json:"method"`
+	ExcludedRows    []int       `json:"excludedRows,omitempty"`
+	ExcludedColumns []int       `json:"excludedColumns,omitempty"`
+	MissingStrategy string      `json:"missingStrategy,omitempty"`
 	// Kernel PCA parameters
 	KernelType   string  `json:"kernelType,omitempty"`
 	KernelGamma  float64 `json:"kernelGamma,omitempty"`
@@ -467,8 +466,8 @@ func (a *App) RunPCA(request PCARequest) (response PCAResponse) {
 	}
 	result.VariableLabels = filteredHeaders
 
-	// Calculate diagnostic metrics if requested
-	if request.CalculateMetrics && strings.ToLower(request.Method) != "kernel" {
+	// Calculate diagnostic metrics (not applicable for Kernel PCA)
+	if strings.ToLower(request.Method) != "kernel" {
 		// For RSS calculation, we need to use data preprocessed exactly as it was for PCA fitting
 		// This ensures the data and reconstruction are in the same space
 		preprocessedData := dataToAnalyze
@@ -510,7 +509,6 @@ func (a *App) RunPCA(request PCARequest) (response PCAResponse) {
 
 	// Calculate eigencorrelations if requested
 	if request.CalculateEigencorrelations && (len(request.MetadataNumeric) > 0 || len(request.MetadataCategorical) > 0) {
-		fmt.Println("Calculating eigencorrelations...")
 
 		// Convert scores to mat.Matrix
 		scoresMatrix := mat.NewDense(len(result.Scores), len(result.Scores[0]), nil)
@@ -881,16 +879,15 @@ func (a *App) LoadDatasetFile(filename string) (*FileDataJSON, error) {
 
 // PCAConfig represents PCA configuration from the frontend
 type PCAConfig struct {
-	Components       int    `json:"components"`
-	MeanCenter       bool   `json:"meanCenter"`
-	StandardScale    bool   `json:"standardScale"`
-	RobustScale      bool   `json:"robustScale"`
-	ScaleOnly        bool   `json:"scaleOnly"`
-	SNV              bool   `json:"snv"`
-	VectorNorm       bool   `json:"vectorNorm"`
-	Method           string `json:"method"`
-	MissingStrategy  string `json:"missingStrategy"`
-	CalculateMetrics bool   `json:"calculateMetrics"`
+	Components      int    `json:"components"`
+	MeanCenter      bool   `json:"meanCenter"`
+	StandardScale   bool   `json:"standardScale"`
+	RobustScale     bool   `json:"robustScale"`
+	ScaleOnly       bool   `json:"scaleOnly"`
+	SNV             bool   `json:"snv"`
+	VectorNorm      bool   `json:"vectorNorm"`
+	Method          string `json:"method"`
+	MissingStrategy string `json:"missingStrategy"`
 	// Kernel PCA parameters
 	KernelType   string  `json:"kernelType,omitempty"`
 	KernelGamma  float64 `json:"kernelGamma,omitempty"`
