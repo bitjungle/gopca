@@ -12,6 +12,7 @@ import (
 	"strings"
 
 	"github.com/bitjungle/gopca/internal/cli"
+	"github.com/bitjungle/gopca/internal/config"
 	"github.com/bitjungle/gopca/internal/core"
 	"github.com/bitjungle/gopca/internal/datasets"
 	"github.com/bitjungle/gopca/internal/utils"
@@ -949,4 +950,9 @@ func (a *App) ExportPCAModel(request ExportPCAModelRequest) error {
 	}
 
 	return nil
+}
+
+// GetGUIConfig returns the GUI configuration
+func (a *App) GetGUIConfig() *config.GUIConfig {
+	return config.DefaultGUIConfig()
 }

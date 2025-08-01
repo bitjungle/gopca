@@ -27,7 +27,7 @@ interface LoadingsPlotProps {
 export const LoadingsPlot: React.FC<LoadingsPlotProps> = ({ 
   pcaResult, 
   selectedComponent = 0,
-  variableThreshold = 50
+  variableThreshold = 100
 }) => {
   const chartRef = useRef<HTMLDivElement>(null);
   const fullscreenRef = useRef<HTMLDivElement>(null);
@@ -44,7 +44,7 @@ export const LoadingsPlot: React.FC<LoadingsPlotProps> = ({
   }
   
   // Auto-detect plot type based on number of variables
-  const numVariables = pcaResult.loadings[0]?.length || 0;
+  const numVariables = pcaResult.loadings.length;
   const autoPlotType = numVariables > variableThreshold ? 'line' : 'bar';
   
   const [plotType, setPlotType] = useState<'bar' | 'line'>(autoPlotType);
