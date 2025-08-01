@@ -10,6 +10,26 @@
       "text": "Try PCA with built-in datasets: Corn NIR (spectroscopy), Iris (classic ML), or Wine (chemometrics).",
       "category": "data-input"
     },
+    "sample-dataset-corn": {
+      "title": "Corn (NIR) Dataset",
+      "text": "Near infrared spectra on 80 corn samples including reference measurements for Moisture, Oil, Protein, and Starch.",
+      "category": "data-input"
+    },
+    "sample-dataset-iris": {
+      "title": "Iris Dataset",
+      "text": "Classic multivariate dataset that contains measurements of sepal and petal length and width for three species of iris flowers.",
+      "category": "data-input"
+    },
+    "sample-dataset-swiss-roll": {
+      "title": "Swiss Roll Dataset",
+      "text": "Synthetic 3D dataset with 1,000 samples where data points form a rolled-up two-dimensional surface, often used to demonstrate nonlinear dimensionality reduction.",
+      "category": "data-input"
+    },
+    "sample-dataset-wine": {
+      "title": "Wine Dataset",
+      "text": "Dataset containing chemical analysis results of wines from three cultivars, widely used for classification and feature analysis tasks.",
+      "category": "data-input"
+    },
     "num-components": {
       "title": "Number of Components",
       "text": "Principal components to extract. Default: min(samples-1, features). Start with 2-3 for visualization.",
