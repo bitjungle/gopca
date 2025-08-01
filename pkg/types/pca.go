@@ -62,6 +62,17 @@ type PCAResult struct {
 	T2Limit99 float64 `json:"t2_limit_99,omitempty"` // 99% confidence limit for T²
 	QLimit95  float64 `json:"q_limit_95,omitempty"`  // 95% confidence limit for Q-residuals
 	QLimit99  float64 `json:"q_limit_99,omitempty"`  // 99% confidence limit for Q-residuals
+	// Eigencorrelations with metadata
+	Eigencorrelations *EigencorrelationResult `json:"eigencorrelations,omitempty"`
+}
+
+// EigencorrelationResult contains correlations between PC scores and metadata variables
+type EigencorrelationResult struct {
+	Correlations map[string][]float64 `json:"correlations"` // Variable name -> correlations with each PC
+	PValues      map[string][]float64 `json:"pValues"`      // Variable name -> p-values
+	Variables    []string             `json:"variables"`    // Order of variables
+	Components   []string             `json:"components"`   // PC labels
+	Method       string               `json:"method"`       // Correlation method used
 }
 
 // PCAEngine defines the interface for PCA computation
@@ -73,11 +84,12 @@ type PCAEngine interface {
 
 // PCAOutputData represents complete PCA results for output
 type PCAOutputData struct {
-	Metadata      ModelMetadata     `json:"metadata"`
-	Preprocessing PreprocessingInfo `json:"preprocessing"`
-	Model         ModelComponents   `json:"model"`
-	Results       ResultsData       `json:"results"`
-	Diagnostics   DiagnosticLimits  `json:"diagnostics,omitempty"`
+	Metadata          ModelMetadata           `json:"metadata"`
+	Preprocessing     PreprocessingInfo       `json:"preprocessing"`
+	Model             ModelComponents         `json:"model"`
+	Results           ResultsData             `json:"results"`
+	Diagnostics       DiagnosticLimits        `json:"diagnostics,omitempty"`
+	Eigencorrelations *EigencorrelationResult `json:"eigencorrelations,omitempty"`
 }
 
 // SampleData contains sample-space results

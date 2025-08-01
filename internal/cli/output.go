@@ -170,11 +170,12 @@ func ConvertToPCAOutputData(result *types.PCAResult, data *CSVData, includeMetri
 	}
 
 	return &types.PCAOutputData{
-		Metadata:      metadata,
-		Preprocessing: preprocessingInfo,
-		Model:         modelComponents,
-		Results:       resultsData,
-		Diagnostics:   diagnostics,
+		Metadata:          metadata,
+		Preprocessing:     preprocessingInfo,
+		Model:             modelComponents,
+		Results:           resultsData,
+		Diagnostics:       diagnostics,
+		Eigencorrelations: result.Eigencorrelations,
 	}
 }
 

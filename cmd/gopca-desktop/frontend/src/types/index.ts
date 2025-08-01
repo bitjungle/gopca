@@ -36,6 +36,10 @@ export interface PCARequest {
   // Grouping parameters for confidence ellipses
   groupColumn?: string;
   groupLabels?: string[];
+  // Metadata for eigencorrelations
+  metadataNumeric?: { [key: string]: number[] };
+  metadataCategorical?: { [key: string]: string[] };
+  calculateEigencorrelations?: boolean;
 }
 
 
@@ -57,6 +61,15 @@ export interface PCAResult {
   t2_limit_99?: number;
   q_limit_95?: number;
   q_limit_99?: number;
+  eigencorrelations?: EigencorrelationResult;
+}
+
+export interface EigencorrelationResult {
+  correlations: { [variable: string]: number[] };
+  pValues: { [variable: string]: number[] };
+  variables: string[];
+  components: string[];
+  method: string;
 }
 
 export interface SampleMetrics {

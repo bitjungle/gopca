@@ -191,6 +191,10 @@ type PCARequest struct {
 	// Grouping parameters for confidence ellipses
 	GroupColumn string   `json:"groupColumn,omitempty"`
 	GroupLabels []string `json:"groupLabels,omitempty"`
+	// Metadata for eigencorrelations
+	MetadataNumeric            map[string][]float64 `json:"metadataNumeric,omitempty"`
+	MetadataCategorical        map[string][]string  `json:"metadataCategorical,omitempty"`
+	CalculateEigencorrelations bool                 `json:"calculateEigencorrelations,omitempty"`
 }
 
 // EllipseParams represents confidence ellipse parameters for a group
@@ -501,6 +505,42 @@ func (a *App) RunPCA(request PCARequest) (response PCAResponse) {
 			// Since we don't have them in the current implementation, we'll use a simplified approach
 			result.QLimit95 = 0.0
 			result.QLimit99 = 0.0
+		}
+	}
+
+	// Calculate eigencorrelations if requested
+	if request.CalculateEigencorrelations && (len(request.MetadataNumeric) > 0 || len(request.MetadataCategorical) > 0) {
+		fmt.Println("Calculating eigencorrelations...")
+
+		// Convert scores to mat.Matrix
+		scoresMatrix := mat.NewDense(len(result.Scores), len(result.Scores[0]), nil)
+		for i, row := range result.Scores {
+			for j, val := range row {
+				scoresMatrix.Set(i, j, val)
+			}
+		}
+
+		// Create correlation request
+		corrRequest := core.CorrelationRequest{
+			Scores:              scoresMatrix,
+			MetadataNumeric:     request.MetadataNumeric,
+			MetadataCategorical: request.MetadataCategorical,
+			Components:          nil,       // Use all components
+			Method:              "pearson", // Default to Pearson
+		}
+
+		// Calculate correlations
+		corrResult, err := core.CalculateEigencorrelations(corrRequest)
+		if err != nil {
+			fmt.Printf("Warning: failed to calculate eigencorrelations: %v\n", err)
+		} else {
+			result.Eigencorrelations = &types.EigencorrelationResult{
+				Correlations: corrResult.Correlations,
+				PValues:      corrResult.PValues,
+				Variables:    corrResult.Variables,
+				Components:   corrResult.Components,
+				Method:       "pearson",
+			}
 		}
 	}
 
@@ -950,71 +990,6 @@ func (a *App) ExportPCAModel(request ExportPCAModelRequest) error {
 	}
 
 	return nil
-}
-
-// CalculateEigencorrelationsRequest contains the request for eigencorrelation calculation
-type CalculateEigencorrelationsRequest struct {
-	Scores              [][]float64          `json:"scores"`
-	MetadataNumeric     map[string][]float64 `json:"metadataNumeric"`
-	MetadataCategorical map[string][]string  `json:"metadataCategorical"`
-	Components          []int                `json:"components"`
-	Method              string               `json:"method"`
-}
-
-// CalculateEigencorrelationsResponse contains the eigencorrelation results
-type CalculateEigencorrelationsResponse struct {
-	Success      bool                 `json:"success"`
-	Error        string               `json:"error,omitempty"`
-	Correlations map[string][]float64 `json:"correlations,omitempty"`
-	PValues      map[string][]float64 `json:"pValues,omitempty"`
-	Variables    []string             `json:"variables,omitempty"`
-	Components   []string             `json:"components,omitempty"`
-}
-
-// CalculateEigencorrelations computes correlations between PC scores and metadata variables
-func (a *App) CalculateEigencorrelations(request CalculateEigencorrelationsRequest) CalculateEigencorrelationsResponse {
-	// Convert scores to mat.Matrix
-	if len(request.Scores) == 0 {
-		return CalculateEigencorrelationsResponse{
-			Success: false,
-			Error:   "No scores provided",
-		}
-	}
-
-	rows := len(request.Scores)
-	cols := len(request.Scores[0])
-	scoresMatrix := mat.NewDense(rows, cols, nil)
-	for i := 0; i < rows; i++ {
-		for j := 0; j < cols; j++ {
-			scoresMatrix.Set(i, j, request.Scores[i][j])
-		}
-	}
-
-	// Create correlation request
-	corrRequest := core.CorrelationRequest{
-		Scores:              scoresMatrix,
-		MetadataNumeric:     request.MetadataNumeric,
-		MetadataCategorical: request.MetadataCategorical,
-		Components:          request.Components,
-		Method:              request.Method,
-	}
-
-	// Calculate correlations
-	result, err := core.CalculateEigencorrelations(corrRequest)
-	if err != nil {
-		return CalculateEigencorrelationsResponse{
-			Success: false,
-			Error:   fmt.Sprintf("Failed to calculate correlations: %v", err),
-		}
-	}
-
-	return CalculateEigencorrelationsResponse{
-		Success:      true,
-		Correlations: result.Correlations,
-		PValues:      result.PValues,
-		Variables:    result.Variables,
-		Components:   result.Components,
-	}
 }
 
 // GetGUIConfig returns the GUI configuration

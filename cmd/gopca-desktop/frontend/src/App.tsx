@@ -172,7 +172,12 @@ function AppContent() {
                 ...(selectedGroupColumn && fileData.categoricalColumns && {
                     groupColumn: selectedGroupColumn,
                     groupLabels: fileData.categoricalColumns[selectedGroupColumn]
-                })
+                }),
+                // Add metadata for eigencorrelations if available
+                metadataNumeric: fileData.numericTargetColumns || {},
+                metadataCategorical: fileData.categoricalColumns || {},
+                calculateEigencorrelations: (fileData.numericTargetColumns && Object.keys(fileData.numericTargetColumns).length > 0) || 
+                                          (fileData.categoricalColumns && Object.keys(fileData.categoricalColumns).length > 0)
             };
             const result = await RunPCA(request);
             if (result.success) {

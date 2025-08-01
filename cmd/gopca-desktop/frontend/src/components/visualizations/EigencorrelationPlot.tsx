@@ -1,41 +1,28 @@
-import React, { useRef, useState, useCallback, useEffect, useMemo } from 'react';
+import React, { useRef, useState, useCallback, useMemo } from 'react';
 import ReactDOM from 'react-dom';
 import { PCAResult, FileData } from '../../types';
 import { ExportButton } from '../ExportButton';
 import { PlotControls } from '../PlotControls';
 import { useChartTheme } from '../../hooks/useChartTheme';
-import { CalculateEigencorrelations } from '../../../wailsjs/go/main/App';
 
 interface EigencorrelationPlotProps {
   pcaResult: PCAResult;
   fileData: FileData;
   selectedComponents?: number[]; // Which PCs to show (0-based indices)
-  correlationMethod?: 'pearson' | 'spearman';
   showSignificance?: boolean;
   significanceThreshold?: number;
-}
-
-interface CorrelationData {
-  correlations: { [key: string]: number[] };
-  pValues: { [key: string]: number[] };
-  variables: string[];
-  components: string[];
 }
 
 export const EigencorrelationPlot: React.FC<EigencorrelationPlotProps> = ({
   pcaResult,
   fileData,
   selectedComponents = [0, 1, 2, 3, 4], // Default to first 5 components
-  correlationMethod = 'pearson',
   showSignificance = true,
   significanceThreshold = 0.05
 }) => {
   const chartRef = useRef<HTMLDivElement>(null);
   const fullscreenRef = useRef<HTMLDivElement>(null);
   const [isFullscreen, setIsFullscreen] = useState(false);
-  const [correlationData, setCorrelationData] = useState<CorrelationData | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
   const chartTheme = useChartTheme();
   
   // Tooltip state
@@ -43,73 +30,34 @@ export const EigencorrelationPlot: React.FC<EigencorrelationPlotProps> = ({
     show: false, text: '', x: 0, y: 0
   });
 
-  // Calculate correlations
-  useEffect(() => {
-    const calculateCorrelations = async () => {
-      if (!pcaResult.scores || !fileData) {
-        setLoading(false);
-        return;
-      }
+  // Get pre-calculated eigencorrelations from PCA result
+  const correlationData = useMemo(() => {
+    if (!pcaResult?.eigencorrelations) {
+      return null;
+    }
 
-      setLoading(true);
-      setError(null);
+    const eigencorr = pcaResult.eigencorrelations;
+    
+    // Filter components based on selection
+    const componentsToShow = selectedComponents.filter(i => i < eigencorr.components.length);
+    
+    // Filter data for selected components
+    const filteredCorrelations: { [key: string]: number[] } = {};
+    const filteredPValues: { [key: string]: number[] } = {};
+    
+    eigencorr.variables.forEach(variable => {
+      filteredCorrelations[variable] = componentsToShow.map(i => eigencorr.correlations[variable][i]);
+      filteredPValues[variable] = componentsToShow.map(i => eigencorr.pValues[variable][i]);
+    });
 
-      try {
-        // Prepare metadata
-        const metadataNumeric: { [key: string]: number[] } = {};
-        const metadataCategorical: { [key: string]: string[] } = {};
-
-        // Add numeric target columns
-        if (fileData.numericTargetColumns) {
-          Object.entries(fileData.numericTargetColumns).forEach(([name, values]) => {
-            metadataNumeric[name] = values;
-          });
-        }
-
-        // Add categorical columns
-        if (fileData.categoricalColumns) {
-          Object.entries(fileData.categoricalColumns).forEach(([name, values]) => {
-            metadataCategorical[name] = values;
-          });
-        }
-
-        // Ensure we have some metadata to correlate
-        if (Object.keys(metadataNumeric).length === 0 && Object.keys(metadataCategorical).length === 0) {
-          setError('No metadata variables available for correlation analysis');
-          setLoading(false);
-          return;
-        }
-
-        // Filter selected components
-        const componentsToUse = selectedComponents.filter(i => i < pcaResult.scores[0].length);
-        
-        const response = await CalculateEigencorrelations({
-          scores: pcaResult.scores,
-          metadataNumeric,
-          metadataCategorical,
-          components: componentsToUse,
-          method: correlationMethod
-        });
-
-        if (response.success) {
-          setCorrelationData({
-            correlations: response.correlations || {},
-            pValues: response.pValues || {},
-            variables: response.variables || [],
-            components: response.components || []
-          });
-        } else {
-          setError(response.error || 'Failed to calculate correlations');
-        }
-      } catch (err) {
-        setError(`Error calculating correlations: ${err}`);
-      } finally {
-        setLoading(false);
-      }
+    return {
+      correlations: filteredCorrelations,
+      pValues: filteredPValues,
+      variables: eigencorr.variables,
+      components: componentsToShow.map(i => eigencorr.components[i]),
+      method: eigencorr.method
     };
-
-    calculateCorrelations();
-  }, [pcaResult, fileData, selectedComponents, correlationMethod]);
+  }, [pcaResult?.eigencorrelations, selectedComponents]);
 
   // Color scale function for correlation values
   const getColor = useCallback((value: number): string => {
@@ -174,29 +122,11 @@ export const EigencorrelationPlot: React.FC<EigencorrelationPlotProps> = ({
     return { width: cellWidth, height: cellHeight };
   }, [correlationData, isFullscreen]);
 
-  // Loading state
-  if (loading) {
-    return (
-      <div className="w-full h-full flex items-center justify-center text-gray-500 dark:text-gray-400">
-        <p>Calculating correlations...</p>
-      </div>
-    );
-  }
-
-  // Error state
-  if (error) {
-    return (
-      <div className="w-full h-full flex items-center justify-center text-red-500">
-        <p>{error}</p>
-      </div>
-    );
-  }
-
   // No data state
   if (!correlationData || correlationData.variables.length === 0) {
     return (
       <div className="w-full h-full flex items-center justify-center text-gray-500 dark:text-gray-400">
-        <p>No correlation data to display</p>
+        <p>No eigencorrelation data available. Please ensure metadata variables were included when calculating PCA.</p>
       </div>
     );
   }
@@ -212,7 +142,7 @@ export const EigencorrelationPlot: React.FC<EigencorrelationPlotProps> = ({
         {/* Header with controls */}
         <div className="flex items-center justify-between mb-4">
           <h4 className="text-md font-medium text-gray-700 dark:text-gray-300">
-            Eigencorrelation Plot: Component-Metadata Correlations ({correlationMethod})
+            Eigencorrelation Plot: Component-Metadata Correlations ({correlationData.method})
           </h4>
           <div className="flex items-center gap-2">
             <PlotControls 
@@ -222,7 +152,7 @@ export const EigencorrelationPlot: React.FC<EigencorrelationPlotProps> = ({
             />
             <ExportButton 
               chartRef={chartRef} 
-              fileName={`eigencorrelations-${correlationMethod}`}
+              fileName={`eigencorrelations-${correlationData.method}`}
             />
           </div>
         </div>
