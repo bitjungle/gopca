@@ -116,8 +116,15 @@ func (p *PCAImpl) Fit(data types.Matrix, config types.PCAConfig) (*types.PCAResu
 	p.nComponents = actualComponents
 	p.fitted = true
 
-	// Calculate explained variance
-	explainedVar, cumulativeVar := p.calculateVariance(X, scores, loadings)
+	// Get eigenvalues for variance calculations
+	var eigenvalues []float64
+	if allEigenvalues != nil {
+		// Use eigenvalues from the algorithm (SVD or NIPALS)
+		eigenvalues = allEigenvalues[:actualComponents]
+	} else {
+		// Fallback: calculate from scores (shouldn't happen with current algorithms)
+		eigenvalues = p.calculateEigenvaluesFromScores(scores)
+	}
 
 	// Generate component labels
 	componentLabels := make([]string, actualComponents)
@@ -126,21 +133,47 @@ func (p *PCAImpl) Fit(data types.Matrix, config types.PCAConfig) (*types.PCAResu
 	}
 
 	// Calculate explained variance ratio
-	explainedVarRatio := make([]float64, len(explainedVar))
+	explainedVarRatio := make([]float64, len(eigenvalues))
+	cumulativeVar := make([]float64, len(eigenvalues))
+
 	if p.config.Method == "nipals" && p.config.MissingStrategy == types.MissingNative {
-		// For NIPALS with missing values, we report eigenvalues, not percentages
-		// Set ratio to eigenvalues for now (the UI should handle this differently)
-		copy(explainedVarRatio, explainedVar)
-	} else {
-		// Traditional percentage calculation for complete data
-		totalVar := 0.0
-		for _, v := range explainedVar {
-			totalVar += v
+		// For NIPALS with missing values, we cannot calculate true percentages
+		// because total variance is undefined with missing data
+		// Instead, show relative proportions of extracted components
+		totalExtractedVar := 0.0
+		for _, v := range eigenvalues {
+			totalExtractedVar += v
 		}
-		for i, v := range explainedVar {
+		cumSum := 0.0
+		for i, v := range eigenvalues {
+			if totalExtractedVar > 0 {
+				explainedVarRatio[i] = v / totalExtractedVar * 100
+			}
+			cumSum += explainedVarRatio[i]
+			cumulativeVar[i] = cumSum
+		}
+	} else {
+		// Standard calculation using all eigenvalues for total variance
+		totalVar := 0.0
+		if allEigenvalues != nil {
+			// Sum ALL eigenvalues for total variance
+			for _, v := range allEigenvalues {
+				totalVar += v
+			}
+		} else {
+			// Fallback to selected eigenvalues
+			for _, v := range eigenvalues {
+				totalVar += v
+			}
+		}
+
+		cumSum := 0.0
+		for i, v := range eigenvalues {
 			if totalVar > 0 {
 				explainedVarRatio[i] = v / totalVar * 100
 			}
+			cumSum += explainedVarRatio[i]
+			cumulativeVar[i] = cumSum
 		}
 	}
 
@@ -154,7 +187,7 @@ func (p *PCAImpl) Fit(data types.Matrix, config types.PCAConfig) (*types.PCAResu
 	return &types.PCAResult{
 		Scores:               utils.DenseToMatrix(scores),
 		Loadings:             utils.DenseToMatrix(loadings),
-		ExplainedVar:         explainedVar,
+		ExplainedVar:         eigenvalues,
 		ExplainedVarRatio:    explainedVarRatio,
 		CumulativeVar:        cumulativeVar,
 		ComponentLabels:      componentLabels,
@@ -686,7 +719,26 @@ func (p *PCAImpl) svdAlgorithm(X *mat.Dense, nComponents int) (*mat.Dense, *mat.
 	return scores, loadings, allEigenvalues, nil
 }
 
+// calculateEigenvaluesFromScores computes eigenvalues from score matrix
+// This is a fallback method when eigenvalues are not provided by the algorithm
+func (p *PCAImpl) calculateEigenvaluesFromScores(scores *mat.Dense) []float64 {
+	n, k := scores.Dims()
+	eigenvalues := make([]float64, k)
+
+	for i := 0; i < k; i++ {
+		scoreCol := mat.Col(nil, i, scores)
+		var sum float64
+		for _, v := range scoreCol {
+			sum += v * v
+		}
+		eigenvalues[i] = sum / float64(n-1)
+	}
+
+	return eigenvalues
+}
+
 // calculateVariance computes explained variance for each component
+// DEPRECATED: This function is kept for reference but should not be used
 func (p *PCAImpl) calculateVariance(X, scores, loadings *mat.Dense) ([]float64, []float64) {
 	n, m := X.Dims()
 	_, k := scores.Dims()

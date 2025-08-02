@@ -780,8 +780,7 @@ function AppContent() {
                                     </button>
                                 </div>
                                 <div className="space-y-2">
-                                    {pcaResponse.result.explained_variance.map((variance, i) => {
-                                        const percentage = variance;
+                                    {pcaResponse.result.explained_variance_ratio.map((percentage, i) => {
                                         return (
                                             <div key={i} className="flex justify-between">
                                                 <span>{pcaResponse.result?.component_labels?.[i] || `PC${i+1}`}:</span>
@@ -904,7 +903,7 @@ function AppContent() {
                                                     >
                                                         {pcaResponse.result.component_labels?.map((label, i) => (
                                                             <option key={i} value={i}>
-                                                                {label} ({pcaResponse.result!.explained_variance[i].toFixed(1)}%)
+                                                                {label} ({pcaResponse.result!.explained_variance_ratio[i].toFixed(1)}%)
                                                             </option>
                                                         ))}
                                                     </select>
@@ -918,7 +917,7 @@ function AppContent() {
                                                     >
                                                         {pcaResponse.result.component_labels?.map((label, i) => (
                                                             <option key={i} value={i}>
-                                                                {label} ({pcaResponse.result!.explained_variance[i].toFixed(1)}%)
+                                                                {label} ({pcaResponse.result!.explained_variance_ratio[i].toFixed(1)}%)
                                                             </option>
                                                         ))}
                                                     </select>
@@ -935,7 +934,7 @@ function AppContent() {
                                                 >
                                                     {pcaResponse.result?.component_labels?.map((label, i) => (
                                                         <option key={i} value={i}>
-                                                            {label} ({pcaResponse.result!.explained_variance[i].toFixed(1)}%)
+                                                            {label} ({pcaResponse.result!.explained_variance_ratio[i].toFixed(1)}%)
                                                         </option>
                                                     ))}
                                                 </select>

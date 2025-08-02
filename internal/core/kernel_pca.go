@@ -167,8 +167,8 @@ func (kpca *KernelPCAImpl) centerKernelMatrix(K *mat.Dense) (*mat.Dense, error) 
 	return Kc, nil
 }
 
-// eigenDecomposition performs eigendecomposition and returns top k components
-func (kpca *KernelPCAImpl) eigenDecomposition(K *mat.Dense, k int) ([]float64, *mat.Dense, error) {
+// eigenDecomposition performs eigendecomposition and returns top k components and all eigenvalues
+func (kpca *KernelPCAImpl) eigenDecomposition(K *mat.Dense, k int) ([]float64, []float64, *mat.Dense, error) {
 	// Convert to symmetric matrix for eigendecomposition
 	n, _ := K.Dims()
 	symK := mat.NewSymDense(n, nil)
@@ -180,7 +180,7 @@ func (kpca *KernelPCAImpl) eigenDecomposition(K *mat.Dense, k int) ([]float64, *
 
 	var eig mat.EigenSym
 	if ok := eig.Factorize(symK, true); !ok {
-		return nil, nil, fmt.Errorf("eigendecomposition failed")
+		return nil, nil, nil, fmt.Errorf("eigendecomposition failed")
 	}
 
 	vals := eig.Values(nil)
@@ -197,6 +197,16 @@ func (kpca *KernelPCAImpl) eigenDecomposition(K *mat.Dense, k int) ([]float64, *
 		return vals[idx[i]] > vals[idx[j]]
 	})
 
+	// Store all eigenvalues in sorted order for variance calculation
+	allSortedVals := make([]float64, nVals)
+	for i := 0; i < nVals; i++ {
+		allSortedVals[i] = vals[idx[i]]
+		// Handle near-zero or negative eigenvalues
+		if allSortedVals[i] < 1e-10 {
+			allSortedVals[i] = 1e-10
+		}
+	}
+
 	// Extract top k components
 	if k > nVals {
 		k = nVals
@@ -206,17 +216,13 @@ func (kpca *KernelPCAImpl) eigenDecomposition(K *mat.Dense, k int) ([]float64, *
 	sortedVecs := mat.NewDense(nVals, k, nil)
 
 	for i := 0; i < k; i++ {
-		sortedVals[i] = vals[idx[i]]
-		// Handle near-zero or negative eigenvalues
-		if sortedVals[i] < 1e-10 {
-			sortedVals[i] = 1e-10
-		}
+		sortedVals[i] = allSortedVals[i]
 		for j := 0; j < nVals; j++ {
 			sortedVecs.Set(j, i, vecs.At(j, idx[i]))
 		}
 	}
 
-	return sortedVals, sortedVecs, nil
+	return sortedVals, allSortedVals, sortedVecs, nil
 }
 
 // Fit trains the Kernel PCA model on the provided data
@@ -290,7 +296,7 @@ func (kpca *KernelPCAImpl) Fit(data types.Matrix, config types.PCAConfig) (*type
 	}
 
 	// Perform eigendecomposition
-	eigvals, eigvecs, err := kpca.eigenDecomposition(Kc, config.Components)
+	eigvals, allEigvals, eigvecs, err := kpca.eigenDecomposition(Kc, config.Components)
 	if err != nil {
 		return nil, fmt.Errorf("error in eigendecomposition: %w", err)
 	}
@@ -317,20 +323,23 @@ func (kpca *KernelPCAImpl) Fit(data types.Matrix, config types.PCAConfig) (*type
 		}
 	}
 
-	// Calculate explained variance
+	// Calculate explained variance using all eigenvalues
 	totalVar := 0.0
-	for _, v := range eigvals {
-		totalVar += v
+	for _, v := range allEigvals {
+		if v > 0 { // Only count positive eigenvalues
+			totalVar += v
+		}
 	}
 
-	explainedVar := make([]float64, config.Components)
+	explainedVar := eigvals // Use the selected eigenvalues directly
 	explainedVarRatio := make([]float64, config.Components)
 	cumulativeVar := make([]float64, config.Components)
 	cumSum := 0.0
 
 	for i := 0; i < config.Components; i++ {
-		explainedVar[i] = eigvals[i]
-		explainedVarRatio[i] = eigvals[i] / totalVar * 100
+		if totalVar > 0 {
+			explainedVarRatio[i] = eigvals[i] / totalVar * 100
+		}
 		cumSum += explainedVarRatio[i]
 		cumulativeVar[i] = cumSum
 	}
@@ -348,6 +357,7 @@ func (kpca *KernelPCAImpl) Fit(data types.Matrix, config types.PCAConfig) (*type
 		ComponentsComputed:   config.Components,
 		Method:               "kernel",
 		PreprocessingApplied: config.ScaleOnly || config.SNV || config.VectorNorm,
+		AllEigenvalues:       allEigvals,
 	}, nil
 }
 

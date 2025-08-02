@@ -82,8 +82,8 @@ export const CircleOfCorrelations: React.FC<CircleOfCorrelationsProps> = ({
   // Get component labels and variance
   const xLabel = pcaResult.component_labels?.[xComponent] || `PC${xComponent + 1}`;
   const yLabel = pcaResult.component_labels?.[yComponent] || `PC${yComponent + 1}`;
-  const xVariance = pcaResult.explained_variance[xComponent]?.toFixed(1) || '0';
-  const yVariance = pcaResult.explained_variance[yComponent]?.toFixed(1) || '0';
+  const xVariance = pcaResult.explained_variance_ratio[xComponent]?.toFixed(1) || '0';
+  const yVariance = pcaResult.explained_variance_ratio[yComponent]?.toFixed(1) || '0';
 
   // SVG dimensions
   const width = 500;
