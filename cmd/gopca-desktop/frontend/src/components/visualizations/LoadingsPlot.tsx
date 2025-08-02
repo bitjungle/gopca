@@ -79,7 +79,7 @@ export const LoadingsPlot: React.FC<LoadingsPlotProps> = ({
 
   // Get component label and variance
   const componentLabel = pcaResult.component_labels?.[selectedComponent] || `PC${selectedComponent + 1}`;
-  const variance = pcaResult.explained_variance[selectedComponent]?.toFixed(1) || '0';
+  const variance = pcaResult.explained_variance_ratio[selectedComponent]?.toFixed(1) || '0';
 
   // Handle edge cases
   if (!loadingsData || loadingsData.length === 0) {

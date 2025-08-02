@@ -158,8 +158,8 @@ export const ScoresPlot: React.FC<ScoresPlotProps> = ({
   }, []);
 
   // Get variance percentages for axis labels
-  const xVariance = pcaResult.explained_variance[xComponent]?.toFixed(1) || '0';
-  const yVariance = pcaResult.explained_variance[yComponent]?.toFixed(1) || '0';
+  const xVariance = pcaResult.explained_variance_ratio[xComponent]?.toFixed(1) || '0';
+  const yVariance = pcaResult.explained_variance_ratio[yComponent]?.toFixed(1) || '0';
 
   const xLabel = `PC${xComponent + 1} (${xVariance}%)`;
   const yLabel = `PC${yComponent + 1} (${yVariance}%)`;
