@@ -1,14 +1,15 @@
 import React, { useState, useRef, useEffect } from 'react';
 import './App.css';
-import { ParseCSV, RunPCA, LoadIrisDataset, LoadDatasetFile, GetVersion } from "../wailsjs/go/main/App";
+import { ParseCSV, RunPCA, LoadIrisDataset, LoadDatasetFile, GetVersion, CalculateEllipses, GetGUIConfig } from "../wailsjs/go/main/App";
 import { DataTable, SelectionTable, ThemeToggle, MatrixIllustration, HelpWrapper } from './components';
-import { ScoresPlot, ScreePlot, LoadingsPlot, Biplot, CircleOfCorrelations, DiagnosticScatterPlot } from './components/visualizations';
+import { ScoresPlot, ScreePlot, LoadingsPlot, Biplot, CircleOfCorrelations, DiagnosticScatterPlot, EigencorrelationPlot } from './components/visualizations';
 import { FileData, PCARequest, PCAResponse } from './types';
 import { ThemeProvider } from './contexts/ThemeContext';
 import { HelpProvider, useHelp } from './contexts/HelpContext';
 import { PaletteProvider, usePalette } from './contexts/PaletteContext';
 import { HelpDisplay } from './components/HelpDisplay';
 import { PaletteSelector } from './components/PaletteSelector';
+import { config } from '../wailsjs/go/models';
 import logo from './assets/images/GoPCA-logo-1024-transp.png';
 
 function AppContent() {
@@ -20,11 +21,12 @@ function AppContent() {
     const [fileError, setFileError] = useState<string | null>(null);
     const [pcaError, setPcaError] = useState<string | null>(null);
     const [version, setVersion] = useState<string>('');
+    const [guiConfig, setGuiConfig] = useState<config.GUIConfig | null>(null);
     
     // Selection state
     const [excludedRows, setExcludedRows] = useState<number[]>([]);
     const [excludedColumns, setExcludedColumns] = useState<number[]>([]);
-    const [selectedPlot, setSelectedPlot] = useState<'scores' | 'scree' | 'loadings' | 'biplot' | 'correlations' | 'diagnostics'>('scores');
+    const [selectedPlot, setSelectedPlot] = useState<'scores' | 'scree' | 'loadings' | 'biplot' | 'correlations' | 'diagnostics' | 'eigencorrelation'>('scores');
     const [selectedXComponent, setSelectedXComponent] = useState(0);
     const [selectedYComponent, setSelectedYComponent] = useState(1);
     const [selectedLoadingComponent, setSelectedLoadingComponent] = useState(0);
@@ -48,7 +50,6 @@ function AppContent() {
         vectorNorm: false,
         method: 'SVD',
         missingStrategy: 'error',
-        calculateMetrics: true,
         // Kernel PCA parameters
         kernelType: 'rbf',
         kernelGamma: 1.0,
@@ -67,12 +68,18 @@ function AppContent() {
         }
     };
     
-    // Fetch version on mount
+    // Fetch version and GUI config on mount
     useEffect(() => {
         GetVersion().then((v) => {
             setVersion(v);
         }).catch((err) => {
             console.error('Failed to get version:', err);
+        });
+        
+        GetGUIConfig().then((config) => {
+            setGuiConfig(config);
+        }).catch((err) => {
+            console.error('Failed to get GUI config:', err);
         });
     }, []);
     
@@ -164,7 +171,12 @@ function AppContent() {
                 ...(selectedGroupColumn && fileData.categoricalColumns && {
                     groupColumn: selectedGroupColumn,
                     groupLabels: fileData.categoricalColumns[selectedGroupColumn]
-                })
+                }),
+                // Add metadata for eigencorrelations if available
+                metadataNumeric: fileData.numericTargetColumns || {},
+                metadataCategorical: fileData.categoricalColumns || {},
+                calculateEigencorrelations: (fileData.numericTargetColumns && Object.keys(fileData.numericTargetColumns).length > 0) || 
+                                          (fileData.categoricalColumns && Object.keys(fileData.categoricalColumns).length > 0)
             };
             const result = await RunPCA(request);
             if (result.success) {
@@ -174,6 +186,16 @@ function AppContent() {
                 setSelectedYComponent(1);
                 // Clear any previous errors
                 setPcaError(null);
+                
+                // Check if Kernel PCA is selected with unsupported visualization
+                if (config.method === 'kernel' && 
+                    (selectedPlot === 'correlations' || selectedPlot === 'biplot')) {
+                    // Switch to scores plot
+                    setSelectedPlot('scores');
+                    // Alert user about the automatic switch
+                    alert('The selected visualization is not supported for Kernel PCA. Switching to Scores Plot.');
+                }
+                
                 // Smooth scroll to results
                 setTimeout(() => {
                     pcaResultsRef.current?.scrollIntoView({ 
@@ -285,109 +307,117 @@ function AppContent() {
                             </div>
 
                             {/* Column 3: Sample Datasets */}
-                            <HelpWrapper helpKey="sample-datasets" className="flex flex-col justify-center md:col-span-2 lg:col-span-1">
+                            <div className="flex flex-col justify-center md:col-span-2 lg:col-span-1">
                                 <label className="block text-sm font-medium mb-3">
                                     Or Try Sample Datasets
                                 </label>
                                 <div className="space-y-2">
-                                    <button
-                                        onClick={async () => {
-                                            setLoading(true);
-                                            setFileError(null);
-                                            setPcaError(null);
-                                            try {
-                                                const result = await LoadDatasetFile('corn.csv');
-                                                setFileData(result);
-                                                setPcaResponse(null);
-                                                setExcludedRows([]);
-                                                setExcludedColumns([]);
-                                                setSelectedGroupColumn(null);
-                                                updateGammaForData(result);
-                                            } catch (err) {
-                                                setFileError(`Failed to load Corn dataset: ${err}`);
-                                            } finally {
-                                                setLoading(false);
-                                            }
-                                        }}
-                                        className="w-full px-4 py-2 text-sm bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors"
-                                        disabled={loading}
-                                    >
-                                        Corn (NIR)
-                                    </button>
-                                    <button
-                                        onClick={async () => {
-                                            setLoading(true);
-                                            setFileError(null);
-                                            setPcaError(null);
-                                            try {
-                                                const result = await LoadDatasetFile('iris.csv');
-                                                setFileData(result);
-                                                setPcaResponse(null);
-                                                setExcludedRows([]);
-                                                setExcludedColumns([]);
-                                                setSelectedGroupColumn('species');
-                                                updateGammaForData(result);
-                                            } catch (err) {
-                                                setFileError(`Failed to load Iris dataset: ${err}`);
-                                            } finally {
-                                                setLoading(false);
-                                            }
-                                        }}
-                                        className="w-full px-4 py-2 text-sm bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors"
-                                        disabled={loading}
-                                    >
-                                        Iris
-                                    </button>
-                                    <button
-                                        onClick={async () => {
-                                            setLoading(true);
-                                            setFileError(null);
-                                            setPcaError(null);
-                                            try {
-                                                const result = await LoadDatasetFile('wine.csv');
-                                                setFileData(result);
-                                                setPcaResponse(null);
-                                                setExcludedRows([]);
-                                                setExcludedColumns([]);
-                                                setSelectedGroupColumn('target');
-                                                updateGammaForData(result);
-                                            } catch (err) {
-                                                setFileError(`Failed to load Wine dataset: ${err}`);
-                                            } finally {
-                                                setLoading(false);
-                                            }
-                                        }}
-                                        className="w-full px-4 py-2 text-sm bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors"
-                                        disabled={loading}
-                                    >
-                                        Wine
-                                    </button>
-                                    <button
-                                        onClick={async () => {
-                                            setLoading(true);
-                                            setFileError(null);
-                                            setPcaError(null);
-                                            try {
-                                                const result = await LoadDatasetFile('swiss_roll.csv');
-                                                setFileData(result);
-                                                setPcaResponse(null);
-                                                setExcludedRows([]);
-                                                setExcludedColumns([]);
-                                                setSelectedGroupColumn('color_category');
-                                                updateGammaForData(result);
-                                            } catch (err) {
-                                                setFileError(`Failed to load Swiss Roll dataset: ${err}`);
-                                            } finally {
-                                                setLoading(false);
-                                            }
-                                        }}
-                                        className="w-full px-4 py-2 text-sm bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors"
-                                        disabled={loading}
-                                    >
-                                        Swiss Roll
-                                    </button>
+                                    <HelpWrapper helpKey="sample-dataset-corn">
+                                        <button
+                                            onClick={async () => {
+                                                setLoading(true);
+                                                setFileError(null);
+                                                setPcaError(null);
+                                                try {
+                                                    const result = await LoadDatasetFile('corn.csv');
+                                                    setFileData(result);
+                                                    setPcaResponse(null);
+                                                    setExcludedRows([]);
+                                                    setExcludedColumns([]);
+                                                    setSelectedGroupColumn(null);
+                                                    updateGammaForData(result);
+                                                } catch (err) {
+                                                    setFileError(`Failed to load Corn dataset: ${err}`);
+                                                } finally {
+                                                    setLoading(false);
+                                                }
+                                            }}
+                                            className="w-full px-4 py-2 text-sm bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors"
+                                            disabled={loading}
+                                        >
+                                            Corn (NIR)
+                                        </button>
+                                    </HelpWrapper>
+                                    <HelpWrapper helpKey="sample-dataset-iris">
+                                        <button
+                                            onClick={async () => {
+                                                setLoading(true);
+                                                setFileError(null);
+                                                setPcaError(null);
+                                                try {
+                                                    const result = await LoadDatasetFile('iris.csv');
+                                                    setFileData(result);
+                                                    setPcaResponse(null);
+                                                    setExcludedRows([]);
+                                                    setExcludedColumns([]);
+                                                    setSelectedGroupColumn('species');
+                                                    updateGammaForData(result);
+                                                } catch (err) {
+                                                    setFileError(`Failed to load Iris dataset: ${err}`);
+                                                } finally {
+                                                    setLoading(false);
+                                                }
+                                            }}
+                                            className="w-full px-4 py-2 text-sm bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors"
+                                            disabled={loading}
+                                        >
+                                            Iris
+                                        </button>
+                                    </HelpWrapper>
+                                    <HelpWrapper helpKey="sample-dataset-wine">
+                                        <button
+                                            onClick={async () => {
+                                                setLoading(true);
+                                                setFileError(null);
+                                                setPcaError(null);
+                                                try {
+                                                    const result = await LoadDatasetFile('wine.csv');
+                                                    setFileData(result);
+                                                    setPcaResponse(null);
+                                                    setExcludedRows([]);
+                                                    setExcludedColumns([]);
+                                                    setSelectedGroupColumn('target');
+                                                    updateGammaForData(result);
+                                                } catch (err) {
+                                                    setFileError(`Failed to load Wine dataset: ${err}`);
+                                                } finally {
+                                                    setLoading(false);
+                                                }
+                                            }}
+                                            className="w-full px-4 py-2 text-sm bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors"
+                                            disabled={loading}
+                                        >
+                                            Wine
+                                        </button>
+                                    </HelpWrapper>
+                                    <HelpWrapper helpKey="sample-dataset-swiss-roll">
+                                        <button
+                                            onClick={async () => {
+                                                setLoading(true);
+                                                setFileError(null);
+                                                setPcaError(null);
+                                                try {
+                                                    const result = await LoadDatasetFile('swiss_roll.csv');
+                                                    setFileData(result);
+                                                    setPcaResponse(null);
+                                                    setExcludedRows([]);
+                                                    setExcludedColumns([]);
+                                                    setSelectedGroupColumn('color_category');
+                                                    updateGammaForData(result);
+                                                } catch (err) {
+                                                    setFileError(`Failed to load Swiss Roll dataset: ${err}`);
+                                                } finally {
+                                                    setLoading(false);
+                                                }
+                                            }}
+                                            className="w-full px-4 py-2 text-sm bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors"
+                                            disabled={loading}
+                                        >
+                                            Swiss Roll
+                                        </button>
+                                    </HelpWrapper>
                                 </div>
-                            </HelpWrapper>
+                            </div>
                         </div>
                     </div>
                     
@@ -456,7 +486,26 @@ function AppContent() {
                                         </label>
                                         <select
                                             value={config.method}
-                                            onChange={(e) => setConfig({...config, method: e.target.value})}
+                                            onChange={(e) => {
+                                                const newMethod = e.target.value;
+                                                const newConfig = {...config, method: newMethod};
+                                                
+                                                // If switching to kernel PCA and current preprocessing is invalid
+                                                if (newMethod === 'kernel') {
+                                                    // Check if current preprocessing is invalid for kernel PCA
+                                                    // Valid options for kernel PCA are: none (all false) or scale-only
+                                                    if (newConfig.meanCenter || newConfig.standardScale || newConfig.robustScale) {
+                                                        // Reset to "None" - the default valid option
+                                                        newConfig.meanCenter = false;
+                                                        newConfig.standardScale = false;
+                                                        newConfig.robustScale = false;
+                                                        newConfig.scaleOnly = false;
+                                                    }
+                                                    // scaleOnly is valid, so we keep it as-is
+                                                }
+                                                
+                                                setConfig(newConfig);
+                                            }}
                                             className="w-full px-3 py-2 bg-gray-100 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg text-gray-900 dark:text-white"
                                         >
                                             <option value="SVD">SVD</option>
@@ -682,24 +731,6 @@ function AppContent() {
                                     </HelpWrapper>
                                     
                                     {/* Diagnostic Metrics Option */}
-                                    {config.method !== 'kernel' && (
-                                        <HelpWrapper helpKey="diagnostic-metrics">
-                                            <label className="flex items-center gap-2">
-                                                <input
-                                                    type="checkbox"
-                                                    checked={config.calculateMetrics}
-                                                    onChange={(e) => setConfig({...config, calculateMetrics: e.target.checked})}
-                                                    className="w-4 h-4 text-blue-600 bg-gray-100 border-gray-300 rounded focus:ring-blue-500 dark:focus:ring-blue-600 dark:ring-offset-gray-800 focus:ring-2 dark:bg-gray-700 dark:border-gray-600"
-                                                />
-                                                <span className="text-sm font-medium text-gray-700 dark:text-gray-300">
-                                                    Calculate Diagnostic Metrics
-                                                </span>
-                                            </label>
-                                            <p className="text-xs text-gray-500 dark:text-gray-400 mt-1 ml-6">
-                                                Enable calculation of Mahalanobis distances, Hotelling's T², and residuals for outlier detection
-                                            </p>
-                                        </HelpWrapper>
-                                    )}
                                 </div>
                             </div>
                             
@@ -749,8 +780,7 @@ function AppContent() {
                                     </button>
                                 </div>
                                 <div className="space-y-2">
-                                    {pcaResponse.result.explained_variance.map((variance, i) => {
-                                        const percentage = variance;
+                                    {pcaResponse.result.explained_variance_ratio.map((percentage, i) => {
                                         return (
                                             <div key={i} className="flex justify-between">
                                                 <span>{pcaResponse.result?.component_labels?.[i] || `PC${i+1}`}:</span>
@@ -790,10 +820,13 @@ function AppContent() {
                                                             // Auto-switch palette mode based on column type
                                                             if (!value) {
                                                                 setMode('none');
+                                                                setShowEllipses(false);
                                                             } else if (fileData.numericTargetColumns && value in fileData.numericTargetColumns) {
                                                                 setMode('continuous');
+                                                                setShowEllipses(false); // Ellipses only work with categorical data
                                                             } else if (fileData.categoricalColumns && value in fileData.categoricalColumns) {
                                                                 setMode('categorical');
+                                                                // Keep current showEllipses state for categorical columns
                                                             }
                                                         }}
                                                         className="px-2 py-1 bg-gray-100 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded text-sm text-gray-900 dark:text-white"
@@ -824,7 +857,11 @@ function AppContent() {
                                                 {selectedGroupColumn && (
                                                     <PaletteSelector />
                                                 )}
-                                                {selectedPlot === 'scores' && selectedGroupColumn && (
+                                                {selectedPlot === 'scores' && 
+                                                 fileData.categoricalColumns && 
+                                                 Object.keys(fileData.categoricalColumns).length > 0 && 
+                                                 selectedGroupColumn && 
+                                                 getColumnData(selectedGroupColumn).type === 'categorical' && (
                                                     <>
                                                         <HelpWrapper helpKey="confidence-ellipses" className="flex items-center gap-2">
                                                             <label className="text-sm text-gray-600 dark:text-gray-400">
@@ -866,7 +903,7 @@ function AppContent() {
                                                     >
                                                         {pcaResponse.result.component_labels?.map((label, i) => (
                                                             <option key={i} value={i}>
-                                                                {label} ({pcaResponse.result!.explained_variance[i].toFixed(1)}%)
+                                                                {label} ({pcaResponse.result!.explained_variance_ratio[i].toFixed(1)}%)
                                                             </option>
                                                         ))}
                                                     </select>
@@ -880,7 +917,7 @@ function AppContent() {
                                                     >
                                                         {pcaResponse.result.component_labels?.map((label, i) => (
                                                             <option key={i} value={i}>
-                                                                {label} ({pcaResponse.result!.explained_variance[i].toFixed(1)}%)
+                                                                {label} ({pcaResponse.result!.explained_variance_ratio[i].toFixed(1)}%)
                                                             </option>
                                                         ))}
                                                     </select>
@@ -897,7 +934,7 @@ function AppContent() {
                                                 >
                                                     {pcaResponse.result?.component_labels?.map((label, i) => (
                                                         <option key={i} value={i}>
-                                                            {label} ({pcaResponse.result!.explained_variance[i].toFixed(1)}%)
+                                                            {label} ({pcaResponse.result!.explained_variance_ratio[i].toFixed(1)}%)
                                                         </option>
                                                     ))}
                                                 </select>
@@ -906,7 +943,7 @@ function AppContent() {
                                         <HelpWrapper helpKey={`${selectedPlot}-plot`}>
                                             <select
                                                 value={selectedPlot}
-                                                onChange={(e) => setSelectedPlot(e.target.value as 'scores' | 'scree' | 'loadings' | 'biplot' | 'correlations' | 'diagnostics')}
+                                                onChange={(e) => setSelectedPlot(e.target.value as 'scores' | 'scree' | 'loadings' | 'biplot' | 'correlations' | 'diagnostics' | 'eigencorrelation')}
                                                 className="px-3 py-2 bg-gray-100 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg text-gray-900 dark:text-white"
                                             >
                                                 <option value="scores">Scores Plot</option>
@@ -915,6 +952,7 @@ function AppContent() {
                                                 <option value="biplot">Biplot</option>
                                                 <option value="correlations">Circle of Correlations</option>
                                                 <option value="diagnostics">Diagnostics (Mahalanobis vs RSS)</option>
+                                                <option value="eigencorrelation">Eigencorrelation Plot</option>
                                             </select>
                                         </HelpWrapper>
                                     </div>
@@ -937,6 +975,7 @@ function AppContent() {
                                                 pcaResponse.groupEllipses99
                                             }
                                             showEllipses={showEllipses && !!selectedGroupColumn && getColumnData(selectedGroupColumn).type === 'categorical'}
+                                            confidenceLevel={confidenceLevel}
                                         />
                                     ) : selectedPlot === 'scree' ? (
                                         <ScreePlot
@@ -948,6 +987,7 @@ function AppContent() {
                                         <LoadingsPlot
                                             pcaResult={pcaResponse.result}
                                             selectedComponent={selectedLoadingComponent}
+                                            variableThreshold={guiConfig?.visualization?.loadings_variable_threshold || 100}
                                         />
                                     ) : selectedPlot === 'biplot' ? (
                                         <Biplot
@@ -959,17 +999,24 @@ function AppContent() {
                                             groupLabels={getColumnData(selectedGroupColumn).type === 'categorical' ? getColumnData(selectedGroupColumn).values as string[] : undefined}
                                             groupValues={getColumnData(selectedGroupColumn).type === 'continuous' ? getColumnData(selectedGroupColumn).values as number[] : undefined}
                                             groupType={getColumnData(selectedGroupColumn).type}
+                                            maxVariables={guiConfig?.visualization?.biplot_max_variables || 100}
                                         />
                                     ) : selectedPlot === 'correlations' ? (
                                         <CircleOfCorrelations
                                             pcaResult={pcaResponse.result}
                                             xComponent={selectedXComponent}
                                             yComponent={selectedYComponent}
+                                            maxVariables={guiConfig?.visualization?.circle_max_variables || 100}
                                         />
                                     ) : selectedPlot === 'diagnostics' ? (
                                         <DiagnosticScatterPlot
                                             pcaResult={pcaResponse.result}
                                             rowNames={fileData?.rowNames || []}
+                                        />
+                                    ) : selectedPlot === 'eigencorrelation' ? (
+                                        <EigencorrelationPlot
+                                            pcaResult={pcaResponse.result}
+                                            fileData={fileData!}
                                         />
                                     ) : (
                                         <div className="w-full h-full flex items-center justify-center text-gray-500 dark:text-gray-400">

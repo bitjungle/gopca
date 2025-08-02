@@ -249,14 +249,19 @@ func TestKernelPCA_FitTransform(t *testing.T) {
 		t.Errorf("Expected %d scores, got %d", len(data), len(result.Scores))
 	}
 
-	// Check explained variance adds up
+	// Check explained variance is reasonable (should be less than 100% for subset of components)
 	totalExplained := 0.0
 	for _, v := range result.ExplainedVarRatio {
 		totalExplained += v
 	}
 
-	if math.Abs(totalExplained-100.0) > 0.1 {
-		t.Errorf("Explained variance ratios should sum to 100%%, got %.2f%%", totalExplained)
+	if totalExplained > 100.0 {
+		t.Errorf("Explained variance ratios should not exceed 100%%, got %.2f%%", totalExplained)
+	}
+
+	// For 2 components out of many samples, explained variance should be less than 100%
+	if totalExplained > 99.0 {
+		t.Errorf("Expected explained variance for 2 components to be less than 99%%, got %.2f%%", totalExplained)
 	}
 }
 
@@ -308,6 +313,59 @@ func TestKernelPCA_MoreComponentsThanSamples(t *testing.T) {
 	_, err := engine.Fit(data, config)
 	if err == nil {
 		t.Error("Expected error when components exceed samples")
+	}
+}
+
+func TestKernelPCA_ExplainedVarianceCalculation(t *testing.T) {
+	// Test that explained variance is calculated correctly
+	// Using all eigenvalues, not just selected components
+	engine := NewKernelPCAEngine()
+
+	// Create a dataset with enough samples to test variance calculation
+	data := types.Matrix{
+		{1.0, 2.0, 3.0},
+		{2.0, 3.0, 4.0},
+		{3.0, 4.0, 5.0},
+		{4.0, 5.0, 6.0},
+		{5.0, 6.0, 7.0},
+		{6.0, 7.0, 8.0},
+		{7.0, 8.0, 9.0},
+		{8.0, 9.0, 10.0},
+		{9.0, 10.0, 11.0},
+		{10.0, 11.0, 12.0},
+	}
+
+	config := types.PCAConfig{
+		Components:  2, // Select only 2 components
+		Method:      "kernel",
+		KernelType:  "rbf",
+		KernelGamma: 0.1,
+	}
+
+	result, err := engine.Fit(data, config)
+	if err != nil {
+		t.Fatalf("Failed to fit: %v", err)
+	}
+
+	// Check that individual variance ratios are reasonable
+	for i, ratio := range result.ExplainedVarRatio {
+		if ratio > 100.0 {
+			t.Errorf("Component %d has explained variance ratio > 100%%: %.2f%%", i+1, ratio)
+		}
+		if ratio < 0.0 {
+			t.Errorf("Component %d has negative explained variance ratio: %.2f%%", i+1, ratio)
+		}
+	}
+
+	// Check cumulative variance
+	totalVar := result.CumulativeVar[len(result.CumulativeVar)-1]
+	if totalVar > 100.0 {
+		t.Errorf("Cumulative variance exceeds 100%%: %.2f%%", totalVar)
+	}
+
+	// For 2 components out of 10 samples, we expect much less than 100%
+	if totalVar > 80.0 {
+		t.Logf("Warning: Cumulative variance for 2 components is %.2f%%, which seems high", totalVar)
 	}
 }
 

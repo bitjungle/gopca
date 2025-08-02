@@ -12,6 +12,7 @@ import (
 	"strings"
 
 	"github.com/bitjungle/gopca/internal/cli"
+	"github.com/bitjungle/gopca/internal/config"
 	"github.com/bitjungle/gopca/internal/core"
 	"github.com/bitjungle/gopca/internal/datasets"
 	"github.com/bitjungle/gopca/internal/utils"
@@ -42,6 +43,118 @@ func (a *App) GetVersion() string {
 	return version.Get().Short()
 }
 
+// CalculateEllipsesRequest represents a request to calculate confidence ellipses
+type CalculateEllipsesRequest struct {
+	Scores      [][]float64 `json:"scores"`
+	GroupLabels []string    `json:"groupLabels"`
+	XComponent  int         `json:"xComponent"`
+	YComponent  int         `json:"yComponent"`
+}
+
+// CalculateEllipsesResponse represents the response with calculated ellipses
+type CalculateEllipsesResponse struct {
+	GroupEllipses90 map[string]EllipseParams `json:"groupEllipses90"`
+	GroupEllipses95 map[string]EllipseParams `json:"groupEllipses95"`
+	GroupEllipses99 map[string]EllipseParams `json:"groupEllipses99"`
+	Success         bool                     `json:"success"`
+	Error           string                   `json:"error,omitempty"`
+}
+
+// CalculateEllipses calculates confidence ellipses for given scores and groups
+func (a *App) CalculateEllipses(request CalculateEllipsesRequest) CalculateEllipsesResponse {
+	// Validate input
+	if len(request.Scores) == 0 || len(request.GroupLabels) == 0 {
+		return CalculateEllipsesResponse{
+			Success: false,
+			Error:   "Invalid input: scores and group labels are required",
+		}
+	}
+
+	if len(request.Scores) != len(request.GroupLabels) {
+		return CalculateEllipsesResponse{
+			Success: false,
+			Error:   fmt.Sprintf("Scores and group labels must have the same length (scores: %d, labels: %d)", len(request.Scores), len(request.GroupLabels)),
+		}
+	}
+
+	// Validate scores structure
+	if len(request.Scores[0]) == 0 {
+		return CalculateEllipsesResponse{
+			Success: false,
+			Error:   "Scores matrix has no columns",
+		}
+	}
+
+	// Check component indices
+	maxComponent := len(request.Scores[0]) - 1
+	if request.XComponent < 0 || request.XComponent > maxComponent || request.YComponent < 0 || request.YComponent > maxComponent {
+		return CalculateEllipsesResponse{
+			Success: false,
+			Error:   fmt.Sprintf("Component indices out of bounds (x: %d, y: %d, max: %d)", request.XComponent, request.YComponent, maxComponent),
+		}
+	}
+
+	// Convert scores to matrix
+	scoresMatrix := mat.NewDense(len(request.Scores), len(request.Scores[0]), nil)
+	for i, row := range request.Scores {
+		for j, val := range row {
+			scoresMatrix.Set(i, j, val)
+		}
+	}
+
+	// Calculate ellipses for all three confidence levels
+	response := CalculateEllipsesResponse{
+		Success:         true,
+		GroupEllipses90: make(map[string]EllipseParams),
+		GroupEllipses95: make(map[string]EllipseParams),
+		GroupEllipses99: make(map[string]EllipseParams),
+	}
+
+	confidenceLevels := []float64{0.90, 0.95, 0.99}
+	allErrors := []string{}
+	for _, confidenceLevel := range confidenceLevels {
+		coreEllipses, err := core.CalculateGroupEllipses(scoresMatrix, request.GroupLabels, request.XComponent, request.YComponent, confidenceLevel)
+		if err != nil {
+			// Log error but continue with other confidence levels
+			allErrors = append(allErrors, fmt.Sprintf("%.0f%%: %v", confidenceLevel*100, err))
+		}
+		if err == nil && len(coreEllipses) > 0 {
+			ellipses := make(map[string]EllipseParams)
+			for group, ellipse := range coreEllipses {
+				ellipses[group] = EllipseParams{
+					CenterX:         ellipse.CenterX,
+					CenterY:         ellipse.CenterY,
+					MajorAxis:       ellipse.MajorAxis,
+					MinorAxis:       ellipse.MinorAxis,
+					Angle:           ellipse.Angle,
+					ConfidenceLevel: ellipse.ConfidenceLevel,
+				}
+			}
+
+			switch confidenceLevel {
+			case 0.90:
+				response.GroupEllipses90 = ellipses
+			case 0.95:
+				response.GroupEllipses95 = ellipses
+			case 0.99:
+				response.GroupEllipses99 = ellipses
+			}
+		}
+	}
+
+	// If we have some ellipses but also some errors, include a warning
+	if len(allErrors) > 0 && (len(response.GroupEllipses90) > 0 || len(response.GroupEllipses95) > 0 || len(response.GroupEllipses99) > 0) {
+		// Some ellipses were calculated successfully, just log warnings
+		fmt.Printf("Warning: Some ellipse calculations failed: %v\n", allErrors)
+	} else if len(allErrors) > 0 && len(response.GroupEllipses90) == 0 && len(response.GroupEllipses95) == 0 && len(response.GroupEllipses99) == 0 {
+		// No ellipses were calculated
+		response.Success = false
+		response.Error = fmt.Sprintf("Failed to calculate any ellipses: %v", allErrors)
+	}
+
+	return response
+}
+
 // FileData represents the structure of CSV data for the frontend
 type FileData struct {
 	Headers              []string             `json:"headers"`
@@ -54,22 +167,21 @@ type FileData struct {
 
 // PCARequest represents a PCA analysis request from the frontend
 type PCARequest struct {
-	Data             [][]float64 `json:"data"`
-	MissingMask      [][]bool    `json:"missingMask,omitempty"`
-	Headers          []string    `json:"headers"`
-	RowNames         []string    `json:"rowNames"`
-	Components       int         `json:"components"`
-	MeanCenter       bool        `json:"meanCenter"`
-	StandardScale    bool        `json:"standardScale"`
-	RobustScale      bool        `json:"robustScale"`
-	ScaleOnly        bool        `json:"scaleOnly"`
-	SNV              bool        `json:"snv"`
-	VectorNorm       bool        `json:"vectorNorm"`
-	Method           string      `json:"method"`
-	ExcludedRows     []int       `json:"excludedRows,omitempty"`
-	ExcludedColumns  []int       `json:"excludedColumns,omitempty"`
-	MissingStrategy  string      `json:"missingStrategy,omitempty"`
-	CalculateMetrics bool        `json:"calculateMetrics,omitempty"`
+	Data            [][]float64 `json:"data"`
+	MissingMask     [][]bool    `json:"missingMask,omitempty"`
+	Headers         []string    `json:"headers"`
+	RowNames        []string    `json:"rowNames"`
+	Components      int         `json:"components"`
+	MeanCenter      bool        `json:"meanCenter"`
+	StandardScale   bool        `json:"standardScale"`
+	RobustScale     bool        `json:"robustScale"`
+	ScaleOnly       bool        `json:"scaleOnly"`
+	SNV             bool        `json:"snv"`
+	VectorNorm      bool        `json:"vectorNorm"`
+	Method          string      `json:"method"`
+	ExcludedRows    []int       `json:"excludedRows,omitempty"`
+	ExcludedColumns []int       `json:"excludedColumns,omitempty"`
+	MissingStrategy string      `json:"missingStrategy,omitempty"`
 	// Kernel PCA parameters
 	KernelType   string  `json:"kernelType,omitempty"`
 	KernelGamma  float64 `json:"kernelGamma,omitempty"`
@@ -78,6 +190,10 @@ type PCARequest struct {
 	// Grouping parameters for confidence ellipses
 	GroupColumn string   `json:"groupColumn,omitempty"`
 	GroupLabels []string `json:"groupLabels,omitempty"`
+	// Metadata for eigencorrelations
+	MetadataNumeric            map[string][]float64 `json:"metadataNumeric,omitempty"`
+	MetadataCategorical        map[string][]string  `json:"metadataCategorical,omitempty"`
+	CalculateEigencorrelations bool                 `json:"calculateEigencorrelations,omitempty"`
 }
 
 // EllipseParams represents confidence ellipse parameters for a group
@@ -350,15 +466,32 @@ func (a *App) RunPCA(request PCARequest) (response PCAResponse) {
 	}
 	result.VariableLabels = filteredHeaders
 
-	// Calculate diagnostic metrics if requested
-	if request.CalculateMetrics && strings.ToLower(request.Method) != "kernel" {
+	// Calculate diagnostic metrics (not applicable for Kernel PCA)
+	if strings.ToLower(request.Method) != "kernel" {
 		// For RSS calculation, we need to use data preprocessed exactly as it was for PCA fitting
 		// This ensures the data and reconstruction are in the same space
 		preprocessedData := dataToAnalyze
 
+		// Check if we're using NIPALS with native missing value handling
+		usingNIPALSNativeMissing := strings.ToLower(request.Method) == "nipals" && request.MissingStrategy == "native"
+
 		// Apply the same preprocessing that was used for PCA
-		if config.MeanCenter || config.StandardScale || config.RobustScale || config.ScaleOnly || config.SNV || config.VectorNorm {
-			// Create preprocessor with the same settings used for PCA
+		// IMPORTANT: For NIPALS with native missing values, only mean centering is applied internally
+		// Other preprocessing options are ignored
+		if usingNIPALSNativeMissing {
+			// For NIPALS with native missing values, only mean center (handled internally by NIPALS)
+			// We need to apply the same mean centering here for RSS calculation
+			if config.MeanCenter {
+				preprocessor := core.NewPreprocessorWithScaleOnly(true, false, false, false, false, false)
+				var err error
+				preprocessedData, err = preprocessor.FitTransform(dataToAnalyze)
+				if err != nil {
+					fmt.Printf("Warning: failed to preprocess data for metrics: %v\n", err)
+					preprocessedData = dataToAnalyze
+				}
+			}
+		} else if config.MeanCenter || config.StandardScale || config.RobustScale || config.ScaleOnly || config.SNV || config.VectorNorm {
+			// For other methods, apply full preprocessing
 			preprocessor := core.NewPreprocessorWithScaleOnly(config.MeanCenter, config.StandardScale, config.RobustScale, config.ScaleOnly, config.SNV, config.VectorNorm)
 			var err error
 			preprocessedData, err = preprocessor.FitTransform(dataToAnalyze)
@@ -384,10 +517,49 @@ func (a *App) RunPCA(request PCARequest) (response PCAResponse) {
 			// Calculate T² limits
 			result.T2Limit95, result.T2Limit99 = calculator.CalculateT2Limits()
 
-			// For Q limits calculation, we need all eigenvalues including non-retained ones
-			// Since we don't have them in the current implementation, we'll use a simplified approach
-			result.QLimit95 = 0.0
-			result.QLimit99 = 0.0
+			// Calculate Q limits using all eigenvalues
+			if result.AllEigenvalues != nil && len(result.AllEigenvalues) > result.ComponentsComputed {
+				result.QLimit95, result.QLimit99 = calculator.CalculateQLimits(result.AllEigenvalues, len(result.AllEigenvalues))
+			} else {
+				// If we don't have all eigenvalues, set to 0
+				result.QLimit95 = 0.0
+				result.QLimit99 = 0.0
+			}
+		}
+	}
+
+	// Calculate eigencorrelations if requested
+	if request.CalculateEigencorrelations && (len(request.MetadataNumeric) > 0 || len(request.MetadataCategorical) > 0) {
+
+		// Convert scores to mat.Matrix
+		scoresMatrix := mat.NewDense(len(result.Scores), len(result.Scores[0]), nil)
+		for i, row := range result.Scores {
+			for j, val := range row {
+				scoresMatrix.Set(i, j, val)
+			}
+		}
+
+		// Create correlation request
+		corrRequest := core.CorrelationRequest{
+			Scores:              scoresMatrix,
+			MetadataNumeric:     request.MetadataNumeric,
+			MetadataCategorical: request.MetadataCategorical,
+			Components:          nil,       // Use all components
+			Method:              "pearson", // Default to Pearson
+		}
+
+		// Calculate correlations
+		corrResult, err := core.CalculateEigencorrelations(corrRequest)
+		if err != nil {
+			fmt.Printf("Warning: failed to calculate eigencorrelations: %v\n", err)
+		} else {
+			result.Eigencorrelations = &types.EigencorrelationResult{
+				Correlations: corrResult.Correlations,
+				PValues:      corrResult.PValues,
+				Variables:    corrResult.Variables,
+				Components:   corrResult.Components,
+				Method:       "pearson",
+			}
 		}
 	}
 
@@ -728,16 +900,15 @@ func (a *App) LoadDatasetFile(filename string) (*FileDataJSON, error) {
 
 // PCAConfig represents PCA configuration from the frontend
 type PCAConfig struct {
-	Components       int    `json:"components"`
-	MeanCenter       bool   `json:"meanCenter"`
-	StandardScale    bool   `json:"standardScale"`
-	RobustScale      bool   `json:"robustScale"`
-	ScaleOnly        bool   `json:"scaleOnly"`
-	SNV              bool   `json:"snv"`
-	VectorNorm       bool   `json:"vectorNorm"`
-	Method           string `json:"method"`
-	MissingStrategy  string `json:"missingStrategy"`
-	CalculateMetrics bool   `json:"calculateMetrics"`
+	Components      int    `json:"components"`
+	MeanCenter      bool   `json:"meanCenter"`
+	StandardScale   bool   `json:"standardScale"`
+	RobustScale     bool   `json:"robustScale"`
+	ScaleOnly       bool   `json:"scaleOnly"`
+	SNV             bool   `json:"snv"`
+	VectorNorm      bool   `json:"vectorNorm"`
+	Method          string `json:"method"`
+	MissingStrategy string `json:"missingStrategy"`
 	// Kernel PCA parameters
 	KernelType   string  `json:"kernelType,omitempty"`
 	KernelGamma  float64 `json:"kernelGamma,omitempty"`
@@ -837,4 +1008,9 @@ func (a *App) ExportPCAModel(request ExportPCAModelRequest) error {
 	}
 
 	return nil
+}
+
+// GetGUIConfig returns the GUI configuration
+func (a *App) GetGUIConfig() *config.GUIConfig {
+	return config.DefaultGUIConfig()
 }

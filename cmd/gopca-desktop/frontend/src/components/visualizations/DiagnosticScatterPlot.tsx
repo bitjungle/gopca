@@ -21,29 +21,37 @@ import { useChartTheme } from '../../hooks/useChartTheme';
 interface DiagnosticScatterPlotProps {
   pcaResult: PCAResult;
   rowNames?: string[];
-  mahalanobisThreshold?: number;
-  rssThreshold?: number;
+  confidenceLevel?: '95' | '99';
 }
 
 export const DiagnosticScatterPlot: React.FC<DiagnosticScatterPlotProps> = ({ 
   pcaResult,
   rowNames = [],
-  mahalanobisThreshold = 3.0,  // Default threshold for Mahalanobis distance
-  rssThreshold = 0.03           // Default threshold for RSS (adjusted for typical RSS scale)
+  confidenceLevel: initialConfidenceLevel = '95'
 }) => {
   const chartRef = useRef<HTMLDivElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
   const [isFullscreen, setIsFullscreen] = useState(false);
+  const [confidenceLevel, setConfidenceLevel] = useState<'95' | '99'>(initialConfidenceLevel);
   const chartTheme = useChartTheme();
   
   // Check if metrics are available
   if (!pcaResult.metrics || pcaResult.metrics.length === 0) {
     return (
       <div className="w-full h-full flex items-center justify-center text-gray-400">
-        <p>Diagnostic metrics are not available. Enable metrics calculation in PCA configuration.</p>
+        <p>Diagnostic metrics are not available for Kernel PCA.</p>
       </div>
     );
   }
+
+  // Use calculated confidence limits from PCA result, or fallback to defaults
+  const mahalanobisThreshold = confidenceLevel === '95' 
+    ? (pcaResult.t2_limit_95 || 3.0) 
+    : (pcaResult.t2_limit_99 || 3.0);
+  
+  const rssThreshold = confidenceLevel === '95'
+    ? (pcaResult.q_limit_95 || 0.03)
+    : (pcaResult.q_limit_99 || 0.03);
 
   // Prepare data for scatter plot
   const data = pcaResult.metrics.map((metric, index) => {
@@ -147,7 +155,20 @@ export const DiagnosticScatterPlot: React.FC<DiagnosticScatterPlotProps> = ({
           <h4 className="text-md font-medium text-gray-700 dark:text-gray-300">
             Diagnostic Plot: Mahalanobis Distance vs Residual Sum of Squares
           </h4>
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-4">
+            {/* Confidence Level Selector */}
+            <div className="flex items-center gap-2">
+              <label className="text-sm text-gray-600 dark:text-gray-400">Confidence Level:</label>
+              <select
+                value={confidenceLevel}
+                onChange={(e) => setConfidenceLevel(e.target.value as '95' | '99')}
+                className="px-2 py-1 text-sm border rounded focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white dark:bg-gray-800 border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300"
+              >
+                <option value="95">95%</option>
+                <option value="99">99%</option>
+              </select>
+            </div>
+            <div className="flex items-center gap-2">
             <PlotControls
               onZoomIn={handleZoomIn}
               onZoomOut={handleZoomOut}
@@ -159,6 +180,7 @@ export const DiagnosticScatterPlot: React.FC<DiagnosticScatterPlotProps> = ({
               chartRef={chartRef} 
               fileName="diagnostic-plot-mahalanobis-rss"
             />
+            </div>
           </div>
         </div>
 
@@ -206,7 +228,7 @@ export const DiagnosticScatterPlot: React.FC<DiagnosticScatterPlotProps> = ({
                 strokeWidth={2}
               >
                 <Label 
-                  value="RSS Threshold" 
+                  value={`Q-limit (${confidenceLevel}%)`} 
                   position="top"
                   style={{ fill: '#EF4444', fontSize: 12 }}
                 />
@@ -219,7 +241,7 @@ export const DiagnosticScatterPlot: React.FC<DiagnosticScatterPlotProps> = ({
                 strokeWidth={2}
               >
                 <Label 
-                  value="Mahalanobis Threshold" 
+                  value={`T² limit (${confidenceLevel}%)`} 
                   position="right"
                   angle={-90}
                   style={{ fill: '#EF4444', fontSize: 12 }}
@@ -264,6 +286,9 @@ export const DiagnosticScatterPlot: React.FC<DiagnosticScatterPlotProps> = ({
         <div className="mt-2 text-xs text-gray-500 dark:text-gray-400 text-center">
           Points in different quadrants indicate different types of outliers. 
           Top-right quadrant contains samples that are both outliers in the model space and have poor reconstruction.
+          {(pcaResult.t2_limit_95 || pcaResult.q_limit_95) && (
+            <span> Confidence limits are statistically calculated based on the F and χ² distributions.</span>
+          )}
         </div>
       </div>
     </div>

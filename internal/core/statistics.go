@@ -101,8 +101,22 @@ func chiSquareValue(confidenceLevel float64, df int) float64 {
 // pcX and pcY are the indices of the principal components to use (0-based).
 func CalculateGroupEllipses(scores mat.Matrix, groups []string, pcX, pcY int, confidenceLevel float64) (map[string]EllipseParams, error) {
 	rows, cols := scores.Dims()
-	if pcX >= cols || pcY >= cols {
-		return nil, fmt.Errorf("PC indices out of bounds")
+
+	// Validate inputs
+	if scores == nil {
+		return nil, fmt.Errorf("scores matrix is nil")
+	}
+	if len(groups) == 0 {
+		return nil, fmt.Errorf("groups slice is empty")
+	}
+	if len(groups) != rows {
+		return nil, fmt.Errorf("groups length (%d) does not match scores rows (%d)", len(groups), rows)
+	}
+	if pcX >= cols || pcY >= cols || pcX < 0 || pcY < 0 {
+		return nil, fmt.Errorf("PC indices out of bounds: pcX=%d, pcY=%d, cols=%d", pcX, pcY, cols)
+	}
+	if confidenceLevel <= 0 || confidenceLevel >= 1 {
+		return nil, fmt.Errorf("confidence level must be between 0 and 1, got %f", confidenceLevel)
 	}
 
 	// Group the data
@@ -113,6 +127,19 @@ func CalculateGroupEllipses(scores mat.Matrix, groups []string, pcX, pcY int, co
 
 	for i := 0; i < rows; i++ {
 		group := groups[i]
+		// Skip empty group labels
+		if group == "" {
+			continue
+		}
+
+		xVal := scores.At(i, pcX)
+		yVal := scores.At(i, pcY)
+
+		// Skip invalid values
+		if math.IsNaN(xVal) || math.IsInf(xVal, 0) || math.IsNaN(yVal) || math.IsInf(yVal, 0) {
+			continue
+		}
+
 		if _, exists := groupData[group]; !exists {
 			groupData[group] = &struct {
 				x []float64
@@ -122,21 +149,37 @@ func CalculateGroupEllipses(scores mat.Matrix, groups []string, pcX, pcY int, co
 				y: make([]float64, 0),
 			}
 		}
-		groupData[group].x = append(groupData[group].x, scores.At(i, pcX))
-		groupData[group].y = append(groupData[group].y, scores.At(i, pcY))
+		groupData[group].x = append(groupData[group].x, xVal)
+		groupData[group].y = append(groupData[group].y, yVal)
+	}
+
+	// Check if we have any groups
+	if len(groupData) == 0 {
+		return nil, fmt.Errorf("no valid groups found in data")
 	}
 
 	// Calculate ellipse for each group
 	ellipses := make(map[string]EllipseParams)
+	skippedGroups := 0
 	for group, data := range groupData {
 		if len(data.x) < 3 {
 			// Skip groups with too few points
+			skippedGroups++
 			continue
 		}
 
 		centerX, centerY, majorAxis, minorAxis, angle, err := CalculateConfidenceEllipse(data.x, data.y, confidenceLevel)
 		if err != nil {
 			// Skip this group if ellipse calculation fails
+			skippedGroups++
+			continue
+		}
+
+		// Validate ellipse parameters
+		if math.IsNaN(centerX) || math.IsNaN(centerY) || math.IsNaN(majorAxis) || math.IsNaN(minorAxis) || math.IsNaN(angle) ||
+			math.IsInf(centerX, 0) || math.IsInf(centerY, 0) || math.IsInf(majorAxis, 0) || math.IsInf(minorAxis, 0) || math.IsInf(angle, 0) ||
+			majorAxis <= 0 || minorAxis <= 0 {
+			skippedGroups++
 			continue
 		}
 
@@ -148,6 +191,11 @@ func CalculateGroupEllipses(scores mat.Matrix, groups []string, pcX, pcY int, co
 			Angle:           angle,
 			ConfidenceLevel: confidenceLevel,
 		}
+	}
+
+	// If all groups were skipped, return an error
+	if skippedGroups == len(groupData) {
+		return nil, fmt.Errorf("could not calculate ellipses for any group")
 	}
 
 	return ellipses, nil

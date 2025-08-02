@@ -29,6 +29,7 @@ interface BiplotProps {
   groupLabels?: string[];
   groupValues?: number[]; // For continuous columns
   groupType?: 'categorical' | 'continuous';
+  maxVariables?: number; // Maximum number of variables to display
 }
 
 export const Biplot: React.FC<BiplotProps> = ({ 
@@ -40,7 +41,8 @@ export const Biplot: React.FC<BiplotProps> = ({
   groupColumn,
   groupLabels,
   groupValues,
-  groupType = 'categorical'
+  groupType = 'categorical',
+  maxVariables = 100
 }) => {
   const [hoveredVariable, setHoveredVariable] = useState<number | null>(null);
   const chartRef = useRef<HTMLDivElement>(null);
@@ -71,7 +73,7 @@ export const Biplot: React.FC<BiplotProps> = ({
   // Calculate min/max for continuous values
   const continuousRange = useMemo(() => {
     if (groupType === 'continuous' && groupValues) {
-      const validValues = groupValues.filter(v => !isNaN(v) && isFinite(v));
+      const validValues = groupValues.filter(v => v !== null && v !== undefined && !isNaN(v) && isFinite(v));
       if (validValues.length > 0) {
         return {
           min: Math.min(...validValues),
@@ -87,18 +89,29 @@ export const Biplot: React.FC<BiplotProps> = ({
     let color = '#3B82F6'; // Default color
     let group = 'Unknown';
     let value: number | undefined;
+    const MISSING_VALUE_COLOR = '#9CA3AF'; // Gray color for missing values
     
     if (groupType === 'categorical') {
-      group = groupLabels?.[index] || 'Unknown';
-      if (group && groupColorMap) {
-        color = groupColorMap.get(group) || color;
+      const labelValue = groupLabels?.[index];
+      if (!labelValue || labelValue === '') {
+        group = 'Missing';
+        color = MISSING_VALUE_COLOR;
+      } else {
+        group = labelValue;
+        if (groupColorMap) {
+          color = groupColorMap.get(group) || color;
+        }
       }
-    } else if (groupType === 'continuous' && groupValues && continuousRange) {
+    } else if (groupType === 'continuous' && groupValues) {
       const val = groupValues[index];
       value = val;
-      if (!isNaN(val) && isFinite(val)) {
+      if (val !== null && val !== undefined && !isNaN(val) && isFinite(val) && continuousRange) {
         color = getSequentialColorScale(val, continuousRange.min, continuousRange.max, sequentialPalette);
         group = val.toFixed(2); // For display purposes
+      } else {
+        // Handle missing values explicitly
+        color = MISSING_VALUE_COLOR;
+        group = 'Missing';
       }
     }
     
@@ -148,14 +161,14 @@ export const Biplot: React.FC<BiplotProps> = ({
   const scaleFactor = maxLoadingMagnitude > 0 ? (plotMax * 0.7) / maxLoadingMagnitude : 1;
 
   // Transform loadings data for display
-  const loadingsData = pcaResult.loadings.map((row, index) => {
+  const allLoadingsData = pcaResult.loadings.map((row, index) => {
     const originalX = row[xComponent] || 0;
     const originalY = row[yComponent] || 0;
     
     // Scale loadings to be visible
     const scaledX = originalX * scaleFactor;
     const scaledY = originalY * scaleFactor;
-    const magnitude = Math.sqrt(scaledX * scaledX + scaledY * scaledY);
+    const magnitude = Math.sqrt(originalX * originalX + originalY * originalY); // Use original magnitude for filtering
     
     return {
       index,
@@ -167,6 +180,16 @@ export const Biplot: React.FC<BiplotProps> = ({
       originalY
     };
   });
+
+  // Check if filtering is needed
+  const needsFiltering = pcaResult.loadings.length > maxVariables;
+  
+  // Filter loadings if needed
+  const loadingsData = needsFiltering
+    ? [...allLoadingsData]
+        .sort((a, b) => b.magnitude - a.magnitude)
+        .slice(0, maxVariables)
+    : allLoadingsData;
 
   // Sort loadings by magnitude and get top N for labeling
   const topLoadings = [...loadingsData]
@@ -231,8 +254,8 @@ export const Biplot: React.FC<BiplotProps> = ({
   }, []);
 
   // Get variance percentages for axis labels
-  const xVariance = pcaResult.explained_variance[xComponent]?.toFixed(1) || '0';
-  const yVariance = pcaResult.explained_variance[yComponent]?.toFixed(1) || '0';
+  const xVariance = pcaResult.explained_variance_ratio[xComponent]?.toFixed(1) || '0';
+  const yVariance = pcaResult.explained_variance_ratio[yComponent]?.toFixed(1) || '0';
   const xLabel = `PC${xComponent + 1} (${xVariance}%)`;
   const yLabel = `PC${yComponent + 1} (${yVariance}%)`;
 
@@ -366,6 +389,11 @@ export const Biplot: React.FC<BiplotProps> = ({
         <div className="flex items-center gap-4">
           <h4 className="text-md font-medium text-gray-700 dark:text-gray-300">
             Biplot: {xLabel} vs {yLabel}
+            {needsFiltering && (
+              <span className="ml-2 text-sm text-amber-600 dark:text-amber-400">
+                (showing top {maxVariables} of {pcaResult.loadings.length} variables)
+              </span>
+            )}
           </h4>
           {/* Group legend */}
           {groupColumn && groupType === 'categorical' && groupColorMap ? (
@@ -507,9 +535,12 @@ export const Biplot: React.FC<BiplotProps> = ({
             stroke="#1E40AF"
           >
             {groupColumn ? (
-              scoresData.map((entry, index) => (
-                <Cell key={`cell-${index}`} fill={entry.color} stroke={entry.color} />
-              ))
+              scoresData.map((entry, index) => {
+                const fillColor = entry?.color || '#3B82F6';
+                return (
+                  <Cell key={`cell-${index}`} fill={fillColor} stroke={fillColor} />
+                );
+              })
             ) : null}
           </Scatter>
           

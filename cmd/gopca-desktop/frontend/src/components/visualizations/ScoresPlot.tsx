@@ -7,6 +7,7 @@ import { useZoomPan } from '../../hooks/useZoomPan';
 import { useChartTheme } from '../../hooks/useChartTheme';
 import { usePalette } from '../../contexts/PaletteContext';
 import { getQualitativeColor, getSequentialColor, createQualitativeColorMap, getSequentialColorScale } from '../../utils/colorPalettes';
+import { useEllipses } from '../../hooks/useEllipses';
 
 interface ScoresPlotProps {
   pcaResult: PCAResult;
@@ -19,6 +20,7 @@ interface ScoresPlotProps {
   groupType?: 'categorical' | 'continuous';
   groupEllipses?: Record<string, EllipseParams>;
   showEllipses?: boolean;
+  confidenceLevel?: 0.90 | 0.95 | 0.99;
 }
 
 export const ScoresPlot: React.FC<ScoresPlotProps> = ({ 
@@ -31,7 +33,8 @@ export const ScoresPlot: React.FC<ScoresPlotProps> = ({
   groupValues,
   groupType = 'categorical',
   groupEllipses,
-  showEllipses = false
+  showEllipses = false,
+  confidenceLevel = 0.95
 }) => {
   const containerRef = useRef<HTMLDivElement>(null);
   const fullscreenRef = useRef<HTMLDivElement>(null);
@@ -49,17 +52,45 @@ export const ScoresPlot: React.FC<ScoresPlotProps> = ({
     return null;
   }, [groupLabels, groupColumn, qualitativePalette, groupType]);
   
+  // Calculate ellipses dynamically if not provided
+  const shouldCalculateEllipses = !!(showEllipses && groupType === 'categorical' && groupLabels && !groupEllipses);
+  const { 
+    ellipses90: dynamicEllipses90,
+    ellipses95: dynamicEllipses95,
+    ellipses99: dynamicEllipses99,
+    isLoading: ellipsesLoading,
+    error: ellipsesError
+  } = useEllipses({
+    scores: pcaResult.scores,
+    groupLabels: groupLabels || [],
+    xComponent,
+    yComponent,
+    enabled: shouldCalculateEllipses
+  });
+  
+  // Use provided ellipses or dynamically calculated ones based on confidence level
+  const effectiveGroupEllipses = groupEllipses || 
+    (showEllipses && (
+      confidenceLevel === 0.90 ? dynamicEllipses90 :
+      confidenceLevel === 0.95 ? dynamicEllipses95 :
+      dynamicEllipses99
+    )) || 
+    undefined;
+  
   // Calculate min/max for continuous values
   const continuousRange = useMemo(() => {
     if (groupType === 'continuous' && groupValues) {
-      const validValues = groupValues.filter(v => !isNaN(v) && isFinite(v));
+      const validValues = groupValues.filter(v => v !== null && v !== undefined && !isNaN(v) && isFinite(v));
+      console.log(`Continuous values - Total: ${groupValues.length}, Valid: ${validValues.length}`);
       if (validValues.length > 0) {
         const range = {
           min: Math.min(...validValues),
           max: Math.max(...validValues)
         };
+        console.log(`Range: min=${range.min}, max=${range.max}`);
         return range;
       }
+      console.log('No valid values found for continuous range');
     }
     return null;
   }, [groupValues, groupType]);
@@ -78,18 +109,29 @@ export const ScoresPlot: React.FC<ScoresPlotProps> = ({
     let color = '#3B82F6'; // Default color
     let group = 'Unknown';
     let value: number | undefined;
+    const MISSING_VALUE_COLOR = '#9CA3AF'; // Gray color for missing values
     
     if (groupType === 'categorical') {
-      group = groupLabels?.[index] || 'Unknown';
-      if (group && groupColorMap) {
-        color = groupColorMap.get(group) || color;
+      const labelValue = groupLabels?.[index];
+      if (!labelValue || labelValue === '') {
+        group = 'Missing';
+        color = MISSING_VALUE_COLOR;
+      } else {
+        group = labelValue;
+        if (groupColorMap) {
+          color = groupColorMap.get(group) || color;
+        }
       }
-    } else if (groupType === 'continuous' && groupValues && continuousRange) {
+    } else if (groupType === 'continuous' && groupValues) {
       const val = groupValues[index];
       value = val;
-      if (!isNaN(val) && isFinite(val)) {
+      if (val !== null && val !== undefined && !isNaN(val) && isFinite(val) && continuousRange) {
         color = getSequentialColorScale(val, continuousRange.min, continuousRange.max, sequentialPalette);
         group = val.toFixed(2); // For display purposes
+      } else {
+        // Handle missing values explicitly
+        color = MISSING_VALUE_COLOR;
+        group = 'Missing';
       }
     }
     
@@ -130,8 +172,8 @@ export const ScoresPlot: React.FC<ScoresPlotProps> = ({
   }, []);
 
   // Get variance percentages for axis labels
-  const xVariance = pcaResult.explained_variance[xComponent]?.toFixed(1) || '0';
-  const yVariance = pcaResult.explained_variance[yComponent]?.toFixed(1) || '0';
+  const xVariance = pcaResult.explained_variance_ratio[xComponent]?.toFixed(1) || '0';
+  const yVariance = pcaResult.explained_variance_ratio[yComponent]?.toFixed(1) || '0';
 
   const xLabel = `PC${xComponent + 1} (${xVariance}%)`;
   const yLabel = `PC${yComponent + 1} (${yVariance}%)`;
@@ -303,13 +345,27 @@ export const ScoresPlot: React.FC<ScoresPlotProps> = ({
         onMouseUp={handlePanEnd}
         onMouseLeave={handlePanEnd}
       >
+        {/* Show ellipse error if any */}
+        {showEllipses && ellipsesError && (
+          <div className="absolute top-2 left-2 bg-red-100 dark:bg-red-900 text-red-700 dark:text-red-200 px-3 py-1 rounded text-sm z-10">
+            {ellipsesError}
+          </div>
+        )}
+        
+        {/* Show loading indicator for ellipses */}
+        {showEllipses && ellipsesLoading && (
+          <div className="absolute top-2 left-2 bg-blue-100 dark:bg-blue-900 text-blue-700 dark:text-blue-200 px-3 py-1 rounded text-sm z-10">
+            Calculating ellipses...
+          </div>
+        )}
+        
         {/* SVG Overlay for confidence ellipses */}
-        {showEllipses && groupEllipses && groupColorMap && (
+        {showEllipses && effectiveGroupEllipses && groupColorMap && !ellipsesError && (
           <svg 
             className="absolute inset-0 pointer-events-none" 
             style={{ width: '100%', height: '100%' }}
           >
-            {Object.entries(groupEllipses).map(([group, ellipse]) => {
+            {Object.entries(effectiveGroupEllipses).map(([group, ellipse]) => {
               const color = groupColorMap.get(group) || '#888888';
               const points = generateEllipsePoints(ellipse);
               
@@ -423,9 +479,12 @@ export const ScoresPlot: React.FC<ScoresPlotProps> = ({
             stroke="#1E40AF"
           >
             {groupColumn ? (
-              data.map((entry, index) => (
-                <Cell key={`cell-${index}`} fill={entry!.color} stroke={entry!.color} />
-              ))
+              data.map((entry, index) => {
+                const fillColor = entry?.color || '#3B82F6';
+                return (
+                  <Cell key={`cell-${index}`} fill={fillColor} stroke={fillColor} />
+                );
+              })
             ) : null}
           </Scatter>
         </ComposedChart>

@@ -46,13 +46,10 @@ build/
 !cmd/gopca-desktop/build/icons/
 results/
 bin/
-gopca-cli
-gopca-desktop
 
 # Node modules
 node_modules/
 
-# Data files
-data/iris_metrics*
-data/*_pca_*.csv
-data/*_pca.json
+# Python 
+__pycache__/
+.venv/

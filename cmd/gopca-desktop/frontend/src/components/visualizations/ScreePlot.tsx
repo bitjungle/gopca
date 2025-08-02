@@ -181,7 +181,7 @@ export const ScreePlot: React.FC<ScreePlotProps> = ({
               stroke="#EF4444" 
               strokeDasharray="5 5"
               label={{ 
-                value: `${elbowThreshold}% threshold`, 
+                value: `${elbowThreshold}%`, 
                 position: 'right',
                 style: { fill: '#EF4444' }
               }}

@@ -14,6 +14,12 @@ type VisualizationConfig struct {
 	// Threshold for showing variables in loadings plot
 	LoadingsVariableThreshold int `json:"loadings_variable_threshold"`
 
+	// Maximum variables to display in biplot
+	BiplotMaxVariables int `json:"biplot_max_variables"`
+
+	// Maximum variables to display in circle of correlations
+	CircleMaxVariables int `json:"circle_max_variables"`
+
 	// Threshold for correlation circle
 	CorrelationThreshold float64 `json:"correlation_threshold"`
 
@@ -44,7 +50,9 @@ type UIConfig struct {
 func DefaultGUIConfig() *GUIConfig {
 	return &GUIConfig{
 		Visualization: VisualizationConfig{
-			LoadingsVariableThreshold: 50,
+			LoadingsVariableThreshold: 100,
+			BiplotMaxVariables:        100,
+			CircleMaxVariables:        100,
 			CorrelationThreshold:      0.3,
 			ElbowThreshold:            80.0,
 			MahalanobisThreshold:      3.0,
