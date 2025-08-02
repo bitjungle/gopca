@@ -75,6 +75,7 @@ func (p *PCAImpl) Fit(data types.Matrix, config types.PCAConfig) (*types.PCAResu
 
 	// Select PCA method
 	var scores, loadings *mat.Dense
+	var allEigenvalues []float64
 	var err error
 
 	// Check if we should use NIPALS with native missing value handling
@@ -94,12 +95,12 @@ func (p *PCAImpl) Fit(data types.Matrix, config types.PCAConfig) (*types.PCAResu
 
 	switch config.Method {
 	case "svd", "":
-		scores, loadings, err = p.svdAlgorithm(X, config.Components)
+		scores, loadings, allEigenvalues, err = p.svdAlgorithm(X, config.Components)
 	case "nipals":
 		if hasMissing && config.MissingStrategy == types.MissingNative {
-			scores, loadings, err = p.nipalsAlgorithmWithMissing(X, config.Components)
+			scores, loadings, allEigenvalues, err = p.nipalsAlgorithmWithMissing(X, config.Components)
 		} else {
-			scores, loadings, err = p.nipalsAlgorithm(X, config.Components)
+			scores, loadings, allEigenvalues, err = p.nipalsAlgorithm(X, config.Components)
 		}
 	default:
 		return nil, fmt.Errorf("unknown PCA method: %s", config.Method)
@@ -162,6 +163,7 @@ func (p *PCAImpl) Fit(data types.Matrix, config types.PCAConfig) (*types.PCAResu
 		PreprocessingApplied: config.MeanCenter || config.StandardScale || config.RobustScale,
 		Means:                means,
 		StdDevs:              stddevs,
+		AllEigenvalues:       allEigenvalues,
 	}, nil
 }
 
@@ -205,7 +207,7 @@ func (p *PCAImpl) FitTransform(data types.Matrix, config types.PCAConfig) (*type
 // nipalsAlgorithm implements the NIPALS (Nonlinear Iterative Partial Least Squares) algorithm for PCA
 // Reference: Wold, H. (1966). Estimation of principal components and related models by iterative least squares.
 // In P.R. Krishnaiah (Ed.), Multivariate Analysis (pp. 391-420). Academic Press.
-func (p *PCAImpl) nipalsAlgorithm(X *mat.Dense, nComponents int) (*mat.Dense, *mat.Dense, error) {
+func (p *PCAImpl) nipalsAlgorithm(X *mat.Dense, nComponents int) (*mat.Dense, *mat.Dense, []float64, error) {
 	n, m := X.Dims()
 
 	// Initialize matrices
@@ -271,14 +273,14 @@ func (p *PCAImpl) nipalsAlgorithm(X *mat.Dense, nComponents int) (*mat.Dense, *m
 			p.MulVec(Xwork.T(), t)
 			tNorm := mat.Dot(t, t)
 			if tNorm < tolerance {
-				return nil, nil, fmt.Errorf("score vector has zero variance at component %d", k+1)
+				return nil, nil, nil, fmt.Errorf("score vector has zero variance at component %d", k+1)
 			}
 			p.ScaleVec(1.0/tNorm, p)
 
 			// Normalize p
 			pNorm := math.Sqrt(mat.Dot(p, p))
 			if pNorm < tolerance {
-				return nil, nil, fmt.Errorf("loading vector has zero variance at component %d", k+1)
+				return nil, nil, nil, fmt.Errorf("loading vector has zero variance at component %d", k+1)
 			}
 			p.ScaleVec(1.0/pNorm, p)
 
@@ -297,7 +299,7 @@ func (p *PCAImpl) nipalsAlgorithm(X *mat.Dense, nComponents int) (*mat.Dense, *m
 		}
 
 		if !converged {
-			return nil, nil, fmt.Errorf("NIPALS did not converge for component %d", k+1)
+			return nil, nil, nil, fmt.Errorf("NIPALS did not converge for component %d", k+1)
 		}
 
 		// Store component
@@ -320,11 +322,54 @@ func (p *PCAImpl) nipalsAlgorithm(X *mat.Dense, nComponents int) (*mat.Dense, *m
 		Xwork.Sub(Xwork, deflation)
 	}
 
-	return T, P, nil
+	// Calculate eigenvalues from scores for retained components
+	// For NIPALS, eigenvalue = variance of the score vector
+	allEigenvalues := make([]float64, nComponents)
+	for i := 0; i < nComponents; i++ {
+		scoreCol := mat.Col(nil, i, T)
+		var eigenvalue float64
+		for _, v := range scoreCol {
+			eigenvalue += v * v
+		}
+		allEigenvalues[i] = eigenvalue / float64(n-1)
+	}
+
+	// Calculate residual variance to estimate eigenvalues for non-retained components
+	// The residual matrix Xwork contains what's left after extracting nComponents
+	// We estimate remaining eigenvalues based on the residual variance
+	if m > nComponents {
+		// Calculate total residual variance
+		var residualVar float64
+		for i := 0; i < n; i++ {
+			for j := 0; j < m; j++ {
+				val := Xwork.At(i, j)
+				residualVar += val * val
+			}
+		}
+		residualVar /= float64(n - 1)
+
+		// Estimate eigenvalues for non-retained components
+		// Distribute residual variance equally among remaining components
+		remainingComponents := m - nComponents
+		if remainingComponents > 0 {
+			// Extend eigenvalues array to include all possible components
+			extendedEigenvalues := make([]float64, m)
+			copy(extendedEigenvalues, allEigenvalues)
+
+			// Distribute residual variance among remaining components
+			avgResidualEigenvalue := residualVar / float64(remainingComponents)
+			for i := nComponents; i < m; i++ {
+				extendedEigenvalues[i] = avgResidualEigenvalue
+			}
+			allEigenvalues = extendedEigenvalues
+		}
+	}
+
+	return T, P, allEigenvalues, nil
 }
 
 // nipalsAlgorithmWithMissing implements NIPALS with native missing value handling
-func (p *PCAImpl) nipalsAlgorithmWithMissing(X *mat.Dense, nComponents int) (*mat.Dense, *mat.Dense, error) {
+func (p *PCAImpl) nipalsAlgorithmWithMissing(X *mat.Dense, nComponents int) (*mat.Dense, *mat.Dense, []float64, error) {
 	n, m := X.Dims()
 
 	// Initialize matrices
@@ -470,7 +515,7 @@ func (p *PCAImpl) nipalsAlgorithmWithMissing(X *mat.Dense, nComponents int) (*ma
 			}
 			pNorm = math.Sqrt(pNorm)
 			if pNorm < tolerance {
-				return nil, nil, fmt.Errorf("loading vector has zero variance at component %d", k+1)
+				return nil, nil, nil, fmt.Errorf("loading vector has zero variance at component %d", k+1)
 			}
 			p.ScaleVec(1.0/pNorm, p)
 
@@ -506,7 +551,7 @@ func (p *PCAImpl) nipalsAlgorithmWithMissing(X *mat.Dense, nComponents int) (*ma
 		}
 
 		if !converged {
-			return nil, nil, fmt.Errorf("NIPALS did not converge for component %d", k+1)
+			return nil, nil, nil, fmt.Errorf("NIPALS did not converge for component %d", k+1)
 		}
 
 		// Store component
@@ -531,20 +576,75 @@ func (p *PCAImpl) nipalsAlgorithmWithMissing(X *mat.Dense, nComponents int) (*ma
 		}
 	}
 
-	return T, P, nil
+	// Calculate eigenvalues from scores for retained components
+	// T might have been sliced to fewer columns if convergence stopped early
+	_, actualComponents := T.Dims()
+	allEigenvalues := make([]float64, actualComponents)
+	for i := 0; i < actualComponents; i++ {
+		scoreCol := mat.Col(nil, i, T)
+		var eigenvalue float64
+		count := 0
+		for _, v := range scoreCol {
+			if !math.IsNaN(v) {
+				eigenvalue += v * v
+				count++
+			}
+		}
+		if count > 0 {
+			allEigenvalues[i] = eigenvalue / float64(n-1)
+		}
+	}
+
+	// Calculate residual variance to estimate eigenvalues for non-retained components
+	// The residual matrix Xwork contains what's left after extracting actualComponents
+	if m > actualComponents {
+		// Calculate total residual variance (only for non-missing values)
+		var residualVar float64
+		count := 0
+		for i := 0; i < n; i++ {
+			for j := 0; j < m; j++ {
+				val := Xwork.At(i, j)
+				if !math.IsNaN(val) {
+					residualVar += val * val
+					count++
+				}
+			}
+		}
+		if count > 0 {
+			residualVar /= float64(n - 1)
+
+			// Estimate eigenvalues for non-retained components
+			// Distribute residual variance equally among remaining components
+			remainingComponents := m - actualComponents
+			if remainingComponents > 0 {
+				// Extend eigenvalues array to include all possible components
+				extendedEigenvalues := make([]float64, m)
+				copy(extendedEigenvalues, allEigenvalues)
+
+				// Distribute residual variance among remaining components
+				avgResidualEigenvalue := residualVar / float64(remainingComponents)
+				for i := actualComponents; i < m; i++ {
+					extendedEigenvalues[i] = avgResidualEigenvalue
+				}
+				allEigenvalues = extendedEigenvalues
+			}
+		}
+	}
+
+	return T, P, allEigenvalues, nil
 }
 
 // svdAlgorithm implements SVD-based PCA using Singular Value Decomposition
 // The scores are computed as T = U * Σ and loadings as P = V
 // Reference: Jolliffe, I.T. (2002). Principal Component Analysis (2nd ed.). Springer.
-func (p *PCAImpl) svdAlgorithm(X *mat.Dense, nComponents int) (*mat.Dense, *mat.Dense, error) {
+func (p *PCAImpl) svdAlgorithm(X *mat.Dense, nComponents int) (*mat.Dense, *mat.Dense, []float64, error) {
 	n, m := X.Dims()
 
 	// Perform SVD: X = U * Σ * V^T
 	var svd mat.SVD
 	ok := svd.Factorize(X, mat.SVDThin)
 	if !ok {
-		return nil, nil, fmt.Errorf("SVD factorization failed")
+		return nil, nil, nil, fmt.Errorf("SVD factorization failed")
 	}
 
 	// Get U and V matrices
@@ -576,7 +676,14 @@ func (p *PCAImpl) svdAlgorithm(X *mat.Dense, nComponents int) (*mat.Dense, *mat.
 	loadings := mat.NewDense(m, actualComponents, nil)
 	loadings.Copy(vTrunc)
 
-	return scores, loadings, nil
+	// Convert singular values to eigenvalues
+	// eigenvalue = (singular value)^2 / (n-1)
+	allEigenvalues := make([]float64, len(s))
+	for i, sv := range s {
+		allEigenvalues[i] = (sv * sv) / float64(n-1)
+	}
+
+	return scores, loadings, allEigenvalues, nil
 }
 
 // calculateVariance computes explained variance for each component

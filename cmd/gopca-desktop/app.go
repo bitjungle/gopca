@@ -472,9 +472,26 @@ func (a *App) RunPCA(request PCARequest) (response PCAResponse) {
 		// This ensures the data and reconstruction are in the same space
 		preprocessedData := dataToAnalyze
 
+		// Check if we're using NIPALS with native missing value handling
+		usingNIPALSNativeMissing := strings.ToLower(request.Method) == "nipals" && request.MissingStrategy == "native"
+
 		// Apply the same preprocessing that was used for PCA
-		if config.MeanCenter || config.StandardScale || config.RobustScale || config.ScaleOnly || config.SNV || config.VectorNorm {
-			// Create preprocessor with the same settings used for PCA
+		// IMPORTANT: For NIPALS with native missing values, only mean centering is applied internally
+		// Other preprocessing options are ignored
+		if usingNIPALSNativeMissing {
+			// For NIPALS with native missing values, only mean center (handled internally by NIPALS)
+			// We need to apply the same mean centering here for RSS calculation
+			if config.MeanCenter {
+				preprocessor := core.NewPreprocessorWithScaleOnly(true, false, false, false, false, false)
+				var err error
+				preprocessedData, err = preprocessor.FitTransform(dataToAnalyze)
+				if err != nil {
+					fmt.Printf("Warning: failed to preprocess data for metrics: %v\n", err)
+					preprocessedData = dataToAnalyze
+				}
+			}
+		} else if config.MeanCenter || config.StandardScale || config.RobustScale || config.ScaleOnly || config.SNV || config.VectorNorm {
+			// For other methods, apply full preprocessing
 			preprocessor := core.NewPreprocessorWithScaleOnly(config.MeanCenter, config.StandardScale, config.RobustScale, config.ScaleOnly, config.SNV, config.VectorNorm)
 			var err error
 			preprocessedData, err = preprocessor.FitTransform(dataToAnalyze)
@@ -500,10 +517,14 @@ func (a *App) RunPCA(request PCARequest) (response PCAResponse) {
 			// Calculate T² limits
 			result.T2Limit95, result.T2Limit99 = calculator.CalculateT2Limits()
 
-			// For Q limits calculation, we need all eigenvalues including non-retained ones
-			// Since we don't have them in the current implementation, we'll use a simplified approach
-			result.QLimit95 = 0.0
-			result.QLimit99 = 0.0
+			// Calculate Q limits using all eigenvalues
+			if result.AllEigenvalues != nil && len(result.AllEigenvalues) > result.ComponentsComputed {
+				result.QLimit95, result.QLimit99 = calculator.CalculateQLimits(result.AllEigenvalues, len(result.AllEigenvalues))
+			} else {
+				// If we don't have all eigenvalues, set to 0
+				result.QLimit95 = 0.0
+				result.QLimit99 = 0.0
+			}
 		}
 	}
 

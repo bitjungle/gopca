@@ -64,6 +64,8 @@ type PCAResult struct {
 	QLimit99  float64 `json:"q_limit_99,omitempty"`  // 99% confidence limit for Q-residuals
 	// Eigencorrelations with metadata
 	Eigencorrelations *EigencorrelationResult `json:"eigencorrelations,omitempty"`
+	// All eigenvalues (including non-retained) for diagnostic calculations
+	AllEigenvalues []float64 `json:"all_eigenvalues,omitempty"`
 }
 
 // EigencorrelationResult contains correlations between PC scores and metadata variables
