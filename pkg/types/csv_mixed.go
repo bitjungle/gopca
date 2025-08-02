@@ -274,8 +274,17 @@ func ParseCSVMixedWithTargets(r io.Reader, format CSVFormat, targetColumns []str
 		}
 
 		if !hasAnyValue {
-			// Empty column - treat as numeric data column
-			numericDataCols = append(numericDataCols, j)
+			// Empty column - check if it's a target column by name
+			colName := ""
+			if j < len(headers) {
+				colName = headers[j]
+			}
+
+			if isTargetColumn(colName, targetColumns) {
+				numericTargetCols = append(numericTargetCols, j)
+			} else {
+				numericDataCols = append(numericDataCols, j)
+			}
 		} else if isNumeric {
 			// Numeric column - check if it's a target
 			colName := ""

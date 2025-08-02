@@ -59,6 +59,26 @@ func TestParseCSVMixedWithTargets(t *testing.T) {
 			wantCatCols:    1, // category
 			wantTargetCols: 2, // manual_target, auto#target
 		},
+		{
+			name: "target column with empty values in first rows",
+			csvContent: `feature1,feature2,sparse#target,dense#target
+1.0,2.0,,100
+2.0,3.0,,200
+3.0,4.0,,300
+4.0,5.0,,400
+5.0,6.0,,500
+6.0,7.0,,600
+7.0,8.0,,700
+8.0,9.0,,800
+9.0,10.0,,900
+10.0,11.0,,1000
+11.0,12.0,42.5,1100
+12.0,13.0,43.5,1200`,
+			targetColumns:  nil,
+			wantDataCols:   2, // feature1, feature2
+			wantCatCols:    0,
+			wantTargetCols: 2, // sparse#target, dense#target
+		},
 	}
 
 	for _, tt := range tests {
@@ -91,9 +111,12 @@ func TestParseCSVMixedWithTargets(t *testing.T) {
 			if tt.wantTargetCols > 0 {
 				for colName, values := range targetData {
 					t.Logf("Target column %s: %v", colName, values)
-					for _, v := range values {
-						if math.IsNaN(v) {
-							t.Errorf("unexpected NaN in target column %s", colName)
+					// Don't check for NaN in sparse columns test
+					if tt.name != "target column with empty values in first rows" {
+						for _, v := range values {
+							if math.IsNaN(v) {
+								t.Errorf("unexpected NaN in target column %s", colName)
+							}
 						}
 					}
 				}
