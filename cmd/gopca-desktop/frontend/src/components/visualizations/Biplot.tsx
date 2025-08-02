@@ -73,7 +73,7 @@ export const Biplot: React.FC<BiplotProps> = ({
   // Calculate min/max for continuous values
   const continuousRange = useMemo(() => {
     if (groupType === 'continuous' && groupValues) {
-      const validValues = groupValues.filter(v => !isNaN(v) && isFinite(v));
+      const validValues = groupValues.filter(v => v !== null && v !== undefined && !isNaN(v) && isFinite(v));
       if (validValues.length > 0) {
         return {
           min: Math.min(...validValues),
@@ -105,7 +105,7 @@ export const Biplot: React.FC<BiplotProps> = ({
     } else if (groupType === 'continuous' && groupValues) {
       const val = groupValues[index];
       value = val;
-      if (!isNaN(val) && isFinite(val) && continuousRange) {
+      if (val !== null && val !== undefined && !isNaN(val) && isFinite(val) && continuousRange) {
         color = getSequentialColorScale(val, continuousRange.min, continuousRange.max, sequentialPalette);
         group = val.toFixed(2); // For display purposes
       } else {
