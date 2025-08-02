@@ -222,20 +222,99 @@ The second PC is the direction (unit vector) orthogonal to the first, maximizing
 
 ---
 
-## 9. Variants and Extensions of PCA
+## 9. Beyond Linear PCA: Kernel PCA for Nonlinear Patterns
 
-While **classical PCA** is powerful, several variants and extensions have been developed to address specific challenges or data types:
+While classical PCA excels at finding linear patterns in data, real-world datasets often contain complex, nonlinear relationships that standard PCA cannot capture. GoPCA implements **Kernel PCA**, a powerful extension that can uncover these hidden nonlinear structures.
 
-- **Robust PCA:** Adapts PCA to be less sensitive to outliers or gross measurement errors.
-- **Sparse PCA:** Finds PCs with loadings on only a subset of variables, improving interpretability.
-- **Kernel PCA:** Extends PCA to nonlinear relationships by mapping data into a high-dimensional feature space before applying PCA.
-- **Functional PCA:** Applies PCA to data consisting of functions or curves (e.g., time series, spectra).
-- **Dynamic PCA:** Incorporates time dependency or lagged variables for monitoring processes.
-- **Independent Component Analysis (ICA):** Goes beyond PCA by finding statistically independent (rather than just uncorrelated) components; useful for separating mixed signals.
-- **Probabilistic PCA:** Puts PCA on a statistical footing, useful for modeling data uncertainty.
-- **Handling Missing Data:** EM-PCA and other algorithms allow PCA to be performed on incomplete data matrices.
+### 9.1. The Limitation of Linear PCA
 
-Each of these approaches modifies or extends the basic PCA framework to deal with practical limitations, new types of data, or additional goals.
+Imagine data points arranged in a spiral pattern or lying on a curved surface like a Swiss Roll. Standard PCA, which only looks for straight-line projections, would fail to reveal the underlying two-dimensional structure of such data. This is because PCA is fundamentally limited to finding linear combinations of variables.
+
+### 9.2. How Kernel PCA Works
+
+Kernel PCA overcomes this limitation using the "kernel trick"—a mathematical technique that implicitly maps data into a higher-dimensional space where nonlinear patterns become linear. Instead of explicitly computing this transformation (which could be computationally prohibitive or even infinite-dimensional), Kernel PCA uses kernel functions to compute similarities between data points directly.
+
+The key insight is that many algorithms, including PCA, only need to compute dot products between data points. Kernel functions provide a way to compute these dot products in the transformed space without ever explicitly performing the transformation.
+
+### 9.3. Available Kernels in GoPCA
+
+GoPCA supports three kernel types, each suited to different kinds of nonlinear patterns:
+
+**RBF (Radial Basis Function) Kernel:**
+- Most versatile and widely used
+- Excellent for general nonlinear patterns, circular structures, and unknown relationships
+- Key parameter: `gamma` controls the flexibility of the transformation
+  - Small gamma (0.001-0.01): Smooth, global patterns
+  - Large gamma (0.1-10): Tight, local patterns
+  - Default: 1/number_of_features
+
+**Linear Kernel:**
+- Equivalent to standard PCA
+- Useful for comparing Kernel PCA results with regular PCA
+- No additional parameters needed
+
+**Polynomial Kernel:**
+- Captures polynomial relationships of a specified degree
+- Parameters: degree (2=quadratic, 3=cubic), gamma, and coef0
+- Best when you know the data contains polynomial patterns
+
+### 9.4. When to Use Kernel PCA
+
+Consider Kernel PCA when:
+- Score plots from standard PCA show circular or spiral patterns
+- Known groups overlap significantly in linear PCA
+- You suspect nonlinear relationships between variables
+- Working with data known to have nonlinear structure (e.g., certain types of spectroscopy)
+
+### 9.5. Practical Considerations
+
+**Preprocessing:** Kernel PCA handles centering internally in kernel space. Avoid preprocessing methods that include centering:
+- ❌ Mean centering
+- ❌ Standard scaling (includes centering)
+- ❌ Robust scaling (includes centering)
+- ✅ Variance scaling only
+- ✅ SNV (for spectroscopic data)
+- ✅ Vector normalization
+
+**Computational Cost:** Kernel PCA scales with the square of the number of samples, making it more computationally intensive than standard PCA. It works well for datasets up to ~5,000 samples.
+
+**Interpretation:** Unlike standard PCA, Kernel PCA doesn't produce traditional loadings (variable contributions). The transformation is too complex to express as simple linear combinations of the original variables.
+
+### 9.6. Example: Unrolling the Swiss Roll
+
+The Swiss Roll dataset, included with GoPCA, perfectly demonstrates Kernel PCA's power. This three-dimensional spiral structure has an underlying two-dimensional nature that standard PCA cannot reveal:
+
+```bash
+# Using CLI with RBF kernel
+gopca-cli analyze --method kernel --kernel-type rbf \
+  --kernel-gamma 0.333 swiss_roll.csv
+
+# Compare with standard PCA
+gopca-cli analyze --method svd swiss_roll.csv
+```
+
+In the GUI:
+1. Load the Swiss Roll sample dataset
+2. Select "Kernel PCA" as the method
+3. Choose RBF kernel (gamma automatically set to 0.333)
+4. Run the analysis to see the beautifully unrolled structure
+
+### 9.7. Implementation Methods in GoPCA
+
+Beyond the choice of kernel vs. standard PCA, GoPCA offers two numerical algorithms for computing principal components:
+
+**SVD (Singular Value Decomposition):**
+- Default method for standard PCA
+- Numerically stable and efficient
+- Recommended for most datasets
+
+**NIPALS (Nonlinear Iterative Partial Least Squares):**
+- Iterative algorithm that computes components sequentially
+- Useful for very wide datasets (many more variables than samples)
+- Can handle some missing data scenarios
+- Allows computation of only the first few components without computing all
+
+Both methods produce equivalent results for complete datasets but offer different computational trade-offs.
 
 ---
 
