@@ -102,10 +102,10 @@ export const Biplot: React.FC<BiplotProps> = ({
           color = groupColorMap.get(group) || color;
         }
       }
-    } else if (groupType === 'continuous' && groupValues && continuousRange) {
+    } else if (groupType === 'continuous' && groupValues) {
       const val = groupValues[index];
       value = val;
-      if (!isNaN(val) && isFinite(val)) {
+      if (!isNaN(val) && isFinite(val) && continuousRange) {
         color = getSequentialColorScale(val, continuousRange.min, continuousRange.max, sequentialPalette);
         group = val.toFixed(2); // For display purposes
       } else {
@@ -535,9 +535,12 @@ export const Biplot: React.FC<BiplotProps> = ({
             stroke="#1E40AF"
           >
             {groupColumn ? (
-              scoresData.map((entry, index) => (
-                <Cell key={`cell-${index}`} fill={entry.color} stroke={entry.color} />
-              ))
+              scoresData.map((entry, index) => {
+                const fillColor = entry?.color || '#3B82F6';
+                return (
+                  <Cell key={`cell-${index}`} fill={fillColor} stroke={fillColor} />
+                );
+              })
             ) : null}
           </Scatter>
           

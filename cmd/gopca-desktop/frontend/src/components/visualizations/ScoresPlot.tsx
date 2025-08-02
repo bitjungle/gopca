@@ -81,13 +81,16 @@ export const ScoresPlot: React.FC<ScoresPlotProps> = ({
   const continuousRange = useMemo(() => {
     if (groupType === 'continuous' && groupValues) {
       const validValues = groupValues.filter(v => !isNaN(v) && isFinite(v));
+      console.log(`Continuous values - Total: ${groupValues.length}, Valid: ${validValues.length}`);
       if (validValues.length > 0) {
         const range = {
           min: Math.min(...validValues),
           max: Math.max(...validValues)
         };
+        console.log(`Range: min=${range.min}, max=${range.max}`);
         return range;
       }
+      console.log('No valid values found for continuous range');
     }
     return null;
   }, [groupValues, groupType]);
@@ -119,10 +122,10 @@ export const ScoresPlot: React.FC<ScoresPlotProps> = ({
           color = groupColorMap.get(group) || color;
         }
       }
-    } else if (groupType === 'continuous' && groupValues && continuousRange) {
+    } else if (groupType === 'continuous' && groupValues) {
       const val = groupValues[index];
       value = val;
-      if (!isNaN(val) && isFinite(val)) {
+      if (!isNaN(val) && isFinite(val) && continuousRange) {
         color = getSequentialColorScale(val, continuousRange.min, continuousRange.max, sequentialPalette);
         group = val.toFixed(2); // For display purposes
       } else {
@@ -476,9 +479,12 @@ export const ScoresPlot: React.FC<ScoresPlotProps> = ({
             stroke="#1E40AF"
           >
             {groupColumn ? (
-              data.map((entry, index) => (
-                <Cell key={`cell-${index}`} fill={entry!.color} stroke={entry!.color} />
-              ))
+              data.map((entry, index) => {
+                const fillColor = entry?.color || '#3B82F6';
+                return (
+                  <Cell key={`cell-${index}`} fill={fillColor} stroke={fillColor} />
+                );
+              })
             ) : null}
           </Scatter>
         </ComposedChart>
