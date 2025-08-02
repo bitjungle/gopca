@@ -73,7 +73,7 @@ export const Biplot: React.FC<BiplotProps> = ({
   // Calculate min/max for continuous values
   const continuousRange = useMemo(() => {
     if (groupType === 'continuous' && groupValues) {
-      const validValues = groupValues.filter(v => !isNaN(v) && isFinite(v));
+      const validValues = groupValues.filter(v => v !== null && v !== undefined && !isNaN(v) && isFinite(v));
       if (validValues.length > 0) {
         return {
           min: Math.min(...validValues),
@@ -89,18 +89,29 @@ export const Biplot: React.FC<BiplotProps> = ({
     let color = '#3B82F6'; // Default color
     let group = 'Unknown';
     let value: number | undefined;
+    const MISSING_VALUE_COLOR = '#9CA3AF'; // Gray color for missing values
     
     if (groupType === 'categorical') {
-      group = groupLabels?.[index] || 'Unknown';
-      if (group && groupColorMap) {
-        color = groupColorMap.get(group) || color;
+      const labelValue = groupLabels?.[index];
+      if (!labelValue || labelValue === '') {
+        group = 'Missing';
+        color = MISSING_VALUE_COLOR;
+      } else {
+        group = labelValue;
+        if (groupColorMap) {
+          color = groupColorMap.get(group) || color;
+        }
       }
-    } else if (groupType === 'continuous' && groupValues && continuousRange) {
+    } else if (groupType === 'continuous' && groupValues) {
       const val = groupValues[index];
       value = val;
-      if (!isNaN(val) && isFinite(val)) {
+      if (val !== null && val !== undefined && !isNaN(val) && isFinite(val) && continuousRange) {
         color = getSequentialColorScale(val, continuousRange.min, continuousRange.max, sequentialPalette);
         group = val.toFixed(2); // For display purposes
+      } else {
+        // Handle missing values explicitly
+        color = MISSING_VALUE_COLOR;
+        group = 'Missing';
       }
     }
     
@@ -524,9 +535,12 @@ export const Biplot: React.FC<BiplotProps> = ({
             stroke="#1E40AF"
           >
             {groupColumn ? (
-              scoresData.map((entry, index) => (
-                <Cell key={`cell-${index}`} fill={entry.color} stroke={entry.color} />
-              ))
+              scoresData.map((entry, index) => {
+                const fillColor = entry?.color || '#3B82F6';
+                return (
+                  <Cell key={`cell-${index}`} fill={fillColor} stroke={fillColor} />
+                );
+              })
             ) : null}
           </Scatter>
           
