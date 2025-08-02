@@ -9,14 +9,19 @@
     "preview": "vite preview"
   },
   "dependencies": {
+    "@tailwindcss/typography": "^0.5.16",
     "@tanstack/react-table": "^8.21.3",
     "@tanstack/react-virtual": "^3.13.12",
     "file-saver": "^2.0.5",
     "html-to-image": "^1.11.13",
+    "katex": "^0.16.22",
     "lucide-react": "^0.525.0",
     "react": "^18.2.0",
     "react-dom": "^18.2.0",
-    "recharts": "^3.1.0"
+    "react-markdown": "^10.1.0",
+    "recharts": "^3.1.0",
+    "rehype-katex": "^7.0.1",
+    "remark-math": "^6.0.0"
   },
   "devDependencies": {
     "@types/file-saver": "^2.0.7",
