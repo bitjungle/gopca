@@ -34,6 +34,7 @@ function AppContent() {
     const [showEllipses, setShowEllipses] = useState(false);
     const [confidenceLevel, setConfidenceLevel] = useState<0.90 | 0.95 | 0.99>(0.95);
     const [showDocumentation, setShowDocumentation] = useState(false);
+    const [datasetId, setDatasetId] = useState(0); // Force DataTable re-render on dataset change
     
     // Refs for smooth scrolling
     const pcaErrorRef = useRef<HTMLDivElement>(null);
@@ -98,6 +99,44 @@ function AppContent() {
         
         return {};
     };
+    
+    // Centralized dataset loading function
+    const loadDataset = async (filename: string, defaultGroupColumn?: string) => {
+        setLoading(true);
+        setFileError(null);
+        setPcaError(null);
+        
+        try {
+            const result = await LoadDatasetFile(filename);
+            setFileData(result);
+            setPcaResponse(null);
+            setExcludedRows([]);
+            setExcludedColumns([]);
+            setDatasetId(prev => prev + 1); // Force DataTable re-render
+            
+            // Validate group column exists before setting
+            if (defaultGroupColumn && result) {
+                const isValid = 
+                    (result.categoricalColumns && defaultGroupColumn in result.categoricalColumns) ||
+                    (result.numericTargetColumns && defaultGroupColumn in result.numericTargetColumns);
+                
+                if (isValid) {
+                    setSelectedGroupColumn(defaultGroupColumn);
+                } else {
+                    console.warn(`Column "${defaultGroupColumn}" not found in ${filename}, setting group column to null`);
+                    setSelectedGroupColumn(null);
+                }
+            } else {
+                setSelectedGroupColumn(null);
+            }
+            
+            updateGammaForData(result);
+        } catch (err) {
+            setFileError(`Failed to load ${filename}: ${err}`);
+        } finally {
+            setLoading(false);
+        }
+    };
 
     const handleFileUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
         const file = event.target.files?.[0];
@@ -116,6 +155,7 @@ function AppContent() {
             setExcludedRows([]);
             setExcludedColumns([]);
             setSelectedGroupColumn(null);
+            setDatasetId(prev => prev + 1); // Force DataTable re-render
             
             // Calculate and set default gamma for kernel PCA
             updateGammaForData(result);
@@ -338,24 +378,7 @@ function AppContent() {
                                 <div className="space-y-2">
                                     <HelpWrapper helpKey="sample-dataset-corn">
                                         <button
-                                            onClick={async () => {
-                                                setLoading(true);
-                                                setFileError(null);
-                                                setPcaError(null);
-                                                try {
-                                                    const result = await LoadDatasetFile('corn.csv');
-                                                    setFileData(result);
-                                                    setPcaResponse(null);
-                                                    setExcludedRows([]);
-                                                    setExcludedColumns([]);
-                                                    setSelectedGroupColumn(null);
-                                                    updateGammaForData(result);
-                                                } catch (err) {
-                                                    setFileError(`Failed to load Corn dataset: ${err}`);
-                                                } finally {
-                                                    setLoading(false);
-                                                }
-                                            }}
+                                            onClick={() => loadDataset('corn.csv')}
                                             className="w-full px-4 py-2 text-sm bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors"
                                             disabled={loading}
                                         >
@@ -364,24 +387,7 @@ function AppContent() {
                                     </HelpWrapper>
                                     <HelpWrapper helpKey="sample-dataset-iris">
                                         <button
-                                            onClick={async () => {
-                                                setLoading(true);
-                                                setFileError(null);
-                                                setPcaError(null);
-                                                try {
-                                                    const result = await LoadDatasetFile('iris.csv');
-                                                    setFileData(result);
-                                                    setPcaResponse(null);
-                                                    setExcludedRows([]);
-                                                    setExcludedColumns([]);
-                                                    setSelectedGroupColumn('species');
-                                                    updateGammaForData(result);
-                                                } catch (err) {
-                                                    setFileError(`Failed to load Iris dataset: ${err}`);
-                                                } finally {
-                                                    setLoading(false);
-                                                }
-                                            }}
+                                            onClick={() => loadDataset('iris.csv', 'species')}
                                             className="w-full px-4 py-2 text-sm bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors"
                                             disabled={loading}
                                         >
@@ -390,24 +396,7 @@ function AppContent() {
                                     </HelpWrapper>
                                     <HelpWrapper helpKey="sample-dataset-wine">
                                         <button
-                                            onClick={async () => {
-                                                setLoading(true);
-                                                setFileError(null);
-                                                setPcaError(null);
-                                                try {
-                                                    const result = await LoadDatasetFile('wine.csv');
-                                                    setFileData(result);
-                                                    setPcaResponse(null);
-                                                    setExcludedRows([]);
-                                                    setExcludedColumns([]);
-                                                    setSelectedGroupColumn('target');
-                                                    updateGammaForData(result);
-                                                } catch (err) {
-                                                    setFileError(`Failed to load Wine dataset: ${err}`);
-                                                } finally {
-                                                    setLoading(false);
-                                                }
-                                            }}
+                                            onClick={() => loadDataset('wine.csv', 'target')}
                                             className="w-full px-4 py-2 text-sm bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors"
                                             disabled={loading}
                                         >
@@ -416,24 +405,7 @@ function AppContent() {
                                     </HelpWrapper>
                                     <HelpWrapper helpKey="sample-dataset-swiss-roll">
                                         <button
-                                            onClick={async () => {
-                                                setLoading(true);
-                                                setFileError(null);
-                                                setPcaError(null);
-                                                try {
-                                                    const result = await LoadDatasetFile('swiss_roll.csv');
-                                                    setFileData(result);
-                                                    setPcaResponse(null);
-                                                    setExcludedRows([]);
-                                                    setExcludedColumns([]);
-                                                    setSelectedGroupColumn('color_category');
-                                                    updateGammaForData(result);
-                                                } catch (err) {
-                                                    setFileError(`Failed to load Swiss Roll dataset: ${err}`);
-                                                } finally {
-                                                    setLoading(false);
-                                                }
-                                            }}
+                                            onClick={() => loadDataset('swiss_roll.csv', 'color #target')}
                                             className="w-full px-4 py-2 text-sm bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors"
                                             disabled={loading}
                                         >
@@ -459,6 +431,7 @@ function AppContent() {
                             {/* Check if dataset is large (>10,000 cells) */}
                             {fileData.data.length * fileData.headers.length > 10000 ? (
                                 <SelectionTable
+                                    key={`dataset-${datasetId}`}
                                     headers={fileData.headers}
                                     rowNames={fileData.rowNames}
                                     data={fileData.data}
@@ -468,6 +441,7 @@ function AppContent() {
                                 />
                             ) : (
                                 <DataTable
+                                    key={`dataset-${datasetId}`}
                                     headers={fileData.headers}
                                     rowNames={fileData.rowNames}
                                     data={fileData.data}
