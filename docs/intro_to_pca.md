@@ -369,4 +369,4 @@ Whether you're a researcher exploring complex datasets, a data scientist buildin
 - **Bro, R., & Smilde, A. K. (2014).** Principal component analysis. _Analytical Methods, 6_, 2812–2831. [https://doi.org/10.1039/c3ay41907j](https://doi.org/10.1039/c3ay41907j)
 - **Shlens, J. (2014).** A Tutorial on Principal Component Analysis. _arXiv:1404.1100 [cs.LG]_. [https://arxiv.org/abs/1404.1100](https://arxiv.org/abs/1404.1100)
 - **Esbensen, K. H., et al. (2002).** Multivariate Data Analysis—In Practice, Chapters 3 and 4. CAMO Process AS.
-
+- **Schölkopf, B., Smola, A., & Müller, K. R. (1998).** Nonlinear component analysis as a kernel eigenvalue problem. Neural computation 10.5 (1998): 1299-1319. [https://doi.org/10.1162/089976698300017467](https://doi.org/10.1162/089976698300017467)
