@@ -106,11 +106,18 @@ export const ScoresPlot: React.FC<ScoresPlotProps> = ({
     let color = '#3B82F6'; // Default color
     let group = 'Unknown';
     let value: number | undefined;
+    const MISSING_VALUE_COLOR = '#9CA3AF'; // Gray color for missing values
     
     if (groupType === 'categorical') {
-      group = groupLabels?.[index] || 'Unknown';
-      if (group && groupColorMap) {
-        color = groupColorMap.get(group) || color;
+      const labelValue = groupLabels?.[index];
+      if (!labelValue || labelValue === '') {
+        group = 'Missing';
+        color = MISSING_VALUE_COLOR;
+      } else {
+        group = labelValue;
+        if (groupColorMap) {
+          color = groupColorMap.get(group) || color;
+        }
       }
     } else if (groupType === 'continuous' && groupValues && continuousRange) {
       const val = groupValues[index];
@@ -118,6 +125,10 @@ export const ScoresPlot: React.FC<ScoresPlotProps> = ({
       if (!isNaN(val) && isFinite(val)) {
         color = getSequentialColorScale(val, continuousRange.min, continuousRange.max, sequentialPalette);
         group = val.toFixed(2); // For display purposes
+      } else {
+        // Handle missing values explicitly
+        color = MISSING_VALUE_COLOR;
+        group = 'Missing';
       }
     }
     
