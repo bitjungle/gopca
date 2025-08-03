@@ -6,11 +6,17 @@ export function AnalyzeDataQuality(arg1:main.FileData):Promise<main.DataQualityR
 
 export function AnalyzeMissingValues(arg1:main.FileData):Promise<main.MissingValueStats>;
 
+export function CheckGoPCAStatus():Promise<main.GoPCAStatus>;
+
+export function DownloadGoPCA():Promise<void>;
+
 export function FillMissingValues(arg1:main.FileData,arg2:main.FillMissingValuesRequest):Promise<main.FileData>;
 
 export function GetVersion():Promise<string>;
 
 export function LoadCSV(arg1:string):Promise<main.FileData>;
+
+export function OpenInGoPCA(arg1:main.FileData):Promise<void>;
 
 export function SaveCSV(arg1:main.FileData):Promise<void>;
 

@@ -6,13 +6,16 @@ import (
 	"fmt"
 	"math"
 	"os"
+	"os/exec"
 	"path/filepath"
+	"runtime"
 	"sort"
 	"strconv"
 	"strings"
+	"time"
 	
 	"github.com/bitjungle/gopca/pkg/types"
-	"github.com/wailsapp/wails/v2/pkg/runtime"
+	wailsruntime "github.com/wailsapp/wails/v2/pkg/runtime"
 	"github.com/xuri/excelize/v2"
 )
 
@@ -54,9 +57,9 @@ type ValidationResult struct {
 func (a *App) LoadCSV(filePath string) (*FileData, error) {
 	// If no filepath provided, show file dialog
 	if filePath == "" {
-		selection, err := runtime.OpenFileDialog(a.ctx, runtime.OpenDialogOptions{
+		selection, err := wailsruntime.OpenFileDialog(a.ctx, wailsruntime.OpenDialogOptions{
 			Title: "Select CSV File",
-			Filters: []runtime.FileFilter{
+			Filters: []wailsruntime.FileFilter{
 				{
 					DisplayName: "Supported Files (*.csv,*.xlsx,*.xls,*.tsv)",
 					Pattern:     "*.csv;*.xlsx;*.xls;*.tsv",
@@ -109,7 +112,7 @@ func (a *App) LoadCSV(filePath string) (*FileData, error) {
 		
 		// Check file size
 		if len(content) > 100*1024*1024 { // 100MB
-			runtime.LogWarning(a.ctx, fmt.Sprintf("Large file detected: %d MB", len(content)/1024/1024))
+			wailsruntime.LogWarning(a.ctx, fmt.Sprintf("Large file detected: %d MB", len(content)/1024/1024))
 		}
 		
 		// Parse using GoPCA's parser with format detection
@@ -122,14 +125,14 @@ func (a *App) LoadCSV(filePath string) (*FileData, error) {
 	}
 
 	// Store the filename for display
-	runtime.EventsEmit(a.ctx, "file-loaded", filepath.Base(filePath))
+	wailsruntime.EventsEmit(a.ctx, "file-loaded", filepath.Base(filePath))
 
 	return fileData, nil
 }
 
 // loadExcel loads data from an Excel file
 func (a *App) loadExcel(filePath string) (*FileData, error) {
-	runtime.LogInfo(a.ctx, fmt.Sprintf("Loading Excel file: %s", filePath))
+	wailsruntime.LogInfo(a.ctx, fmt.Sprintf("Loading Excel file: %s", filePath))
 	
 	f, err := excelize.OpenFile(filePath)
 	if err != nil {
@@ -146,7 +149,7 @@ func (a *App) loadExcel(filePath string) (*FileData, error) {
 	// For now, use the first sheet. TODO: Add sheet selection dialog
 	selectedSheet := sheets[0]
 	if len(sheets) > 1 {
-		runtime.LogInfo(a.ctx, fmt.Sprintf("Multiple sheets found. Using first sheet: %s", selectedSheet))
+		wailsruntime.LogInfo(a.ctx, fmt.Sprintf("Multiple sheets found. Using first sheet: %s", selectedSheet))
 	}
 	
 	// Get all rows from the selected sheet
@@ -179,7 +182,7 @@ func (a *App) loadExcel(filePath string) (*FileData, error) {
 	}
 	
 	// Parse the CSV content using GoPCA's parser
-	runtime.LogInfo(a.ctx, fmt.Sprintf("Excel data converted to CSV, %d bytes", csvContent.Len()))
+	wailsruntime.LogInfo(a.ctx, fmt.Sprintf("Excel data converted to CSV, %d bytes", csvContent.Len()))
 	return a.parseCSVContent(csvContent.String(), ".csv")
 }
 
@@ -237,10 +240,10 @@ func (a *App) parseCSVContent(content string, ext string) (*FileData, error) {
 
 	if csvData == nil {
 		if lastErr != nil {
-			runtime.LogError(a.ctx, fmt.Sprintf("Failed to parse CSV: %v", lastErr))
+			wailsruntime.LogError(a.ctx, fmt.Sprintf("Failed to parse CSV: %v", lastErr))
 			return nil, fmt.Errorf("failed to parse CSV: %w", lastErr)
 		}
-		runtime.LogError(a.ctx, "No data found in file")
+		wailsruntime.LogError(a.ctx, "No data found in file")
 		return nil, fmt.Errorf("no data found in file")
 	}
 
@@ -287,7 +290,7 @@ func (a *App) parseCSVContent(content string, ext string) (*FileData, error) {
 		ColumnTypes:          columnTypes,
 	}
 	
-	runtime.LogInfo(a.ctx, fmt.Sprintf("Parsed data: %d rows, %d columns, %d headers", csvData.Rows, csvData.Columns, len(csvData.Headers)))
+	wailsruntime.LogInfo(a.ctx, fmt.Sprintf("Parsed data: %d rows, %d columns, %d headers", csvData.Rows, csvData.Columns, len(csvData.Headers)))
 
 	// If we have categorical or target columns, we need to combine them with numeric data
 	// for the full data display
@@ -468,10 +471,10 @@ func (a *App) ValidateForGoPCA(data *FileData) *ValidationResult {
 // SaveCSV saves the data to a CSV file
 func (a *App) SaveCSV(data *FileData) error {
 	// Show save dialog
-	selection, err := runtime.SaveFileDialog(a.ctx, runtime.SaveDialogOptions{
+	selection, err := wailsruntime.SaveFileDialog(a.ctx, wailsruntime.SaveDialogOptions{
 		Title: "Save CSV File",
 		DefaultFilename: "exported_data.csv",
-		Filters: []runtime.FileFilter{
+		Filters: []wailsruntime.FileFilter{
 			{
 				DisplayName: "CSV Files (*.csv)",
 				Pattern:     "*.csv",
@@ -518,17 +521,17 @@ func (a *App) SaveCSV(data *FileData) error {
 		}
 	}
 
-	runtime.EventsEmit(a.ctx, "file-saved", filepath.Base(selection))
+	wailsruntime.EventsEmit(a.ctx, "file-saved", filepath.Base(selection))
 	return nil
 }
 
 // SaveExcel saves data to an Excel file
 func (a *App) SaveExcel(data *FileData) error {
 	// Show save dialog
-	selection, err := runtime.SaveFileDialog(a.ctx, runtime.SaveDialogOptions{
+	selection, err := wailsruntime.SaveFileDialog(a.ctx, wailsruntime.SaveDialogOptions{
 		Title: "Save Excel File",
 		DefaultFilename: "exported_data.xlsx",
-		Filters: []runtime.FileFilter{
+		Filters: []wailsruntime.FileFilter{
 			{
 				DisplayName: "Excel Files (*.xlsx)",
 				Pattern:     "*.xlsx",
@@ -658,7 +661,7 @@ func (a *App) SaveExcel(data *FileData) error {
 		return fmt.Errorf("failed to save Excel file: %w", err)
 	}
 	
-	runtime.EventsEmit(a.ctx, "file-saved", filepath.Base(selection))
+	wailsruntime.EventsEmit(a.ctx, "file-saved", filepath.Base(selection))
 	return nil
 }
 
@@ -2038,4 +2041,174 @@ func calculateColumnQualityScore(analysis ColumnAnalysis) float64 {
 	}
 	
 	return score
+}
+
+// GoPCAStatus represents the installation status of GoPCA
+type GoPCAStatus struct {
+	Installed bool   `json:"installed"`
+	Path      string `json:"path"`
+	Version   string `json:"version"`
+	Error     string `json:"error,omitempty"`
+}
+
+// CheckGoPCAStatus checks if GoPCA Desktop is installed and available
+func (a *App) CheckGoPCAStatus() *GoPCAStatus {
+	status := &GoPCAStatus{
+		Installed: false,
+	}
+
+	// Check for gopca-desktop in PATH
+	path, err := exec.LookPath("gopca-desktop")
+	if err == nil {
+		status.Installed = true
+		status.Path = path
+		
+		// Try to get version
+		cmd := exec.Command(path, "--version")
+		output, err := cmd.Output()
+		if err == nil {
+			status.Version = strings.TrimSpace(string(output))
+		}
+		return status
+	}
+
+	// Check common installation locations based on OS
+	var possiblePaths []string
+	switch runtime.GOOS {
+	case "darwin":
+		possiblePaths = []string{
+			"/Applications/GoPCA Desktop.app/Contents/MacOS/gopca-desktop",
+			filepath.Join(os.Getenv("HOME"), "Applications/GoPCA Desktop.app/Contents/MacOS/gopca-desktop"),
+			"/usr/local/bin/gopca-desktop",
+			filepath.Join(os.Getenv("HOME"), "go/bin/gopca-desktop"),
+		}
+	case "windows":
+		possiblePaths = []string{
+			"C:\\Program Files\\GoPCA Desktop\\gopca-desktop.exe",
+			filepath.Join(os.Getenv("APPDATA"), "GoPCA Desktop\\gopca-desktop.exe"),
+			filepath.Join(os.Getenv("LOCALAPPDATA"), "GoPCA Desktop\\gopca-desktop.exe"),
+			filepath.Join(os.Getenv("USERPROFILE"), "go\\bin\\gopca-desktop.exe"),
+		}
+	default: // Linux and others
+		possiblePaths = []string{
+			"/usr/local/bin/gopca-desktop",
+			"/usr/bin/gopca-desktop",
+			filepath.Join(os.Getenv("HOME"), ".local/bin/gopca-desktop"),
+			filepath.Join(os.Getenv("HOME"), "go/bin/gopca-desktop"),
+		}
+	}
+
+	// Check each possible path
+	for _, p := range possiblePaths {
+		if _, err := os.Stat(p); err == nil {
+			status.Installed = true
+			status.Path = p
+			
+			// Try to get version
+			cmd := exec.Command(p, "--version")
+			output, err := cmd.Output()
+			if err == nil {
+				status.Version = strings.TrimSpace(string(output))
+			}
+			return status
+		}
+	}
+
+	status.Error = "GoPCA Desktop not found. Please ensure it is installed and in your PATH."
+	return status
+}
+
+// OpenInGoPCA saves the current data to a temporary file and opens it in GoPCA Desktop
+func (a *App) OpenInGoPCA(data *FileData) error {
+	if data == nil || len(data.Data) == 0 {
+		return fmt.Errorf("no data to export")
+	}
+
+	// Check if GoPCA is installed
+	status := a.CheckGoPCAStatus()
+	if !status.Installed {
+		return fmt.Errorf("GoPCA Desktop not found: %s", status.Error)
+	}
+
+	// Create a temporary file
+	tempDir := os.TempDir()
+	timestamp := time.Now().Format("20060102_150405")
+	tempFile := filepath.Join(tempDir, fmt.Sprintf("gocsv_export_%s.csv", timestamp))
+
+	// Write data to temp file
+	file, err := os.Create(tempFile)
+	if err != nil {
+		return fmt.Errorf("failed to create temporary file: %w", err)
+	}
+	defer file.Close()
+
+	writer := csv.NewWriter(file)
+	defer writer.Flush()
+
+	// Write headers with row name column if present
+	headers := data.Headers
+	if len(data.RowNames) > 0 {
+		headers = append([]string{"Row"}, headers...)
+	}
+	if err := writer.Write(headers); err != nil {
+		return fmt.Errorf("failed to write headers: %w", err)
+	}
+
+	// Write data rows
+	for i, row := range data.Data {
+		rowData := row
+		if len(data.RowNames) > 0 && i < len(data.RowNames) {
+			rowData = append([]string{data.RowNames[i]}, row...)
+		}
+		if err := writer.Write(rowData); err != nil {
+			return fmt.Errorf("failed to write row %d: %w", i+1, err)
+		}
+	}
+
+	writer.Flush()
+	if err := writer.Error(); err != nil {
+		return fmt.Errorf("failed to flush CSV writer: %w", err)
+	}
+
+	// Launch GoPCA with the file
+	var cmd *exec.Cmd
+	
+	// Use different launch methods based on OS
+	switch runtime.GOOS {
+	case "darwin":
+		if strings.Contains(status.Path, ".app") {
+			// Launch macOS app bundle with open command
+			cmd = exec.Command("open", "-a", filepath.Dir(filepath.Dir(status.Path)), "--args", "--open", tempFile)
+		} else {
+			// Direct binary execution
+			cmd = exec.Command(status.Path, "--open", tempFile)
+		}
+	default:
+		// Windows and Linux
+		cmd = exec.Command(status.Path, "--open", tempFile)
+	}
+
+	// Start the process without waiting
+	if err := cmd.Start(); err != nil {
+		return fmt.Errorf("failed to launch GoPCA Desktop: %w", err)
+	}
+
+	// Log the temporary file location
+	wailsruntime.LogInfo(a.ctx, fmt.Sprintf("Exported data to: %s", tempFile))
+	wailsruntime.LogInfo(a.ctx, fmt.Sprintf("Launched GoPCA Desktop: %s", status.Path))
+
+	// Schedule cleanup of temp file after a delay
+	go func() {
+		time.Sleep(10 * time.Second) // Give GoPCA time to load the file
+		os.Remove(tempFile)
+	}()
+
+	return nil
+}
+
+// DownloadGoPCA opens the GoPCA download page in the default browser
+func (a *App) DownloadGoPCA() error {
+	url := "https://github.com/bitjungle/gopca/releases"
+	wailsruntime.BrowserOpenURL(a.ctx, url)
+	return nil
 }

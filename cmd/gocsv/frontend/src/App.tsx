@@ -3,7 +3,7 @@ import './App.css';
 import { ThemeToggle, CSVGrid, ValidationResults, MissingValueSummary, MissingValueDialog, DataQualityDashboard } from './components';
 import { ThemeProvider } from './contexts/ThemeContext';
 import logo from './assets/images/GoCSV-logo-1024-transp.png';
-import { LoadCSV, SaveCSV, SaveExcel, ValidateForGoPCA, AnalyzeMissingValues, FillMissingValues, AnalyzeDataQuality } from '../wailsjs/go/main/App';
+import { LoadCSV, SaveCSV, SaveExcel, ValidateForGoPCA, AnalyzeMissingValues, FillMissingValues, AnalyzeDataQuality, CheckGoPCAStatus, OpenInGoPCA, DownloadGoPCA } from '../wailsjs/go/main/App';
 import { EventsOn } from '../wailsjs/runtime/runtime';
 import { main } from '../wailsjs/go/models';
 
@@ -23,12 +23,17 @@ function AppContent() {
     const [dataQualityReport, setDataQualityReport] = useState<main.DataQualityReport | null>(null);
     const [showDataQualityReport, setShowDataQualityReport] = useState(false);
     const [isAnalyzingQuality, setIsAnalyzingQuality] = useState(false);
+    const [gopcaStatus, setGopcaStatus] = useState<main.GoPCAStatus | null>(null);
+    const [isCheckingGoPCA, setIsCheckingGoPCA] = useState(false);
     
     // Listen for file-loaded events from backend
     useEffect(() => {
         const unsubscribe = EventsOn('file-loaded', (filename: string) => {
             setFileName(filename);
         });
+        
+        // Check GoPCA status on startup
+        checkGoPCAInstallation();
         
         return () => {
             unsubscribe();
@@ -38,6 +43,25 @@ function AppContent() {
     // Scroll to top function
     const scrollToTop = () => {
         window.scrollTo({ top: 0, behavior: 'smooth' });
+    };
+    
+    // Check GoPCA installation status
+    const checkGoPCAInstallation = async () => {
+        setIsCheckingGoPCA(true);
+        try {
+            const status = await CheckGoPCAStatus();
+            setGopcaStatus(status);
+        } catch (error) {
+            console.error('Error checking GoPCA status:', error);
+            setGopcaStatus({
+                installed: false,
+                path: '',
+                version: '',
+                error: 'Failed to check GoPCA status'
+            });
+        } finally {
+            setIsCheckingGoPCA(false);
+        }
     };
     
     // Handle file selection
@@ -421,13 +445,33 @@ function AppContent() {
                                         {isValidating ? 'Validating...' : 'Validate for GoPCA'}
                                     </button>
                                     <button 
-                                        onClick={() => {
-                                            // TODO: Implement Open in GoPCA
-                                            alert('Open in GoPCA coming soon!');
+                                        onClick={async () => {
+                                            if (!fileData) return;
+                                            
+                                            // Check if GoPCA is installed
+                                            if (!gopcaStatus?.installed) {
+                                                const shouldDownload = confirm(
+                                                    'GoPCA Desktop is not installed. Would you like to download it?'
+                                                );
+                                                if (shouldDownload) {
+                                                    await DownloadGoPCA();
+                                                }
+                                                return;
+                                            }
+                                            
+                                            try {
+                                                await OpenInGoPCA(fileData);
+                                            } catch (error) {
+                                                console.error('Error opening in GoPCA:', error);
+                                                alert('Error opening in GoPCA: ' + error);
+                                            }
                                         }}
-                                        className="flex-1 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors"
+                                        disabled={!gopcaStatus || isCheckingGoPCA}
+                                        className="flex-1 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
                                     >
-                                        Open in GoPCA
+                                        {isCheckingGoPCA ? 'Checking...' : 
+                                         !gopcaStatus?.installed ? 'Install GoPCA' : 
+                                         'Open in GoPCA'}
                                     </button>
                                 </div>
                                 
@@ -437,6 +481,40 @@ function AppContent() {
                                         messages={validationResult.messages}
                                         onClose={() => setValidationResult(null)}
                                     />
+                                )}
+                                
+                                {/* GoPCA Status */}
+                                {gopcaStatus && (
+                                    <div className={`p-3 rounded-lg text-sm ${
+                                        gopcaStatus.installed 
+                                            ? 'bg-green-50 dark:bg-green-900/20 text-green-700 dark:text-green-300' 
+                                            : 'bg-yellow-50 dark:bg-yellow-900/20 text-yellow-700 dark:text-yellow-300'
+                                    }`}>
+                                        <div className="flex items-center justify-between">
+                                            <div className="flex items-center gap-2">
+                                                <svg className={`w-4 h-4 ${gopcaStatus.installed ? 'text-green-600' : 'text-yellow-600'}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                    {gopcaStatus.installed ? (
+                                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                                                    ) : (
+                                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                                                    )}
+                                                </svg>
+                                                <span>
+                                                    {gopcaStatus.installed 
+                                                        ? `GoPCA Desktop ${gopcaStatus.version || 'detected'}` 
+                                                        : 'GoPCA Desktop not found'}
+                                                </span>
+                                            </div>
+                                            {!gopcaStatus.installed && (
+                                                <button
+                                                    onClick={() => checkGoPCAInstallation()}
+                                                    className="text-xs text-yellow-600 hover:text-yellow-700 dark:text-yellow-400 dark:hover:text-yellow-300"
+                                                >
+                                                    Refresh
+                                                </button>
+                                            )}
+                                        </div>
+                                    </div>
                                 )}
                                 
                                 <div className="border-t border-gray-200 dark:border-gray-700 pt-4">

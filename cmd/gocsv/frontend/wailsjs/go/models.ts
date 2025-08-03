@@ -320,6 +320,24 @@ export namespace main {
 	        this.value = source["value"];
 	    }
 	}
+	export class GoPCAStatus {
+	    installed: boolean;
+	    path: string;
+	    version: string;
+	    error?: string;
+	
+	    static createFrom(source: any = {}) {
+	        return new GoPCAStatus(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.installed = source["installed"];
+	        this.path = source["path"];
+	        this.version = source["version"];
+	        this.error = source["error"];
+	    }
+	}
 	
 	export class RowMissing {
 	    index: number;

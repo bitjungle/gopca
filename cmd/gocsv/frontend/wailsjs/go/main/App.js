@@ -10,6 +10,14 @@ export function AnalyzeMissingValues(arg1) {
   return window['go']['main']['App']['AnalyzeMissingValues'](arg1);
 }
 
+export function CheckGoPCAStatus() {
+  return window['go']['main']['App']['CheckGoPCAStatus']();
+}
+
+export function DownloadGoPCA() {
+  return window['go']['main']['App']['DownloadGoPCA']();
+}
+
 export function FillMissingValues(arg1, arg2) {
   return window['go']['main']['App']['FillMissingValues'](arg1, arg2);
 }
@@ -20,6 +28,10 @@ export function GetVersion() {
 
 export function LoadCSV(arg1) {
   return window['go']['main']['App']['LoadCSV'](arg1);
+}
+
+export function OpenInGoPCA(arg1) {
+  return window['go']['main']['App']['OpenInGoPCA'](arg1);
 }
 
 export function SaveCSV(arg1) {
