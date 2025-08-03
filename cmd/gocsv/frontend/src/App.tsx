@@ -1,13 +1,23 @@
 import React, { useState, useRef, useEffect } from 'react';
 import './App.css';
-import { ThemeToggle } from './components/ThemeToggle';
+import { ThemeToggle, CSVGrid } from './components';
 import { ThemeProvider } from './contexts/ThemeContext';
 import logo from './assets/images/GoCSV-logo-1024-transp.png';
+import { LoadCSV, SaveCSV } from '../wailsjs/go/main/App';
+
+interface FileData {
+    headers: string[];
+    data: string[][];
+    rows: number;
+    columns: number;
+}
 
 function AppContent() {
     const [fileLoaded, setFileLoaded] = useState(false);
     const [fileName, setFileName] = useState<string | null>(null);
+    const [fileData, setFileData] = useState<FileData | null>(null);
     const [isDragging, setIsDragging] = useState(false);
+    const [isLoading, setIsLoading] = useState(false);
     
     // Scroll to top function
     const scrollToTop = () => {
@@ -15,11 +25,67 @@ function AppContent() {
     };
     
     // Handle file selection
-    const handleFile = (file: File) => {
+    const handleFile = async (file: File) => {
         if (file) {
+            setIsLoading(true);
             setFileName(file.name);
-            setFileLoaded(true);
-            // TODO: Actually load and parse the file
+            
+            try {
+                // For now, we'll use the file input approach
+                // In the future, we can enhance to handle File objects directly
+                console.log('File selected:', file.name);
+                setFileLoaded(true);
+                
+                // TODO: Load file through backend
+                // For now, show empty grid
+                setFileData({
+                    headers: ['Column 1', 'Column 2', 'Column 3'],
+                    data: [['', '', '']],
+                    rows: 1,
+                    columns: 3
+                });
+            } catch (error) {
+                console.error('Error loading file:', error);
+                alert('Error loading file: ' + error);
+            } finally {
+                setIsLoading(false);
+            }
+        }
+    };
+    
+    // Load file from dialog
+    const handleLoadFromDialog = async () => {
+        setIsLoading(true);
+        try {
+            const result = await LoadCSV('');
+            if (result) {
+                setFileData(result);
+                setFileName('Loaded file');
+                setFileLoaded(true);
+            }
+        } catch (error) {
+            console.error('Error loading file:', error);
+            alert('Error loading file: ' + error);
+        } finally {
+            setIsLoading(false);
+        }
+    };
+    
+    // Handle data changes
+    const handleDataChange = (rowIndex: number, colIndex: number, newValue: string) => {
+        if (fileData) {
+            const newData = [...fileData.data];
+            newData[rowIndex][colIndex] = newValue;
+            setFileData({ ...fileData, data: newData });
+        }
+    };
+    
+    // Handle header changes
+    const handleHeaderChange = (colIndex: number, newHeader: string) => {
+        if (fileData) {
+            const newHeaders = [...fileData.headers];
+            newHeaders[colIndex] = newHeader;
+            setFileData({ ...fileData, headers: newHeaders });
         }
     };
     
@@ -134,6 +200,18 @@ function AppContent() {
                                 </label>
                             </div>
                             
+                            <div className="text-center">
+                                <span className="text-gray-500 dark:text-gray-400 text-sm">or</span>
+                            </div>
+                            
+                            <button
+                                onClick={handleLoadFromDialog}
+                                disabled={isLoading}
+                                className="w-full px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                            >
+                                {isLoading ? 'Loading...' : 'Browse for File'}
+                            </button>
+                            
                             {fileName && (
                                 <div className="bg-gray-50 dark:bg-gray-700/50 rounded-lg p-3 flex items-center justify-between">
                                     <span className="text-sm font-medium text-gray-700 dark:text-gray-300">
@@ -143,6 +221,7 @@ function AppContent() {
                                         onClick={() => {
                                             setFileName(null);
                                             setFileLoaded(false);
+                                            setFileData(null);
                                         }}
                                         className="text-red-600 hover:text-red-700 dark:text-red-400 dark:hover:text-red-300"
                                     >
@@ -155,20 +234,25 @@ function AppContent() {
                         </div>
                     </div>
                     
-                    {/* Step 2: Edit Data - placeholder for ag-Grid */}
-                    {fileLoaded && (
+                    {/* Step 2: Edit Data */}
+                    {fileLoaded && fileData && (
                         <div className="bg-white dark:bg-gray-800 rounded-xl shadow-md p-6 animate-fadeIn">
-                            <h2 className="text-lg font-semibold mb-4 text-gray-800 dark:text-gray-200">
-                                Step 2: Edit Data
-                            </h2>
+                            <div className="flex items-center justify-between mb-4">
+                                <h2 className="text-lg font-semibold text-gray-800 dark:text-gray-200">
+                                    Step 2: Edit Data
+                                </h2>
+                                <div className="text-sm text-gray-600 dark:text-gray-400">
+                                    {fileData.rows} rows × {fileData.columns} columns
+                                </div>
+                            </div>
                             
-                            <div className="bg-gray-100 dark:bg-gray-700 rounded-lg p-8 text-center">
-                                <p className="text-gray-600 dark:text-gray-400">
-                                    CSV Editor Grid will be displayed here
-                                </p>
-                                <p className="text-sm text-gray-500 dark:text-gray-500 mt-2">
-                                    (ag-Grid integration pending)
-                                </p>
+                            <div className="h-[600px] w-full">
+                                <CSVGrid 
+                                    data={fileData.data}
+                                    headers={fileData.headers}
+                                    onDataChange={handleDataChange}
+                                    onHeaderChange={handleHeaderChange}
+                                />
                             </div>
                         </div>
                     )}
@@ -182,10 +266,22 @@ function AppContent() {
                             
                             <div className="space-y-4">
                                 <div className="flex gap-4">
-                                    <button className="flex-1 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors">
+                                    <button 
+                                        onClick={() => {
+                                            // TODO: Implement validation
+                                            alert('Validation coming soon!');
+                                        }}
+                                        className="flex-1 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+                                    >
                                         Validate for GoPCA
                                     </button>
-                                    <button className="flex-1 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors">
+                                    <button 
+                                        onClick={() => {
+                                            // TODO: Implement Open in GoPCA
+                                            alert('Open in GoPCA coming soon!');
+                                        }}
+                                        className="flex-1 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors"
+                                    >
                                         Open in GoPCA
                                     </button>
                                 </div>
@@ -195,10 +291,27 @@ function AppContent() {
                                         Export Options
                                     </h3>
                                     <div className="grid grid-cols-2 gap-2">
-                                        <button className="px-3 py-1.5 text-sm bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 rounded hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors">
+                                        <button 
+                                            onClick={async () => {
+                                                if (fileData) {
+                                                    try {
+                                                        await SaveCSV(fileData);
+                                                    } catch (error) {
+                                                        console.error('Error saving file:', error);
+                                                        alert('Error saving file: ' + error);
+                                                    }
+                                                }
+                                            }}
+                                            className="px-3 py-1.5 text-sm bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 rounded hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors"
+                                        >
                                             Export as CSV
                                         </button>
-                                        <button className="px-3 py-1.5 text-sm bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 rounded hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors">
+                                        <button 
+                                            onClick={() => {
+                                                alert('Excel export coming soon!');
+                                            }}
+                                            className="px-3 py-1.5 text-sm bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 rounded hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors"
+                                        >
                                             Export as Excel
                                         </button>
                                     </div>

@@ -5,6 +5,9 @@ import (
 	"encoding/csv"
 	"fmt"
 	"os"
+	"path/filepath"
+	
+	"github.com/wailsapp/wails/v2/pkg/runtime"
 )
 
 // App struct
@@ -33,13 +36,53 @@ type FileData struct {
 
 // LoadCSV loads a CSV file and returns its data
 func (a *App) LoadCSV(filePath string) (*FileData, error) {
+	// If no filepath provided, show file dialog
+	if filePath == "" {
+		selection, err := runtime.OpenFileDialog(a.ctx, runtime.OpenDialogOptions{
+			Title: "Select CSV File",
+			Filters: []runtime.FileFilter{
+				{
+					DisplayName: "CSV Files (*.csv)",
+					Pattern:     "*.csv",
+				},
+				{
+					DisplayName: "All Files (*.*)",
+					Pattern:     "*.*",
+				},
+			},
+		})
+		if err != nil {
+			return nil, fmt.Errorf("error showing file dialog: %w", err)
+		}
+		if selection == "" {
+			return nil, fmt.Errorf("no file selected")
+		}
+		filePath = selection
+	}
+
 	file, err := os.Open(filePath)
 	if err != nil {
 		return nil, fmt.Errorf("error opening file: %w", err)
 	}
 	defer file.Close()
 
+	// Get file info for size checking
+	fileInfo, err := file.Stat()
+	if err != nil {
+		return nil, fmt.Errorf("error getting file info: %w", err)
+	}
+
+	// Configure CSV reader
 	reader := csv.NewReader(file)
+	reader.LazyQuotes = true
+	reader.TrimLeadingSpace = true
+	
+	// For very large files, we might want to implement streaming
+	// For now, we'll read all at once but with a size check
+	if fileInfo.Size() > 100*1024*1024 { // 100MB
+		runtime.LogWarning(a.ctx, fmt.Sprintf("Large file detected: %d MB", fileInfo.Size()/1024/1024))
+	}
+
 	records, err := reader.ReadAll()
 	if err != nil {
 		return nil, fmt.Errorf("error reading CSV: %w", err)
@@ -51,6 +94,9 @@ func (a *App) LoadCSV(filePath string) (*FileData, error) {
 
 	headers := records[0]
 	data := records[1:]
+
+	// Store the filename for display
+	runtime.EventsEmit(a.ctx, "file-loaded", filepath.Base(filePath))
 
 	return &FileData{
 		Headers: headers,
@@ -78,6 +124,53 @@ func (a *App) ValidateForGoPCA(data *FileData) (bool, []string) {
 	// - Validate column types
 
 	return len(errors) == 0, errors
+}
+
+// SaveCSV saves the data to a CSV file
+func (a *App) SaveCSV(data *FileData) error {
+	// Show save dialog
+	selection, err := runtime.SaveFileDialog(a.ctx, runtime.SaveDialogOptions{
+		Title: "Save CSV File",
+		DefaultFilename: "exported_data.csv",
+		Filters: []runtime.FileFilter{
+			{
+				DisplayName: "CSV Files (*.csv)",
+				Pattern:     "*.csv",
+			},
+		},
+	})
+	if err != nil {
+		return fmt.Errorf("error showing save dialog: %w", err)
+	}
+	if selection == "" {
+		return fmt.Errorf("no file selected")
+	}
+
+	// Create the file
+	file, err := os.Create(selection)
+	if err != nil {
+		return fmt.Errorf("error creating file: %w", err)
+	}
+	defer file.Close()
+
+	// Create CSV writer
+	writer := csv.NewWriter(file)
+	defer writer.Flush()
+
+	// Write headers
+	if err := writer.Write(data.Headers); err != nil {
+		return fmt.Errorf("error writing headers: %w", err)
+	}
+
+	// Write data
+	for _, row := range data.Data {
+		if err := writer.Write(row); err != nil {
+			return fmt.Errorf("error writing row: %w", err)
+		}
+	}
+
+	runtime.EventsEmit(a.ctx, "file-saved", filepath.Base(selection))
+	return nil
 }
 
 // GetVersion returns the application version
