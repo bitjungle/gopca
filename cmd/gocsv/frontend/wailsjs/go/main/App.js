@@ -10,6 +10,10 @@ export function LoadCSV(arg1) {
   return window['go']['main']['App']['LoadCSV'](arg1);
 }
 
+export function SaveCSV(arg1) {
+  return window['go']['main']['App']['SaveCSV'](arg1);
+}
+
 export function ValidateForGoPCA(arg1) {
   return window['go']['main']['App']['ValidateForGoPCA'](arg1);
 }

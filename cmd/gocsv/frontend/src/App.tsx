@@ -4,6 +4,7 @@ import { ThemeToggle, CSVGrid } from './components';
 import { ThemeProvider } from './contexts/ThemeContext';
 import logo from './assets/images/GoCSV-logo-1024-transp.png';
 import { LoadCSV, SaveCSV } from '../wailsjs/go/main/App';
+import { EventsOn } from '../wailsjs/runtime/runtime';
 
 interface FileData {
     headers: string[];
@@ -18,6 +19,17 @@ function AppContent() {
     const [fileData, setFileData] = useState<FileData | null>(null);
     const [isDragging, setIsDragging] = useState(false);
     const [isLoading, setIsLoading] = useState(false);
+    
+    // Listen for file-loaded events from backend
+    useEffect(() => {
+        const unsubscribe = EventsOn('file-loaded', (filename: string) => {
+            setFileName(filename);
+        });
+        
+        return () => {
+            unsubscribe();
+        };
+    }, []);
     
     // Scroll to top function
     const scrollToTop = () => {
@@ -44,9 +56,16 @@ function AppContent() {
                     rows: 1,
                     columns: 3
                 });
-            } catch (error) {
+            } catch (error: any) {
                 console.error('Error loading file:', error);
-                alert('Error loading file: ' + error);
+                const errorMsg = error?.message || error?.toString() || 'Unknown error';
+                if (errorMsg.includes('Excel files are not yet supported')) {
+                    alert('Excel files (.xlsx, .xls) are not yet supported.\n\nPlease save your file as CSV format in Excel:\n1. Open in Excel\n2. File → Save As\n3. Choose "CSV (Comma delimited)" format');
+                } else {
+                    alert('Error loading file: ' + errorMsg);
+                }
+                setFileLoaded(false);
+                setFileName(null);
             } finally {
                 setIsLoading(false);
             }
@@ -60,12 +79,19 @@ function AppContent() {
             const result = await LoadCSV('');
             if (result) {
                 setFileData(result);
-                setFileName('Loaded file');
                 setFileLoaded(true);
+                // Filename will be set by the event from backend
             }
-        } catch (error) {
+        } catch (error: any) {
             console.error('Error loading file:', error);
-            alert('Error loading file: ' + error);
+            const errorMsg = error?.message || error?.toString() || 'Unknown error';
+            if (errorMsg.includes('Excel files are not yet supported')) {
+                alert('Excel files (.xlsx, .xls) are not yet supported.\n\nPlease save your file as CSV format in Excel:\n1. Open in Excel\n2. File → Save As\n3. Choose "CSV (Comma delimited)" format');
+            } else {
+                alert('Error loading file: ' + errorMsg);
+            }
+            setFileLoaded(false);
+            setFileName(null);
         } finally {
             setIsLoading(false);
         }
@@ -163,7 +189,7 @@ function AppContent() {
                             >
                                 <input
                                     type="file"
-                                    accept=".csv,.xlsx,.xls,.tsv,.json"
+                                    accept=".csv,.tsv"
                                     className="hidden"
                                     id="file-upload"
                                     onChange={(e) => {
@@ -195,7 +221,10 @@ function AppContent() {
                                         )}
                                     </p>
                                     <p className="text-xs text-gray-500 dark:text-gray-500 mt-1">
-                                        CSV, Excel (XLSX/XLS), TSV, JSON
+                                        CSV, TSV files supported
+                                    </p>
+                                    <p className="text-xs text-gray-400 dark:text-gray-600 mt-1">
+                                        (Excel support coming soon)
                                     </p>
                                 </label>
                             </div>

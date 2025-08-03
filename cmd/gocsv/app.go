@@ -42,8 +42,20 @@ func (a *App) LoadCSV(filePath string) (*FileData, error) {
 			Title: "Select CSV File",
 			Filters: []runtime.FileFilter{
 				{
+					DisplayName: "Supported Files (*.csv,*.xlsx,*.xls,*.tsv)",
+					Pattern:     "*.csv;*.xlsx;*.xls;*.tsv",
+				},
+				{
 					DisplayName: "CSV Files (*.csv)",
 					Pattern:     "*.csv",
+				},
+				{
+					DisplayName: "Excel Files (*.xlsx,*.xls)",
+					Pattern:     "*.xlsx;*.xls",
+				},
+				{
+					DisplayName: "TSV Files (*.tsv)",
+					Pattern:     "*.tsv",
 				},
 				{
 					DisplayName: "All Files (*.*)",
@@ -58,6 +70,20 @@ func (a *App) LoadCSV(filePath string) (*FileData, error) {
 			return nil, fmt.Errorf("no file selected")
 		}
 		filePath = selection
+	}
+
+	// Check file extension
+	ext := filepath.Ext(filePath)
+	switch ext {
+	case ".xlsx", ".xls":
+		return nil, fmt.Errorf("Excel files are not yet supported. Please export to CSV format first")
+	case ".tsv":
+		// TSV files can be handled by setting the delimiter
+		// Continue with CSV reader below
+	case ".csv", "":
+		// Default CSV handling
+	default:
+		return nil, fmt.Errorf("unsupported file format: %s", ext)
 	}
 
 	file, err := os.Open(filePath)
@@ -76,6 +102,11 @@ func (a *App) LoadCSV(filePath string) (*FileData, error) {
 	reader := csv.NewReader(file)
 	reader.LazyQuotes = true
 	reader.TrimLeadingSpace = true
+	
+	// Handle TSV files
+	if ext == ".tsv" {
+		reader.Comma = '\t'
+	}
 	
 	// For very large files, we might want to implement streaming
 	// For now, we'll read all at once but with a size check

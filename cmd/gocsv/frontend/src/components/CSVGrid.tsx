@@ -86,10 +86,6 @@ export const CSVGrid: React.FC<CSVGridProps> = ({
                     }
                     return params.value;
                 },
-                onHeaderClick: (params: any) => {
-                    // Could implement header editing here
-                    console.log('Header clicked:', params);
-                }
             };
         });
     }, [headers, detectColumnType]);
