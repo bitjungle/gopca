@@ -1,9 +1,9 @@
 import React, { useState, useRef, useEffect } from 'react';
 import './App.css';
-import { ThemeToggle, CSVGrid, ValidationResults } from './components';
+import { ThemeToggle, CSVGrid, ValidationResults, MissingValueSummary, MissingValueDialog } from './components';
 import { ThemeProvider } from './contexts/ThemeContext';
 import logo from './assets/images/GoCSV-logo-1024-transp.png';
-import { LoadCSV, SaveCSV, SaveExcel, ValidateForGoPCA } from '../wailsjs/go/main/App';
+import { LoadCSV, SaveCSV, SaveExcel, ValidateForGoPCA, AnalyzeMissingValues, FillMissingValues } from '../wailsjs/go/main/App';
 import { EventsOn } from '../wailsjs/runtime/runtime';
 import { main } from '../wailsjs/go/models';
 
@@ -17,6 +17,9 @@ function AppContent() {
     const [isLoading, setIsLoading] = useState(false);
     const [validationResult, setValidationResult] = useState<{ isValid: boolean; messages: string[] } | null>(null);
     const [isValidating, setIsValidating] = useState(false);
+    const [missingValueStats, setMissingValueStats] = useState<main.MissingValueStats | null>(null);
+    const [showMissingValueSummary, setShowMissingValueSummary] = useState(false);
+    const [showMissingValueDialog, setShowMissingValueDialog] = useState(false);
     
     // Listen for file-loaded events from backend
     useEffect(() => {
@@ -117,6 +120,44 @@ function AppContent() {
             });
         } finally {
             setIsValidating(false);
+        }
+    };
+    
+    // Handle missing value analysis
+    const handleAnalyzeMissingValues = async () => {
+        if (!fileData) return;
+        
+        try {
+            const stats = await AnalyzeMissingValues(fileData);
+            setMissingValueStats(stats);
+            setShowMissingValueSummary(true);
+        } catch (error) {
+            console.error('Error analyzing missing values:', error);
+            alert('Error analyzing missing values: ' + error);
+        }
+    };
+    
+    // Handle missing value fill
+    const handleFillMissingValues = async (strategy: string, column: string, value?: string) => {
+        if (!fileData) return;
+        
+        try {
+            const request = {
+                strategy,
+                column,
+                value: value || ''
+            };
+            const result = await FillMissingValues(fileData, request);
+            if (result) {
+                setFileData(result);
+                setValidationResult(null);
+                // Re-analyze missing values
+                const stats = await AnalyzeMissingValues(result);
+                setMissingValueStats(stats);
+            }
+        } catch (error) {
+            console.error('Error filling missing values:', error);
+            alert('Error filling missing values: ' + error);
         }
     };
     
@@ -282,6 +323,39 @@ function AppContent() {
                                 </div>
                             </div>
                             
+                            {/* Missing Values Toolbar */}
+                            <div className="flex items-center justify-between mb-4 p-3 bg-gray-50 dark:bg-gray-700 rounded-lg">
+                                <div className="flex items-center gap-4">
+                                    <button
+                                        onClick={handleAnalyzeMissingValues}
+                                        className="px-3 py-1.5 text-sm bg-white dark:bg-gray-600 text-gray-700 dark:text-gray-300 rounded hover:bg-gray-100 dark:hover:bg-gray-500 transition-colors border border-gray-300 dark:border-gray-500"
+                                    >
+                                        <span className="flex items-center gap-2">
+                                            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
+                                            </svg>
+                                            Analyze Missing Values
+                                        </span>
+                                    </button>
+                                    <button
+                                        onClick={() => setShowMissingValueDialog(true)}
+                                        className="px-3 py-1.5 text-sm bg-white dark:bg-gray-600 text-gray-700 dark:text-gray-300 rounded hover:bg-gray-100 dark:hover:bg-gray-500 transition-colors border border-gray-300 dark:border-gray-500"
+                                    >
+                                        <span className="flex items-center gap-2">
+                                            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12" />
+                                            </svg>
+                                            Fill Missing Values
+                                        </span>
+                                    </button>
+                                </div>
+                                {missingValueStats && (
+                                    <div className="text-sm text-gray-600 dark:text-gray-400">
+                                        Missing: {missingValueStats.missingCells} cells ({missingValueStats.missingPercent?.toFixed(1)}%)
+                                    </div>
+                                )}
+                            </div>
+                            
                             <div className="h-[600px] w-full">
                                 <CSVGrid 
                                     data={fileData.data}
@@ -379,6 +453,21 @@ function AppContent() {
                     )}
                 </div>
             </main>
+            
+            {/* Missing Value Summary Dialog */}
+            <MissingValueSummary 
+                stats={missingValueStats}
+                onClose={() => setShowMissingValueSummary(false)}
+            />
+            
+            {/* Missing Value Fill Dialog */}
+            <MissingValueDialog
+                isOpen={showMissingValueDialog}
+                onClose={() => setShowMissingValueDialog(false)}
+                onFill={handleFillMissingValues}
+                columns={fileData?.headers || []}
+                columnTypes={fileData?.columnTypes || {}}
+            />
         </div>
     );
 }

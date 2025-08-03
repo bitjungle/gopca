@@ -96,7 +96,14 @@ export const CSVGrid: React.FC<CSVGridProps> = ({
                     if (colType === 'numeric') classes.push('numeric-cell');
                     if (colType === 'mixed') classes.push('mixed-cell');
                     if (isTargetColumn) classes.push('target-column');
-                    if (!params.value || params.value.trim() === '') classes.push('missing-value');
+                    
+                    // Check for missing values using same logic as backend
+                    const value = params.value?.toString().trim() || '';
+                    const lowerValue = value.toLowerCase();
+                    const isMissing = !value || 
+                        ['na', 'n/a', 'nan', 'null', 'none', 'missing', '-', '?'].includes(lowerValue);
+                    
+                    if (isMissing) classes.push('missing-value');
                     return classes.join(' ');
                 },
                 headerClass: () => {
