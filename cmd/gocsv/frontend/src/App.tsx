@@ -1,9 +1,9 @@
 import React, { useState, useRef, useEffect } from 'react';
 import './App.css';
-import { ThemeToggle, CSVGrid, ValidationResults, MissingValueSummary, MissingValueDialog } from './components';
+import { ThemeToggle, CSVGrid, ValidationResults, MissingValueSummary, MissingValueDialog, DataQualityDashboard } from './components';
 import { ThemeProvider } from './contexts/ThemeContext';
 import logo from './assets/images/GoCSV-logo-1024-transp.png';
-import { LoadCSV, SaveCSV, SaveExcel, ValidateForGoPCA, AnalyzeMissingValues, FillMissingValues } from '../wailsjs/go/main/App';
+import { LoadCSV, SaveCSV, SaveExcel, ValidateForGoPCA, AnalyzeMissingValues, FillMissingValues, AnalyzeDataQuality } from '../wailsjs/go/main/App';
 import { EventsOn } from '../wailsjs/runtime/runtime';
 import { main } from '../wailsjs/go/models';
 
@@ -20,6 +20,9 @@ function AppContent() {
     const [missingValueStats, setMissingValueStats] = useState<main.MissingValueStats | null>(null);
     const [showMissingValueSummary, setShowMissingValueSummary] = useState(false);
     const [showMissingValueDialog, setShowMissingValueDialog] = useState(false);
+    const [dataQualityReport, setDataQualityReport] = useState<main.DataQualityReport | null>(null);
+    const [showDataQualityReport, setShowDataQualityReport] = useState(false);
+    const [isAnalyzingQuality, setIsAnalyzingQuality] = useState(false);
     
     // Listen for file-loaded events from backend
     useEffect(() => {
@@ -323,9 +326,34 @@ function AppContent() {
                                 </div>
                             </div>
                             
-                            {/* Missing Values Toolbar */}
+                            {/* Data Quality Toolbar */}
                             <div className="flex items-center justify-between mb-4 p-3 bg-gray-50 dark:bg-gray-700 rounded-lg">
                                 <div className="flex items-center gap-4">
+                                    <button
+                                        onClick={async () => {
+                                            if (!fileData) return;
+                                            setIsAnalyzingQuality(true);
+                                            try {
+                                                const report = await AnalyzeDataQuality(fileData);
+                                                setDataQualityReport(report);
+                                                setShowDataQualityReport(true);
+                                            } catch (error) {
+                                                console.error('Error analyzing data quality:', error);
+                                                alert('Error analyzing data quality: ' + error);
+                                            } finally {
+                                                setIsAnalyzingQuality(false);
+                                            }
+                                        }}
+                                        disabled={isAnalyzingQuality}
+                                        className="px-3 py-1.5 text-sm bg-blue-600 text-white rounded hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                                    >
+                                        <span className="flex items-center gap-2">
+                                            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 17v-2m3 2v-4m3 4v-6m2 10H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                                            </svg>
+                                            {isAnalyzingQuality ? 'Analyzing...' : 'Data Quality Report'}
+                                        </span>
+                                    </button>
                                     <button
                                         onClick={handleAnalyzeMissingValues}
                                         className="px-3 py-1.5 text-sm bg-white dark:bg-gray-600 text-gray-700 dark:text-gray-300 rounded hover:bg-gray-100 dark:hover:bg-gray-500 transition-colors border border-gray-300 dark:border-gray-500"
@@ -468,6 +496,13 @@ function AppContent() {
                 onFill={handleFillMissingValues}
                 columns={fileData?.headers || []}
                 columnTypes={fileData?.columnTypes || {}}
+            />
+            
+            {/* Data Quality Report Dashboard */}
+            <DataQualityDashboard
+                report={dataQualityReport}
+                isOpen={showDataQualityReport}
+                onClose={() => setShowDataQualityReport(false)}
             />
         </div>
     );

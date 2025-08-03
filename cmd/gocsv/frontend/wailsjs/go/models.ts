@@ -1,5 +1,157 @@
 export namespace main {
 	
+	export class OutlierInfo {
+	    rowIndex: number;
+	    value: string;
+	    method: string;
+	    score: number;
+	
+	    static createFrom(source: any = {}) {
+	        return new OutlierInfo(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.rowIndex = source["rowIndex"];
+	        this.value = source["value"];
+	        this.method = source["method"];
+	        this.score = source["score"];
+	    }
+	}
+	export class HistogramBin {
+	    min: number;
+	    max: number;
+	    count: number;
+	
+	    static createFrom(source: any = {}) {
+	        return new HistogramBin(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.min = source["min"];
+	        this.max = source["max"];
+	        this.count = source["count"];
+	    }
+	}
+	export class DistributionInfo {
+	    histogram?: HistogramBin[];
+	    isNormal: boolean;
+	    normalityPValue?: number;
+	    distType: string;
+	
+	    static createFrom(source: any = {}) {
+	        return new DistributionInfo(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.histogram = this.convertValues(source["histogram"], HistogramBin);
+	        this.isNormal = source["isNormal"];
+	        this.normalityPValue = source["normalityPValue"];
+	        this.distType = source["distType"];
+	    }
+	
+		convertValues(a: any, classs: any, asMap: boolean = false): any {
+		    if (!a) {
+		        return a;
+		    }
+		    if (a.slice && a.map) {
+		        return (a as any[]).map(elem => this.convertValues(elem, classs));
+		    } else if ("object" === typeof a) {
+		        if (asMap) {
+		            for (const key of Object.keys(a)) {
+		                a[key] = new classs(a[key]);
+		            }
+		            return a;
+		        }
+		        return new classs(a);
+		    }
+		    return a;
+		}
+	}
+	export class ColumnStatistics {
+	    count: number;
+	    missing: number;
+	    missingPercent: number;
+	    unique: number;
+	    mean?: number;
+	    median?: number;
+	    mode?: string;
+	    stdDev?: number;
+	    min?: number;
+	    max?: number;
+	    q1?: number;
+	    q3?: number;
+	    iqr?: number;
+	    skewness?: number;
+	    kurtosis?: number;
+	    categories?: Record<string, number>;
+	
+	    static createFrom(source: any = {}) {
+	        return new ColumnStatistics(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.count = source["count"];
+	        this.missing = source["missing"];
+	        this.missingPercent = source["missingPercent"];
+	        this.unique = source["unique"];
+	        this.mean = source["mean"];
+	        this.median = source["median"];
+	        this.mode = source["mode"];
+	        this.stdDev = source["stdDev"];
+	        this.min = source["min"];
+	        this.max = source["max"];
+	        this.q1 = source["q1"];
+	        this.q3 = source["q3"];
+	        this.iqr = source["iqr"];
+	        this.skewness = source["skewness"];
+	        this.kurtosis = source["kurtosis"];
+	        this.categories = source["categories"];
+	    }
+	}
+	export class ColumnAnalysis {
+	    name: string;
+	    type: string;
+	    stats: ColumnStatistics;
+	    distribution: DistributionInfo;
+	    outliers: OutlierInfo[];
+	    qualityScore: number;
+	
+	    static createFrom(source: any = {}) {
+	        return new ColumnAnalysis(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.name = source["name"];
+	        this.type = source["type"];
+	        this.stats = this.convertValues(source["stats"], ColumnStatistics);
+	        this.distribution = this.convertValues(source["distribution"], DistributionInfo);
+	        this.outliers = this.convertValues(source["outliers"], OutlierInfo);
+	        this.qualityScore = source["qualityScore"];
+	    }
+	
+		convertValues(a: any, classs: any, asMap: boolean = false): any {
+		    if (!a) {
+		        return a;
+		    }
+		    if (a.slice && a.map) {
+		        return (a as any[]).map(elem => this.convertValues(elem, classs));
+		    } else if ("object" === typeof a) {
+		        if (asMap) {
+		            for (const key of Object.keys(a)) {
+		                a[key] = new classs(a[key]);
+		            }
+		            return a;
+		        }
+		        return new classs(a);
+		    }
+		    return a;
+		}
+	}
 	export class ColumnMissing {
 	    name: string;
 	    totalValues: number;
@@ -20,6 +172,112 @@ export namespace main {
 	        this.pattern = source["pattern"];
 	    }
 	}
+	
+	export class DataProfile {
+	    rows: number;
+	    columns: number;
+	    numericColumns: number;
+	    categoricalColumns: number;
+	    targetColumns: number;
+	    missingPercent: number;
+	    duplicateRows: number;
+	    memorySize: string;
+	
+	    static createFrom(source: any = {}) {
+	        return new DataProfile(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.rows = source["rows"];
+	        this.columns = source["columns"];
+	        this.numericColumns = source["numericColumns"];
+	        this.categoricalColumns = source["categoricalColumns"];
+	        this.targetColumns = source["targetColumns"];
+	        this.missingPercent = source["missingPercent"];
+	        this.duplicateRows = source["duplicateRows"];
+	        this.memorySize = source["memorySize"];
+	    }
+	}
+	export class Recommendation {
+	    priority: string;
+	    category: string;
+	    action: string;
+	    description: string;
+	    columns?: string[];
+	
+	    static createFrom(source: any = {}) {
+	        return new Recommendation(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.priority = source["priority"];
+	        this.category = source["category"];
+	        this.action = source["action"];
+	        this.description = source["description"];
+	        this.columns = source["columns"];
+	    }
+	}
+	export class QualityIssue {
+	    severity: string;
+	    category: string;
+	    description: string;
+	    affected: string[];
+	    impact: string;
+	
+	    static createFrom(source: any = {}) {
+	        return new QualityIssue(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.severity = source["severity"];
+	        this.category = source["category"];
+	        this.description = source["description"];
+	        this.affected = source["affected"];
+	        this.impact = source["impact"];
+	    }
+	}
+	export class DataQualityReport {
+	    dataProfile: DataProfile;
+	    columnAnalysis: ColumnAnalysis[];
+	    qualityScore: number;
+	    issues: QualityIssue[];
+	    recommendations: Recommendation[];
+	
+	    static createFrom(source: any = {}) {
+	        return new DataQualityReport(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.dataProfile = this.convertValues(source["dataProfile"], DataProfile);
+	        this.columnAnalysis = this.convertValues(source["columnAnalysis"], ColumnAnalysis);
+	        this.qualityScore = source["qualityScore"];
+	        this.issues = this.convertValues(source["issues"], QualityIssue);
+	        this.recommendations = this.convertValues(source["recommendations"], Recommendation);
+	    }
+	
+		convertValues(a: any, classs: any, asMap: boolean = false): any {
+		    if (!a) {
+		        return a;
+		    }
+		    if (a.slice && a.map) {
+		        return (a as any[]).map(elem => this.convertValues(elem, classs));
+		    } else if ("object" === typeof a) {
+		        if (asMap) {
+		            for (const key of Object.keys(a)) {
+		                a[key] = new classs(a[key]);
+		            }
+		            return a;
+		        }
+		        return new classs(a);
+		    }
+		    return a;
+		}
+	}
+	
 	export class FileData {
 	    headers: string[];
 	    rowNames?: string[];
@@ -62,6 +320,7 @@ export namespace main {
 	        this.value = source["value"];
 	    }
 	}
+	
 	export class RowMissing {
 	    index: number;
 	    totalValues: number;
@@ -118,6 +377,9 @@ export namespace main {
 		    return a;
 		}
 	}
+	
+	
+	
 	
 	export class ValidationResult {
 	    isValid: boolean;
