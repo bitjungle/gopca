@@ -457,6 +457,7 @@ function AppContent() {
             {/* Missing Value Summary Dialog */}
             <MissingValueSummary 
                 stats={missingValueStats}
+                isOpen={showMissingValueSummary}
                 onClose={() => setShowMissingValueSummary(false)}
             />
             

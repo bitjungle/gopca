@@ -3,11 +3,12 @@ import { main } from '../../wailsjs/go/models';
 
 interface MissingValueSummaryProps {
     stats: main.MissingValueStats | null;
+    isOpen: boolean;
     onClose: () => void;
 }
 
-export const MissingValueSummary: React.FC<MissingValueSummaryProps> = ({ stats, onClose }) => {
-    if (!stats) {
+export const MissingValueSummary: React.FC<MissingValueSummaryProps> = ({ stats, isOpen, onClose }) => {
+    if (!isOpen || !stats) {
         return null;
     }
 
