@@ -9,7 +9,9 @@ import (
 	"strconv"
 	"strings"
 	
+	"github.com/bitjungle/gopca/pkg/types"
 	"github.com/wailsapp/wails/v2/pkg/runtime"
+	"github.com/xuri/excelize/v2"
 )
 
 // App struct
@@ -30,10 +32,14 @@ func (a *App) startup(ctx context.Context) {
 
 // FileData represents the loaded CSV data
 type FileData struct {
-	Headers []string   `json:"headers"`
-	Data    [][]string `json:"data"`
-	Rows    int        `json:"rows"`
-	Columns int        `json:"columns"`
+	Headers              []string              `json:"headers"`
+	RowNames             []string              `json:"rowNames,omitempty"`
+	Data                 [][]string            `json:"data"`
+	Rows                 int                   `json:"rows"`
+	Columns              int                   `json:"columns"`
+	CategoricalColumns   map[string][]string   `json:"categoricalColumns,omitempty"`
+	NumericTargetColumns map[string][]float64  `json:"numericTargetColumns,omitempty"`
+	ColumnTypes          map[string]string     `json:"columnTypes,omitempty"` // "numeric", "categorical", "target"
 }
 
 // ValidationResult represents the result of GoPCA validation
@@ -82,105 +88,306 @@ func (a *App) LoadCSV(filePath string) (*FileData, error) {
 
 	// Check file extension
 	ext := filepath.Ext(filePath)
+	var fileData *FileData
+	
 	switch ext {
 	case ".xlsx", ".xls":
-		return nil, fmt.Errorf("Excel files are not yet supported. Please export to CSV format first")
-	case ".tsv":
-		// TSV files can be handled by setting the delimiter
-		// Continue with CSV reader below
-	case ".csv", "":
-		// Default CSV handling
+		// Handle Excel files
+		var err error
+		fileData, err = a.loadExcel(filePath)
+		if err != nil {
+			return nil, fmt.Errorf("error loading Excel file: %w", err)
+		}
+	case ".tsv", ".csv", "":
+		// Handle CSV/TSV files
+		content, err := os.ReadFile(filePath)
+		if err != nil {
+			return nil, fmt.Errorf("error reading file: %w", err)
+		}
+		
+		// Check file size
+		if len(content) > 100*1024*1024 { // 100MB
+			runtime.LogWarning(a.ctx, fmt.Sprintf("Large file detected: %d MB", len(content)/1024/1024))
+		}
+		
+		// Parse using GoPCA's parser with format detection
+		fileData, err = a.parseCSVContent(string(content), ext)
+		if err != nil {
+			return nil, err
+		}
 	default:
 		return nil, fmt.Errorf("unsupported file format: %s", ext)
 	}
 
-	file, err := os.Open(filePath)
-	if err != nil {
-		return nil, fmt.Errorf("error opening file: %w", err)
-	}
-	defer file.Close()
-
-	// Get file info for size checking
-	fileInfo, err := file.Stat()
-	if err != nil {
-		return nil, fmt.Errorf("error getting file info: %w", err)
-	}
-
-	// Configure CSV reader
-	reader := csv.NewReader(file)
-	reader.LazyQuotes = true
-	reader.TrimLeadingSpace = true
-	
-	// Handle TSV files
-	if ext == ".tsv" {
-		reader.Comma = '\t'
-	}
-	
-	// For very large files, we might want to implement streaming
-	// For now, we'll read all at once but with a size check
-	if fileInfo.Size() > 100*1024*1024 { // 100MB
-		runtime.LogWarning(a.ctx, fmt.Sprintf("Large file detected: %d MB", fileInfo.Size()/1024/1024))
-	}
-
-	records, err := reader.ReadAll()
-	if err != nil {
-		return nil, fmt.Errorf("error reading CSV: %w", err)
-	}
-
-	if len(records) == 0 {
-		return nil, fmt.Errorf("empty CSV file")
-	}
-
-	headers := records[0]
-	data := records[1:]
-
 	// Store the filename for display
 	runtime.EventsEmit(a.ctx, "file-loaded", filepath.Base(filePath))
 
+	return fileData, nil
+}
+
+// loadExcel loads data from an Excel file
+func (a *App) loadExcel(filePath string) (*FileData, error) {
+	runtime.LogInfo(a.ctx, fmt.Sprintf("Loading Excel file: %s", filePath))
+	
+	f, err := excelize.OpenFile(filePath)
+	if err != nil {
+		return nil, fmt.Errorf("failed to open Excel file: %w", err)
+	}
+	defer f.Close()
+	
+	// Get list of sheets
+	sheets := f.GetSheetList()
+	if len(sheets) == 0 {
+		return nil, fmt.Errorf("no sheets found in Excel file")
+	}
+	
+	// For now, use the first sheet. TODO: Add sheet selection dialog
+	selectedSheet := sheets[0]
+	if len(sheets) > 1 {
+		runtime.LogInfo(a.ctx, fmt.Sprintf("Multiple sheets found. Using first sheet: %s", selectedSheet))
+	}
+	
+	// Get all rows from the selected sheet
+	rows, err := f.GetRows(selectedSheet)
+	if err != nil {
+		return nil, fmt.Errorf("failed to read sheet %s: %w", selectedSheet, err)
+	}
+	
+	if len(rows) == 0 {
+		return nil, fmt.Errorf("no data found in sheet %s", selectedSheet)
+	}
+	
+	// Convert Excel data to CSV format for parsing
+	var csvContent strings.Builder
+	for _, row := range rows {
+		for i, cell := range row {
+			if i > 0 {
+				csvContent.WriteString(",")
+			}
+			// Quote cells that contain commas or quotes
+			if strings.Contains(cell, ",") || strings.Contains(cell, "\"") {
+				csvContent.WriteString("\"")
+				csvContent.WriteString(strings.ReplaceAll(cell, "\"", "\"\""))
+				csvContent.WriteString("\"")
+			} else {
+				csvContent.WriteString(cell)
+			}
+		}
+		csvContent.WriteString("\n")
+	}
+	
+	// Parse the CSV content using GoPCA's parser
+	runtime.LogInfo(a.ctx, fmt.Sprintf("Excel data converted to CSV, %d bytes", csvContent.Len()))
+	return a.parseCSVContent(csvContent.String(), ".csv")
+}
+
+// parseCSVContent parses CSV content using GoPCA's parser
+func (a *App) parseCSVContent(content string, ext string) (*FileData, error) {
+	// Configure format based on file extension
+	defaultFormat := types.DefaultCSVFormat()
+	formats := []types.CSVFormat{
+		defaultFormat, // Standard CSV: comma with dot decimal
+	}
+	
+	// Add TSV format if TSV file
+	if ext == ".tsv" {
+		formats = []types.CSVFormat{
+			{
+				FieldDelimiter:   '\t',
+				DecimalSeparator: '.',
+				HasHeaders:       true,
+				HasRowNames:      true,
+				NullValues:       defaultFormat.NullValues,
+			},
+		}
+	} else {
+		// Try multiple CSV formats
+		formats = append(formats, 
+			types.CSVFormat{
+				FieldDelimiter:   ';',
+				DecimalSeparator: ',',
+				HasHeaders:       true,
+				HasRowNames:      true,
+				NullValues:       defaultFormat.NullValues,
+			},
+		)
+	}
+
+	var csvData *types.CSVData
+	var categoricalData map[string][]string
+	var numericTargetData map[string][]float64
+	var lastErr error
+
+	// Try each format until one works
+	for _, format := range formats {
+		reader := strings.NewReader(content)
+		data, catData, targetData, err := types.ParseCSVMixedWithTargets(reader, format, nil)
+		if err == nil && data != nil && data.Columns > 0 {
+			csvData = data
+			categoricalData = catData
+			numericTargetData = targetData
+			break
+		}
+		if err != nil {
+			lastErr = err
+		}
+	}
+
+	if csvData == nil {
+		if lastErr != nil {
+			runtime.LogError(a.ctx, fmt.Sprintf("Failed to parse CSV: %v", lastErr))
+			return nil, fmt.Errorf("failed to parse CSV: %w", lastErr)
+		}
+		runtime.LogError(a.ctx, "No data found in file")
+		return nil, fmt.Errorf("no data found in file")
+	}
+
+	// Convert numeric matrix to string matrix for display
+	stringData := make([][]string, len(csvData.Matrix))
+	for i, row := range csvData.Matrix {
+		stringData[i] = make([]string, len(row))
+		for j, val := range row {
+			if csvData.MissingMask != nil && csvData.MissingMask[i][j] {
+				stringData[i][j] = ""
+			} else {
+				stringData[i][j] = strconv.FormatFloat(val, 'g', -1, 64)
+			}
+		}
+	}
+
+	// Build column types map
+	columnTypes := make(map[string]string)
+	
+	// Mark numeric columns
+	for _, header := range csvData.Headers {
+		columnTypes[header] = "numeric"
+	}
+	
+	// Mark categorical columns
+	for colName := range categoricalData {
+		columnTypes[colName] = "categorical"
+	}
+	
+	// Mark target columns
+	for colName := range numericTargetData {
+		columnTypes[colName] = "target"
+	}
+
+	// Create FileData with all information
+	fileData := &FileData{
+		Headers:              csvData.Headers,
+		RowNames:             csvData.RowNames,
+		Data:                 stringData,
+		Rows:                 csvData.Rows,
+		Columns:              csvData.Columns,
+		CategoricalColumns:   categoricalData,
+		NumericTargetColumns: numericTargetData,
+		ColumnTypes:          columnTypes,
+	}
+	
+	runtime.LogInfo(a.ctx, fmt.Sprintf("Parsed data: %d rows, %d columns, %d headers", csvData.Rows, csvData.Columns, len(csvData.Headers)))
+
+	// If we have categorical or target columns, we need to combine them with numeric data
+	// for the full data display
+	if len(categoricalData) > 0 || len(numericTargetData) > 0 {
+		fileData = a.combineAllColumns(csvData, categoricalData, numericTargetData)
+	}
+
+	return fileData, nil
+}
+
+// combineAllColumns combines numeric, categorical, and target columns for display
+func (a *App) combineAllColumns(csvData *types.CSVData, categoricalData map[string][]string, numericTargetData map[string][]float64) *FileData {
+	// Start with numeric columns from csvData
+	allHeaders := make([]string, 0)
+	allData := make([][]string, csvData.Rows)
+	columnTypes := make(map[string]string)
+	
+	// Initialize rows
+	for i := range allData {
+		allData[i] = make([]string, 0)
+	}
+	
+	// Add numeric columns
+	for colIdx, header := range csvData.Headers {
+		allHeaders = append(allHeaders, header)
+		columnTypes[header] = "numeric"
+		
+		for rowIdx := 0; rowIdx < csvData.Rows; rowIdx++ {
+			if csvData.MissingMask != nil && csvData.MissingMask[rowIdx][colIdx] {
+				allData[rowIdx] = append(allData[rowIdx], "")
+			} else {
+				allData[rowIdx] = append(allData[rowIdx], strconv.FormatFloat(csvData.Matrix[rowIdx][colIdx], 'g', -1, 64))
+			}
+		}
+	}
+	
+	// Add categorical columns
+	for colName, values := range categoricalData {
+		allHeaders = append(allHeaders, colName)
+		columnTypes[colName] = "categorical"
+		
+		for rowIdx, value := range values {
+			if rowIdx < len(allData) {
+				allData[rowIdx] = append(allData[rowIdx], value)
+			}
+		}
+	}
+	
+	// Add numeric target columns
+	for colName, values := range numericTargetData {
+		allHeaders = append(allHeaders, colName)
+		columnTypes[colName] = "target"
+		
+		for rowIdx, value := range values {
+			if rowIdx < len(allData) {
+				allData[rowIdx] = append(allData[rowIdx], strconv.FormatFloat(value, 'g', -1, 64))
+			}
+		}
+	}
+	
 	return &FileData{
-		Headers: headers,
-		Data:    data,
-		Rows:    len(data),
-		Columns: len(headers),
-	}, nil
+		Headers:              allHeaders,
+		RowNames:             csvData.RowNames,
+		Data:                 allData,
+		Rows:                 csvData.Rows,
+		Columns:              len(allHeaders),
+		CategoricalColumns:   categoricalData,
+		NumericTargetColumns: numericTargetData,
+		ColumnTypes:          columnTypes,
+	}
 }
 
 // ValidateForGoPCA validates that the CSV data is compatible with GoPCA
 func (a *App) ValidateForGoPCA(data *FileData) *ValidationResult {
 	var warnings []string
 	var numericColumns int
+	var categoricalColumns int
+	var targetColumns int
 	var totalMissing int
-	var hasTargetColumn bool
 
 	// Check minimum data requirements
 	if data.Rows < 2 {
 		warnings = append(warnings, "ERROR: Data must have at least 2 rows (found "+fmt.Sprintf("%d", data.Rows)+")")
 	}
-	if data.Columns < 2 {
-		warnings = append(warnings, "ERROR: Data must have at least 2 columns (found "+fmt.Sprintf("%d", data.Columns)+")")
+
+	// Count column types using our pre-detected types
+	for _, colType := range data.ColumnTypes {
+		switch colType {
+		case "numeric":
+			numericColumns++
+		case "categorical":
+			categoricalColumns++
+		case "target":
+			targetColumns++
+		}
 	}
 
-	// Check column types and missing values
+	// Check for missing values in the data
 	for colIdx, header := range data.Headers {
-		// Check if it's a target column
-		headerLower := strings.ToLower(header)
-		if strings.HasSuffix(headerLower, "#target") || strings.HasSuffix(headerLower, "# target") {
-			hasTargetColumn = true
-			continue // Target columns are excluded from PCA
-		}
-
-		// Analyze column data
-		hasNumeric := false
-		hasText := false
 		missingInCol := 0
 		
-		// Sample up to 100 rows for type detection
-		sampleSize := data.Rows
-		if sampleSize > 100 {
-			sampleSize = 100
-		}
-		
-		for i := 0; i < sampleSize; i++ {
+		for i := 0; i < data.Rows; i++ {
 			if i >= len(data.Data) {
 				break
 			}
@@ -192,55 +399,53 @@ func (a *App) ValidateForGoPCA(data *FileData) *ValidationResult {
 			   trimmed == "nan" || trimmed == "NaN" || trimmed == "null" || trimmed == "NULL" {
 				missingInCol++
 				totalMissing++
-				continue
 			}
-			
-			// Check if numeric
-			if _, err := strconv.ParseFloat(trimmed, 64); err == nil {
-				hasNumeric = true
-			} else {
-				hasText = true
-			}
-		}
-		
-		// Count numeric columns (excluding mixed type columns)
-		if hasNumeric && !hasText {
-			numericColumns++
-		} else if hasText && !hasNumeric {
-			warnings = append(warnings, fmt.Sprintf("WARNING: Column '%s' contains only text values", header))
-		} else if hasText && hasNumeric {
-			warnings = append(warnings, fmt.Sprintf("WARNING: Column '%s' contains mixed numeric and text values", header))
 		}
 		
 		// Report high missing value percentage
-		missingPercent := float64(missingInCol) / float64(sampleSize) * 100
-		if missingPercent > 50 {
-			warnings = append(warnings, fmt.Sprintf("WARNING: Column '%s' has %.1f%% missing values", header, missingPercent))
+		if data.Rows > 0 {
+			missingPercent := float64(missingInCol) / float64(data.Rows) * 100
+			if missingPercent > 50 {
+				warnings = append(warnings, fmt.Sprintf("WARNING: Column '%s' has %.1f%% missing values", header, missingPercent))
+			}
 		}
 	}
 
-	// Check if we have enough numeric columns for PCA
-	effectiveColumns := numericColumns
-	if hasTargetColumn {
-		warnings = append(warnings, "INFO: Target column(s) detected - these will be excluded from PCA analysis")
+	// Report column type summary
+	if categoricalColumns > 0 {
+		warnings = append(warnings, fmt.Sprintf("INFO: %d categorical column(s) detected - these will be excluded from PCA but available for visualization", categoricalColumns))
 	}
 	
-	if effectiveColumns < 2 {
-		warnings = append(warnings, fmt.Sprintf("ERROR: Need at least 2 numeric columns for PCA (found %d)", effectiveColumns))
-	} else if effectiveColumns < 3 {
-		warnings = append(warnings, fmt.Sprintf("WARNING: Only %d numeric columns found - PCA results may be limited", effectiveColumns))
+	if targetColumns > 0 {
+		warnings = append(warnings, fmt.Sprintf("INFO: %d target column(s) detected - these will be excluded from PCA but available for visualization", targetColumns))
+	}
+
+	// Check if we have enough numeric columns for PCA
+	if numericColumns < 2 {
+		warnings = append(warnings, fmt.Sprintf("ERROR: Need at least 2 numeric columns for PCA (found %d)", numericColumns))
+	} else if numericColumns < 3 {
+		warnings = append(warnings, fmt.Sprintf("WARNING: Only %d numeric columns found - PCA results may be limited", numericColumns))
+	} else {
+		warnings = append(warnings, fmt.Sprintf("INFO: %d numeric columns will be used for PCA analysis", numericColumns))
 	}
 
 	// Report overall missing data
 	totalCells := data.Rows * data.Columns
-	missingPercent := float64(totalMissing) / float64(totalCells) * 100
-	if missingPercent > 0 {
-		warnings = append(warnings, fmt.Sprintf("INFO: Dataset contains %.1f%% missing values (%d cells)", missingPercent, totalMissing))
+	if totalCells > 0 {
+		missingPercent := float64(totalMissing) / float64(totalCells) * 100
+		if missingPercent > 0 {
+			warnings = append(warnings, fmt.Sprintf("INFO: Dataset contains %.1f%% missing values (%d cells)", missingPercent, totalMissing))
+		}
 	}
 
 	// Check for reasonable data size
 	if data.Rows > 10000 {
 		warnings = append(warnings, fmt.Sprintf("INFO: Large dataset detected (%d rows) - processing may take time", data.Rows))
+	}
+
+	// Check if row names were detected
+	if len(data.RowNames) > 0 {
+		warnings = append(warnings, "INFO: Row names detected in first column")
 	}
 	
 	// Determine if data is valid (no ERRORs)
@@ -289,18 +494,168 @@ func (a *App) SaveCSV(data *FileData) error {
 	writer := csv.NewWriter(file)
 	defer writer.Flush()
 
-	// Write headers
-	if err := writer.Write(data.Headers); err != nil {
+	// Write headers with row name column if present
+	headers := data.Headers
+	if len(data.RowNames) > 0 {
+		// Add empty header for row names column
+		headers = append([]string{""}, headers...)
+	}
+	if err := writer.Write(headers); err != nil {
 		return fmt.Errorf("error writing headers: %w", err)
 	}
 
-	// Write data
-	for _, row := range data.Data {
-		if err := writer.Write(row); err != nil {
+	// Write data with row names
+	for i, row := range data.Data {
+		outputRow := row
+		if len(data.RowNames) > 0 && i < len(data.RowNames) {
+			// Prepend row name to the row
+			outputRow = append([]string{data.RowNames[i]}, row...)
+		}
+		if err := writer.Write(outputRow); err != nil {
 			return fmt.Errorf("error writing row: %w", err)
 		}
 	}
 
+	runtime.EventsEmit(a.ctx, "file-saved", filepath.Base(selection))
+	return nil
+}
+
+// SaveExcel saves data to an Excel file
+func (a *App) SaveExcel(data *FileData) error {
+	// Show save dialog
+	selection, err := runtime.SaveFileDialog(a.ctx, runtime.SaveDialogOptions{
+		Title: "Save Excel File",
+		DefaultFilename: "exported_data.xlsx",
+		Filters: []runtime.FileFilter{
+			{
+				DisplayName: "Excel Files (*.xlsx)",
+				Pattern:     "*.xlsx",
+			},
+		},
+	})
+	if err != nil {
+		return fmt.Errorf("error showing save dialog: %w", err)
+	}
+	if selection == "" {
+		return fmt.Errorf("no file selected")
+	}
+
+	// Create new Excel file
+	f := excelize.NewFile()
+	defer f.Close()
+	
+	// Create a new sheet
+	sheetName := "Sheet1"
+	index, err := f.NewSheet(sheetName)
+	if err != nil {
+		return fmt.Errorf("failed to create sheet: %w", err)
+	}
+	
+	// Write headers with row names if present
+	headers := data.Headers
+	if len(data.RowNames) > 0 {
+		// Add row name header
+		headers = append([]string{"RowName"}, headers...)
+	}
+	
+	for i, header := range headers {
+		cell, err := excelize.CoordinatesToCellName(i+1, 1)
+		if err != nil {
+			return fmt.Errorf("failed to get cell coordinate: %w", err)
+		}
+		f.SetCellValue(sheetName, cell, header)
+		
+		// Style headers
+		style, err := f.NewStyle(&excelize.Style{
+			Font: &excelize.Font{
+				Bold: true,
+			},
+			Fill: excelize.Fill{
+				Type:    "pattern",
+				Pattern: 1,
+				Color:   []string{"#E0E0E0"},
+			},
+		})
+		if err == nil {
+			f.SetCellStyle(sheetName, cell, cell, style)
+		}
+	}
+	
+	// Write data rows
+	for rowIdx, row := range data.Data {
+		excelRow := rowIdx + 2 // Excel rows are 1-indexed, plus header row
+		
+		// Write row name if present
+		colOffset := 0
+		if len(data.RowNames) > 0 && rowIdx < len(data.RowNames) {
+			cell, err := excelize.CoordinatesToCellName(1, excelRow)
+			if err == nil {
+				f.SetCellValue(sheetName, cell, data.RowNames[rowIdx])
+			}
+			colOffset = 1
+		}
+		
+		// Write data cells
+		for colIdx, value := range row {
+			cell, err := excelize.CoordinatesToCellName(colIdx+1+colOffset, excelRow)
+			if err != nil {
+				continue
+			}
+			
+			// Try to convert to number if possible
+			if num, err := strconv.ParseFloat(value, 64); err == nil && value != "" {
+				f.SetCellValue(sheetName, cell, num)
+			} else {
+				f.SetCellValue(sheetName, cell, value)
+			}
+			
+			// Apply column type styling
+			if data.ColumnTypes != nil {
+				header := data.Headers[colIdx]
+				if colType, exists := data.ColumnTypes[header]; exists {
+					var style int
+					switch colType {
+					case "target":
+						// Light yellow background for target columns
+						style, _ = f.NewStyle(&excelize.Style{
+							Fill: excelize.Fill{
+								Type:    "pattern",
+								Pattern: 1,
+								Color:   []string{"#FFFFCC"},
+							},
+						})
+					case "categorical":
+						// Light blue background for categorical columns
+						style, _ = f.NewStyle(&excelize.Style{
+							Fill: excelize.Fill{
+								Type:    "pattern",
+								Pattern: 1,
+								Color:   []string{"#E6F3FF"},
+							},
+						})
+					}
+					if style > 0 {
+						f.SetCellStyle(sheetName, cell, cell, style)
+					}
+				}
+			}
+		}
+	}
+	
+	// Auto-fit columns
+	for i := 0; i < len(headers); i++ {
+		col, _ := excelize.ColumnNumberToName(i + 1)
+		f.SetColWidth(sheetName, col, col, 12)
+	}
+	
+	// Set active sheet
+	f.SetActiveSheet(index)
+	
+	// Save file
+	if err := f.SaveAs(selection); err != nil {
+		return fmt.Errorf("failed to save Excel file: %w", err)
+	}
+	
 	runtime.EventsEmit(a.ctx, "file-saved", filepath.Base(selection))
 	return nil
 }

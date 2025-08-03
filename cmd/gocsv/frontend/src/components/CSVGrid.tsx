@@ -8,16 +8,24 @@ import { useTheme } from '../contexts/ThemeContext';
 interface CSVGridProps {
     data: string[][];
     headers: string[];
+    rowNames?: string[];
     onDataChange?: (rowIndex: number, colIndex: number, newValue: string) => void;
     onHeaderChange?: (colIndex: number, newHeader: string) => void;
+    onRowNameChange?: (rowIndex: number, newRowName: string) => void;
 }
 
 export const CSVGrid: React.FC<CSVGridProps> = ({ 
     data, 
-    headers, 
+    headers,
+    rowNames,
     onDataChange,
-    onHeaderChange 
+    onHeaderChange,
+    onRowNameChange
 }) => {
+    // Validate inputs
+    if (!data || !headers || data.length === 0 || headers.length === 0) {
+        return <div className="w-full h-full flex items-center justify-center text-gray-500">No data to display</div>;
+    }
     const gridRef = useRef<AgGridReact>(null);
     const [gridApi, setGridApi] = useState<GridApi | null>(null);
     const [columnApi, setColumnApi] = useState<ColumnApi | null>(null);
@@ -46,12 +54,36 @@ export const CSVGrid: React.FC<CSVGridProps> = ({
     
     // Create column definitions
     const columnDefs = useMemo<ColDef[]>(() => {
-        return headers.map((header, index) => {
+        const cols: ColDef[] = [];
+        
+        // Add row name column if present
+        if (rowNames && rowNames.length > 0) {
+            cols.push({
+                field: 'rowName',
+                headerName: '',
+                editable: true,
+                sortable: true,
+                filter: true,
+                resizable: true,
+                minWidth: 100,
+                cellClass: 'row-name-cell',
+                headerClass: 'row-name-header',
+                pinned: 'left',
+                lockPinned: true,
+                cellStyle: {
+                    backgroundColor: theme === 'dark' ? '#374151' : '#f3f4f6',
+                    fontWeight: 'bold'
+                }
+            });
+        }
+        
+        // Add data columns
+        headers.forEach((header, index) => {
             const colType = detectColumnType(index);
             const isTargetColumn = header.toLowerCase().endsWith('#target') || 
                                  header.toLowerCase().endsWith('# target');
             
-            return {
+            cols.push({
                 field: `col${index}`,
                 headerName: header,
                 editable: true,
@@ -86,20 +118,29 @@ export const CSVGrid: React.FC<CSVGridProps> = ({
                     }
                     return params.value;
                 },
-            };
+            });
         });
-    }, [headers, detectColumnType]);
+        
+        return cols;
+    }, [headers, detectColumnType, rowNames, theme]);
     
     // Convert data to row format for ag-Grid
     const rowData = useMemo(() => {
         return data.map((row, rowIndex) => {
             const rowObj: any = { id: rowIndex };
+            
+            // Add row name if present
+            if (rowNames && rowIndex < rowNames.length) {
+                rowObj.rowName = rowNames[rowIndex];
+            }
+            
+            // Add data columns
             headers.forEach((_, colIndex) => {
                 rowObj[`col${colIndex}`] = row[colIndex] || '';
             });
             return rowObj;
         });
-    }, [data, headers]);
+    }, [data, headers, rowNames]);
     
     // Grid ready event
     const onGridReady = useCallback((params: GridReadyEvent) => {
@@ -112,12 +153,17 @@ export const CSVGrid: React.FC<CSVGridProps> = ({
     
     // Cell value changed event
     const onCellValueChanged = useCallback((event: CellValueChangedEvent) => {
-        if (onDataChange && event.colDef?.field) {
-            const colIndex = parseInt(event.colDef.field.replace('col', ''));
+        if (event.colDef?.field) {
             const rowIndex = event.node.data.id;
-            onDataChange(rowIndex, colIndex, event.newValue);
+            
+            if (event.colDef.field === 'rowName' && onRowNameChange) {
+                onRowNameChange(rowIndex, event.newValue);
+            } else if (onDataChange) {
+                const colIndex = parseInt(event.colDef.field.replace('col', ''));
+                onDataChange(rowIndex, colIndex, event.newValue);
+            }
         }
-    }, [onDataChange]);
+    }, [onDataChange, onRowNameChange]);
     
     // Default column definition
     const defaultColDef = useMemo<ColDef>(() => ({

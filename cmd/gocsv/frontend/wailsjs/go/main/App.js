@@ -14,6 +14,10 @@ export function SaveCSV(arg1) {
   return window['go']['main']['App']['SaveCSV'](arg1);
 }
 
+export function SaveExcel(arg1) {
+  return window['go']['main']['App']['SaveExcel'](arg1);
+}
+
 export function ValidateForGoPCA(arg1) {
   return window['go']['main']['App']['ValidateForGoPCA'](arg1);
 }

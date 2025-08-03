@@ -3,15 +3,11 @@ import './App.css';
 import { ThemeToggle, CSVGrid, ValidationResults } from './components';
 import { ThemeProvider } from './contexts/ThemeContext';
 import logo from './assets/images/GoCSV-logo-1024-transp.png';
-import { LoadCSV, SaveCSV, ValidateForGoPCA } from '../wailsjs/go/main/App';
+import { LoadCSV, SaveCSV, SaveExcel, ValidateForGoPCA } from '../wailsjs/go/main/App';
 import { EventsOn } from '../wailsjs/runtime/runtime';
+import { main } from '../wailsjs/go/models';
 
-interface FileData {
-    headers: string[];
-    data: string[][];
-    rows: number;
-    columns: number;
-}
+type FileData = main.FileData;
 
 function AppContent() {
     const [fileLoaded, setFileLoaded] = useState(false);
@@ -40,38 +36,11 @@ function AppContent() {
     
     // Handle file selection
     const handleFile = async (file: File) => {
-        if (file) {
-            setIsLoading(true);
-            setFileName(file.name);
-            
-            try {
-                // For now, we'll use the file input approach
-                // In the future, we can enhance to handle File objects directly
-                console.log('File selected:', file.name);
-                setFileLoaded(true);
-                
-                // TODO: Load file through backend
-                // For now, show empty grid
-                setFileData({
-                    headers: ['Column 1', 'Column 2', 'Column 3'],
-                    data: [['', '', '']],
-                    rows: 1,
-                    columns: 3
-                });
-            } catch (error: any) {
-                console.error('Error loading file:', error);
-                const errorMsg = error?.message || error?.toString() || 'Unknown error';
-                if (errorMsg.includes('Excel files are not yet supported')) {
-                    alert('Excel files (.xlsx, .xls) are not yet supported.\n\nPlease save your file as CSV format in Excel:\n1. Open in Excel\n2. File → Save As\n3. Choose "CSV (Comma delimited)" format');
-                } else {
-                    alert('Error loading file: ' + errorMsg);
-                }
-                setFileLoaded(false);
-                setFileName(null);
-            } finally {
-                setIsLoading(false);
-            }
-        }
+        // For drag-and-drop and file input, we can't pass the File object directly to Go
+        // Instead, we need to trigger the file dialog in the backend
+        // This is a limitation of the current Wails file handling
+        // For now, just inform the user to use the Browse button
+        alert(`File "${file.name}" selected. Please use the "Browse for File" button to load files.`);
     };
     
     // Load file from dialog
@@ -79,19 +48,25 @@ function AppContent() {
         setIsLoading(true);
         try {
             const result = await LoadCSV('');
-            if (result) {
+            console.log('Loaded file data:', result);
+            if (result && result.data && result.data.length > 0) {
+                console.log('Setting file data:', {
+                    headers: result.headers?.length,
+                    rows: result.rows,
+                    columns: result.columns,
+                    dataLength: result.data?.length
+                });
                 setFileData(result);
                 setFileLoaded(true);
                 // Filename will be set by the event from backend
+            } else {
+                console.error('Invalid file data received:', result);
+                throw new Error('No data found in file');
             }
         } catch (error: any) {
             console.error('Error loading file:', error);
             const errorMsg = error?.message || error?.toString() || 'Unknown error';
-            if (errorMsg.includes('Excel files are not yet supported')) {
-                alert('Excel files (.xlsx, .xls) are not yet supported.\n\nPlease save your file as CSV format in Excel:\n1. Open in Excel\n2. File → Save As\n3. Choose "CSV (Comma delimited)" format');
-            } else {
-                alert('Error loading file: ' + errorMsg);
-            }
+            alert('Error loading file: ' + errorMsg);
             setFileLoaded(false);
             setFileName(null);
         } finally {
@@ -219,12 +194,16 @@ function AppContent() {
                             >
                                 <input
                                     type="file"
-                                    accept=".csv,.tsv"
+                                    accept=".csv,.tsv,.xlsx,.xls"
                                     className="hidden"
                                     id="file-upload"
                                     onChange={(e) => {
+                                        console.log('File input changed');
                                         const file = e.target.files?.[0];
                                         if (file) {
+                                            console.log('File selected:', file.name);
+                                            // Reset the input so the same file can be selected again
+                                            e.target.value = '';
                                             handleFile(file);
                                         }
                                     }}
@@ -251,10 +230,7 @@ function AppContent() {
                                         )}
                                     </p>
                                     <p className="text-xs text-gray-500 dark:text-gray-500 mt-1">
-                                        CSV, TSV files supported
-                                    </p>
-                                    <p className="text-xs text-gray-400 dark:text-gray-600 mt-1">
-                                        (Excel support coming soon)
+                                        CSV, TSV, Excel files supported
                                     </p>
                                 </label>
                             </div>
@@ -310,8 +286,17 @@ function AppContent() {
                                 <CSVGrid 
                                     data={fileData.data}
                                     headers={fileData.headers}
+                                    rowNames={fileData.rowNames}
                                     onDataChange={handleDataChange}
                                     onHeaderChange={handleHeaderChange}
+                                    onRowNameChange={(rowIndex, newRowName) => {
+                                        if (fileData && fileData.rowNames) {
+                                            const newRowNames = [...fileData.rowNames];
+                                            newRowNames[rowIndex] = newRowName;
+                                            setFileData({ ...fileData, rowNames: newRowNames });
+                                            setValidationResult(null);
+                                        }
+                                    }}
                                 />
                             </div>
                         </div>
@@ -373,8 +358,15 @@ function AppContent() {
                                             Export as CSV
                                         </button>
                                         <button 
-                                            onClick={() => {
-                                                alert('Excel export coming soon!');
+                                            onClick={async () => {
+                                                if (fileData) {
+                                                    try {
+                                                        await SaveExcel(fileData);
+                                                    } catch (error) {
+                                                        console.error('Error saving Excel file:', error);
+                                                        alert('Error saving Excel file: ' + error);
+                                                    }
+                                                }
                                             }}
                                             className="px-3 py-1.5 text-sm bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 rounded hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors"
                                         >

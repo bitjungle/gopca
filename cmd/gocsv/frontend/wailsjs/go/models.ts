@@ -2,9 +2,13 @@ export namespace main {
 	
 	export class FileData {
 	    headers: string[];
+	    rowNames?: string[];
 	    data: string[][];
 	    rows: number;
 	    columns: number;
+	    categoricalColumns?: Record<string, Array<string>>;
+	    numericTargetColumns?: Record<string, Array<number>>;
+	    columnTypes?: Record<string, string>;
 	
 	    static createFrom(source: any = {}) {
 	        return new FileData(source);
@@ -13,9 +17,13 @@ export namespace main {
 	    constructor(source: any = {}) {
 	        if ('string' === typeof source) source = JSON.parse(source);
 	        this.headers = source["headers"];
+	        this.rowNames = source["rowNames"];
 	        this.data = source["data"];
 	        this.rows = source["rows"];
 	        this.columns = source["columns"];
+	        this.categoricalColumns = source["categoricalColumns"];
+	        this.numericTargetColumns = source["numericTargetColumns"];
+	        this.columnTypes = source["columnTypes"];
 	    }
 	}
 	export class ValidationResult {
