@@ -7,10 +7,49 @@ import logo from './assets/images/GoCSV-logo-1024-transp.png';
 function AppContent() {
     const [fileLoaded, setFileLoaded] = useState(false);
     const [fileName, setFileName] = useState<string | null>(null);
+    const [isDragging, setIsDragging] = useState(false);
     
     // Scroll to top function
     const scrollToTop = () => {
         window.scrollTo({ top: 0, behavior: 'smooth' });
+    };
+    
+    // Handle file selection
+    const handleFile = (file: File) => {
+        if (file) {
+            setFileName(file.name);
+            setFileLoaded(true);
+            // TODO: Actually load and parse the file
+        }
+    };
+    
+    // Drag and drop handlers
+    const handleDragOver = (e: React.DragEvent) => {
+        e.preventDefault();
+        e.stopPropagation();
+    };
+    
+    const handleDragEnter = (e: React.DragEvent) => {
+        e.preventDefault();
+        e.stopPropagation();
+        setIsDragging(true);
+    };
+    
+    const handleDragLeave = (e: React.DragEvent) => {
+        e.preventDefault();
+        e.stopPropagation();
+        setIsDragging(false);
+    };
+    
+    const handleDrop = (e: React.DragEvent) => {
+        e.preventDefault();
+        e.stopPropagation();
+        setIsDragging(false);
+        
+        const files = e.dataTransfer.files;
+        if (files && files.length > 0) {
+            handleFile(files[0]);
+        }
     };
     
     return (
@@ -45,7 +84,17 @@ function AppContent() {
                         </h2>
                         
                         <div className="space-y-4">
-                            <div className="border-2 border-dashed border-gray-300 dark:border-gray-600 rounded-lg p-8 text-center hover:border-gray-400 dark:hover:border-gray-500 transition-colors">
+                            <div 
+                                className={`border-2 border-dashed rounded-lg p-8 text-center transition-colors ${
+                                    isDragging 
+                                        ? 'border-blue-500 bg-blue-50 dark:bg-blue-900/20' 
+                                        : 'border-gray-300 dark:border-gray-600 hover:border-gray-400 dark:hover:border-gray-500'
+                                }`}
+                                onDragOver={handleDragOver}
+                                onDragEnter={handleDragEnter}
+                                onDragLeave={handleDragLeave}
+                                onDrop={handleDrop}
+                            >
                                 <input
                                     type="file"
                                     accept=".csv,.xlsx,.xls,.tsv,.json"
@@ -54,8 +103,7 @@ function AppContent() {
                                     onChange={(e) => {
                                         const file = e.target.files?.[0];
                                         if (file) {
-                                            setFileName(file.name);
-                                            setFileLoaded(true);
+                                            handleFile(file);
                                         }
                                     }}
                                 />
@@ -63,14 +111,22 @@ function AppContent() {
                                     htmlFor="file-upload"
                                     className="cursor-pointer"
                                 >
-                                    <svg className="mx-auto h-12 w-12 text-gray-400" stroke="currentColor" fill="none" viewBox="0 0 48 48" aria-hidden="true">
+                                    <svg className={`mx-auto h-12 w-12 ${isDragging ? 'text-blue-500' : 'text-gray-400'} transition-colors`} stroke="currentColor" fill="none" viewBox="0 0 48 48" aria-hidden="true">
                                         <path d="M28 8H12a4 4 0 00-4 4v20m32-12v8m0 0v8a4 4 0 01-4 4H12a4 4 0 01-4-4v-4m32-4l-3.172-3.172a4 4 0 00-5.656 0L28 28M8 32l9.172-9.172a4 4 0 015.656 0L28 28m0 0l4 4m4-24h8m-4-4v8m-12 4h.02" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
                                     </svg>
                                     <p className="mt-2 text-sm text-gray-600 dark:text-gray-400">
-                                        <span className="font-medium text-gray-900 dark:text-white hover:text-blue-600 dark:hover:text-blue-400">
-                                            Click to upload
-                                        </span>{' '}
-                                        or drag and drop
+                                        {isDragging ? (
+                                            <span className="font-medium text-blue-600 dark:text-blue-400">
+                                                Drop file here
+                                            </span>
+                                        ) : (
+                                            <>
+                                                <span className="font-medium text-gray-900 dark:text-white hover:text-blue-600 dark:hover:text-blue-400">
+                                                    Click to upload
+                                                </span>{' '}
+                                                or drag and drop
+                                            </>
+                                        )}
                                     </p>
                                     <p className="text-xs text-gray-500 dark:text-gray-500 mt-1">
                                         CSV, Excel (XLSX/XLS), TSV, JSON
