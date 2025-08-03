@@ -18,6 +18,20 @@ export namespace main {
 	        this.columns = source["columns"];
 	    }
 	}
+	export class ValidationResult {
+	    isValid: boolean;
+	    messages: string[];
+	
+	    static createFrom(source: any = {}) {
+	        return new ValidationResult(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.isValid = source["isValid"];
+	        this.messages = source["messages"];
+	    }
+	}
 
 }
 

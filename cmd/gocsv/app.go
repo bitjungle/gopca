@@ -6,6 +6,8 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"strconv"
+	"strings"
 	
 	"github.com/wailsapp/wails/v2/pkg/runtime"
 )
@@ -32,6 +34,12 @@ type FileData struct {
 	Data    [][]string `json:"data"`
 	Rows    int        `json:"rows"`
 	Columns int        `json:"columns"`
+}
+
+// ValidationResult represents the result of GoPCA validation
+type ValidationResult struct {
+	IsValid  bool     `json:"isValid"`
+	Messages []string `json:"messages"`
 }
 
 // LoadCSV loads a CSV file and returns its data
@@ -138,23 +146,116 @@ func (a *App) LoadCSV(filePath string) (*FileData, error) {
 }
 
 // ValidateForGoPCA validates that the CSV data is compatible with GoPCA
-func (a *App) ValidateForGoPCA(data *FileData) (bool, []string) {
-	var errors []string
+func (a *App) ValidateForGoPCA(data *FileData) *ValidationResult {
+	var warnings []string
+	var numericColumns int
+	var totalMissing int
+	var hasTargetColumn bool
 
-	// Check if data has at least 2 rows and 2 columns
+	// Check minimum data requirements
 	if data.Rows < 2 {
-		errors = append(errors, "Data must have at least 2 rows")
+		warnings = append(warnings, "ERROR: Data must have at least 2 rows (found "+fmt.Sprintf("%d", data.Rows)+")")
 	}
 	if data.Columns < 2 {
-		errors = append(errors, "Data must have at least 2 columns")
+		warnings = append(warnings, "ERROR: Data must have at least 2 columns (found "+fmt.Sprintf("%d", data.Columns)+")")
 	}
 
-	// TODO: Add more validation rules based on GoPCA requirements
-	// - Check for numeric columns
-	// - Check for missing values
-	// - Validate column types
+	// Check column types and missing values
+	for colIdx, header := range data.Headers {
+		// Check if it's a target column
+		headerLower := strings.ToLower(header)
+		if strings.HasSuffix(headerLower, "#target") || strings.HasSuffix(headerLower, "# target") {
+			hasTargetColumn = true
+			continue // Target columns are excluded from PCA
+		}
 
-	return len(errors) == 0, errors
+		// Analyze column data
+		hasNumeric := false
+		hasText := false
+		missingInCol := 0
+		
+		// Sample up to 100 rows for type detection
+		sampleSize := data.Rows
+		if sampleSize > 100 {
+			sampleSize = 100
+		}
+		
+		for i := 0; i < sampleSize; i++ {
+			if i >= len(data.Data) {
+				break
+			}
+			value := data.Data[i][colIdx]
+			
+			// Check for missing values
+			trimmed := strings.TrimSpace(value)
+			if trimmed == "" || trimmed == "NA" || trimmed == "N/A" || 
+			   trimmed == "nan" || trimmed == "NaN" || trimmed == "null" || trimmed == "NULL" {
+				missingInCol++
+				totalMissing++
+				continue
+			}
+			
+			// Check if numeric
+			if _, err := strconv.ParseFloat(trimmed, 64); err == nil {
+				hasNumeric = true
+			} else {
+				hasText = true
+			}
+		}
+		
+		// Count numeric columns (excluding mixed type columns)
+		if hasNumeric && !hasText {
+			numericColumns++
+		} else if hasText && !hasNumeric {
+			warnings = append(warnings, fmt.Sprintf("WARNING: Column '%s' contains only text values", header))
+		} else if hasText && hasNumeric {
+			warnings = append(warnings, fmt.Sprintf("WARNING: Column '%s' contains mixed numeric and text values", header))
+		}
+		
+		// Report high missing value percentage
+		missingPercent := float64(missingInCol) / float64(sampleSize) * 100
+		if missingPercent > 50 {
+			warnings = append(warnings, fmt.Sprintf("WARNING: Column '%s' has %.1f%% missing values", header, missingPercent))
+		}
+	}
+
+	// Check if we have enough numeric columns for PCA
+	effectiveColumns := numericColumns
+	if hasTargetColumn {
+		warnings = append(warnings, "INFO: Target column(s) detected - these will be excluded from PCA analysis")
+	}
+	
+	if effectiveColumns < 2 {
+		warnings = append(warnings, fmt.Sprintf("ERROR: Need at least 2 numeric columns for PCA (found %d)", effectiveColumns))
+	} else if effectiveColumns < 3 {
+		warnings = append(warnings, fmt.Sprintf("WARNING: Only %d numeric columns found - PCA results may be limited", effectiveColumns))
+	}
+
+	// Report overall missing data
+	totalCells := data.Rows * data.Columns
+	missingPercent := float64(totalMissing) / float64(totalCells) * 100
+	if missingPercent > 0 {
+		warnings = append(warnings, fmt.Sprintf("INFO: Dataset contains %.1f%% missing values (%d cells)", missingPercent, totalMissing))
+	}
+
+	// Check for reasonable data size
+	if data.Rows > 10000 {
+		warnings = append(warnings, fmt.Sprintf("INFO: Large dataset detected (%d rows) - processing may take time", data.Rows))
+	}
+	
+	// Determine if data is valid (no ERRORs)
+	isValid := true
+	for _, warning := range warnings {
+		if strings.HasPrefix(warning, "ERROR:") {
+			isValid = false
+			break
+		}
+	}
+
+	return &ValidationResult{
+		IsValid:  isValid,
+		Messages: warnings,
+	}
 }
 
 // SaveCSV saves the data to a CSV file

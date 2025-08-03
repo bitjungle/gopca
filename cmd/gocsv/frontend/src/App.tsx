@@ -1,9 +1,9 @@
 import React, { useState, useRef, useEffect } from 'react';
 import './App.css';
-import { ThemeToggle, CSVGrid } from './components';
+import { ThemeToggle, CSVGrid, ValidationResults } from './components';
 import { ThemeProvider } from './contexts/ThemeContext';
 import logo from './assets/images/GoCSV-logo-1024-transp.png';
-import { LoadCSV, SaveCSV } from '../wailsjs/go/main/App';
+import { LoadCSV, SaveCSV, ValidateForGoPCA } from '../wailsjs/go/main/App';
 import { EventsOn } from '../wailsjs/runtime/runtime';
 
 interface FileData {
@@ -19,6 +19,8 @@ function AppContent() {
     const [fileData, setFileData] = useState<FileData | null>(null);
     const [isDragging, setIsDragging] = useState(false);
     const [isLoading, setIsLoading] = useState(false);
+    const [validationResult, setValidationResult] = useState<{ isValid: boolean; messages: string[] } | null>(null);
+    const [isValidating, setIsValidating] = useState(false);
     
     // Listen for file-loaded events from backend
     useEffect(() => {
@@ -103,6 +105,8 @@ function AppContent() {
             const newData = [...fileData.data];
             newData[rowIndex][colIndex] = newValue;
             setFileData({ ...fileData, data: newData });
+            // Clear validation when data changes
+            setValidationResult(null);
         }
     };
     
@@ -112,6 +116,32 @@ function AppContent() {
             const newHeaders = [...fileData.headers];
             newHeaders[colIndex] = newHeader;
             setFileData({ ...fileData, headers: newHeaders });
+            // Clear validation when headers change
+            setValidationResult(null);
+        }
+    };
+    
+    // Handle validation
+    const handleValidate = async () => {
+        if (!fileData) return;
+        
+        setIsValidating(true);
+        try {
+            const result = await ValidateForGoPCA(fileData);
+            if (result) {
+                setValidationResult({
+                    isValid: result.isValid,
+                    messages: result.messages || []
+                });
+            }
+        } catch (error) {
+            console.error('Validation error:', error);
+            setValidationResult({
+                isValid: false,
+                messages: ['ERROR: Failed to validate data - ' + error]
+            });
+        } finally {
+            setIsValidating(false);
         }
     };
     
@@ -251,6 +281,7 @@ function AppContent() {
                                             setFileName(null);
                                             setFileLoaded(false);
                                             setFileData(null);
+                                            setValidationResult(null);
                                         }}
                                         className="text-red-600 hover:text-red-700 dark:text-red-400 dark:hover:text-red-300"
                                     >
@@ -296,13 +327,11 @@ function AppContent() {
                             <div className="space-y-4">
                                 <div className="flex gap-4">
                                     <button 
-                                        onClick={() => {
-                                            // TODO: Implement validation
-                                            alert('Validation coming soon!');
-                                        }}
-                                        className="flex-1 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+                                        onClick={handleValidate}
+                                        disabled={isValidating}
+                                        className="flex-1 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
                                     >
-                                        Validate for GoPCA
+                                        {isValidating ? 'Validating...' : 'Validate for GoPCA'}
                                     </button>
                                     <button 
                                         onClick={() => {
@@ -314,6 +343,14 @@ function AppContent() {
                                         Open in GoPCA
                                     </button>
                                 </div>
+                                
+                                {validationResult && (
+                                    <ValidationResults 
+                                        isValid={validationResult.isValid}
+                                        messages={validationResult.messages}
+                                        onClose={() => setValidationResult(null)}
+                                    />
+                                )}
                                 
                                 <div className="border-t border-gray-200 dark:border-gray-700 pt-4">
                                     <h3 className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">

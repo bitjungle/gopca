@@ -8,4 +8,4 @@ export function LoadCSV(arg1:string):Promise<main.FileData>;
 
 export function SaveCSV(arg1:main.FileData):Promise<void>;
 
-export function ValidateForGoPCA(arg1:main.FileData):Promise<boolean|Array<string>>;
+export function ValidateForGoPCA(arg1:main.FileData):Promise<main.ValidationResult>;
