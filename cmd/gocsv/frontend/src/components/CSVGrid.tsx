@@ -77,7 +77,7 @@ export const CSVGrid: React.FC<CSVGridProps> = ({
                 headerTooltip: isTargetColumn ? 'Target column - excluded from PCA' : 
                               colType === 'numeric' ? 'Numeric column' : 
                               colType === 'mixed' ? 'Mixed column' : 'Text column',
-                valueFormatter: (params) => {
+                valueFormatter: (params: any) => {
                     if (colType === 'numeric' && params.value) {
                         const num = Number(params.value);
                         if (!isNaN(num)) {
@@ -86,7 +86,7 @@ export const CSVGrid: React.FC<CSVGridProps> = ({
                     }
                     return params.value;
                 },
-                onHeaderClick: (params) => {
+                onHeaderClick: (params: any) => {
                     // Could implement header editing here
                     console.log('Header clicked:', params);
                 }
@@ -147,7 +147,7 @@ export const CSVGrid: React.FC<CSVGridProps> = ({
         stopEditingWhenCellsLoseFocus: true,
         
         // Selection
-        rowSelection: 'multiple',
+        rowSelection: 'multiple' as const,
         
         // Pagination for very large datasets
         pagination: data.length > 10000,
