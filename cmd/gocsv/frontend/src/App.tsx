@@ -2,7 +2,7 @@ import React, { useState, useRef, useEffect } from 'react';
 import './App.css';
 import { ThemeToggle } from './components/ThemeToggle';
 import { ThemeProvider } from './contexts/ThemeContext';
-import logo from './assets/images/GoPCA-logo-1024-transp.png';
+import logo from './assets/images/GoCSV-logo-1024-transp.png';
 
 function AppContent() {
     const [fileLoaded, setFileLoaded] = useState(false);
@@ -26,7 +26,6 @@ function AppContent() {
                             onClick={scrollToTop}
                         />
                         <div>
-                            <h1 className="text-xl font-semibold text-gray-900 dark:text-white">GoCSV</h1>
                             <p className="text-sm text-gray-600 dark:text-gray-400">CSV Editor for GoPCA</p>
                         </div>
                     </div>
