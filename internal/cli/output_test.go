@@ -71,7 +71,7 @@ func TestConvertToPCAOutputData(t *testing.T) {
 	)
 
 	// Convert to output data
-	outputData := ConvertToPCAOutputData(result, csvData, false, config, preprocessor)
+	outputData := ConvertToPCAOutputData(result, csvData, false, config, preprocessor, nil, nil)
 
 	// Test metadata
 	if outputData.Metadata.Version != "1.0" {
@@ -151,7 +151,7 @@ func TestJSONSerialization(t *testing.T) {
 	preprocessor := core.NewPreprocessor(true, false, false)
 
 	// Convert to output data
-	outputData := ConvertToPCAOutputData(result, csvData, false, config, preprocessor)
+	outputData := ConvertToPCAOutputData(result, csvData, false, config, preprocessor, nil, nil)
 
 	// Test JSON marshaling
 	jsonData, err := json.MarshalIndent(outputData, "", "  ")

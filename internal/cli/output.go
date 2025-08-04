@@ -77,7 +77,8 @@ func generateOutputPaths(inputFile, outputDir, format string) map[string]string 
 
 // ConvertToPCAOutputData converts PCAResult and CSVData to PCAOutputData
 func ConvertToPCAOutputData(result *types.PCAResult, data *CSVData, includeMetrics bool,
-	config types.PCAConfig, preprocessor *core.Preprocessor) *types.PCAOutputData {
+	config types.PCAConfig, preprocessor *core.Preprocessor,
+	categoricalData map[string][]string, targetData map[string][]float64) *types.PCAOutputData {
 
 	// Create timestamp
 	createdAt := time.Now().Format(time.RFC3339)
@@ -169,6 +170,15 @@ func ConvertToPCAOutputData(result *types.PCAResult, data *CSVData, includeMetri
 		QLimit99:  result.QLimit99,
 	}
 
+	// Add preserved columns if provided
+	var preservedColumns *types.PreservedColumns
+	if len(categoricalData) > 0 || len(targetData) > 0 {
+		preservedColumns = &types.PreservedColumns{
+			Categorical:   categoricalData,
+			NumericTarget: targetData,
+		}
+	}
+
 	return &types.PCAOutputData{
 		Metadata:          metadata,
 		Preprocessing:     preprocessingInfo,
@@ -176,6 +186,7 @@ func ConvertToPCAOutputData(result *types.PCAResult, data *CSVData, includeMetri
 		Results:           resultsData,
 		Diagnostics:       diagnostics,
 		Eigencorrelations: result.Eigencorrelations,
+		PreservedColumns:  preservedColumns,
 	}
 }
 
@@ -326,10 +337,11 @@ func outputTableFormat(result *types.PCAResult, data *CSVData,
 // outputJSONFormat outputs results in JSON format
 func outputJSONFormat(result *types.PCAResult, data *CSVData, inputFile, outputDir string,
 	outputScores, outputLoadings, outputVariance, includeMetrics bool,
-	config types.PCAConfig, preprocessor *core.Preprocessor) error {
+	config types.PCAConfig, preprocessor *core.Preprocessor,
+	categoricalData map[string][]string, targetData map[string][]float64) error {
 
 	// Convert to PCAOutputData
-	outputData := ConvertToPCAOutputData(result, data, includeMetrics, config, preprocessor)
+	outputData := ConvertToPCAOutputData(result, data, includeMetrics, config, preprocessor, categoricalData, targetData)
 
 	// Generate output paths
 	paths := generateOutputPaths(inputFile, outputDir, "json")
