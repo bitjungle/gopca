@@ -2,40 +2,27 @@ package main
 
 import (
 	"strconv"
-	"strings"
+
+	"github.com/bitjungle/gopca/pkg/utils"
 )
 
-// Common missing value indicators
-var missingValueIndicators = []string{"na", "n/a", "nan", "null", "none", "missing", "-", "?"}
+// Common missing value indicators for GoCSV
+// This extends the default set with additional indicators
+var missingValueIndicators = append(utils.DefaultMissingValues(), "-", "?", "none", "missing")
 
 // isMissingValue checks if a value is considered missing
 func isMissingValue(value string) bool {
-	value = strings.TrimSpace(value)
-	if value == "" {
-		return true
-	}
-	
-	// Check common missing value representations
-	lowerValue := strings.ToLower(value)
-	for _, indicator := range missingValueIndicators {
-		if lowerValue == indicator {
-			return true
-		}
-	}
-	
-	return false
+	return utils.IsMissingValue(value, missingValueIndicators)
 }
 
 // parseNumericValue attempts to parse a string as a float64
 // Returns the parsed value and true if successful, or 0 and false if not
 func parseNumericValue(value string) (float64, bool) {
-	value = strings.TrimSpace(value)
-	if isMissingValue(value) {
+	val, isMissing, err := utils.ParseNumericValueWithMissing(value, '.', missingValueIndicators)
+	if isMissing || err != nil {
 		return 0, false
 	}
-	
-	num, err := strconv.ParseFloat(value, 64)
-	return num, err == nil
+	return val, true
 }
 
 // getNumericValues extracts all numeric values from a column

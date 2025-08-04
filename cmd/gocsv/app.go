@@ -2567,7 +2567,7 @@ func (a *App) importCSVWithOptions(filePath string, options ImportOptions) (*Fil
 	
 	fileData := &FileData{
 		CategoricalColumns:   make(map[string][]string),
-		NumericTargetColumns: make(map[string][]JSONFloat64),
+		NumericTargetColumns: make(map[string][]types.JSONFloat64),
 		ColumnTypes:          make(map[string]string),
 	}
 	
@@ -2705,7 +2705,7 @@ func (a *App) importExcelWithOptions(filePath string, options ImportOptions) (*F
 	
 	fileData := &FileData{
 		CategoricalColumns:   make(map[string][]string),
-		NumericTargetColumns: make(map[string][]JSONFloat64),
+		NumericTargetColumns: make(map[string][]types.JSONFloat64),
 		ColumnTypes:          make(map[string]string),
 	}
 	
@@ -2952,7 +2952,7 @@ func (a *App) ApplyTransformation(data *FileData, options TransformOptions) (*Tr
 		Rows:                 data.Rows,
 		Columns:              data.Columns,
 		CategoricalColumns:   make(map[string][]string),
-		NumericTargetColumns: make(map[string][]JSONFloat64),
+		NumericTargetColumns: make(map[string][]types.JSONFloat64),
 		ColumnTypes:          make(map[string]string),
 	}
 	
