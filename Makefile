@@ -4,9 +4,11 @@
 # Variables
 BINARY_NAME := gopca-cli
 DESKTOP_NAME := gopca-desktop
+CSV_NAME := gocsv
 BUILD_DIR := build
 CLI_PATH := cmd/gopca-cli/main.go
 DESKTOP_PATH := cmd/gopca-desktop
+CSV_PATH := cmd/gocsv
 COVERAGE_FILE := coverage.out
 
 # Shortcuts for CLI builds
@@ -16,6 +18,9 @@ cli-all: build-all
 # Shortcuts for desktop/GUI builds  
 desktop: gui-build
 desktop-dev: gui-dev
+
+# Shortcuts for CSV editor builds
+csv: csv-build
 
 # Cross-platform build variables
 GOOS ?= $(shell go env GOOS)
@@ -63,7 +68,7 @@ WAILS := $(shell which wails 2> /dev/null || echo "$${HOME}/go/bin/wails")
 .DEFAULT_GOAL := all
 
 # Phony targets
-.PHONY: all build cli cli-all build-cross build-darwin-amd64 build-darwin-arm64 build-linux-amd64 build-linux-arm64 build-windows-amd64 build-all gui-dev gui-build gui-run gui-deps test test-verbose test-coverage fmt lint run-pca-iris clean clean-cross install deps install-hooks help
+.PHONY: all build cli cli-all build-cross build-darwin-amd64 build-darwin-arm64 build-linux-amd64 build-linux-arm64 build-windows-amd64 build-all gui-dev gui-build gui-run gui-deps csv-dev csv-build csv-run csv-deps test test-verbose test-coverage fmt lint run-pca-iris clean clean-cross install deps install-hooks help
 
 ## all: Build the binary and run tests
 all: build test
@@ -153,6 +158,48 @@ gui-deps:
 	@cd $(DESKTOP_PATH)/frontend && npm install
 	@echo "GUI dependencies installed"
 
+## csv-dev: Run CSV editor in development mode with hot reload
+csv-dev:
+	@if [ -x "$(WAILS)" ]; then \
+		echo "Starting CSV editor in development mode..."; \
+		cd $(CSV_PATH) && $(WAILS) dev; \
+	else \
+		echo "Wails not found. Install it with:"; \
+		echo "  go install github.com/wailsapp/wails/v2/cmd/wails@latest"; \
+		exit 1; \
+	fi
+
+## csv-build: Build CSV editor application for production
+csv-build:
+	@if [ -x "$(WAILS)" ]; then \
+		echo "Building CSV editor application..."; \
+		cd $(CSV_PATH) && $(WAILS) build $(DESKTOP_LDFLAGS); \
+		echo "CSV editor build complete. Check $(CSV_PATH)/build/bin/"; \
+	else \
+		echo "Wails not found. Install it with:"; \
+		echo "  go install github.com/wailsapp/wails/v2/cmd/wails@latest"; \
+		exit 1; \
+	fi
+
+## csv-run: Run the built CSV editor application
+csv-run:
+	@if [ -f "$(CSV_PATH)/build/bin/gocsv.app/Contents/MacOS/gocsv" ]; then \
+		echo "Running CSV editor application..."; \
+		open $(CSV_PATH)/build/bin/gocsv.app; \
+	elif [ -f "$(CSV_PATH)/build/bin/gocsv" ]; then \
+		echo "Running CSV editor application..."; \
+		$(CSV_PATH)/build/bin/gocsv; \
+	else \
+		echo "CSV editor application not found. Build it first with 'make csv-build'"; \
+		exit 1; \
+	fi
+
+## csv-deps: Install frontend dependencies for CSV editor
+csv-deps:
+	@echo "Installing CSV editor frontend dependencies..."
+	@cd $(CSV_PATH)/frontend && npm install
+	@echo "CSV editor dependencies installed"
+
 ## test: Run all tests with coverage
 test:
 	@echo "Running tests with coverage..."
@@ -198,6 +245,7 @@ clean:
 	@echo "Cleaning build artifacts..."
 	@rm -rf $(BUILD_DIR)
 	@rm -rf $(DESKTOP_PATH)/build/bin
+	@rm -rf $(CSV_PATH)/build/bin
 	@rm -f $(COVERAGE_FILE) coverage.html
 	@echo "Clean complete"
 
@@ -285,6 +333,12 @@ help:
 	@echo "  make gui-dev      # Run GUI in development mode"
 	@echo "  make gui-build    # Build GUI for production"
 	@echo "  make gui-run      # Run the built GUI application"
+	@echo ""
+	@echo "CSV editor development:"
+	@echo "  make csv-deps     # Install CSV editor dependencies (first time)"
+	@echo "  make csv-dev      # Run CSV editor in development mode"
+	@echo "  make csv-build    # Build CSV editor for production"
+	@echo "  make csv-run      # Run the built CSV editor application"
 	@echo ""
 	@echo "CI targets:"
 	@echo "  make ci-setup     # Show CI environment info"

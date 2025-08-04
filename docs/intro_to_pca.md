@@ -10,6 +10,9 @@ Analyzing such **multivariate data**—where each sample or observation is descr
 
 **GoPCA** is a focused, professional-grade application that implements PCA with both a command-line interface (CLI) for automation and scripting, and a desktop graphical user interface (GUI) for interactive data exploration. This guide will introduce you to the fundamentals of PCA and show how GoPCA makes this powerful technique accessible and practical.
 
+> **Note on Data Preparation:**  
+> Before performing PCA, your data should be properly cleaned and structured. If you're starting with raw data that contains missing values, outliers, or quality issues, consider using **GoCSV** for data preparation. See our companion guide *"Data Preparation with GoCSV"* for detailed guidance on getting your data ready for analysis.
+
 ---
 
 ## 2. What is PCA?
@@ -60,6 +63,8 @@ If variables are measured in different units or have very different variances, i
 > **Tip:** Centering is *essential* for PCA; scaling is *strongly recommended* when variables are on different scales.
 
 **In GoPCA:** Both the CLI and GUI provide simple options for centering and scaling your data. The GUI offers checkboxes for these preprocessing steps, while the CLI uses flags like `--center` and `--scale`.
+
+> **Important:** These mathematical preprocessing steps (centering and scaling) are handled by GoPCA during the analysis. Data cleaning tasks like handling missing values, removing outliers, and selecting variables should be done beforehand using appropriate data preparation tools like GoCSV.
 
 ### 4.3. Covariance and Correlation
 
@@ -177,10 +182,18 @@ The second PC is the direction (unit vector) orthogonal to the first, maximizing
 
 ### 8.1. Preprocessing
 
-- **Centering:** Always center each variable (subtract the mean).
-- **Scaling:** If variables have different units or scales, standardize each variable (divide by standard deviation).
-- **Handling missing data:** PCA requires a complete data matrix. Impute missing values or use specialized PCA algorithms for missing data.
-- **Outlier detection:** Check for outliers before or after PCA; they can strongly influence results.
+**Data Preparation (Before PCA):**
+- **Missing data:** Must be handled before PCA - remove or impute missing values
+- **Outlier detection:** Investigate and address outliers that could distort results
+- **Variable selection:** Remove irrelevant or near-constant variables
+- **Data quality:** Ensure data is clean and properly formatted
+
+**Mathematical Preprocessing (During PCA in GoPCA):**
+- **Centering:** Always center each variable (subtract the mean) - handled automatically by GoPCA
+- **Scaling:** If variables have different units or scales, standardize each variable - option in GoPCA
+- **Advanced preprocessing:** SNV, vector normalization for specific data types - available in GoPCA
+
+> **Workflow:** Use data preparation tools (like GoCSV) to clean your data, then let GoPCA handle the mathematical preprocessing appropriate for PCA.
 
 ### 8.2. Number of Components to Retain
 
@@ -219,6 +232,7 @@ The second PC is the direction (unit vector) orthogonal to the first, maximizing
 - **Quick Analysis:** GoPCA includes built-in example datasets (wine, iris) to explore PCA immediately
 - **CLI for Automation:** Perfect for batch processing and integration into data pipelines
 - **GUI for Exploration:** Ideal for interactive analysis, method development, and teaching
+- **Data Preparation:** For real-world data, use GoCSV to handle missing values, outliers, and data quality issues before analysis
 
 ---
 
