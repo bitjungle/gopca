@@ -1978,6 +1978,41 @@ func (a *App) CheckGoPCAStatus() *GoPCAStatus {
 		return status
 	}
 
+	// Check for development binary relative to current executable
+	execPath, _ := os.Executable()
+	execDir := filepath.Dir(execPath)
+	
+	// Also check relative to current working directory (for wails dev)
+	cwd, _ := os.Getwd()
+	
+	// Development binary paths to check
+	devPaths := []string{
+		// When running from cmd/gocsv with make csv-dev
+		filepath.Join(execDir, "../../build/bin/gopca-desktop"),
+		filepath.Join(execDir, "../../build/bin/gopca-desktop.exe"),
+		// When running from build output directory
+		filepath.Join(execDir, "../gopca-desktop"),
+		filepath.Join(execDir, "../gopca-desktop.exe"),
+		// macOS app bundle in development
+		filepath.Join(execDir, "../../build/bin/GoPCA Desktop.app/Contents/MacOS/gopca-desktop"),
+		// When running with wails dev from cmd/gocsv directory
+		filepath.Join(cwd, "../../build/bin/gopca-desktop"),
+		filepath.Join(cwd, "../../build/bin/gopca-desktop.exe"),
+		filepath.Join(cwd, "../gopca-desktop/build/bin/gopca-desktop.app/Contents/MacOS/gopca-desktop"),
+		// Direct path to GoPCA Desktop build output
+		filepath.Join(cwd, "../../cmd/gopca-desktop/build/bin/gopca-desktop.app/Contents/MacOS/gopca-desktop"),
+	}
+	
+	// Check development paths first
+	for _, p := range devPaths {
+		if _, err := os.Stat(p); err == nil {
+			status.Installed = true
+			status.Path = p
+			status.Version = "dev"
+			return status
+		}
+	}
+
 	// Check common installation locations based on OS
 	var possiblePaths []string
 	switch runtime.GOOS {

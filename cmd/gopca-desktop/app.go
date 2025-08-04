@@ -10,6 +10,7 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+	"time"
 
 	"github.com/bitjungle/gopca/internal/cli"
 	"github.com/bitjungle/gopca/internal/config"
@@ -24,7 +25,8 @@ import (
 
 // App struct
 type App struct {
-	ctx context.Context
+	ctx        context.Context
+	fileToOpen string
 }
 
 // NewApp creates a new App application struct
@@ -32,15 +34,42 @@ func NewApp() *App {
 	return &App{}
 }
 
+// SetFileToOpen sets the file path to open on startup
+func (a *App) SetFileToOpen(path string) {
+	a.fileToOpen = path
+}
+
 // startup is called when the app starts. The context is saved
 // so we can call the runtime methods
 func (a *App) startup(ctx context.Context) {
 	a.ctx = ctx
+	
+	// If a file was specified via --open, emit an event to load it
+	if a.fileToOpen != "" {
+		// Give the frontend a moment to set up event listeners
+		go func() {
+			time.Sleep(500 * time.Millisecond)
+			runtime.LogInfo(a.ctx, fmt.Sprintf("Emitting load-file-on-startup event with file: %s", a.fileToOpen))
+			runtime.EventsEmit(a.ctx, "load-file-on-startup", a.fileToOpen)
+		}()
+	}
 }
 
 // GetVersion returns the application version
 func (a *App) GetVersion() string {
 	return version.Get().Short()
+}
+
+// LoadCSVFile loads a CSV file from the given path
+func (a *App) LoadCSVFile(filePath string) (*FileDataJSON, error) {
+	// Read file content
+	content, err := os.ReadFile(filePath)
+	if err != nil {
+		return nil, fmt.Errorf("failed to read file: %w", err)
+	}
+	
+	// Parse the CSV content
+	return a.ParseCSV(string(content))
 }
 
 // CalculateEllipsesRequest represents a request to calculate confidence ellipses
