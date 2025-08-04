@@ -19,8 +19,8 @@ interface CSVGridProps {
 
 // Context menu component
 interface ContextMenuItem {
-    label: string;
-    action: () => void;
+    label?: string;
+    action?: () => void;
     icon?: string;
     separator?: boolean;
 }
@@ -60,7 +60,7 @@ const ContextMenu: React.FC<ContextMenuProps> = ({ x, y, items, onClose }) => {
                     <button
                         key={index}
                         onClick={() => {
-                            item.action();
+                            item.action?.();
                             onClose();
                         }}
                         className="w-full px-4 py-2 text-left text-sm hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center gap-2"
@@ -120,6 +120,112 @@ export const CSVGrid: React.FC<CSVGridProps> = ({
         if (hasText && !hasNumeric) return 'text';
         return 'mixed';
     }, [data]);
+    
+    // Declare context menu handlers early
+    const handleHeaderContextMenu = useCallback((event: React.MouseEvent, colIndex: number) => {
+        event.preventDefault();
+        
+        const header = headers[colIndex];
+        const isTargetColumn = header.toLowerCase().endsWith('#target') || 
+                              header.toLowerCase().endsWith('# target');
+        
+        const items: ContextMenuItem[] = [
+            {
+                label: isTargetColumn ? 'Remove Target Flag' : 'Mark as Target Column',
+                action: async () => {
+                    if (fileData) {
+                        await ExecuteToggleTargetColumn(fileData, colIndex);
+                        onRefresh?.();
+                    }
+                },
+                icon: '🎯'
+            },
+            {
+                label: 'Insert Column Before',
+                action: async () => {
+                    if (fileData) {
+                        await ExecuteInsertColumn(fileData, colIndex, '');
+                        onRefresh?.();
+                    }
+                },
+                icon: '⬅️'
+            },
+            {
+                label: 'Insert Column After',
+                action: async () => {
+                    if (fileData) {
+                        await ExecuteInsertColumn(fileData, colIndex + 1, '');
+                        onRefresh?.();
+                    }
+                },
+                icon: '➡️'
+            },
+            { separator: true },
+            {
+                label: 'Delete Column',
+                action: async () => {
+                    if (fileData && confirm(`Delete column '${header}'?`)) {
+                        await ExecuteDeleteColumns(fileData, [colIndex]);
+                        onRefresh?.();
+                    }
+                },
+                icon: '🗑️'
+            }
+        ];
+        
+        setContextMenu({ x: event.clientX, y: event.clientY, items });
+    }, [fileData, headers, onRefresh]);
+    
+    const handleRowContextMenu = useCallback((event: React.MouseEvent, rowIndex: number) => {
+        event.preventDefault();
+        
+        const items: ContextMenuItem[] = [
+            {
+                label: 'Insert Row Above',
+                action: async () => {
+                    if (fileData) {
+                        await ExecuteInsertRow(fileData, rowIndex);
+                        onRefresh?.();
+                    }
+                },
+                icon: '⬆️'
+            },
+            {
+                label: 'Insert Row Below',
+                action: async () => {
+                    if (fileData) {
+                        await ExecuteInsertRow(fileData, rowIndex + 1);
+                        onRefresh?.();
+                    }
+                },
+                icon: '⬇️'
+            },
+            { separator: true },
+            {
+                label: 'Delete Row',
+                action: async () => {
+                    if (fileData) {
+                        const selectedRows = gridApi?.getSelectedRows() || [];
+                        const rowIndices = selectedRows.length > 0 
+                            ? selectedRows.map(row => row.id)
+                            : [rowIndex];
+                        
+                        const confirmMsg = rowIndices.length > 1 
+                            ? `Delete ${rowIndices.length} rows?`
+                            : 'Delete this row?';
+                            
+                        if (confirm(confirmMsg)) {
+                            await ExecuteDeleteRows(fileData, rowIndices);
+                            onRefresh?.();
+                        }
+                    }
+                },
+                icon: '🗑️'
+            }
+        ];
+        
+        setContextMenu({ x: event.clientX, y: event.clientY, items });
+    }, [fileData, gridApi, onRefresh]);
     
     // Create column definitions
     const columnDefs = useMemo<ColDef[]>(() => {
@@ -261,112 +367,6 @@ export const CSVGrid: React.FC<CSVGridProps> = ({
         resizable: true,
     }), []);
     
-    // Handle column header right-click
-    const handleHeaderContextMenu = useCallback((event: React.MouseEvent, colIndex: number) => {
-        event.preventDefault();
-        
-        const header = headers[colIndex];
-        const isTargetColumn = header.toLowerCase().endsWith('#target') || 
-                              header.toLowerCase().endsWith('# target');
-        
-        const items: ContextMenuItem[] = [
-            {
-                label: isTargetColumn ? 'Remove Target Flag' : 'Mark as Target Column',
-                action: async () => {
-                    if (fileData) {
-                        await ExecuteToggleTargetColumn(fileData, colIndex);
-                        onRefresh?.();
-                    }
-                },
-                icon: '🎯'
-            },
-            {
-                label: 'Insert Column Before',
-                action: async () => {
-                    if (fileData) {
-                        await ExecuteInsertColumn(fileData, colIndex, '');
-                        onRefresh?.();
-                    }
-                },
-                icon: '⬅️'
-            },
-            {
-                label: 'Insert Column After',
-                action: async () => {
-                    if (fileData) {
-                        await ExecuteInsertColumn(fileData, colIndex + 1, '');
-                        onRefresh?.();
-                    }
-                },
-                icon: '➡️'
-            },
-            { separator: true },
-            {
-                label: 'Delete Column',
-                action: async () => {
-                    if (fileData && confirm(`Delete column '${header}'?`)) {
-                        await ExecuteDeleteColumns(fileData, [colIndex]);
-                        onRefresh?.();
-                    }
-                },
-                icon: '🗑️'
-            }
-        ];
-        
-        setContextMenu({ x: event.clientX, y: event.clientY, items });
-    }, [fileData, headers, onRefresh]);
-    
-    // Handle row right-click
-    const handleRowContextMenu = useCallback((event: React.MouseEvent, rowIndex: number) => {
-        event.preventDefault();
-        
-        const items: ContextMenuItem[] = [
-            {
-                label: 'Insert Row Above',
-                action: async () => {
-                    if (fileData) {
-                        await ExecuteInsertRow(fileData, rowIndex);
-                        onRefresh?.();
-                    }
-                },
-                icon: '⬆️'
-            },
-            {
-                label: 'Insert Row Below',
-                action: async () => {
-                    if (fileData) {
-                        await ExecuteInsertRow(fileData, rowIndex + 1);
-                        onRefresh?.();
-                    }
-                },
-                icon: '⬇️'
-            },
-            { separator: true },
-            {
-                label: 'Delete Row',
-                action: async () => {
-                    if (fileData) {
-                        const selectedRows = gridApi?.getSelectedRows() || [];
-                        const rowIndices = selectedRows.length > 0 
-                            ? selectedRows.map(row => row.id)
-                            : [rowIndex];
-                        
-                        const confirmMsg = rowIndices.length > 1 
-                            ? `Delete ${rowIndices.length} rows?`
-                            : 'Delete this row?';
-                            
-                        if (confirm(confirmMsg)) {
-                            await ExecuteDeleteRows(fileData, rowIndices);
-                            onRefresh?.();
-                        }
-                    }
-                },
-                icon: '🗑️'
-            }
-        ];
-        
-        setContextMenu({ x: event.clientX, y: event.clientY, items });
-    }, [fileData, gridApi, onRefresh]);
     
     // Handle keyboard shortcuts
     const handleKeyDown = useCallback((event: KeyboardEvent) => {
@@ -459,7 +459,7 @@ export const CSVGrid: React.FC<CSVGridProps> = ({
             const colId = headerCell.getAttribute('col-id');
             if (colId && colId.startsWith('col')) {
                 const colIndex = parseInt(colId.replace('col', ''));
-                handleHeaderContextMenu(event, colIndex);
+                handleHeaderContextMenu(event as any as React.MouseEvent, colIndex);
             }
         };
         
