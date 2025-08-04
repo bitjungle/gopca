@@ -10,6 +10,7 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+	"time"
 
 	"github.com/bitjungle/gopca/internal/cli"
 	"github.com/bitjungle/gopca/internal/config"
@@ -45,7 +46,12 @@ func (a *App) startup(ctx context.Context) {
 	
 	// If a file was specified via --open, emit an event to load it
 	if a.fileToOpen != "" {
-		runtime.EventsEmit(a.ctx, "load-file-on-startup", a.fileToOpen)
+		// Give the frontend a moment to set up event listeners
+		go func() {
+			time.Sleep(500 * time.Millisecond)
+			runtime.LogInfo(a.ctx, fmt.Sprintf("Emitting load-file-on-startup event with file: %s", a.fileToOpen))
+			runtime.EventsEmit(a.ctx, "load-file-on-startup", a.fileToOpen)
+		}()
 	}
 }
 
