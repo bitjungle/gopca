@@ -2656,19 +2656,9 @@ func (a *App) importCSVWithOptions(filePath string, options ImportOptions) (*Fil
 		fileData.ColumnTypes[header] = colType
 		
 		if strings.HasSuffix(header, "#target") {
-			// Numeric target column
-			values := make([]float64, len(allData))
-			for j, row := range allData {
-				if i < len(row) {
-					val, err := strconv.ParseFloat(row[i], 64)
-					if err != nil {
-						values[j] = math.NaN()
-					} else {
-						values[j] = val
-					}
-				}
-			}
-			fileData.NumericTargetColumns[header] = values
+			// Skip numeric target columns for now to avoid NaN JSON serialization issues
+			// These columns are stored in the regular Data array and can be used for visualization
+			continue
 		} else if colType == "categorical" {
 			// Categorical column
 			values := make([]string, len(allData))
@@ -2806,19 +2796,9 @@ func (a *App) importExcelWithOptions(filePath string, options ImportOptions) (*F
 		fileData.ColumnTypes[header] = colType
 		
 		if strings.HasSuffix(header, "#target") {
-			// Numeric target column
-			values := make([]float64, len(rows))
-			for j, row := range rows {
-				if i < len(row) {
-					val, err := strconv.ParseFloat(row[i], 64)
-					if err != nil {
-						values[j] = math.NaN()
-					} else {
-						values[j] = val
-					}
-				}
-			}
-			fileData.NumericTargetColumns[header] = values
+			// Skip numeric target columns for now to avoid NaN JSON serialization issues
+			// These columns are stored in the regular Data array and can be used for visualization
+			continue
 		} else if colType == "categorical" {
 			// Categorical column
 			values := make([]string, len(rows))
