@@ -28,6 +28,9 @@ function AppContent() {
     const [showTransformDialog, setShowTransformDialog] = useState(false);
     const [showDocumentation, setShowDocumentation] = useState(false);
     
+    // Ref for scrolling to Step 2
+    const step2Ref = useRef<HTMLDivElement>(null);
+    
     // Listen for file-loaded events from backend
     useEffect(() => {
         const unsubscribe = EventsOn('file-loaded', (filename: string) => {
@@ -95,6 +98,14 @@ function AppContent() {
                 setMissingValueStats(null);
                 setDataQualityReport(null);
                 setValidationResult(null);
+                
+                // Smooth scroll to Step 2
+                setTimeout(() => {
+                    step2Ref.current?.scrollIntoView({ 
+                        behavior: 'smooth', 
+                        block: 'start' 
+                    });
+                }, 100);
             } else {
                 alert('Failed to load file or file is empty');
             }
@@ -231,6 +242,14 @@ function AppContent() {
         setValidationResult(null);
         setMissingValueStats(null);
         // Filename will be set by the event from backend
+        
+        // Smooth scroll to Step 2
+        setTimeout(() => {
+            step2Ref.current?.scrollIntoView({ 
+                behavior: 'smooth', 
+                block: 'start' 
+            });
+        }, 100);
     };
     
     // Handle transform completion
@@ -361,9 +380,9 @@ function AppContent() {
                     
                     {/* Step 2: Edit Data */}
                     {fileLoaded && fileData && (
-                        <div className="bg-white dark:bg-gray-800 rounded-xl shadow-md p-6 animate-fadeIn">
+                        <div ref={step2Ref} className="bg-white dark:bg-gray-800 rounded-xl shadow-md p-6 animate-fadeIn">
                             <div className="flex items-center justify-between mb-4">
-                                <h2 className="text-lg font-semibold text-gray-800 dark:text-gray-200">
+                                <h2 className="text-lg font-semibold text-gray-800 dark:text-gray-200 text-center flex-1">
                                     Step 2: Edit Data
                                 </h2>
                                 <div className="text-sm text-gray-600 dark:text-gray-400">
