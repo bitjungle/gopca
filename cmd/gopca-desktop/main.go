@@ -20,7 +20,7 @@ func main() {
 	openFile := flag.String("open", "", "CSV file to open on startup")
 	showVersion := flag.Bool("version", false, "Show version information")
 	flag.Parse()
-	
+
 	// Handle version flag
 	if *showVersion {
 		fmt.Println(version.Get().Short())
@@ -29,7 +29,7 @@ func main() {
 
 	// Create an instance of the app structure
 	app := NewApp()
-	
+
 	// Pass the file to open if provided
 	if *openFile != "" {
 		app.SetFileToOpen(*openFile)

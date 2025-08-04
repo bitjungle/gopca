@@ -8,6 +8,7 @@ import (
 	"github.com/bitjungle/gopca/internal/utils"
 	"github.com/bitjungle/gopca/pkg/types"
 	cli "github.com/urfave/cli/v2"
+	"gonum.org/v1/gonum/mat"
 )
 
 func analyzeCommand() *cli.Command {
@@ -54,11 +55,21 @@ EXAMPLES:
   # Kernel PCA with variance scaling (divide by std dev, no mean centering)
   gopca-cli analyze --method kernel --kernel-type rbf --scale-only data/data.csv
 
+  # Specify group column and calculate eigencorrelations
+  gopca-cli analyze --group-column sample_type --eigencorrelations -f json data/data.csv
+
+  # Include metadata columns for correlation analysis
+  gopca-cli analyze --metadata-cols age,weight --eigencorrelations -f json data/data.csv
+
+  # Explicitly specify target columns (in addition to auto-detection)
+  gopca-cli analyze --target-columns concentration,pH --eigencorrelations -f json data/data.csv
+
 The analysis includes:
   - Data preprocessing (SNV, vector normalization, mean centering, scaling)
   - PCA computation using SVD, NIPALS, or Kernel methods
   - Kernel PCA for non-linear dimensionality reduction
   - Optional statistical metrics (Hotelling's T², Mahalanobis distances, RSS)
+  - Eigencorrelation analysis between PCs and metadata/target variables
   - Multiple output formats (table, JSON)`,
 		Flags: []cli.Flag{
 			// General flags
@@ -204,6 +215,24 @@ The analysis includes:
 				Name:  "kernel-coef0",
 				Usage: "Independent term for polynomial kernel",
 				Value: 0.0,
+			},
+
+			// Metadata and grouping flags
+			&cli.StringFlag{
+				Name:  "group-column",
+				Usage: "Specify categorical column for grouping",
+			},
+			&cli.StringFlag{
+				Name:  "metadata-cols",
+				Usage: "Columns to include for eigencorrelation analysis (comma-separated)",
+			},
+			&cli.StringFlag{
+				Name:  "target-columns",
+				Usage: "Explicitly specify target columns (comma-separated, auto-detected if ending with #target)",
+			},
+			&cli.BoolFlag{
+				Name:  "eigencorrelations",
+				Usage: "Calculate correlations between PCs and metadata/target columns",
 			},
 		},
 		Action: runAnalyze,
@@ -389,12 +418,21 @@ func runAnalyze(c *cli.Context) error {
 		}
 	}
 
-	// Load CSV data
+	// Parse target columns if specified
+	var targetColumns []string
+	if targetColsStr := c.String("target-columns"); targetColsStr != "" {
+		targetColumns = strings.Split(targetColsStr, ",")
+		for i := range targetColumns {
+			targetColumns[i] = strings.TrimSpace(targetColumns[i])
+		}
+	}
+
+	// Load CSV data with target column detection
 	if verbose {
 		fmt.Printf("Loading data from %s...\n", inputFile)
 	}
 
-	data, err := ParseCSV(inputFile, parseOpts)
+	data, categoricalData, targetData, err := ParseCSVMixedWithTargets(inputFile, parseOpts, targetColumns)
 	if err != nil {
 		return fmt.Errorf("failed to parse CSV: %w", err)
 	}
@@ -407,6 +445,20 @@ func runAnalyze(c *cli.Context) error {
 	if verbose {
 		fmt.Println("\nData summary:")
 		fmt.Print(GetDataSummary(data))
+
+		// Report excluded columns
+		if len(categoricalData) > 0 {
+			fmt.Printf("\nCategorical columns detected and excluded:\n")
+			for colName := range categoricalData {
+				fmt.Printf("  - %s\n", colName)
+			}
+		}
+		if len(targetData) > 0 {
+			fmt.Printf("\nTarget columns detected and excluded:\n")
+			for colName := range targetData {
+				fmt.Printf("  - %s\n", colName)
+			}
+		}
 	}
 
 	// Parse exclusion flags
@@ -657,6 +709,89 @@ func runAnalyze(c *cli.Context) error {
 		result.StdDevs = preprocessor.GetStdDevs()
 	}
 
+	// Calculate eigencorrelations if requested
+	if c.Bool("eigencorrelations") {
+		// Prepare metadata for eigencorrelation
+		metadataNumeric := make(map[string][]float64)
+		metadataCategorical := make(map[string][]string)
+
+		// Add target columns to numeric metadata
+		for colName, values := range targetData {
+			metadataNumeric[colName] = values
+		}
+
+		// Parse metadata columns and determine their type
+		if metadataColsStr := c.String("metadata-cols"); metadataColsStr != "" {
+			metadataCols := strings.Split(metadataColsStr, ",")
+			for _, colName := range metadataCols {
+				colName = strings.TrimSpace(colName)
+				// Check if it's in categorical data
+				if values, ok := categoricalData[colName]; ok {
+					metadataCategorical[colName] = values
+				} else if values, ok := targetData[colName]; ok {
+					// Already added above
+					_ = values
+				} else {
+					if verbose {
+						fmt.Printf("Warning: Metadata column '%s' not found in excluded columns\n", colName)
+					}
+				}
+			}
+		}
+
+		// Add group column if specified
+		if groupCol := c.String("group-column"); groupCol != "" {
+			if values, ok := categoricalData[groupCol]; ok {
+				metadataCategorical[groupCol] = values
+			} else {
+				if verbose {
+					fmt.Printf("Warning: Group column '%s' not found in categorical columns\n", groupCol)
+				}
+			}
+		}
+
+		// Calculate eigencorrelations if we have any metadata
+		if len(metadataNumeric) > 0 || len(metadataCategorical) > 0 {
+			if verbose {
+				fmt.Printf("\nCalculating eigencorrelations...\n")
+			}
+
+			// Convert scores to mat.Matrix for correlation calculation
+			scoresMatrix := mat.NewDense(len(result.Scores), len(result.Scores[0]), nil)
+			for i, row := range result.Scores {
+				for j, val := range row {
+					scoresMatrix.Set(i, j, val)
+				}
+			}
+
+			corrRequest := core.CorrelationRequest{
+				Scores:              scoresMatrix,
+				MetadataNumeric:     metadataNumeric,
+				MetadataCategorical: metadataCategorical,
+				Components:          nil, // Use all components
+				Method:              "pearson",
+			}
+
+			corrResult, err := core.CalculateEigencorrelations(corrRequest)
+			if err != nil {
+				if verbose {
+					fmt.Printf("Warning: Failed to calculate eigencorrelations: %v\n", err)
+				}
+			} else {
+				result.Eigencorrelations = &types.EigencorrelationResult{
+					Correlations: corrResult.Correlations,
+					PValues:      corrResult.PValues,
+					Variables:    corrResult.Variables,
+					Components:   corrResult.Components,
+					Method:       "pearson",
+				}
+				if verbose {
+					fmt.Printf("✓ Eigencorrelations calculated for %d variables\n", len(corrResult.Variables))
+				}
+			}
+		}
+	}
+
 	if verbose {
 		fmt.Println("\n✓ PCA analysis completed successfully")
 		fmt.Printf("  - Explained variance: %.1f%% (PC1), %.1f%% (PC2)\n",
@@ -691,7 +826,7 @@ func runAnalyze(c *cli.Context) error {
 	case "json":
 		// JSON output is different - don't show table
 		err = outputJSONFormat(result, data, inputFile, outputDir, outputScores, outputLoadings,
-			outputVariance, includeMetrics, pcaConfig, preprocessor)
+			outputVariance, includeMetrics, pcaConfig, preprocessor, categoricalData, targetData)
 	default:
 		return fmt.Errorf("unsupported output format: %s", outputFormat)
 	}

@@ -43,7 +43,7 @@ func (a *App) SetFileToOpen(path string) {
 // so we can call the runtime methods
 func (a *App) startup(ctx context.Context) {
 	a.ctx = ctx
-	
+
 	// If a file was specified via --open, emit an event to load it
 	if a.fileToOpen != "" {
 		// Give the frontend a moment to set up event listeners
@@ -67,7 +67,7 @@ func (a *App) LoadCSVFile(filePath string) (*FileDataJSON, error) {
 	if err != nil {
 		return nil, fmt.Errorf("failed to read file: %w", err)
 	}
-	
+
 	// Parse the CSV content
 	return a.ParseCSV(string(content))
 }
@@ -1022,7 +1022,8 @@ func (a *App) ExportPCAModel(request ExportPCAModelRequest) error {
 	}
 
 	// Convert to PCAOutputData using the CLI function
-	outputData := cli.ConvertToPCAOutputData(request.PCAResult, csvData, true, pcaConfig, preprocessor)
+	// Note: We don't have categorical/target data in the export request, so pass nil
+	outputData := cli.ConvertToPCAOutputData(request.PCAResult, csvData, true, pcaConfig, preprocessor, nil, nil)
 
 	// Marshal to JSON
 	jsonData, err := json.MarshalIndent(outputData, "", "  ")

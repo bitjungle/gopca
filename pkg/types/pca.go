@@ -92,6 +92,7 @@ type PCAOutputData struct {
 	Results           ResultsData             `json:"results"`
 	Diagnostics       DiagnosticLimits        `json:"diagnostics,omitempty"`
 	Eigencorrelations *EigencorrelationResult `json:"eigencorrelations,omitempty"`
+	PreservedColumns  *PreservedColumns       `json:"preservedColumns,omitempty"`
 }
 
 // SampleData contains sample-space results
@@ -207,4 +208,10 @@ type DiagnosticLimits struct {
 	T2Limit99 float64 `json:"t2_limit_99,omitempty"`
 	QLimit95  float64 `json:"q_limit_95,omitempty"`
 	QLimit99  float64 `json:"q_limit_99,omitempty"`
+}
+
+// PreservedColumns contains columns that were excluded from PCA but preserved in output
+type PreservedColumns struct {
+	Categorical   map[string][]string  `json:"categorical,omitempty"`
+	NumericTarget map[string][]float64 `json:"numericTarget,omitempty"`
 }
