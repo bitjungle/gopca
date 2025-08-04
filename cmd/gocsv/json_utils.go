@@ -5,41 +5,20 @@ import (
 	"math"
 )
 
-// JSONFloat64 is a custom type that handles NaN and Inf values for JSON serialization
+// JSONFloat64 is a float64 that marshals NaN and Inf values as null
 type JSONFloat64 float64
 
 // MarshalJSON implements the json.Marshaler interface
 func (f JSONFloat64) MarshalJSON() ([]byte, error) {
 	if math.IsNaN(float64(f)) || math.IsInf(float64(f), 0) {
-		return json.Marshal(nil) // Convert NaN/Inf to null
+		return []byte("null"), nil
 	}
 	return json.Marshal(float64(f))
 }
 
-// ConvertFloat64SliceToJSON converts a slice of float64 to a slice of JSONFloat64
-func ConvertFloat64SliceToJSON(values []float64) []JSONFloat64 {
-	result := make([]JSONFloat64, len(values))
-	for i, v := range values {
-		result[i] = JSONFloat64(v)
-	}
-	return result
-}
-
-// ConvertNumericTargetColumns converts numeric target columns to JSON-safe format
-func ConvertNumericTargetColumns(columns map[string][]float64) map[string][]JSONFloat64 {
-	if columns == nil {
-		return nil
-	}
-	
-	result := make(map[string][]JSONFloat64, len(columns))
-	for key, values := range columns {
-		result[key] = ConvertFloat64SliceToJSON(values)
-	}
-	return result
-}
-
-// FileDataJSON is a JSON-safe version of FileData
-type FileDataJSON struct {
+// FileData represents the structure of loaded file data
+// This version uses JSONFloat64 to handle NaN values safely
+type FileData struct {
 	Headers              []string                   `json:"headers"`
 	RowNames             []string                   `json:"rowNames,omitempty"`
 	Data                 [][]string                 `json:"data"`
@@ -50,16 +29,19 @@ type FileDataJSON struct {
 	ColumnTypes          map[string]string          `json:"columnTypes,omitempty"`
 }
 
-// ToJSON converts FileData to a JSON-safe version
-func (f *FileData) ToJSON() *FileDataJSON {
-	return &FileDataJSON{
-		Headers:              f.Headers,
-		RowNames:             f.RowNames,
-		Data:                 f.Data,
-		Rows:                 f.Rows,
-		Columns:              f.Columns,
-		CategoricalColumns:   f.CategoricalColumns,
-		NumericTargetColumns: ConvertNumericTargetColumns(f.NumericTargetColumns),
-		ColumnTypes:          f.ColumnTypes,
+// ConvertFloat64MapToJSON converts a map of float64 slices to JSONFloat64 slices
+func ConvertFloat64MapToJSON(data map[string][]float64) map[string][]JSONFloat64 {
+	if data == nil {
+		return nil
 	}
+	
+	result := make(map[string][]JSONFloat64, len(data))
+	for key, values := range data {
+		jsonValues := make([]JSONFloat64, len(values))
+		for i, v := range values {
+			jsonValues[i] = JSONFloat64(v)
+		}
+		result[key] = jsonValues
+	}
+	return result
 }

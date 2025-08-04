@@ -38,17 +38,6 @@ func (a *App) startup(ctx context.Context) {
 	a.ctx = ctx
 }
 
-// FileData represents the loaded CSV data
-type FileData struct {
-	Headers              []string              `json:"headers"`
-	RowNames             []string              `json:"rowNames,omitempty"`
-	Data                 [][]string            `json:"data"`
-	Rows                 int                   `json:"rows"`
-	Columns              int                   `json:"columns"`
-	CategoricalColumns   map[string][]string   `json:"categoricalColumns,omitempty"`
-	NumericTargetColumns map[string][]float64  `json:"numericTargetColumns,omitempty"`
-	ColumnTypes          map[string]string     `json:"columnTypes,omitempty"` // "numeric", "categorical", "target"
-}
 
 // ValidationResult represents the result of GoPCA validation
 type ValidationResult struct {
@@ -289,7 +278,7 @@ func (a *App) parseCSVContent(content string, ext string) (*FileData, error) {
 		Rows:                 csvData.Rows,
 		Columns:              csvData.Columns,
 		CategoricalColumns:   categoricalData,
-		NumericTargetColumns: numericTargetData,
+		NumericTargetColumns: ConvertFloat64MapToJSON(numericTargetData),
 		ColumnTypes:          columnTypes,
 	}
 	
@@ -361,7 +350,7 @@ func (a *App) combineAllColumns(csvData *types.CSVData, categoricalData map[stri
 		Rows:                 csvData.Rows,
 		Columns:              len(allHeaders),
 		CategoricalColumns:   categoricalData,
-		NumericTargetColumns: numericTargetData,
+		NumericTargetColumns: ConvertFloat64MapToJSON(numericTargetData),
 		ColumnTypes:          columnTypes,
 	}
 }
@@ -2578,7 +2567,7 @@ func (a *App) importCSVWithOptions(filePath string, options ImportOptions) (*Fil
 	
 	fileData := &FileData{
 		CategoricalColumns:   make(map[string][]string),
-		NumericTargetColumns: make(map[string][]float64),
+		NumericTargetColumns: make(map[string][]JSONFloat64),
 		ColumnTypes:          make(map[string]string),
 	}
 	
@@ -2716,7 +2705,7 @@ func (a *App) importExcelWithOptions(filePath string, options ImportOptions) (*F
 	
 	fileData := &FileData{
 		CategoricalColumns:   make(map[string][]string),
-		NumericTargetColumns: make(map[string][]float64),
+		NumericTargetColumns: make(map[string][]JSONFloat64),
 		ColumnTypes:          make(map[string]string),
 	}
 	
@@ -2963,7 +2952,7 @@ func (a *App) ApplyTransformation(data *FileData, options TransformOptions) (*Tr
 		Rows:                 data.Rows,
 		Columns:              data.Columns,
 		CategoricalColumns:   make(map[string][]string),
-		NumericTargetColumns: make(map[string][]float64),
+		NumericTargetColumns: make(map[string][]JSONFloat64),
 		ColumnTypes:          make(map[string]string),
 	}
 	
