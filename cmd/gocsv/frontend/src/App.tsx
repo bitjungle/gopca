@@ -59,6 +59,19 @@ function AppContent() {
         };
     }, []);
     
+    // Auto-scroll to Step 2 when file is loaded
+    useEffect(() => {
+        if (fileLoaded && fileData && step2Ref.current) {
+            // Small delay to ensure DOM is updated
+            setTimeout(() => {
+                step2Ref.current?.scrollIntoView({ 
+                    behavior: 'smooth', 
+                    block: 'start' 
+                });
+            }, 100);
+        }
+    }, [fileLoaded, fileData]);
+    
     // Scroll to top function
     const scrollToTop = () => {
         window.scrollTo({ top: 0, behavior: 'smooth' });
@@ -98,14 +111,6 @@ function AppContent() {
                 setMissingValueStats(null);
                 setDataQualityReport(null);
                 setValidationResult(null);
-                
-                // Smooth scroll to Step 2
-                setTimeout(() => {
-                    step2Ref.current?.scrollIntoView({ 
-                        behavior: 'smooth', 
-                        block: 'start' 
-                    });
-                }, 100);
             } else {
                 alert('Failed to load file or file is empty');
             }
@@ -242,14 +247,6 @@ function AppContent() {
         setValidationResult(null);
         setMissingValueStats(null);
         // Filename will be set by the event from backend
-        
-        // Smooth scroll to Step 2
-        setTimeout(() => {
-            step2Ref.current?.scrollIntoView({ 
-                behavior: 'smooth', 
-                block: 'start' 
-            });
-        }, 100);
     };
     
     // Handle transform completion
