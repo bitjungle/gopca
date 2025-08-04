@@ -28,6 +28,12 @@ func main() {
 		Bind: []interface{}{
 			app,
 		},
+		DragAndDrop: &options.DragAndDrop{
+			EnableFileDrop:       true,
+			DisableWebViewDrop:   false,
+			CSSDropProperty:      "--wails-dragging",
+			CSSDropValue:         "1",
+		},
 	})
 
 	if err != nil {

@@ -4,7 +4,7 @@ import { ThemeToggle, CSVGrid, ValidationResults, MissingValueSummary, MissingVa
 import { ThemeProvider } from './contexts/ThemeContext';
 import logo from './assets/images/GoCSV-logo-1024-transp.png';
 import { LoadCSV, SaveCSV, SaveExcel, ValidateForGoPCA, AnalyzeMissingValues, FillMissingValues, AnalyzeDataQuality, CheckGoPCAStatus, OpenInGoPCA, DownloadGoPCA, ExecuteCellEdit, ExecuteHeaderEdit, ExecuteFillMissingValues, ClearHistory } from '../wailsjs/go/main/App';
-import { EventsOn } from '../wailsjs/runtime/runtime';
+import { EventsOn, OnFileDrop, OnFileDropOff } from '../wailsjs/runtime/runtime';
 import { main } from '../wailsjs/go/models';
 
 type FileData = main.FileData;
@@ -13,7 +13,6 @@ function AppContent() {
     const [fileLoaded, setFileLoaded] = useState(false);
     const [fileName, setFileName] = useState<string | null>(null);
     const [fileData, setFileData] = useState<FileData | null>(null);
-    const [isDragging, setIsDragging] = useState(false);
     const [isLoading, setIsLoading] = useState(false);
     const [validationResult, setValidationResult] = useState<{ isValid: boolean; messages: string[] } | null>(null);
     const [isValidating, setIsValidating] = useState(false);
@@ -38,8 +37,22 @@ function AppContent() {
         // Check GoPCA status on startup
         checkGoPCAInstallation();
         
+        // Set up drag and drop listener
+        OnFileDrop(async (x: number, y: number, paths: string[]) => {
+            if (paths.length > 0) {
+                const filePath = paths[0];
+                // Only accept supported file types
+                if (filePath.match(/\.(csv|tsv|xlsx|xls)$/i)) {
+                    await handleDroppedFile(filePath);
+                } else {
+                    alert('Please drop a supported file type: CSV, TSV, or Excel files');
+                }
+            }
+        }, false);
+        
         return () => {
             unsubscribe();
+            OnFileDropOff();
         };
     }, []);
     
@@ -68,12 +81,29 @@ function AppContent() {
     };
     
     // Handle file selection
-    const handleFile = async (file: File) => {
-        // For drag-and-drop and file input, we can't pass the File object directly to Go
-        // Instead, we need to trigger the file dialog in the backend
-        // This is a limitation of the current Wails file handling
-        // For now, just inform the user to use the Browse button
-        alert(`File "${file.name}" selected. Please use the "Browse for File" button to load files.`);
+    // Handle files dropped via Wails drag and drop
+    const handleDroppedFile = async (filePath: string) => {
+        setIsLoading(true);
+        try {
+            const result = await LoadCSV(filePath);
+            if (result && result.data && result.data.length > 0) {
+                setFileData(result);
+                setFileLoaded(true);
+                // Clear history when loading new file
+                ClearHistory();
+                // Clear any previous analysis
+                setMissingValueStats(null);
+                setDataQualityReport(null);
+                setValidationResult(null);
+            } else {
+                alert('Failed to load file or file is empty');
+            }
+        } catch (error) {
+            console.error('Error loading dropped file:', error);
+            alert(`Error loading file: ${error}`);
+        } finally {
+            setIsLoading(false);
+        }
     };
     
     // Load file from dialog
@@ -210,34 +240,6 @@ function AppContent() {
         setShowTransformDialog(false);
     };
     
-    // Drag and drop handlers
-    const handleDragOver = (e: React.DragEvent) => {
-        e.preventDefault();
-        e.stopPropagation();
-    };
-    
-    const handleDragEnter = (e: React.DragEvent) => {
-        e.preventDefault();
-        e.stopPropagation();
-        setIsDragging(true);
-    };
-    
-    const handleDragLeave = (e: React.DragEvent) => {
-        e.preventDefault();
-        e.stopPropagation();
-        setIsDragging(false);
-    };
-    
-    const handleDrop = (e: React.DragEvent) => {
-        e.preventDefault();
-        e.stopPropagation();
-        setIsDragging(false);
-        
-        const files = e.dataTransfer.files;
-        if (files && files.length > 0) {
-            handleFile(files[0]);
-        }
-    };
     
     return (
         <div className="flex flex-col h-screen bg-gray-50 dark:bg-gray-900 text-gray-900 dark:text-white transition-colors duration-200">
@@ -293,78 +295,45 @@ function AppContent() {
                         
                         <div className="space-y-4">
                             <div 
-                                className={`border-2 border-dashed rounded-lg p-8 text-center transition-colors ${
-                                    isDragging 
-                                        ? 'border-blue-500 bg-blue-50 dark:bg-blue-900/20' 
-                                        : 'border-gray-300 dark:border-gray-600 hover:border-gray-400 dark:hover:border-gray-500'
-                                }`}
-                                onDragOver={handleDragOver}
-                                onDragEnter={handleDragEnter}
-                                onDragLeave={handleDragLeave}
-                                onDrop={handleDrop}
+                                className="border-2 border-dashed rounded-lg p-8 text-center transition-colors border-gray-300 dark:border-gray-600 hover:border-gray-400 dark:hover:border-gray-500"
                             >
-                                <input
-                                    type="file"
-                                    accept=".csv,.tsv,.xlsx,.xls"
-                                    className="hidden"
-                                    id="file-upload"
-                                    onChange={(e) => {
-                                        console.log('File input changed');
-                                        const file = e.target.files?.[0];
-                                        if (file) {
-                                            console.log('File selected:', file.name);
-                                            // Reset the input so the same file can be selected again
-                                            e.target.value = '';
-                                            handleFile(file);
-                                        }
-                                    }}
-                                />
-                                <label 
-                                    htmlFor="file-upload"
-                                    className="cursor-pointer"
-                                >
-                                    <svg className={`mx-auto h-12 w-12 ${isDragging ? 'text-blue-500' : 'text-gray-400'} transition-colors`} stroke="currentColor" fill="none" viewBox="0 0 48 48" aria-hidden="true">
-                                        <path d="M28 8H12a4 4 0 00-4 4v20m32-12v8m0 0v8a4 4 0 01-4 4H12a4 4 0 01-4-4v-4m32-4l-3.172-3.172a4 4 0 00-5.656 0L28 28M8 32l9.172-9.172a4 4 0 015.656 0L28 28m0 0l4 4m4-24h8m-4-4v8m-12 4h.02" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
-                                    </svg>
-                                    <p className="mt-2 text-sm text-gray-600 dark:text-gray-400">
-                                        {isDragging ? (
-                                            <span className="font-medium text-blue-600 dark:text-blue-400">
-                                                Drop file here
-                                            </span>
-                                        ) : (
-                                            <>
-                                                <span className="font-medium text-gray-900 dark:text-white hover:text-blue-600 dark:hover:text-blue-400">
-                                                    Click to upload
-                                                </span>{' '}
-                                                or drag and drop
-                                            </>
-                                        )}
-                                    </p>
-                                    <p className="text-xs text-gray-500 dark:text-gray-500 mt-1">
-                                        CSV, TSV, Excel files supported
-                                    </p>
-                                </label>
+                                <svg className="mx-auto h-12 w-12 text-gray-400 transition-colors" stroke="currentColor" fill="none" viewBox="0 0 48 48" aria-hidden="true">
+                                    <path d="M28 8H12a4 4 0 00-4 4v20m32-12v8m0 0v8a4 4 0 01-4 4H12a4 4 0 01-4-4v-4m32-4l-3.172-3.172a4 4 0 00-5.656 0L28 28M8 32l9.172-9.172a4 4 0 015.656 0L28 28m0 0l4 4m4-24h8m-4-4v8m-12 4h.02" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+                                </svg>
+                                <p className="mt-2 text-sm text-gray-600 dark:text-gray-400">
+                                    <span className="font-medium text-gray-900 dark:text-gray-100">
+                                        Drag and drop your file here
+                                    </span>
+                                    <br />
+                                    <span className="text-xs">CSV, TSV, or Excel files</span>
+                                </p>
                             </div>
                             
                             <div className="text-center">
                                 <span className="text-gray-500 dark:text-gray-400 text-sm">or</span>
                             </div>
                             
-                            <div className="grid grid-cols-2 gap-2">
-                                <button
-                                    onClick={handleLoadFromDialog}
-                                    disabled={isLoading}
-                                    className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-                                >
-                                    {isLoading ? 'Loading...' : 'Quick Load'}
-                                </button>
-                                <button
-                                    onClick={() => setShowImportWizard(true)}
-                                    disabled={isLoading}
-                                    className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-                                >
-                                    Import with Wizard
-                                </button>
+                            <div className="space-y-3">
+                                <div className="grid grid-cols-2 gap-2">
+                                    <button
+                                        onClick={handleLoadFromDialog}
+                                        disabled={isLoading}
+                                        className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                                    >
+                                        {isLoading ? 'Loading...' : 'Browse for File'}
+                                    </button>
+                                    <button
+                                        onClick={() => setShowImportWizard(true)}
+                                        disabled={isLoading}
+                                        className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                                    >
+                                        Import with Wizard
+                                    </button>
+                                </div>
+                                <div className="text-xs text-gray-500 dark:text-gray-400 space-y-1">
+                                    <p><span className="font-medium">Browse for File:</span> Quick file picker for standard CSV/TSV files with automatic format detection</p>
+                                    <p><span className="font-medium">Import with Wizard:</span> Advanced options for Excel sheets, custom delimiters, header rows, and column selection</p>
+                                </div>
                             </div>
                             
                             {fileName && (
