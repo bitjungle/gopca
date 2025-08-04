@@ -1978,6 +1978,32 @@ func (a *App) CheckGoPCAStatus() *GoPCAStatus {
 		return status
 	}
 
+	// Check for development binary relative to current executable
+	execPath, _ := os.Executable()
+	execDir := filepath.Dir(execPath)
+	
+	// Development binary paths to check
+	devPaths := []string{
+		// When running from cmd/gocsv with make csv-dev
+		filepath.Join(execDir, "../../build/bin/gopca-desktop"),
+		filepath.Join(execDir, "../../build/bin/gopca-desktop.exe"),
+		// When running from build output directory
+		filepath.Join(execDir, "../gopca-desktop"),
+		filepath.Join(execDir, "../gopca-desktop.exe"),
+		// macOS app bundle in development
+		filepath.Join(execDir, "../../build/bin/GoPCA Desktop.app/Contents/MacOS/gopca-desktop"),
+	}
+	
+	// Check development paths first
+	for _, p := range devPaths {
+		if _, err := os.Stat(p); err == nil {
+			status.Installed = true
+			status.Path = p
+			status.Version = "dev"
+			return status
+		}
+	}
+
 	// Check common installation locations based on OS
 	var possiblePaths []string
 	switch runtime.GOOS {

@@ -2,7 +2,11 @@ package main
 
 import (
 	"embed"
+	"flag"
+	"fmt"
+	"os"
 
+	"github.com/bitjungle/gopca/internal/version"
 	"github.com/wailsapp/wails/v2"
 	"github.com/wailsapp/wails/v2/pkg/options"
 	"github.com/wailsapp/wails/v2/pkg/options/assetserver"
@@ -12,8 +16,24 @@ import (
 var assets embed.FS
 
 func main() {
+	// Parse command-line flags
+	openFile := flag.String("open", "", "CSV file to open on startup")
+	showVersion := flag.Bool("version", false, "Show version information")
+	flag.Parse()
+	
+	// Handle version flag
+	if *showVersion {
+		fmt.Println(version.Get().Short())
+		os.Exit(0)
+	}
+
 	// Create an instance of the app structure
 	app := NewApp()
+	
+	// Pass the file to open if provided
+	if *openFile != "" {
+		app.SetFileToOpen(*openFile)
+	}
 
 	// Create application with options
 	err := wails.Run(&options.App{

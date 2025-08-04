@@ -1,6 +1,7 @@
 import React, { useState, useRef, useEffect } from 'react';
 import './App.css';
-import { ParseCSV, RunPCA, LoadIrisDataset, LoadDatasetFile, GetVersion, CalculateEllipses, GetGUIConfig } from "../wailsjs/go/main/App";
+import { ParseCSV, RunPCA, LoadIrisDataset, LoadDatasetFile, GetVersion, CalculateEllipses, GetGUIConfig, LoadCSVFile } from "../wailsjs/go/main/App";
+import { EventsOn } from '../wailsjs/runtime/runtime';
 import { DataTable, SelectionTable, MatrixIllustration, HelpWrapper, DocumentationViewer } from './components';
 import { ScoresPlot, ScreePlot, LoadingsPlot, Biplot, CircleOfCorrelations, DiagnosticScatterPlot, EigencorrelationPlot } from './components/visualizations';
 import { FileData, PCARequest, PCAResponse } from './types';
@@ -83,6 +84,34 @@ function AppContent() {
         }).catch((err) => {
             console.error('Failed to get GUI config:', err);
         });
+        
+        // Listen for file to load on startup
+        const unsubscribe = EventsOn('load-file-on-startup', async (filePath: string) => {
+            console.log('Loading file on startup:', filePath);
+            setLoading(true);
+            setFileError(null);
+            setPcaError(null);
+            
+            try {
+                const result = await LoadCSVFile(filePath);
+                setFileData(result);
+                setPcaResponse(null);
+                setExcludedRows([]);
+                setExcludedColumns([]);
+                setSelectedGroupColumn(null);
+                setDatasetId(prev => prev + 1); // Force DataTable re-render
+                updateGammaForData(result);
+            } catch (err) {
+                setFileError(`Failed to load file: ${err}`);
+            } finally {
+                setLoading(false);
+            }
+        });
+        
+        // Cleanup event listener on unmount
+        return () => {
+            unsubscribe();
+        };
     }, []);
     
     // Helper function to get column data and type
