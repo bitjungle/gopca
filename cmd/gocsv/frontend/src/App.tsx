@@ -1,6 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react';
 import './App.css';
-import { ThemeToggle, CSVGrid, ValidationResults, MissingValueSummary, MissingValueDialog, DataQualityDashboard, UndoRedoControls, ImportWizard, DataTransformDialog } from './components';
+import { ThemeToggle, CSVGrid, ValidationResults, MissingValueSummary, MissingValueDialog, DataQualityDashboard, UndoRedoControls, ImportWizard, DataTransformDialog, DocumentationViewer } from './components';
 import { ThemeProvider } from './contexts/ThemeContext';
 import logo from './assets/images/GoCSV-logo-1024-transp.png';
 import { LoadCSV, SaveCSV, SaveExcel, ValidateForGoPCA, AnalyzeMissingValues, FillMissingValues, AnalyzeDataQuality, CheckGoPCAStatus, OpenInGoPCA, DownloadGoPCA, ExecuteCellEdit, ExecuteHeaderEdit, ExecuteFillMissingValues, ClearHistory } from '../wailsjs/go/main/App';
@@ -27,6 +27,7 @@ function AppContent() {
     const [isCheckingGoPCA, setIsCheckingGoPCA] = useState(false);
     const [showImportWizard, setShowImportWizard] = useState(false);
     const [showTransformDialog, setShowTransformDialog] = useState(false);
+    const [showDocumentation, setShowDocumentation] = useState(false);
     
     // Listen for file-loaded events from backend
     useEffect(() => {
@@ -255,6 +256,27 @@ function AppContent() {
                         </div>
                     </div>
                     <div className="flex items-center gap-4">
+                        <button
+                            onClick={() => setShowDocumentation(true)}
+                            className="p-2 rounded-lg bg-gray-200 dark:bg-gray-700 hover:bg-gray-300 dark:hover:bg-gray-600 transition-colors duration-200"
+                            aria-label="Open documentation"
+                        >
+                            {/* Book icon */}
+                            <svg
+                                xmlns="http://www.w3.org/2000/svg"
+                                fill="none"
+                                viewBox="0 0 24 24"
+                                strokeWidth={1.5}
+                                stroke="currentColor"
+                                className="w-5 h-5 text-gray-700 dark:text-gray-300"
+                            >
+                                <path
+                                    strokeLinecap="round"
+                                    strokeLinejoin="round"
+                                    d="M12 6.042A8.967 8.967 0 006 3.75c-1.052 0-2.062.18-3 .512v14.25A8.987 8.987 0 016 18c2.305 0 4.408.867 6 2.292m0-14.25a8.966 8.966 0 016-2.292c1.052 0 2.062.18 3 .512v14.25A8.987 8.987 0 0018 18c-2.305 0-4.408.867-6 2.292m0-14.25v14.25"
+                                />
+                            </svg>
+                        </button>
                         <ThemeToggle />
                     </div>
                 </div>
@@ -642,6 +664,12 @@ function AppContent() {
                     onTransformComplete={handleTransformComplete}
                 />
             )}
+            
+            {/* Documentation Viewer */}
+            <DocumentationViewer 
+                isOpen={showDocumentation}
+                onClose={() => setShowDocumentation(false)}
+            />
         </div>
     );
 }
