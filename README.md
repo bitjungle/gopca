@@ -9,7 +9,11 @@ Professional-grade PCA analysis made simple. Available as both a powerful comman
 
 GoPCA is **the** go-to application for Principal Component Analysis - a fundamental technique for understanding complex, multivariate data. Whether you're analyzing spectroscopic data, exploring gene expression patterns, or reducing dimensionality in machine learning pipelines, GoPCA provides the tools you need.
 
-### Two Powerful Interfaces
+### Includes GoCSV Data Preparation Tool
+
+GoPCA comes with **GoCSV**, a companion application for preparing your data. With its Excel-like interface, GoCSV makes it easy to clean, edit, and format your CSV files before PCA analysis - ensuring your data is analysis-ready.
+
+### Three Powerful Tools
 
 #### 🖥️ Desktop Application
 Perfect for interactive data exploration, method development, and teaching.
@@ -27,6 +31,14 @@ gopca-cli analyze data.csv --components 3 --scale --output results/
 # Get detailed component information
 gopca-cli analyze spectra.csv --components 5 --export-loadings
 ```
+
+#### 📝 GoCSV Data Editor
+Clean and prepare your data with an intuitive spreadsheet-like interface.
+
+- Edit cells directly like in Excel
+- Add, remove, or reorder columns
+- Handle missing values
+- Export clean CSV files ready for PCA analysis
 
 ## Key Features
 
@@ -49,6 +61,7 @@ gopca-cli analyze spectra.csv --components 5 --export-loadings
 ### 🎯 Built for Real Work
 - **Example datasets included**: Explore PCA immediately with wine and iris datasets
 - **Handles real-world data**: Robust to missing values, mixed scales, and outliers
+- **Data preparation included**: GoCSV helps clean messy data before analysis
 - **Cross-platform**: Native performance on Windows, macOS, and Linux
 - **Fast**: Optimized implementations handle large datasets efficiently
 
@@ -64,6 +77,14 @@ gopca-cli analyze spectra.csv --components 5 --export-loadings
 
 ![GoPCA Workflow](docs/images/workflow.png)
 *[Screenshot: A step-by-step visual showing the workflow - data loading screen with file browser, preprocessing options panel with checkboxes, and the resulting visualization after running PCA. Could be a single wide image with arrows between steps]*
+
+### Data Preparation with GoCSV
+
+1. **Launch** GoCSV from the GoPCA installation folder
+2. **Open** your raw CSV file
+3. **Clean** your data - remove empty rows, fix headers, handle missing values
+4. **Save** the cleaned file
+5. **Import** directly into GoPCA for analysis
 
 ### Command-Line Interface
 

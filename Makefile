@@ -16,8 +16,9 @@ cli: build
 cli-all: build-all
 
 # Shortcuts for desktop/GUI builds  
-desktop: gui-build
-desktop-dev: gui-dev
+desktop: pca-build
+desktop-dev: pca-dev
+pca: pca-build
 
 # Shortcuts for CSV editor builds
 csv: csv-build
@@ -68,7 +69,7 @@ WAILS := $(shell which wails 2> /dev/null || echo "$${HOME}/go/bin/wails")
 .DEFAULT_GOAL := all
 
 # Phony targets
-.PHONY: all build cli cli-all build-cross build-darwin-amd64 build-darwin-arm64 build-linux-amd64 build-linux-arm64 build-windows-amd64 build-all gui-dev gui-build gui-run gui-deps csv-dev csv-build csv-run csv-deps test test-verbose test-coverage fmt lint run-pca-iris clean clean-cross install deps install-hooks help
+.PHONY: all build cli cli-all build-cross build-darwin-amd64 build-darwin-arm64 build-linux-amd64 build-linux-arm64 build-windows-amd64 build-all pca-dev pca-build pca-build-all pca-run pca-deps csv-dev csv-build csv-build-all csv-run csv-deps build-everything test test-verbose test-coverage fmt lint run-pca-iris clean clean-cross install deps deps-all install-hooks help
 
 ## all: Build the binary and run tests
 all: build test
@@ -112,14 +113,14 @@ build-linux-arm64:
 build-windows-amd64:
 	@$(MAKE) build-cross GOOS=windows GOARCH=amd64
 
-## build-all: Build for all supported platforms
+## build-all: Build CLI for all supported platforms
 build-all: build-darwin-amd64 build-darwin-arm64 build-linux-amd64 build-linux-arm64 build-windows-amd64
-	@echo "All platform builds complete!"
+	@echo "All CLI platform builds complete!"
 
-## gui-dev: Run GUI in development mode with hot reload
-gui-dev:
+## pca-dev: Run PCA Desktop in development mode with hot reload
+pca-dev:
 	@if [ -x "$(WAILS)" ]; then \
-		echo "Starting GUI in development mode..."; \
+		echo "Starting PCA Desktop in development mode..."; \
 		cd $(DESKTOP_PATH) && $(WAILS) dev; \
 	else \
 		echo "Wails not found. Install it with:"; \
@@ -127,36 +128,36 @@ gui-dev:
 		exit 1; \
 	fi
 
-## gui-build: Build GUI application for production
-gui-build:
+## pca-build: Build PCA Desktop application for production
+pca-build:
 	@if [ -x "$(WAILS)" ]; then \
-		echo "Building GUI application..."; \
+		echo "Building PCA Desktop application..."; \
 		cd $(DESKTOP_PATH) && $(WAILS) build $(DESKTOP_LDFLAGS); \
-		echo "GUI build complete. Check $(DESKTOP_PATH)/build/bin/"; \
+		echo "PCA Desktop build complete. Check $(DESKTOP_PATH)/build/bin/"; \
 	else \
 		echo "Wails not found. Install it with:"; \
 		echo "  go install github.com/wailsapp/wails/v2/cmd/wails@latest"; \
 		exit 1; \
 	fi
 
-## gui-run: Run the built GUI application
-gui-run:
+## pca-run: Run the built PCA Desktop application
+pca-run:
 	@if [ -f "$(DESKTOP_PATH)/build/bin/gopca-desktop.app/Contents/MacOS/gopca-desktop" ]; then \
-		echo "Running GUI application..."; \
+		echo "Running PCA Desktop application..."; \
 		open $(DESKTOP_PATH)/build/bin/gopca-desktop.app; \
 	elif [ -f "$(DESKTOP_PATH)/build/bin/gopca-desktop" ]; then \
-		echo "Running GUI application..."; \
+		echo "Running PCA Desktop application..."; \
 		$(DESKTOP_PATH)/build/bin/gopca-desktop; \
 	else \
-		echo "GUI application not found. Build it first with 'make gui-build'"; \
+		echo "PCA Desktop application not found. Build it first with 'make pca-build'"; \
 		exit 1; \
 	fi
 
-## gui-deps: Install frontend dependencies for GUI
-gui-deps:
-	@echo "Installing GUI frontend dependencies..."
+## pca-deps: Install frontend dependencies for PCA Desktop
+pca-deps:
+	@echo "Installing PCA Desktop frontend dependencies..."
 	@cd $(DESKTOP_PATH)/frontend && npm install
-	@echo "GUI dependencies installed"
+	@echo "PCA Desktop dependencies installed"
 
 ## csv-dev: Run CSV editor in development mode with hot reload
 csv-dev:
@@ -263,10 +264,16 @@ install: build
 
 ## deps: Download and tidy module dependencies
 deps:
-	@echo "Downloading dependencies..."
+	@echo "Downloading Go dependencies..."
 	$(GOMOD) download
 	$(GOMOD) tidy
-	@echo "Dependencies updated"
+	@echo "Go dependencies updated"
+
+## deps-all: Install all dependencies (Go + npm for all apps)
+deps-all: deps
+	@echo "Installing all frontend dependencies..."
+	@npm install
+	@echo "All dependencies installed"
 
 ## install-hooks: Install git pre-commit hooks
 install-hooks:
@@ -289,6 +296,34 @@ endif
 
 ## ci-build-cli: Build CLI for all platforms in CI
 ci-build-cli: build-all
+
+## pca-build-all: Build PCA Desktop for all platforms
+pca-build-all:
+	@if [ -x "$(WAILS)" ]; then \
+		echo "Building PCA Desktop for all platforms..."; \
+		cd $(DESKTOP_PATH) && $(WAILS) build -platform darwin/amd64,darwin/arm64,windows/amd64,linux/amd64 $(DESKTOP_LDFLAGS); \
+		echo "PCA Desktop builds complete for all platforms"; \
+	else \
+		echo "Wails not found. Install it with:"; \
+		echo "  go install github.com/wailsapp/wails/v2/cmd/wails@latest"; \
+		exit 1; \
+	fi
+
+## csv-build-all: Build CSV editor for all platforms
+csv-build-all:
+	@if [ -x "$(WAILS)" ]; then \
+		echo "Building CSV editor for all platforms..."; \
+		cd $(CSV_PATH) && $(WAILS) build -platform darwin/amd64,darwin/arm64,windows/amd64,linux/amd64 $(DESKTOP_LDFLAGS); \
+		echo "CSV editor builds complete for all platforms"; \
+	else \
+		echo "Wails not found. Install it with:"; \
+		echo "  go install github.com/wailsapp/wails/v2/cmd/wails@latest"; \
+		exit 1; \
+	fi
+
+## build-everything: Build all applications for all platforms
+build-everything: build-all pca-build-all csv-build-all
+	@echo "All applications built for all platforms!"
 
 ## ci-build-desktop: Build desktop app in CI
 ci-build-desktop:
@@ -315,40 +350,46 @@ help:
 	@echo ""
 	@echo "Usage: make [target]"
 	@echo ""
-	@echo "Example workflows:"
+	@echo "Quick start:"
+	@echo "  make deps-all         # Install all dependencies (first time)"
 	@echo "  make                  # Build CLI and test (default)"
-	@echo "  make build            # Build the CLI binary for current platform"
-	@echo "  make build-all        # Build for all supported platforms"
-	@echo "  make build-linux-amd64 # Build for Linux x64"
-	@echo "  make build-darwin-arm64 # Build for macOS Apple Silicon"
+	@echo "  make pca-dev          # Run PCA Desktop in dev mode"
+	@echo "  make csv-dev          # Run CSV editor in dev mode"
+	@echo ""
+	@echo "Building CLI:"
+	@echo "  make build            # Build CLI for current platform"
+	@echo "  make build-all        # Build CLI for all platforms"
+	@echo "  make build-linux-amd64   # Build for Linux x64"
+	@echo "  make build-darwin-arm64  # Build for macOS Apple Silicon"
 	@echo "  make build-windows-amd64 # Build for Windows x64"
 	@echo ""
-	@echo "Cross-compilation examples:"
-	@echo "  GOOS=linux GOARCH=amd64 make build    # Build for Linux x64"
-	@echo "  GOOS=darwin GOARCH=arm64 make build   # Build for macOS ARM64"
-	@echo "  make build-cross GOOS=windows GOARCH=amd64 # Generic cross-build"
+	@echo "PCA Desktop application:"
+	@echo "  make pca-deps         # Install dependencies"
+	@echo "  make pca-dev          # Run in development mode"
+	@echo "  make pca-build        # Build for current platform"
+	@echo "  make pca-build-all    # Build for all platforms"
+	@echo "  make pca-run          # Run the built application"
 	@echo ""
-	@echo "GUI development:"
-	@echo "  make gui-deps     # Install GUI dependencies (first time)"
-	@echo "  make gui-dev      # Run GUI in development mode"
-	@echo "  make gui-build    # Build GUI for production"
-	@echo "  make gui-run      # Run the built GUI application"
+	@echo "CSV editor application:"
+	@echo "  make csv-deps         # Install dependencies"
+	@echo "  make csv-dev          # Run in development mode"
+	@echo "  make csv-build        # Build for current platform"
+	@echo "  make csv-build-all    # Build for all platforms"
+	@echo "  make csv-run          # Run the built application"
 	@echo ""
-	@echo "CSV editor development:"
-	@echo "  make csv-deps     # Install CSV editor dependencies (first time)"
-	@echo "  make csv-dev      # Run CSV editor in development mode"
-	@echo "  make csv-build    # Build CSV editor for production"
-	@echo "  make csv-run      # Run the built CSV editor application"
+	@echo "Build everything:"
+	@echo "  make build-everything # Build all apps for all platforms"
 	@echo ""
-	@echo "CI targets:"
-	@echo "  make ci-setup     # Show CI environment info"
-	@echo "  make ci-test      # Run tests for CI"
-	@echo "  make ci-lint      # Run linter for CI"
-	@echo "  make ci-build-cli # Build CLI for CI"
-	@echo "  make ci-build-desktop # Build desktop for CI"
+	@echo "Testing & quality:"
+	@echo "  make test             # Run tests with coverage"
+	@echo "  make test-verbose     # Run tests with detailed output"
+	@echo "  make fmt              # Format all Go code"
+	@echo "  make lint             # Run linter (if installed)"
+	@echo "  make run-pca-iris     # Run PCA on example dataset"
 	@echo ""
-	@echo "Other targets:"
-	@echo "  make test         # Run tests with coverage"
-	@echo "  make run-pca-iris # Run PCA on iris dataset"
-	@echo "  make clean        # Clean all artifacts"
-	@echo "  make clean-cross  # Clean cross-compiled binaries only"
+	@echo "Maintenance:"
+	@echo "  make clean            # Clean all build artifacts"
+	@echo "  make clean-cross      # Clean cross-compiled binaries"
+	@echo "  make deps             # Update Go dependencies"
+	@echo "  make deps-all         # Install all dependencies"
+	@echo "  make install-hooks    # Install git pre-commit hooks"

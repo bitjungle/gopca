@@ -1,6 +1,6 @@
 import React, { createContext, useContext, useEffect, useState } from 'react';
 
-type Theme = 'light' | 'dark';
+export type Theme = 'light' | 'dark';
 
 interface ThemeContextType {
   theme: Theme;
@@ -19,13 +19,19 @@ export const useTheme = () => {
 
 interface ThemeProviderProps {
   children: React.ReactNode;
+  storageKey?: string;
+  defaultTheme?: Theme;
 }
 
-export const ThemeProvider: React.FC<ThemeProviderProps> = ({ children }) => {
+export const ThemeProvider: React.FC<ThemeProviderProps> = ({ 
+  children, 
+  storageKey = 'gopca-theme',
+  defaultTheme = 'dark' 
+}) => {
   const [theme, setTheme] = useState<Theme>(() => {
-    // Get saved theme from localStorage or default to dark
-    const savedTheme = localStorage.getItem('gopca-theme') as Theme | null;
-    return savedTheme || 'dark';
+    // Get saved theme from localStorage or default to provided defaultTheme
+    const savedTheme = localStorage.getItem(storageKey) as Theme | null;
+    return savedTheme || defaultTheme;
   });
 
   useEffect(() => {
@@ -38,8 +44,8 @@ export const ThemeProvider: React.FC<ThemeProviderProps> = ({ children }) => {
     }
     
     // Save theme preference
-    localStorage.setItem('gopca-theme', theme);
-  }, [theme]);
+    localStorage.setItem(storageKey, theme);
+  }, [theme, storageKey]);
 
   const toggleTheme = () => {
     setTheme(prevTheme => prevTheme === 'light' ? 'dark' : 'light');

@@ -1,0 +1,39 @@
+{
+  "name": "@gopca/ui-components",
+  "version": "0.1.0",
+  "description": "Shared UI components for GoPCA and GoCSV applications",
+  "type": "module",
+  "main": "./dist/index.js",
+  "module": "./dist/index.esjs",
+  "types": "./dist/index.d.ts",
+  "files": [
+    "dist"
+  ],
+  "scripts": {
+    "dev": "vite build --watch",
+    "build": "tsc && vite build",
+    "preview": "vite preview"
+  },
+  "peerDependencies": {
+    "react": "^18.2.0",
+    "react-dom": "^18.2.0"
+  },
+  "dependencies": {
+    "lucide-react": "^0.525.0"
+  },
+  "devDependencies": {
+    "@types/react": "^18.0.17",
+    "@types/react-dom": "^18.0.6",
+    "@vitejs/plugin-react": "^4.7.0",
+    "typescript": "^4.6.4",
+    "vite": "^7.0.5",
+    "vite-plugin-dts": "^4.3.0"
+  },
+  "exports": {
+    ".": {
+      "import": "./dist/index.esjs",
+      "require": "./dist/index.js",
+      "types": "./dist/index.d.ts"
+    }
+  }
+}

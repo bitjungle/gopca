@@ -1,4 +1,5 @@
-import { useTheme, getChartTheme } from '@gopca/ui-components';
+import { useTheme } from '../contexts/ThemeContext';
+import { getChartTheme } from '../utils/chartTheme';
 
 export const useChartTheme = () => {
   const { theme } = useTheme();

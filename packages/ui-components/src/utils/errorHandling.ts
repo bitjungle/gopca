@@ -1,5 +1,5 @@
 /**
- * Centralized error handling utilities for GoCSV
+ * Centralized error handling utilities for GoPCA applications
  * Following CLAUDE.md principles: KISS, DRY, and readability
  */
 
@@ -9,11 +9,12 @@ export interface ErrorInfo {
   isUserError?: boolean;
 }
 
-/**
- * Display error to user in a consistent manner
- * For now using alert(), but can be easily changed to a toast/modal system
- */
-export function showError(error: ErrorInfo | string): void {
+export interface ErrorConfig {
+  showError?: (error: ErrorInfo | string) => void;
+}
+
+// Default error display function (can be overridden)
+let defaultShowError = (error: ErrorInfo | string): void => {
   const errorMessage = typeof error === 'string' 
     ? error 
     : error.context 
@@ -21,6 +22,22 @@ export function showError(error: ErrorInfo | string): void {
       : error.message;
   
   alert(errorMessage);
+};
+
+/**
+ * Configure the error handling behavior
+ */
+export function configureErrorHandling(config: ErrorConfig): void {
+  if (config.showError) {
+    defaultShowError = config.showError;
+  }
+}
+
+/**
+ * Display error to user in a consistent manner
+ */
+export function showError(error: ErrorInfo | string): void {
+  defaultShowError(error);
 }
 
 /**

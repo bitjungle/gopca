@@ -3,7 +3,7 @@ import { AgGridReact } from 'ag-grid-react';
 import { ColDef, GridReadyEvent, CellValueChangedEvent, GridApi, ColumnApi } from 'ag-grid-community';
 import 'ag-grid-community/styles/ag-grid.css';
 import 'ag-grid-community/styles/ag-theme-quartz.css';
-import { useTheme } from '../contexts/ThemeContext';
+import { useTheme } from '@gopca/ui-components';
 
 interface CSVGridProps {
     data: string[][];
