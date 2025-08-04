@@ -463,6 +463,7 @@ function AppContent() {
                                     data={fileData.data}
                                     headers={fileData.headers}
                                     rowNames={fileData.rowNames}
+                                    fileData={fileData}
                                     onDataChange={handleDataChange}
                                     onHeaderChange={handleHeaderChange}
                                     onRowNameChange={(rowIndex, newRowName) => {
@@ -471,6 +472,15 @@ function AppContent() {
                                             newRowNames[rowIndex] = newRowName;
                                             setFileData({ ...fileData, rowNames: newRowNames });
                                             setValidationResult(null);
+                                        }
+                                    }}
+                                    onRefresh={async () => {
+                                        // Reload the file data to reflect changes
+                                        if (fileName) {
+                                            const result = await LoadCSV(fileName);
+                                            if (result && result.data && result.data.length > 0) {
+                                                setFileData(result);
+                                            }
                                         }
                                     }}
                                 />

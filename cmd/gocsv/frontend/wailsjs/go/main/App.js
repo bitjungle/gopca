@@ -30,12 +30,32 @@ export function ExecuteCellEdit(arg1, arg2, arg3, arg4, arg5) {
   return window['go']['main']['App']['ExecuteCellEdit'](arg1, arg2, arg3, arg4, arg5);
 }
 
+export function ExecuteDeleteColumns(arg1, arg2) {
+  return window['go']['main']['App']['ExecuteDeleteColumns'](arg1, arg2);
+}
+
+export function ExecuteDeleteRows(arg1, arg2) {
+  return window['go']['main']['App']['ExecuteDeleteRows'](arg1, arg2);
+}
+
 export function ExecuteFillMissingValues(arg1, arg2, arg3, arg4) {
   return window['go']['main']['App']['ExecuteFillMissingValues'](arg1, arg2, arg3, arg4);
 }
 
 export function ExecuteHeaderEdit(arg1, arg2, arg3, arg4) {
   return window['go']['main']['App']['ExecuteHeaderEdit'](arg1, arg2, arg3, arg4);
+}
+
+export function ExecuteInsertColumn(arg1, arg2, arg3) {
+  return window['go']['main']['App']['ExecuteInsertColumn'](arg1, arg2, arg3);
+}
+
+export function ExecuteInsertRow(arg1, arg2) {
+  return window['go']['main']['App']['ExecuteInsertRow'](arg1, arg2);
+}
+
+export function ExecuteToggleTargetColumn(arg1, arg2) {
+  return window['go']['main']['App']['ExecuteToggleTargetColumn'](arg1, arg2);
 }
 
 export function FillMissingValues(arg1, arg2) {

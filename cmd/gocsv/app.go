@@ -3507,3 +3507,36 @@ func (a *App) GetTransformableColumns(data *FileData, transformType Transformati
 	
 	return columns
 }
+
+// ExecuteDeleteRows deletes multiple rows with undo support
+func (a *App) ExecuteDeleteRows(data *FileData, rowIndices []int) error {
+	cmd := NewDeleteRowsCommand(a, data, rowIndices)
+	return a.history.Execute(cmd)
+}
+
+// ExecuteDeleteColumns deletes multiple columns with undo support
+func (a *App) ExecuteDeleteColumns(data *FileData, colIndices []int) error {
+	cmd := NewDeleteColumnsCommand(a, data, colIndices)
+	return a.history.Execute(cmd)
+}
+
+// ExecuteInsertRow inserts a new row with undo support
+func (a *App) ExecuteInsertRow(data *FileData, index int) error {
+	cmd := NewInsertRowCommand(a, data, index)
+	return a.history.Execute(cmd)
+}
+
+// ExecuteInsertColumn inserts a new column with undo support
+func (a *App) ExecuteInsertColumn(data *FileData, index int, name string) error {
+	cmd := NewInsertColumnCommand(a, data, index, name)
+	return a.history.Execute(cmd)
+}
+
+// ExecuteToggleTargetColumn toggles the #target suffix on a column with undo support
+func (a *App) ExecuteToggleTargetColumn(data *FileData, colIndex int) error {
+	cmd := NewToggleTargetColumnCommand(a, data, colIndex)
+	if cmd == nil {
+		return fmt.Errorf("invalid column index: %d", colIndex)
+	}
+	return a.history.Execute(cmd)
+}

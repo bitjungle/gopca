@@ -1,26 +1,31 @@
 import React, { useCallback, useMemo, useRef, useState, useEffect } from 'react';
 import { AgGridReact } from 'ag-grid-react';
-import { ColDef, GridReadyEvent, CellValueChangedEvent, GridApi, ColumnApi } from 'ag-grid-community';
+import { ColDef, GridReadyEvent, CellValueChangedEvent, GridApi, ColumnApi, GetContextMenuItemsParams, MenuItemDef } from 'ag-grid-community';
 import 'ag-grid-community/styles/ag-grid.css';
 import 'ag-grid-community/styles/ag-theme-quartz.css';
 import { useTheme } from '@gopca/ui-components';
+import { ExecuteDeleteRows, ExecuteDeleteColumns, ExecuteInsertRow, ExecuteInsertColumn, ExecuteToggleTargetColumn } from '../../wailsjs/go/main/App';
 
 interface CSVGridProps {
     data: string[][];
     headers: string[];
     rowNames?: string[];
+    fileData: any; // The full FileData object for operations
     onDataChange?: (rowIndex: number, colIndex: number, newValue: string) => void;
     onHeaderChange?: (colIndex: number, newHeader: string) => void;
     onRowNameChange?: (rowIndex: number, newRowName: string) => void;
+    onRefresh?: () => void; // Callback to refresh data after operations
 }
 
 export const CSVGrid: React.FC<CSVGridProps> = ({ 
     data, 
     headers,
     rowNames,
+    fileData,
     onDataChange,
     onHeaderChange,
-    onRowNameChange
+    onRowNameChange,
+    onRefresh
 }) => {
     // Validate inputs
     if (!data || !headers || data.length === 0 || headers.length === 0) {
@@ -85,7 +90,7 @@ export const CSVGrid: React.FC<CSVGridProps> = ({
             
             cols.push({
                 field: `col${index}`,
-                headerName: header,
+                headerName: isTargetColumn ? `${header} 🎯` : header,
                 editable: true,
                 sortable: true,
                 filter: true,
@@ -113,9 +118,12 @@ export const CSVGrid: React.FC<CSVGridProps> = ({
                     if (isTargetColumn) classes.push('target-header');
                     return classes.join(' ');
                 },
-                headerTooltip: isTargetColumn ? 'Target column - excluded from PCA' : 
+                headerTooltip: isTargetColumn ? 'Target column - excluded from PCA (right-click to toggle)' : 
                               colType === 'numeric' ? 'Numeric column' : 
                               colType === 'mixed' ? 'Mixed column' : 'Text column',
+                headerComponentParams: {
+                    isTargetColumn
+                },
                 valueFormatter: (params: any) => {
                     if (colType === 'numeric' && params.value) {
                         const num = Number(params.value);
@@ -182,6 +190,147 @@ export const CSVGrid: React.FC<CSVGridProps> = ({
         resizable: true,
     }), []);
     
+    // Context menu items
+    const getContextMenuItems = useCallback((params: GetContextMenuItemsParams): (string | MenuItemDef)[] => {
+        const result: (string | MenuItemDef)[] = [];
+        
+        if (params.column) {
+            const colIndex = parseInt(params.column.getColId().replace('col', ''));
+            const isTargetColumn = params.column.getColDef()?.headerName?.toLowerCase().endsWith('#target') || 
+                                  params.column.getColDef()?.headerName?.toLowerCase().endsWith('# target');
+            
+            // Column operations
+            result.push({
+                name: isTargetColumn ? 'Remove Target Flag' : 'Mark as Target Column',
+                action: async () => {
+                    if (fileData) {
+                        await ExecuteToggleTargetColumn(fileData, colIndex);
+                        onRefresh?.();
+                    }
+                },
+                icon: '<span style="font-size: 14px;">🎯</span>'
+            });
+            
+            result.push({
+                name: 'Insert Column Before',
+                action: async () => {
+                    if (fileData) {
+                        await ExecuteInsertColumn(fileData, colIndex, '');
+                        onRefresh?.();
+                    }
+                },
+                icon: '<span style="font-size: 14px;">⬅️</span>'
+            });
+            
+            result.push({
+                name: 'Insert Column After',
+                action: async () => {
+                    if (fileData) {
+                        await ExecuteInsertColumn(fileData, colIndex + 1, '');
+                        onRefresh?.();
+                    }
+                },
+                icon: '<span style="font-size: 14px;">➡️</span>'
+            });
+            
+            result.push('separator');
+            
+            result.push({
+                name: 'Delete Column',
+                action: async () => {
+                    if (fileData && confirm(`Delete column '${params.column?.getColDef()?.headerName}'?`)) {
+                        await ExecuteDeleteColumns(fileData, [colIndex]);
+                        onRefresh?.();
+                    }
+                },
+                icon: '<span style="font-size: 14px; color: red;">🗑️</span>'
+            });
+        }
+        
+        if (params.node) {
+            const rowIndex = params.node.rowIndex ?? 0;
+            
+            // Row operations
+            result.push({
+                name: 'Insert Row Above',
+                action: async () => {
+                    if (fileData) {
+                        await ExecuteInsertRow(fileData, rowIndex);
+                        onRefresh?.();
+                    }
+                },
+                icon: '<span style="font-size: 14px;">⬆️</span>'
+            });
+            
+            result.push({
+                name: 'Insert Row Below',
+                action: async () => {
+                    if (fileData) {
+                        await ExecuteInsertRow(fileData, rowIndex + 1);
+                        onRefresh?.();
+                    }
+                },
+                icon: '<span style="font-size: 14px;">⬇️</span>'
+            });
+            
+            result.push('separator');
+            
+            result.push({
+                name: 'Delete Row',
+                action: async () => {
+                    if (fileData) {
+                        // Get selected rows if any
+                        const selectedRows = gridApi?.getSelectedRows() || [];
+                        const rowIndices = selectedRows.length > 0 
+                            ? selectedRows.map(row => row.id)
+                            : [rowIndex];
+                        
+                        const confirmMsg = rowIndices.length > 1 
+                            ? `Delete ${rowIndices.length} rows?`
+                            : 'Delete this row?';
+                            
+                        if (confirm(confirmMsg)) {
+                            await ExecuteDeleteRows(fileData, rowIndices);
+                            onRefresh?.();
+                        }
+                    }
+                },
+                icon: '<span style="font-size: 14px; color: red;">🗑️</span>'
+            });
+        }
+        
+        return result;
+    }, [fileData, onRefresh, gridApi]);
+    
+    // Handle keyboard shortcuts
+    const handleKeyDown = useCallback((event: KeyboardEvent) => {
+        if (gridApi && fileData) {
+            if (event.key === 'Delete' || event.key === 'Backspace') {
+                const selectedRows = gridApi.getSelectedRows();
+                if (selectedRows.length > 0) {
+                    event.preventDefault();
+                    const rowIndices = selectedRows.map(row => row.id);
+                    const confirmMsg = rowIndices.length > 1 
+                        ? `Delete ${rowIndices.length} rows?`
+                        : 'Delete selected row?';
+                        
+                    if (confirm(confirmMsg)) {
+                        ExecuteDeleteRows(fileData, rowIndices).then(() => {
+                            onRefresh?.();
+                        });
+                    }
+                }
+            }
+        }
+    }, [gridApi, fileData, onRefresh]);
+    
+    useEffect(() => {
+        window.addEventListener('keydown', handleKeyDown);
+        return () => {
+            window.removeEventListener('keydown', handleKeyDown);
+        };
+    }, [handleKeyDown]);
+    
     // Grid options for performance
     const gridOptions = useMemo(() => ({
         // Performance optimizations
@@ -197,6 +346,10 @@ export const CSVGrid: React.FC<CSVGridProps> = ({
         
         // Selection
         rowSelection: 'multiple' as const,
+        rowMultiSelectWithClick: true,
+        
+        // Context menu
+        getContextMenuItems: getContextMenuItems,
         
         // Pagination for very large datasets
         pagination: data.length > 10000,
@@ -206,7 +359,7 @@ export const CSVGrid: React.FC<CSVGridProps> = ({
         // Other options
         enableCellTextSelection: true,
         ensureDomOrder: true,
-    }), [data.length]);
+    }), [data.length, getContextMenuItems]);
     
     // Auto-size columns on window resize
     useEffect(() => {
