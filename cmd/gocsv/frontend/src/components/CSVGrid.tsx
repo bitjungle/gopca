@@ -1,6 +1,6 @@
 import React, { useCallback, useMemo, useRef, useState, useEffect } from 'react';
 import { AgGridReact } from 'ag-grid-react';
-import { ColDef, GridReadyEvent, CellValueChangedEvent, GridApi, ColumnApi, GetContextMenuItemsParams, MenuItemDef } from 'ag-grid-community';
+import { ColDef, GridReadyEvent, CellValueChangedEvent, GridApi, ColumnApi, CellClickedEvent, RowClickedEvent } from 'ag-grid-community';
 import 'ag-grid-community/styles/ag-grid.css';
 import 'ag-grid-community/styles/ag-theme-quartz.css';
 import { useTheme } from '@gopca/ui-components';
@@ -16,6 +16,63 @@ interface CSVGridProps {
     onRowNameChange?: (rowIndex: number, newRowName: string) => void;
     onRefresh?: () => void; // Callback to refresh data after operations
 }
+
+// Context menu component
+interface ContextMenuItem {
+    label: string;
+    action: () => void;
+    icon?: string;
+    separator?: boolean;
+}
+
+interface ContextMenuProps {
+    x: number;
+    y: number;
+    items: ContextMenuItem[];
+    onClose: () => void;
+}
+
+const ContextMenu: React.FC<ContextMenuProps> = ({ x, y, items, onClose }) => {
+    const menuRef = useRef<HTMLDivElement>(null);
+    
+    useEffect(() => {
+        const handleClickOutside = (event: MouseEvent) => {
+            if (menuRef.current && !menuRef.current.contains(event.target as Node)) {
+                onClose();
+            }
+        };
+        
+        document.addEventListener('mousedown', handleClickOutside);
+        return () => document.removeEventListener('mousedown', handleClickOutside);
+    }, [onClose]);
+    
+    return (
+        <div
+            ref={menuRef}
+            className="fixed z-50 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg shadow-lg py-1 min-w-[200px]"
+            style={{ left: x, top: y }}
+        >
+            {items.map((item, index) => {
+                if (item.separator) {
+                    return <div key={index} className="border-t border-gray-200 dark:border-gray-700 my-1" />;
+                }
+                return (
+                    <button
+                        key={index}
+                        onClick={() => {
+                            item.action();
+                            onClose();
+                        }}
+                        className="w-full px-4 py-2 text-left text-sm hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center gap-2"
+                    >
+                        {item.icon && <span dangerouslySetInnerHTML={{ __html: item.icon }} />}
+                        <span>{item.label}</span>
+                    </button>
+                );
+            })}
+        </div>
+    );
+};
 
 export const CSVGrid: React.FC<CSVGridProps> = ({ 
     data, 
@@ -35,6 +92,13 @@ export const CSVGrid: React.FC<CSVGridProps> = ({
     const [gridApi, setGridApi] = useState<GridApi | null>(null);
     const [columnApi, setColumnApi] = useState<ColumnApi | null>(null);
     const { theme } = useTheme();
+    
+    // Context menu state
+    const [contextMenu, setContextMenu] = useState<{
+        x: number;
+        y: number;
+        items: ContextMenuItem[];
+    } | null>(null);
     
     // Detect column types
     const detectColumnType = useCallback((colIndex: number): 'numeric' | 'text' | 'mixed' => {
@@ -122,7 +186,9 @@ export const CSVGrid: React.FC<CSVGridProps> = ({
                               colType === 'numeric' ? 'Numeric column' : 
                               colType === 'mixed' ? 'Mixed column' : 'Text column',
                 headerComponentParams: {
-                    isTargetColumn
+                    isTargetColumn,
+                    colIndex: index,
+                    onContextMenu: handleHeaderContextMenu
                 },
                 valueFormatter: (params: any) => {
                     if (colType === 'numeric' && params.value) {
@@ -137,7 +203,7 @@ export const CSVGrid: React.FC<CSVGridProps> = ({
         });
         
         return cols;
-    }, [headers, detectColumnType, rowNames, theme]);
+    }, [headers, detectColumnType, rowNames, theme, handleHeaderContextMenu]);
     
     // Convert data to row format for ag-Grid
     const rowData = useMemo(() => {
@@ -166,6 +232,11 @@ export const CSVGrid: React.FC<CSVGridProps> = ({
         params.api.sizeColumnsToFit();
     }, []);
     
+    // Handle cell right-click
+    const onCellContextMenu = useCallback((event: any) => {
+        handleRowContextMenu(event.event, event.rowIndex);
+    }, [handleRowContextMenu]);
+    
     // Cell value changed event
     const onCellValueChanged = useCallback((event: CellValueChangedEvent) => {
         if (event.colDef?.field) {
@@ -190,96 +261,91 @@ export const CSVGrid: React.FC<CSVGridProps> = ({
         resizable: true,
     }), []);
     
-    // Context menu items
-    const getContextMenuItems = useCallback((params: GetContextMenuItemsParams): (string | MenuItemDef)[] => {
-        const result: (string | MenuItemDef)[] = [];
+    // Handle column header right-click
+    const handleHeaderContextMenu = useCallback((event: React.MouseEvent, colIndex: number) => {
+        event.preventDefault();
         
-        if (params.column) {
-            const colIndex = parseInt(params.column.getColId().replace('col', ''));
-            const isTargetColumn = params.column.getColDef()?.headerName?.toLowerCase().endsWith('#target') || 
-                                  params.column.getColDef()?.headerName?.toLowerCase().endsWith('# target');
-            
-            // Column operations
-            result.push({
-                name: isTargetColumn ? 'Remove Target Flag' : 'Mark as Target Column',
+        const header = headers[colIndex];
+        const isTargetColumn = header.toLowerCase().endsWith('#target') || 
+                              header.toLowerCase().endsWith('# target');
+        
+        const items: ContextMenuItem[] = [
+            {
+                label: isTargetColumn ? 'Remove Target Flag' : 'Mark as Target Column',
                 action: async () => {
                     if (fileData) {
                         await ExecuteToggleTargetColumn(fileData, colIndex);
                         onRefresh?.();
                     }
                 },
-                icon: '<span style="font-size: 14px;">🎯</span>'
-            });
-            
-            result.push({
-                name: 'Insert Column Before',
+                icon: '🎯'
+            },
+            {
+                label: 'Insert Column Before',
                 action: async () => {
                     if (fileData) {
                         await ExecuteInsertColumn(fileData, colIndex, '');
                         onRefresh?.();
                     }
                 },
-                icon: '<span style="font-size: 14px;">⬅️</span>'
-            });
-            
-            result.push({
-                name: 'Insert Column After',
+                icon: '⬅️'
+            },
+            {
+                label: 'Insert Column After',
                 action: async () => {
                     if (fileData) {
                         await ExecuteInsertColumn(fileData, colIndex + 1, '');
                         onRefresh?.();
                     }
                 },
-                icon: '<span style="font-size: 14px;">➡️</span>'
-            });
-            
-            result.push('separator');
-            
-            result.push({
-                name: 'Delete Column',
+                icon: '➡️'
+            },
+            { separator: true },
+            {
+                label: 'Delete Column',
                 action: async () => {
-                    if (fileData && confirm(`Delete column '${params.column?.getColDef()?.headerName}'?`)) {
+                    if (fileData && confirm(`Delete column '${header}'?`)) {
                         await ExecuteDeleteColumns(fileData, [colIndex]);
                         onRefresh?.();
                     }
                 },
-                icon: '<span style="font-size: 14px; color: red;">🗑️</span>'
-            });
-        }
+                icon: '🗑️'
+            }
+        ];
         
-        if (params.node) {
-            const rowIndex = params.node.rowIndex ?? 0;
-            
-            // Row operations
-            result.push({
-                name: 'Insert Row Above',
+        setContextMenu({ x: event.clientX, y: event.clientY, items });
+    }, [fileData, headers, onRefresh]);
+    
+    // Handle row right-click
+    const handleRowContextMenu = useCallback((event: React.MouseEvent, rowIndex: number) => {
+        event.preventDefault();
+        
+        const items: ContextMenuItem[] = [
+            {
+                label: 'Insert Row Above',
                 action: async () => {
                     if (fileData) {
                         await ExecuteInsertRow(fileData, rowIndex);
                         onRefresh?.();
                     }
                 },
-                icon: '<span style="font-size: 14px;">⬆️</span>'
-            });
-            
-            result.push({
-                name: 'Insert Row Below',
+                icon: '⬆️'
+            },
+            {
+                label: 'Insert Row Below',
                 action: async () => {
                     if (fileData) {
                         await ExecuteInsertRow(fileData, rowIndex + 1);
                         onRefresh?.();
                     }
                 },
-                icon: '<span style="font-size: 14px;">⬇️</span>'
-            });
-            
-            result.push('separator');
-            
-            result.push({
-                name: 'Delete Row',
+                icon: '⬇️'
+            },
+            { separator: true },
+            {
+                label: 'Delete Row',
                 action: async () => {
                     if (fileData) {
-                        // Get selected rows if any
                         const selectedRows = gridApi?.getSelectedRows() || [];
                         const rowIndices = selectedRows.length > 0 
                             ? selectedRows.map(row => row.id)
@@ -295,12 +361,12 @@ export const CSVGrid: React.FC<CSVGridProps> = ({
                         }
                     }
                 },
-                icon: '<span style="font-size: 14px; color: red;">🗑️</span>'
-            });
-        }
+                icon: '🗑️'
+            }
+        ];
         
-        return result;
-    }, [fileData, onRefresh, gridApi]);
+        setContextMenu({ x: event.clientX, y: event.clientY, items });
+    }, [fileData, gridApi, onRefresh]);
     
     // Handle keyboard shortcuts
     const handleKeyDown = useCallback((event: KeyboardEvent) => {
@@ -348,8 +414,8 @@ export const CSVGrid: React.FC<CSVGridProps> = ({
         rowSelection: 'multiple' as const,
         rowMultiSelectWithClick: true,
         
-        // Context menu
-        getContextMenuItems: getContextMenuItems,
+        // Suppress default context menu
+        suppressContextMenu: true,
         
         // Pagination for very large datasets
         pagination: data.length > 10000,
@@ -359,7 +425,7 @@ export const CSVGrid: React.FC<CSVGridProps> = ({
         // Other options
         enableCellTextSelection: true,
         ensureDomOrder: true,
-    }), [data.length, getContextMenuItems]);
+    }), [data.length]);
     
     // Auto-size columns on window resize
     useEffect(() => {
@@ -372,6 +438,37 @@ export const CSVGrid: React.FC<CSVGridProps> = ({
         window.addEventListener('resize', handleResize);
         return () => window.removeEventListener('resize', handleResize);
     }, [gridApi]);
+    
+    // Add header right-click handling after grid is ready
+    useEffect(() => {
+        if (!gridApi || !columnApi) return;
+        
+        // Add event listener to ag-grid header
+        const headerContainer = document.querySelector('.ag-header-container');
+        if (!headerContainer) return;
+        
+        const handleHeaderRightClick = (e: Event) => {
+            const event = e as MouseEvent;
+            event.preventDefault();
+            
+            // Find which column was clicked
+            const target = event.target as HTMLElement;
+            const headerCell = target.closest('.ag-header-cell');
+            if (!headerCell) return;
+            
+            const colId = headerCell.getAttribute('col-id');
+            if (colId && colId.startsWith('col')) {
+                const colIndex = parseInt(colId.replace('col', ''));
+                handleHeaderContextMenu(event, colIndex);
+            }
+        };
+        
+        headerContainer.addEventListener('contextmenu', handleHeaderRightClick);
+        
+        return () => {
+            headerContainer.removeEventListener('contextmenu', handleHeaderRightClick);
+        };
+    }, [gridApi, columnApi, handleHeaderContextMenu]);
     
     return (
         <div className="w-full h-full">
@@ -417,9 +514,20 @@ export const CSVGrid: React.FC<CSVGridProps> = ({
                     defaultColDef={defaultColDef}
                     onGridReady={onGridReady}
                     onCellValueChanged={onCellValueChanged}
+                    onCellContextMenu={onCellContextMenu}
                     {...gridOptions}
                 />
             </div>
+            
+            {/* Custom context menu */}
+            {contextMenu && (
+                <ContextMenu
+                    x={contextMenu.x}
+                    y={contextMenu.y}
+                    items={contextMenu.items}
+                    onClose={() => setContextMenu(null)}
+                />
+            )}
         </div>
     );
 };
