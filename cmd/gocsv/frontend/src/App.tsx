@@ -270,7 +270,7 @@ function AppContent() {
                             onClick={scrollToTop}
                         />
                         <div>
-                            <p className="text-sm text-gray-600 dark:text-gray-400">CSV Editor for GoPCA</p>
+                            <p className="text-sm text-gray-600 dark:text-gray-400">Data Editor for GoPCA</p>
                         </div>
                     </div>
                     <div className="flex items-center gap-4">
