@@ -46,6 +46,7 @@ build/
 !cmd/gopca-desktop/build/icons/
 results/
 bin/
+cmd/gocsv/gocsv
 
 # Node modules
 node_modules/

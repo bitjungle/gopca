@@ -772,24 +772,6 @@ func (a *App) AnalyzeMissingValues(data *FileData) *MissingValueStats {
 	return stats
 }
 
-// isMissingValue checks if a value is considered missing
-func isMissingValue(value string) bool {
-	value = strings.TrimSpace(value)
-	if value == "" {
-		return true
-	}
-	
-	// Check common missing value representations
-	lowerValue := strings.ToLower(value)
-	missingIndicators := []string{"na", "n/a", "nan", "null", "none", "missing", "-", "?"}
-	for _, indicator := range missingIndicators {
-		if lowerValue == indicator {
-			return true
-		}
-	}
-	
-	return false
-}
 
 // detectMissingPattern analyzes the pattern of missing values
 func detectMissingPattern(missingIndices []int, totalRows int) string {
@@ -944,37 +926,8 @@ func fillWithMean(data *FileData, colIdx int) {
 		return
 	}
 
-	// Calculate mean of non-missing values
-	sum := 0.0
-	count := 0
-	for rowIdx := 0; rowIdx < data.Rows && rowIdx < len(data.Data); rowIdx++ {
-		if colIdx < len(data.Data[rowIdx]) {
-			value := strings.TrimSpace(data.Data[rowIdx][colIdx])
-			if !isMissingValue(value) {
-				if num, err := strconv.ParseFloat(value, 64); err == nil {
-					sum += num
-					count++
-				}
-			}
-		}
-	}
-
-	if count == 0 {
-		return // No valid values to calculate mean
-	}
-
-	mean := sum / float64(count)
-	meanStr := strconv.FormatFloat(mean, 'f', -1, 64)
-
-	// Fill missing values
-	for rowIdx := 0; rowIdx < data.Rows && rowIdx < len(data.Data); rowIdx++ {
-		if colIdx < len(data.Data[rowIdx]) {
-			value := strings.TrimSpace(data.Data[rowIdx][colIdx])
-			if isMissingValue(value) {
-				data.Data[rowIdx][colIdx] = meanStr
-			}
-		}
-	}
+	// Use utility function to fill with mean
+	fillMissingWithMean(data.Data, colIdx)
 }
 
 // fillWithMedian fills missing values with the column median (numeric columns only)
@@ -997,46 +950,8 @@ func fillWithMedian(data *FileData, colIdx int) {
 		return
 	}
 
-	// Collect non-missing values
-	values := []float64{}
-	for rowIdx := 0; rowIdx < data.Rows && rowIdx < len(data.Data); rowIdx++ {
-		if colIdx < len(data.Data[rowIdx]) {
-			value := strings.TrimSpace(data.Data[rowIdx][colIdx])
-			if !isMissingValue(value) {
-				if num, err := strconv.ParseFloat(value, 64); err == nil {
-					values = append(values, num)
-				}
-			}
-		}
-	}
-
-	if len(values) == 0 {
-		return // No valid values
-	}
-
-	// Sort values
-	sort.Float64s(values)
-
-	// Calculate median
-	var median float64
-	n := len(values)
-	if n%2 == 0 {
-		median = (values[n/2-1] + values[n/2]) / 2
-	} else {
-		median = values[n/2]
-	}
-
-	medianStr := strconv.FormatFloat(median, 'f', -1, 64)
-
-	// Fill missing values
-	for rowIdx := 0; rowIdx < data.Rows && rowIdx < len(data.Data); rowIdx++ {
-		if colIdx < len(data.Data[rowIdx]) {
-			value := strings.TrimSpace(data.Data[rowIdx][colIdx])
-			if isMissingValue(value) {
-				data.Data[rowIdx][colIdx] = medianStr
-			}
-		}
-	}
+	// Use utility function to fill with median
+	fillMissingWithMedian(data.Data, colIdx)
 }
 
 // fillWithMode fills missing values with the most frequent value
@@ -1331,15 +1246,14 @@ func calculateNumericStats(data *FileData, colIdx int) ColumnStatistics {
 		Count: data.Rows,
 	}
 
-	// Collect valid numeric values
-	values := []float64{}
+	// Use utility function to get numeric values
+	values := getNumericValues(data.Data, colIdx)
+	
+	// Count missing values
 	for rowIdx := 0; rowIdx < data.Rows && rowIdx < len(data.Data); rowIdx++ {
 		if colIdx < len(data.Data[rowIdx]) {
-			value := strings.TrimSpace(data.Data[rowIdx][colIdx])
-			if isMissingValue(value) {
+			if isMissingValue(data.Data[rowIdx][colIdx]) {
 				stats.Missing++
-			} else if num, err := strconv.ParseFloat(value, 64); err == nil {
-				values = append(values, num)
 			}
 		}
 	}

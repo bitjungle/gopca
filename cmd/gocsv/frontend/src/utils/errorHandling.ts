@@ -1,0 +1,73 @@
+/**
+ * Centralized error handling utilities for GoCSV
+ * Following CLAUDE.md principles: KISS, DRY, and readability
+ */
+
+export interface ErrorInfo {
+  message: string;
+  context?: string;
+  isUserError?: boolean;
+}
+
+/**
+ * Display error to user in a consistent manner
+ * For now using alert(), but can be easily changed to a toast/modal system
+ */
+export function showError(error: ErrorInfo | string): void {
+  const errorMessage = typeof error === 'string' 
+    ? error 
+    : error.context 
+      ? `${error.context}: ${error.message}`
+      : error.message;
+  
+  alert(errorMessage);
+}
+
+/**
+ * Handle async operations with consistent error handling
+ */
+export async function handleAsync<T>(
+  operation: () => Promise<T>,
+  options: {
+    errorPrefix?: string;
+    onError?: (error: any) => void;
+    showUserError?: boolean;
+  } = {}
+): Promise<T | null> {
+  try {
+    return await operation();
+  } catch (error) {
+    const errorMessage = error instanceof Error ? error.message : String(error);
+    console.error(`${options.errorPrefix || 'Error'}:`, error);
+    
+    if (options.showUserError !== false) {
+      showError({
+        message: errorMessage,
+        context: options.errorPrefix
+      });
+    }
+    
+    if (options.onError) {
+      options.onError(error);
+    }
+    
+    return null;
+  }
+}
+
+/**
+ * Extract error message from various error types
+ */
+export function getErrorMessage(error: any): string {
+  if (error instanceof Error) {
+    return error.message;
+  } else if (typeof error === 'string') {
+    return error;
+  } else if (error?.message) {
+    return error.message;
+  } else if (error?.toString) {
+    return error.toString();
+  } else {
+    return 'Unknown error';
+  }
+}
