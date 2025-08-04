@@ -1,0 +1,21 @@
+{
+  "name": "gopca-monorepo",
+  "private": true,
+  "description": "GoPCA monorepo containing shared UI components and applications",
+  "workspaces": [
+    "packages/ui-components",
+    "cmd/gopca-desktop/frontend",
+    "cmd/gocsv/frontend"
+  ],
+  "scripts": {
+    "install-all": "npm install",
+    "build-ui": "npm run build -w @gopca/ui-components",
+    "build-gopca": "npm run build -w frontend",
+    "build-gocsv": "npm run build -w gocsv-frontend",
+    "build-all": "npm run build-ui && npm run build-gopca && npm run build-gocsv",
+    "dev-ui": "npm run dev -w @gopca/ui-components",
+    "dev-gopca": "npm run dev -w frontend",
+    "dev-gocsv": "npm run dev -w gocsv-frontend"
+  },
+  "devDependencies": {}
+}

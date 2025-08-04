@@ -9,6 +9,7 @@
     "preview": "vite preview"
   },
   "dependencies": {
+    "@gopca/ui-components": "file:../../../packages/ui-components",
     "@tailwindcss/typography": "^0.5.16",
     "@tanstack/react-table": "^8.21.3",
     "@tanstack/react-virtual": "^3.13.12",

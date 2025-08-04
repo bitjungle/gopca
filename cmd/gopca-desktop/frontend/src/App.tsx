@@ -1,10 +1,10 @@
 import React, { useState, useRef, useEffect } from 'react';
 import './App.css';
 import { ParseCSV, RunPCA, LoadIrisDataset, LoadDatasetFile, GetVersion, CalculateEllipses, GetGUIConfig } from "../wailsjs/go/main/App";
-import { DataTable, SelectionTable, ThemeToggle, MatrixIllustration, HelpWrapper, DocumentationViewer } from './components';
+import { DataTable, SelectionTable, MatrixIllustration, HelpWrapper, DocumentationViewer } from './components';
 import { ScoresPlot, ScreePlot, LoadingsPlot, Biplot, CircleOfCorrelations, DiagnosticScatterPlot, EigencorrelationPlot } from './components/visualizations';
 import { FileData, PCARequest, PCAResponse } from './types';
-import { ThemeProvider } from './contexts/ThemeContext';
+import { ThemeProvider, ThemeToggle } from '@gopca/ui-components';
 import { HelpProvider, useHelp } from './contexts/HelpContext';
 import { PaletteProvider, usePalette } from './contexts/PaletteContext';
 import { HelpDisplay } from './components/HelpDisplay';

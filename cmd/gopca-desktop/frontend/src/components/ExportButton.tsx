@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { toPng, toSvg } from 'html-to-image';
 import { saveAs } from 'file-saver';
 import { SaveFile } from '../../wailsjs/go/main/App';
-import { useTheme } from '../contexts/ThemeContext';
+import { useTheme } from '@gopca/ui-components';
 
 interface ExportButtonProps {
   chartRef: React.RefObject<HTMLDivElement>;

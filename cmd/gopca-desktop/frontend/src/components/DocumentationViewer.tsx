@@ -2,7 +2,7 @@ import React, { useEffect, useState } from 'react';
 import ReactMarkdown from 'react-markdown';
 import remarkMath from 'remark-math';
 import rehypeKatex from 'rehype-katex';
-import { useTheme } from '../contexts/ThemeContext';
+import { useTheme } from '@gopca/ui-components';
 import 'katex/dist/katex.min.css';
 
 interface DocumentationViewerProps {

@@ -1,7 +1,7 @@
 import React, { useState, useRef, useEffect } from 'react';
 import './App.css';
-import { ThemeToggle, CSVGrid, ValidationResults, MissingValueSummary, MissingValueDialog, DataQualityDashboard, UndoRedoControls, ImportWizard, DataTransformDialog, DocumentationViewer } from './components';
-import { ThemeProvider } from './contexts/ThemeContext';
+import { CSVGrid, ValidationResults, MissingValueSummary, MissingValueDialog, DataQualityDashboard, UndoRedoControls, ImportWizard, DataTransformDialog, DocumentationViewer } from './components';
+import { ThemeProvider, ThemeToggle } from '@gopca/ui-components';
 import logo from './assets/images/GoCSV-logo-1024-transp.png';
 import { LoadCSV, SaveCSV, SaveExcel, ValidateForGoPCA, AnalyzeMissingValues, FillMissingValues, AnalyzeDataQuality, CheckGoPCAStatus, OpenInGoPCA, DownloadGoPCA, ExecuteCellEdit, ExecuteHeaderEdit, ExecuteFillMissingValues, ClearHistory } from '../wailsjs/go/main/App';
 import { EventsOn, OnFileDrop, OnFileDropOff } from '../wailsjs/runtime/runtime';
