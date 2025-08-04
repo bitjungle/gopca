@@ -304,6 +304,30 @@ export namespace main {
 	        this.columnTypes = source["columnTypes"];
 	    }
 	}
+	export class FilePreview {
+	    headers: string[];
+	    data: string[][];
+	    columnTypes: string[];
+	    delimiter: string;
+	    totalRows: number;
+	    totalCols: number;
+	    issues?: string[];
+	
+	    static createFrom(source: any = {}) {
+	        return new FilePreview(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.headers = source["headers"];
+	        this.data = source["data"];
+	        this.columnTypes = source["columnTypes"];
+	        this.delimiter = source["delimiter"];
+	        this.totalRows = source["totalRows"];
+	        this.totalCols = source["totalCols"];
+	        this.issues = source["issues"];
+	    }
+	}
 	export class FillMissingValuesRequest {
 	    strategy: string;
 	    column: string;
@@ -339,6 +363,60 @@ export namespace main {
 	    }
 	}
 	
+	export class ImportFileInfo {
+	    fileName: string;
+	    filePath: string;
+	    fileSize: number;
+	    fileFormat: string;
+	    encoding: string;
+	    sheets?: string[];
+	    error?: string;
+	
+	    static createFrom(source: any = {}) {
+	        return new ImportFileInfo(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.fileName = source["fileName"];
+	        this.filePath = source["filePath"];
+	        this.fileSize = source["fileSize"];
+	        this.fileFormat = source["fileFormat"];
+	        this.encoding = source["encoding"];
+	        this.sheets = source["sheets"];
+	        this.error = source["error"];
+	    }
+	}
+	export class ImportOptions {
+	    format: string;
+	    delimiter?: string;
+	    hasHeaders: boolean;
+	    headerRow: number;
+	    sheet?: string;
+	    range?: string;
+	    rowNameColumn: number;
+	    skipRows: number;
+	    maxRows: number;
+	    selectedColumns?: number[];
+	
+	    static createFrom(source: any = {}) {
+	        return new ImportOptions(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.format = source["format"];
+	        this.delimiter = source["delimiter"];
+	        this.hasHeaders = source["hasHeaders"];
+	        this.headerRow = source["headerRow"];
+	        this.sheet = source["sheet"];
+	        this.range = source["range"];
+	        this.rowNameColumn = source["rowNameColumn"];
+	        this.skipRows = source["skipRows"];
+	        this.maxRows = source["maxRows"];
+	        this.selectedColumns = source["selectedColumns"];
+	    }
+	}
 	export class RowMissing {
 	    index: number;
 	    totalValues: number;
@@ -399,6 +477,82 @@ export namespace main {
 	
 	
 	
+	export class TransformOptions {
+	    type: string;
+	    columns: string[];
+	    binCount?: number;
+	    minValue?: number;
+	    maxValue?: number;
+	
+	    static createFrom(source: any = {}) {
+	        return new TransformOptions(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.type = source["type"];
+	        this.columns = source["columns"];
+	        this.binCount = source["binCount"];
+	        this.minValue = source["minValue"];
+	        this.maxValue = source["maxValue"];
+	    }
+	}
+	export class TransformationResult {
+	    success: boolean;
+	    transformedColumns: string[];
+	    newColumns?: string[];
+	    messages: string[];
+	    data?: FileData;
+	
+	    static createFrom(source: any = {}) {
+	        return new TransformationResult(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.success = source["success"];
+	        this.transformedColumns = source["transformedColumns"];
+	        this.newColumns = source["newColumns"];
+	        this.messages = source["messages"];
+	        this.data = this.convertValues(source["data"], FileData);
+	    }
+	
+		convertValues(a: any, classs: any, asMap: boolean = false): any {
+		    if (!a) {
+		        return a;
+		    }
+		    if (a.slice && a.map) {
+		        return (a as any[]).map(elem => this.convertValues(elem, classs));
+		    } else if ("object" === typeof a) {
+		        if (asMap) {
+		            for (const key of Object.keys(a)) {
+		                a[key] = new classs(a[key]);
+		            }
+		            return a;
+		        }
+		        return new classs(a);
+		    }
+		    return a;
+		}
+	}
+	export class UndoRedoState {
+	    canUndo: boolean;
+	    canRedo: boolean;
+	    history: string[];
+	    currentPos: number;
+	
+	    static createFrom(source: any = {}) {
+	        return new UndoRedoState(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.canUndo = source["canUndo"];
+	        this.canRedo = source["canRedo"];
+	        this.history = source["history"];
+	        this.currentPos = source["currentPos"];
+	    }
+	}
 	export class ValidationResult {
 	    isValid: boolean;
 	    messages: string[];

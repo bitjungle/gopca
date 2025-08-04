@@ -1,9 +1,9 @@
 import React, { useState, useRef, useEffect } from 'react';
 import './App.css';
-import { ThemeToggle, CSVGrid, ValidationResults, MissingValueSummary, MissingValueDialog, DataQualityDashboard } from './components';
+import { ThemeToggle, CSVGrid, ValidationResults, MissingValueSummary, MissingValueDialog, DataQualityDashboard, UndoRedoControls, ImportWizard, DataTransformDialog } from './components';
 import { ThemeProvider } from './contexts/ThemeContext';
 import logo from './assets/images/GoCSV-logo-1024-transp.png';
-import { LoadCSV, SaveCSV, SaveExcel, ValidateForGoPCA, AnalyzeMissingValues, FillMissingValues, AnalyzeDataQuality, CheckGoPCAStatus, OpenInGoPCA, DownloadGoPCA } from '../wailsjs/go/main/App';
+import { LoadCSV, SaveCSV, SaveExcel, ValidateForGoPCA, AnalyzeMissingValues, FillMissingValues, AnalyzeDataQuality, CheckGoPCAStatus, OpenInGoPCA, DownloadGoPCA, ExecuteCellEdit, ExecuteHeaderEdit, ExecuteFillMissingValues, ClearHistory } from '../wailsjs/go/main/App';
 import { EventsOn } from '../wailsjs/runtime/runtime';
 import { main } from '../wailsjs/go/models';
 
@@ -25,6 +25,8 @@ function AppContent() {
     const [isAnalyzingQuality, setIsAnalyzingQuality] = useState(false);
     const [gopcaStatus, setGopcaStatus] = useState<main.GoPCAStatus | null>(null);
     const [isCheckingGoPCA, setIsCheckingGoPCA] = useState(false);
+    const [showImportWizard, setShowImportWizard] = useState(false);
+    const [showTransformDialog, setShowTransformDialog] = useState(false);
     
     // Listen for file-loaded events from backend
     useEffect(() => {
@@ -89,6 +91,8 @@ function AppContent() {
                 setFileData(result);
                 setFileLoaded(true);
                 // Filename will be set by the event from backend
+                // Clear history when loading new file
+                ClearHistory();
             } else {
                 console.error('Invalid file data received:', result);
                 throw new Error('No data found in file');
@@ -186,6 +190,23 @@ function AppContent() {
             console.error('Error filling missing values:', error);
             alert('Error filling missing values: ' + error);
         }
+    };
+    
+    // Handle import completion from wizard
+    const handleImportComplete = (data: FileData) => {
+        setFileData(data);
+        setFileLoaded(true);
+        setShowImportWizard(false);
+        setValidationResult(null);
+        setMissingValueStats(null);
+        // Filename will be set by the event from backend
+    };
+    
+    // Handle transform completion
+    const handleTransformComplete = (data: FileData) => {
+        setFileData(data);
+        setValidationResult(null);
+        setShowTransformDialog(false);
     };
     
     // Drag and drop handlers
@@ -307,13 +328,22 @@ function AppContent() {
                                 <span className="text-gray-500 dark:text-gray-400 text-sm">or</span>
                             </div>
                             
-                            <button
-                                onClick={handleLoadFromDialog}
-                                disabled={isLoading}
-                                className="w-full px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-                            >
-                                {isLoading ? 'Loading...' : 'Browse for File'}
-                            </button>
+                            <div className="grid grid-cols-2 gap-2">
+                                <button
+                                    onClick={handleLoadFromDialog}
+                                    disabled={isLoading}
+                                    className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                                >
+                                    {isLoading ? 'Loading...' : 'Quick Load'}
+                                </button>
+                                <button
+                                    onClick={() => setShowImportWizard(true)}
+                                    disabled={isLoading}
+                                    className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                                >
+                                    Import with Wizard
+                                </button>
+                            </div>
                             
                             {fileName && (
                                 <div className="bg-gray-50 dark:bg-gray-700/50 rounded-lg p-3 flex items-center justify-between">
@@ -353,6 +383,8 @@ function AppContent() {
                             {/* Data Quality Toolbar */}
                             <div className="flex items-center justify-between mb-4 p-3 bg-gray-50 dark:bg-gray-700 rounded-lg">
                                 <div className="flex items-center gap-4">
+                                    <UndoRedoControls />
+                                    <div className="w-px h-6 bg-gray-300 dark:bg-gray-600" />
                                     <button
                                         onClick={async () => {
                                             if (!fileData) return;
@@ -398,6 +430,17 @@ function AppContent() {
                                                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12" />
                                             </svg>
                                             Fill Missing Values
+                                        </span>
+                                    </button>
+                                    <button
+                                        onClick={() => setShowTransformDialog(true)}
+                                        className="px-3 py-1.5 text-sm bg-purple-600 text-white rounded hover:bg-purple-700 transition-colors"
+                                    >
+                                        <span className="flex items-center gap-2">
+                                            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M7 21a4 4 0 01-4-4V5a2 2 0 012-2h4a2 2 0 012 2v12a4 4 0 01-4 4zm0 0h12a2 2 0 002-2v-4a2 2 0 00-2-2h-2.343M11 7.343l1.657-1.657a2 2 0 012.828 0l2.829 2.829a2 2 0 010 2.828l-8.486 8.485M7 17h.01" />
+                                            </svg>
+                                            Transform Data
                                         </span>
                                     </button>
                                 </div>
@@ -582,6 +625,23 @@ function AppContent() {
                 isOpen={showDataQualityReport}
                 onClose={() => setShowDataQualityReport(false)}
             />
+            
+            {/* Import Wizard */}
+            <ImportWizard
+                isOpen={showImportWizard}
+                onClose={() => setShowImportWizard(false)}
+                onImportComplete={handleImportComplete}
+            />
+            
+            {/* Data Transform Dialog */}
+            {fileData && (
+                <DataTransformDialog
+                    isOpen={showTransformDialog}
+                    onClose={() => setShowTransformDialog(false)}
+                    fileData={fileData}
+                    onTransformComplete={handleTransformComplete}
+                />
+            )}
         </div>
     );
 }

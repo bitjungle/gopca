@@ -6,20 +6,46 @@ export function AnalyzeDataQuality(arg1:main.FileData):Promise<main.DataQualityR
 
 export function AnalyzeMissingValues(arg1:main.FileData):Promise<main.MissingValueStats>;
 
+export function ApplyTransformation(arg1:main.FileData,arg2:main.TransformOptions):Promise<main.TransformationResult>;
+
 export function CheckGoPCAStatus():Promise<main.GoPCAStatus>;
+
+export function ClearHistory():Promise<void>;
 
 export function DownloadGoPCA():Promise<void>;
 
+export function ExecuteCellEdit(arg1:main.FileData,arg2:number,arg3:number,arg4:string,arg5:string):Promise<void>;
+
+export function ExecuteFillMissingValues(arg1:main.FileData,arg2:string,arg3:string,arg4:string):Promise<main.FileData>;
+
+export function ExecuteHeaderEdit(arg1:main.FileData,arg2:number,arg3:string,arg4:string):Promise<void>;
+
 export function FillMissingValues(arg1:main.FileData,arg2:main.FillMissingValuesRequest):Promise<main.FileData>;
 
+export function GetFileInfo(arg1:string):Promise<main.ImportFileInfo>;
+
+export function GetTransformableColumns(arg1:main.FileData,arg2:main.TransformationType):Promise<Array<string>>;
+
+export function GetUndoRedoState():Promise<main.UndoRedoState>;
+
 export function GetVersion():Promise<string>;
+
+export function ImportFile(arg1:string,arg2:main.ImportOptions):Promise<main.FileData>;
 
 export function LoadCSV(arg1:string):Promise<main.FileData>;
 
 export function OpenInGoPCA(arg1:main.FileData):Promise<void>;
 
+export function PreviewFile(arg1:string,arg2:main.ImportOptions):Promise<main.FilePreview>;
+
+export function Redo():Promise<void>;
+
 export function SaveCSV(arg1:main.FileData):Promise<void>;
 
 export function SaveExcel(arg1:main.FileData):Promise<void>;
+
+export function SelectFileForImport():Promise<string>;
+
+export function Undo():Promise<void>;
 
 export function ValidateForGoPCA(arg1:main.FileData):Promise<main.ValidationResult>;
