@@ -398,7 +398,7 @@ function AppContent() {
                             {/* Data Quality Toolbar */}
                             <div className="flex items-center justify-between mb-4 p-3 bg-gray-50 dark:bg-gray-700 rounded-lg">
                                 <div className="flex items-center gap-4">
-                                    <UndoRedoControls onDataUpdate={setFileData} />
+                                    <UndoRedoControls fileData={fileData} onDataUpdate={setFileData} />
                                     <div className="w-px h-6 bg-gray-300 dark:bg-gray-600" />
                                     <button
                                         onClick={async () => {

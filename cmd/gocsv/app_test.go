@@ -53,7 +53,7 @@ func TestMultiStepUndoRedo(t *testing.T) {
 	
 	// Test undo operations
 	// Undo 1: Should revert cell [2,2] from "90" to "9"
-	dataUndo1, err := app.Undo()
+	dataUndo1, err := app.Undo(data3)
 	if err != nil {
 		t.Fatalf("Undo 1 failed: %v", err)
 	}
@@ -65,7 +65,7 @@ func TestMultiStepUndoRedo(t *testing.T) {
 	}
 	
 	// Undo 2: Should revert cell [1,1] from "50" to "5"
-	dataUndo2, err := app.Undo()
+	dataUndo2, err := app.Undo(dataUndo1)
 	if err != nil {
 		t.Fatalf("Undo 2 failed: %v", err)
 	}
@@ -77,7 +77,7 @@ func TestMultiStepUndoRedo(t *testing.T) {
 	}
 	
 	// Undo 3: Should revert cell [0,0] from "10" to "1"
-	dataUndo3, err := app.Undo()
+	dataUndo3, err := app.Undo(dataUndo2)
 	if err != nil {
 		t.Fatalf("Undo 3 failed: %v", err)
 	}
@@ -87,7 +87,7 @@ func TestMultiStepUndoRedo(t *testing.T) {
 	
 	// Test redo operations
 	// Redo 1: Should restore cell [0,0] from "1" to "10"
-	dataRedo1, err := app.Redo()
+	dataRedo1, err := app.Redo(dataUndo3)
 	if err != nil {
 		t.Fatalf("Redo 1 failed: %v", err)
 	}
@@ -96,7 +96,7 @@ func TestMultiStepUndoRedo(t *testing.T) {
 	}
 	
 	// Redo 2: Should restore cell [1,1] from "5" to "50"
-	dataRedo2, err := app.Redo()
+	dataRedo2, err := app.Redo(dataRedo1)
 	if err != nil {
 		t.Fatalf("Redo 2 failed: %v", err)
 	}
@@ -105,7 +105,7 @@ func TestMultiStepUndoRedo(t *testing.T) {
 	}
 	
 	// Redo 3: Should restore cell [2,2] from "9" to "90"
-	dataRedo3, err := app.Redo()
+	dataRedo3, err := app.Redo(dataRedo2)
 	if err != nil {
 		t.Fatalf("Redo 3 failed: %v", err)
 	}
@@ -172,9 +172,12 @@ func TestCommandHistoryWithMultipleOperations(t *testing.T) {
 		t.Fatalf("Delete rows failed: %v", err)
 	}
 	
+	// Save the current data state for undo
+	currentData := data
+	
 	// Test multi-step undo
 	// Undo delete rows
-	dataUndo1, err := app.Undo()
+	dataUndo1, err := app.Undo(currentData)
 	if err != nil {
 		t.Fatalf("Undo delete rows failed: %v", err)
 	}
@@ -183,7 +186,7 @@ func TestCommandHistoryWithMultipleOperations(t *testing.T) {
 	}
 	
 	// Undo cell edit
-	dataUndo2, err := app.Undo()
+	dataUndo2, err := app.Undo(dataUndo1)
 	if err != nil {
 		t.Fatalf("Undo cell edit failed: %v", err)
 	}
@@ -192,7 +195,7 @@ func TestCommandHistoryWithMultipleOperations(t *testing.T) {
 	}
 	
 	// Undo header edit
-	dataUndo3, err := app.Undo()
+	dataUndo3, err := app.Undo(dataUndo2)
 	if err != nil {
 		t.Fatalf("Undo header edit failed: %v", err)
 	}
@@ -201,9 +204,9 @@ func TestCommandHistoryWithMultipleOperations(t *testing.T) {
 	}
 	
 	// Redo all operations
-	app.Redo()
-	app.Redo()
-	dataRedo3, err := app.Redo()
+	dataRedo1, _ := app.Redo(dataUndo3)
+	dataRedo2, _ := app.Redo(dataRedo1)
+	dataRedo3, err := app.Redo(dataRedo2)
 	if err != nil {
 		t.Fatalf("Redo failed: %v", err)
 	}

@@ -2185,20 +2185,27 @@ func (a *App) GetUndoRedoState() *UndoRedoState {
 }
 
 // Undo performs an undo operation
-func (a *App) Undo() (*FileData, error) {
+func (a *App) Undo(data *FileData) (*FileData, error) {
+	// Update currentData to the data passed from frontend
+	a.currentData = data
+	
 	if err := a.history.Undo(); err != nil {
 		return nil, err
 	}
+	
 	// Emit event to update UI
 	if a.ctx != nil {
 		wailsruntime.EventsEmit(a.ctx, "undo-redo-state-changed", a.GetUndoRedoState())
 	}
-	// Return the current data
-	return a.currentData, nil
+	// Return the modified data
+	return data, nil
 }
 
 // Redo performs a redo operation
-func (a *App) Redo() (*FileData, error) {
+func (a *App) Redo(data *FileData) (*FileData, error) {
+	// Update currentData to the data passed from frontend
+	a.currentData = data
+	
 	if err := a.history.Redo(); err != nil {
 		return nil, err
 	}
@@ -2206,8 +2213,8 @@ func (a *App) Redo() (*FileData, error) {
 	if a.ctx != nil {
 		wailsruntime.EventsEmit(a.ctx, "undo-redo-state-changed", a.GetUndoRedoState())
 	}
-	// Return the current data
-	return a.currentData, nil
+	// Return the modified data
+	return data, nil
 }
 
 // ClearHistory clears the command history
@@ -2235,6 +2242,7 @@ func (a *App) executeCommand(cmd Command, data *FileData, operation string) (*Fi
 		return nil, fmt.Errorf("%s: %w", operation, err)
 	}
 	a.currentData = data // Store the current data
+	
 	if a.ctx != nil {
 		wailsruntime.EventsEmit(a.ctx, "undo-redo-state-changed", a.GetUndoRedoState())
 	}
