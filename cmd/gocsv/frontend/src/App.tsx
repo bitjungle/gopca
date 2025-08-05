@@ -167,13 +167,16 @@ function AppContent() {
     };
     
     // Handle header changes
-    const handleHeaderChange = (colIndex: number, newHeader: string) => {
-        if (fileData) {
-            const newHeaders = [...fileData.headers];
-            newHeaders[colIndex] = newHeader;
-            setFileData({ ...fileData, headers: newHeaders });
-            // Clear validation when headers change
-            setValidationResult(null);
+    const handleHeaderChange = async (colIndex: number, newHeader: string) => {
+        if (fileData && fileData.headers[colIndex] !== newHeader) {
+            try {
+                const oldHeader = fileData.headers[colIndex];
+                const updatedData = await ExecuteHeaderEdit(fileData, colIndex, oldHeader, newHeader);
+                setFileData(updatedData);
+                setValidationResult(null);
+            } catch (error) {
+                console.error('Error updating header:', error);
+            }
         }
     };
     

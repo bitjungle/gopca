@@ -146,17 +146,9 @@ export const CSVGrid: React.FC<CSVGridProps> = ({
             },
             {
                 label: 'Rename Column',
-                action: async () => {
-                    const newName = prompt(`Rename column '${header}':`);
-                    if (newName && newName !== header && fileData) {
-                        try {
-                            const updatedData = await ExecuteHeaderEdit(fileData, colIndex, header, newName);
-                            onRefresh?.(updatedData);
-                        } catch (error) {
-                            console.error('Error renaming column:', error);
-                            alert('Failed to rename column: ' + error);
-                        }
-                    }
+                action: () => {
+                    // For now, just inform the user to click on the column header to edit
+                    alert('To rename a column, click directly on the column header and type the new name.');
                 },
                 icon: '✏️'
             },
