@@ -2203,14 +2203,14 @@ func (a *App) ClearHistory() {
 }
 
 // ExecuteCellEdit executes a cell edit command
-func (a *App) ExecuteCellEdit(data *FileData, row, col int, oldValue, newValue string) error {
+func (a *App) ExecuteCellEdit(data *FileData, row, col int, oldValue, newValue string) (*FileData, error) {
 	cmd := NewCellEditCommand(a, data, row, col, oldValue, newValue)
 	if err := a.history.Execute(cmd); err != nil {
-		return err
+		return nil, err
 	}
 	a.currentData = data // Store the current data
 	wailsruntime.EventsEmit(a.ctx, "undo-redo-state-changed", a.GetUndoRedoState())
-	return nil
+	return data, nil
 }
 
 // ExecuteHeaderEdit executes a header edit command
@@ -2974,8 +2974,23 @@ type TransformationResult struct {
 	Data          *FileData         `json:"data"`
 }
 
-// ApplyTransformation applies a transformation to the data
+// ApplyTransformation applies a transformation to the data with undo support
 func (a *App) ApplyTransformation(data *FileData, options TransformOptions) (*TransformationResult, error) {
+	// Use the command pattern for undo support
+	cmd := NewTransformCommand(a, data, options)
+	err := a.history.Execute(cmd)
+	if err != nil {
+		return nil, err
+	}
+	a.currentData = data // Store the current data
+	wailsruntime.EventsEmit(a.ctx, "undo-redo-state-changed", a.GetUndoRedoState())
+	
+	// Return the transformation result
+	return cmd.result, nil
+}
+
+// applyTransformationInternal is the internal implementation of transformation
+func (a *App) applyTransformationInternal(data *FileData, options TransformOptions) (*TransformationResult, error) {
 	if data == nil || len(data.Data) == 0 {
 		return nil, fmt.Errorf("no data to transform")
 	}
@@ -3599,3 +3614,4 @@ func (a *App) ExecuteDuplicateRows(data *FileData, rowIndices []int) (*FileData,
 	wailsruntime.EventsEmit(a.ctx, "undo-redo-state-changed", a.GetUndoRedoState())
 	return data, nil
 }
+

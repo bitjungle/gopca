@@ -1038,3 +1038,138 @@ func (c *DuplicateRowCommand) GetDescription() string {
 	}
 	return fmt.Sprintf("Duplicate %d rows", len(c.sourceIndices))
 }
+
+// TransformCommand represents a data transformation operation
+type TransformCommand struct {
+	app       *App
+	data      *FileData
+	oldData   *FileData
+	options   TransformOptions
+	result    *TransformationResult
+}
+
+// NewTransformCommand creates a new transform command
+func NewTransformCommand(app *App, data *FileData, options TransformOptions) *TransformCommand {
+	// Create a deep copy of the current data for undo
+	oldData := &FileData{
+		Headers:              make([]string, len(data.Headers)),
+		RowNames:             data.RowNames,
+		Data:                 make([][]string, len(data.Data)),
+		Rows:                 data.Rows,
+		Columns:              data.Columns,
+		CategoricalColumns:   make(map[string][]string),
+		NumericTargetColumns: make(map[string][]types.JSONFloat64),
+		ColumnTypes:          make(map[string]string),
+	}
+	
+	// Deep copy headers
+	copy(oldData.Headers, data.Headers)
+	
+	// Deep copy the data
+	for i := range data.Data {
+		oldData.Data[i] = make([]string, len(data.Data[i]))
+		copy(oldData.Data[i], data.Data[i])
+	}
+	
+	// Copy maps
+	for k, v := range data.CategoricalColumns {
+		oldData.CategoricalColumns[k] = v
+	}
+	for k, v := range data.NumericTargetColumns {
+		oldData.NumericTargetColumns[k] = v
+	}
+	for k, v := range data.ColumnTypes {
+		oldData.ColumnTypes[k] = v
+	}
+	
+	return &TransformCommand{
+		app:     app,
+		data:    data,
+		oldData: oldData,
+		options: options,
+	}
+}
+
+// Execute applies the transformation
+func (c *TransformCommand) Execute() error {
+	result, err := c.app.applyTransformationInternal(c.data, c.options)
+	if err != nil {
+		return err
+	}
+	c.result = result
+	
+	// Update the data in place with the transformed data
+	if result.Data != nil {
+		c.data.Headers = result.Data.Headers
+		c.data.Data = result.Data.Data
+		c.data.RowNames = result.Data.RowNames
+		c.data.Rows = result.Data.Rows
+		c.data.Columns = result.Data.Columns
+		c.data.CategoricalColumns = result.Data.CategoricalColumns
+		c.data.NumericTargetColumns = result.Data.NumericTargetColumns
+		c.data.ColumnTypes = result.Data.ColumnTypes
+	}
+	
+	return nil
+}
+
+// Undo reverts the transformation
+func (c *TransformCommand) Undo() error {
+	// Restore the old data
+	c.data.Headers = make([]string, len(c.oldData.Headers))
+	copy(c.data.Headers, c.oldData.Headers)
+	
+	c.data.Data = make([][]string, len(c.oldData.Data))
+	for i := range c.oldData.Data {
+		c.data.Data[i] = make([]string, len(c.oldData.Data[i]))
+		copy(c.data.Data[i], c.oldData.Data[i])
+	}
+	
+	c.data.RowNames = c.oldData.RowNames
+	c.data.Rows = c.oldData.Rows
+	c.data.Columns = c.oldData.Columns
+	
+	// Restore maps
+	c.data.CategoricalColumns = make(map[string][]string)
+	for k, v := range c.oldData.CategoricalColumns {
+		c.data.CategoricalColumns[k] = v
+	}
+	
+	c.data.NumericTargetColumns = make(map[string][]types.JSONFloat64)
+	for k, v := range c.oldData.NumericTargetColumns {
+		c.data.NumericTargetColumns[k] = v
+	}
+	
+	c.data.ColumnTypes = make(map[string]string)
+	for k, v := range c.oldData.ColumnTypes {
+		c.data.ColumnTypes[k] = v
+	}
+	
+	return nil
+}
+
+// GetDescription returns a description of the transformation
+func (c *TransformCommand) GetDescription() string {
+	transformName := string(c.options.Type)
+	switch c.options.Type {
+	case TransformLog:
+		transformName = "Log transform"
+	case TransformSqrt:
+		transformName = "Square root transform"
+	case TransformSquare:
+		transformName = "Square transform"
+	case TransformStandardize:
+		transformName = "Standardize"
+	case TransformMinMax:
+		transformName = "Min-Max scale"
+	case TransformBin:
+		transformName = fmt.Sprintf("Bin into %d groups", c.options.BinCount)
+	case TransformOneHot:
+		transformName = "One-hot encode"
+	}
+	
+	if len(c.options.Columns) == 1 {
+		return fmt.Sprintf("%s column '%s'", transformName, c.options.Columns[0])
+	}
+	return fmt.Sprintf("%s %d columns", transformName, len(c.options.Columns))
+}

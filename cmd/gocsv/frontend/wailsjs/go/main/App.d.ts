@@ -14,7 +14,7 @@ export function ClearHistory():Promise<void>;
 
 export function DownloadGoPCA():Promise<void>;
 
-export function ExecuteCellEdit(arg1:main.FileData,arg2:number,arg3:number,arg4:string,arg5:string):Promise<void>;
+export function ExecuteCellEdit(arg1:main.FileData,arg2:number,arg3:number,arg4:string,arg5:string):Promise<main.FileData>;
 
 export function ExecuteDeleteColumns(arg1:main.FileData,arg2:Array<number>):Promise<main.FileData>;
 

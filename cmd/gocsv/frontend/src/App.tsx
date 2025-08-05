@@ -156,13 +156,17 @@ function AppContent() {
     };
     
     // Handle data changes
-    const handleDataChange = (rowIndex: number, colIndex: number, newValue: string) => {
-        if (fileData) {
-            const newData = [...fileData.data];
-            newData[rowIndex][colIndex] = newValue;
-            setFileData({ ...fileData, data: newData });
-            // Clear validation when data changes
-            setValidationResult(null);
+    const handleDataChange = async (rowIndex: number, colIndex: number, newValue: string) => {
+        if (fileData && fileData.data[rowIndex][colIndex] !== newValue) {
+            try {
+                const oldValue = fileData.data[rowIndex][colIndex];
+                const updatedData = await ExecuteCellEdit(fileData, rowIndex, colIndex, oldValue, newValue);
+                setFileData(updatedData);
+                setValidationResult(null);
+            } catch (error) {
+                console.error('Error updating cell:', error);
+                // Optionally show an error message to the user
+            }
         }
     };
     
