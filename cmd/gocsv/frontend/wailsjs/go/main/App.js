@@ -98,8 +98,8 @@ export function PreviewFile(arg1, arg2) {
   return window['go']['main']['App']['PreviewFile'](arg1, arg2);
 }
 
-export function Redo() {
-  return window['go']['main']['App']['Redo']();
+export function Redo(arg1) {
+  return window['go']['main']['App']['Redo'](arg1);
 }
 
 export function SaveCSV(arg1) {
@@ -114,8 +114,8 @@ export function SelectFileForImport() {
   return window['go']['main']['App']['SelectFileForImport']();
 }
 
-export function Undo() {
-  return window['go']['main']['App']['Undo']();
+export function Undo(arg1) {
+  return window['go']['main']['App']['Undo'](arg1);
 }
 
 export function ValidateForGoPCA(arg1) {

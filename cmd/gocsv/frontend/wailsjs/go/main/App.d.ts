@@ -50,7 +50,7 @@ export function OpenInGoPCA(arg1:main.FileData):Promise<void>;
 
 export function PreviewFile(arg1:string,arg2:main.ImportOptions):Promise<main.FilePreview>;
 
-export function Redo():Promise<main.FileData>;
+export function Redo(arg1:main.FileData):Promise<main.FileData>;
 
 export function SaveCSV(arg1:main.FileData):Promise<void>;
 
@@ -58,6 +58,6 @@ export function SaveExcel(arg1:main.FileData):Promise<void>;
 
 export function SelectFileForImport():Promise<string>;
 
-export function Undo():Promise<main.FileData>;
+export function Undo(arg1:main.FileData):Promise<main.FileData>;
 
 export function ValidateForGoPCA(arg1:main.FileData):Promise<main.ValidationResult>;

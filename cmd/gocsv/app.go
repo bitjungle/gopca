@@ -118,7 +118,17 @@ func (a *App) LoadCSV(filePath string) (*FileData, error) {
 	}
 
 	// Store the filename for display
-	wailsruntime.EventsEmit(a.ctx, "file-loaded", filepath.Base(filePath))
+	if a.ctx != nil {
+		wailsruntime.EventsEmit(a.ctx, "file-loaded", filepath.Base(filePath))
+	}
+
+	// Store the current data reference for undo/redo operations
+	a.currentData = fileData
+	// Clear history when loading new file
+	a.history.Clear()
+	if a.ctx != nil {
+		wailsruntime.EventsEmit(a.ctx, "undo-redo-state-changed", a.GetUndoRedoState())
+	}
 
 	return fileData, nil
 }
@@ -2175,31 +2185,33 @@ func (a *App) GetUndoRedoState() *UndoRedoState {
 }
 
 // Undo performs an undo operation
-func (a *App) Undo() (*FileData, error) {
-	if err := a.history.Undo(); err != nil {
+func (a *App) Undo(data *FileData) (*FileData, error) {
+	if err := a.history.Undo(data); err != nil {
 		return nil, err
 	}
 	// Emit event to update UI
 	wailsruntime.EventsEmit(a.ctx, "undo-redo-state-changed", a.GetUndoRedoState())
-	// Return the current data
-	return a.currentData, nil
+	// Return the modified data
+	return data, nil
 }
 
 // Redo performs a redo operation
-func (a *App) Redo() (*FileData, error) {
-	if err := a.history.Redo(); err != nil {
+func (a *App) Redo(data *FileData) (*FileData, error) {
+	if err := a.history.Redo(data); err != nil {
 		return nil, err
 	}
 	// Emit event to update UI
 	wailsruntime.EventsEmit(a.ctx, "undo-redo-state-changed", a.GetUndoRedoState())
-	// Return the current data
-	return a.currentData, nil
+	// Return the modified data
+	return data, nil
 }
 
 // ClearHistory clears the command history
 func (a *App) ClearHistory() {
 	a.history.Clear()
-	wailsruntime.EventsEmit(a.ctx, "undo-redo-state-changed", a.GetUndoRedoState())
+	if a.ctx != nil {
+		wailsruntime.EventsEmit(a.ctx, "undo-redo-state-changed", a.GetUndoRedoState())
+	}
 }
 
 // Command Execution Methods
@@ -2215,23 +2227,26 @@ func (a *App) ClearHistory() {
 
 // executeCommand is a helper that executes a command and handles common operations
 func (a *App) executeCommand(cmd Command, data *FileData, operation string) (*FileData, error) {
-	if err := a.history.Execute(cmd); err != nil {
+	if err := a.history.Execute(cmd, data); err != nil {
 		return nil, fmt.Errorf("%s: %w", operation, err)
 	}
 	a.currentData = data // Store the current data
-	wailsruntime.EventsEmit(a.ctx, "undo-redo-state-changed", a.GetUndoRedoState())
+	
+	if a.ctx != nil {
+		wailsruntime.EventsEmit(a.ctx, "undo-redo-state-changed", a.GetUndoRedoState())
+	}
 	return data, nil
 }
 
 // ExecuteCellEdit executes a cell edit command
 func (a *App) ExecuteCellEdit(data *FileData, row, col int, oldValue, newValue string) (*FileData, error) {
-	cmd := NewCellEditCommand(a, data, row, col, oldValue, newValue)
+	cmd := NewCellEditCommand(row, col, oldValue, newValue)
 	return a.executeCommand(cmd, data, "edit cell")
 }
 
 // ExecuteHeaderEdit executes a header edit command
 func (a *App) ExecuteHeaderEdit(data *FileData, col int, oldValue, newValue string) (*FileData, error) {
-	cmd := NewHeaderEditCommand(a, data, col, oldValue, newValue)
+	cmd := NewHeaderEditCommand(col, oldValue, newValue)
 	return a.executeCommand(cmd, data, "edit header")
 }
 
@@ -2984,11 +2999,13 @@ type TransformationResult struct {
 func (a *App) ApplyTransformation(data *FileData, options TransformOptions) (*TransformationResult, error) {
 	// Use the command pattern for undo support
 	cmd := NewTransformCommand(a, data, options)
-	if err := a.history.Execute(cmd); err != nil {
+	if err := a.history.Execute(cmd, data); err != nil {
 		return nil, fmt.Errorf("apply transformation: %w", err)
 	}
 	a.currentData = data // Store the current data
-	wailsruntime.EventsEmit(a.ctx, "undo-redo-state-changed", a.GetUndoRedoState())
+	if a.ctx != nil {
+		wailsruntime.EventsEmit(a.ctx, "undo-redo-state-changed", a.GetUndoRedoState())
+	}
 	
 	// Return the transformation result
 	return cmd.result, nil
@@ -3536,7 +3553,7 @@ func (a *App) GetTransformableColumns(data *FileData, transformType Transformati
 
 // ExecuteDeleteRows deletes multiple rows with undo support
 func (a *App) ExecuteDeleteRows(data *FileData, rowIndices []int) (*FileData, error) {
-	cmd := NewDeleteRowsCommand(a, data, rowIndices)
+	cmd := NewDeleteRowsCommand(data, rowIndices)
 	return a.executeCommand(cmd, data, "delete rows")
 }
 
