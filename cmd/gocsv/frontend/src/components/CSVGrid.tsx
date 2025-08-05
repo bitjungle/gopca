@@ -6,6 +6,7 @@ import 'ag-grid-community/styles/ag-theme-quartz.css';
 import { useTheme } from '@gopca/ui-components';
 import { ExecuteDeleteRows, ExecuteDeleteColumns, ExecuteInsertRow, ExecuteInsertColumn, ExecuteToggleTargetColumn, ExecuteHeaderEdit, ExecuteDuplicateRows } from '../../wailsjs/go/main/App';
 import { RenameDialog } from './RenameDialog';
+import { ConfirmDialog } from './ConfirmDialog';
 
 interface CSVGridProps {
     data: string[][];
@@ -108,6 +109,14 @@ export const CSVGrid: React.FC<CSVGridProps> = ({
         currentName: string;
     }>({ isOpen: false, colIndex: -1, currentName: '' });
     
+    // Confirm dialog state
+    const [confirmDialog, setConfirmDialog] = useState<{
+        isOpen: boolean;
+        title: string;
+        message: string;
+        onConfirm: () => void;
+    }>({ isOpen: false, title: '', message: '', onConfirm: () => {} });
+    
     // Detect column types
     const detectColumnType = useCallback((colIndex: number): 'numeric' | 'text' | 'mixed' => {
         let hasNumeric = false;
@@ -186,10 +195,21 @@ export const CSVGrid: React.FC<CSVGridProps> = ({
             { separator: true },
             {
                 label: 'Delete Column',
-                action: async () => {
-                    if (fileData && confirm(`Delete column '${header}'?`)) {
-                        const updatedData = await ExecuteDeleteColumns(fileData, [colIndex]);
-                        onRefresh?.(updatedData);
+                action: () => {
+                    if (fileData) {
+                        setConfirmDialog({
+                            isOpen: true,
+                            title: 'Delete Column',
+                            message: `Are you sure you want to delete column '${header}'?`,
+                            onConfirm: async () => {
+                                try {
+                                    const updatedData = await ExecuteDeleteColumns(fileData, [colIndex]);
+                                    onRefresh?.(updatedData);
+                                } catch (error) {
+                                    console.error('Error deleting column:', error);
+                                }
+                            }
+                        });
                     }
                 },
                 icon: '🗑️'
@@ -241,7 +261,7 @@ export const CSVGrid: React.FC<CSVGridProps> = ({
             },
             {
                 label: 'Delete Row',
-                action: async () => {
+                action: () => {
                     if (fileData) {
                         const selectedRows = gridApi?.getSelectedRows() || [];
                         const rowIndices = selectedRows.length > 0 
@@ -249,13 +269,22 @@ export const CSVGrid: React.FC<CSVGridProps> = ({
                             : [rowIndex];
                         
                         const confirmMsg = rowIndices.length > 1 
-                            ? `Delete ${rowIndices.length} rows?`
-                            : 'Delete this row?';
-                            
-                        if (confirm(confirmMsg)) {
-                            const updatedData = await ExecuteDeleteRows(fileData, rowIndices);
-                            onRefresh?.(updatedData);
-                        }
+                            ? `Are you sure you want to delete ${rowIndices.length} rows?`
+                            : 'Are you sure you want to delete this row?';
+                        
+                        setConfirmDialog({
+                            isOpen: true,
+                            title: 'Delete Row',
+                            message: confirmMsg,
+                            onConfirm: async () => {
+                                try {
+                                    const updatedData = await ExecuteDeleteRows(fileData, rowIndices);
+                                    onRefresh?.(updatedData);
+                                } catch (error) {
+                                    console.error('Error deleting rows:', error);
+                                }
+                            }
+                        });
                     }
                 },
                 icon: '🗑️'
@@ -421,14 +450,22 @@ export const CSVGrid: React.FC<CSVGridProps> = ({
                 event.preventDefault();
                 const rowIndices = selectedRows.map(row => row.id);
                 const confirmMsg = rowIndices.length > 1 
-                    ? `Delete ${rowIndices.length} rows?`
-                    : 'Delete selected row?';
-                    
-                if (confirm(confirmMsg)) {
-                    ExecuteDeleteRows(fileData, rowIndices).then((updatedData) => {
-                        onRefresh?.(updatedData);
-                    });
-                }
+                    ? `Are you sure you want to delete ${rowIndices.length} rows?`
+                    : 'Are you sure you want to delete this row?';
+                
+                setConfirmDialog({
+                    isOpen: true,
+                    title: 'Delete Row',
+                    message: confirmMsg,
+                    onConfirm: async () => {
+                        try {
+                            const updatedData = await ExecuteDeleteRows(fileData, rowIndices);
+                            onRefresh?.(updatedData);
+                        } catch (error) {
+                            console.error('Error deleting rows:', error);
+                        }
+                    }
+                });
             }
         }
         
@@ -443,7 +480,7 @@ export const CSVGrid: React.FC<CSVGridProps> = ({
                 });
             }
         }
-    }, [gridApi, fileData, onRefresh]);
+    }, [gridApi, fileData, onRefresh, setConfirmDialog]);
     
     useEffect(() => {
         window.addEventListener('keydown', handleKeyDown);
@@ -599,6 +636,17 @@ export const CSVGrid: React.FC<CSVGridProps> = ({
                 }}
                 currentName={renameDialog.currentName}
                 title="Rename Column"
+            />
+            
+            {/* Confirm dialog */}
+            <ConfirmDialog
+                isOpen={confirmDialog.isOpen}
+                onClose={() => setConfirmDialog({ ...confirmDialog, isOpen: false })}
+                onConfirm={confirmDialog.onConfirm}
+                title={confirmDialog.title}
+                message={confirmDialog.message}
+                confirmText="Delete"
+                destructive={true}
             />
         </div>
     );
