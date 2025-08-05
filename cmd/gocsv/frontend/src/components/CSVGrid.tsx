@@ -150,8 +150,8 @@ export const CSVGrid: React.FC<CSVGridProps> = ({
                     const newName = prompt(`Rename column '${header}':`);
                     if (newName && newName !== header && fileData) {
                         try {
-                            await ExecuteHeaderEdit(fileData, colIndex, header, newName);
-                            onRefresh?.();
+                            const updatedData = await ExecuteHeaderEdit(fileData, colIndex, header, newName);
+                            onRefresh?.(updatedData);
                         } catch (error) {
                             console.error('Error renaming column:', error);
                             alert('Failed to rename column: ' + error);
@@ -164,8 +164,8 @@ export const CSVGrid: React.FC<CSVGridProps> = ({
                 label: 'Insert Column Before',
                 action: async () => {
                     if (fileData) {
-                        await ExecuteInsertColumn(fileData, colIndex, '');
-                        onRefresh?.();
+                        const updatedData = await ExecuteInsertColumn(fileData, colIndex, '');
+                        onRefresh?.(updatedData);
                     }
                 },
                 icon: '⬅️'
@@ -174,8 +174,8 @@ export const CSVGrid: React.FC<CSVGridProps> = ({
                 label: 'Insert Column After',
                 action: async () => {
                     if (fileData) {
-                        await ExecuteInsertColumn(fileData, colIndex + 1, '');
-                        onRefresh?.();
+                        const updatedData = await ExecuteInsertColumn(fileData, colIndex + 1, '');
+                        onRefresh?.(updatedData);
                     }
                 },
                 icon: '➡️'
@@ -185,8 +185,8 @@ export const CSVGrid: React.FC<CSVGridProps> = ({
                 label: 'Delete Column',
                 action: async () => {
                     if (fileData && confirm(`Delete column '${header}'?`)) {
-                        await ExecuteDeleteColumns(fileData, [colIndex]);
-                        onRefresh?.();
+                        const updatedData = await ExecuteDeleteColumns(fileData, [colIndex]);
+                        onRefresh?.(updatedData);
                     }
                 },
                 icon: '🗑️'
@@ -204,8 +204,8 @@ export const CSVGrid: React.FC<CSVGridProps> = ({
                 label: 'Insert Row Above',
                 action: async () => {
                     if (fileData) {
-                        await ExecuteInsertRow(fileData, rowIndex);
-                        onRefresh?.();
+                        const updatedData = await ExecuteInsertRow(fileData, rowIndex);
+                        onRefresh?.(updatedData);
                     }
                 },
                 icon: '⬆️'
@@ -214,8 +214,8 @@ export const CSVGrid: React.FC<CSVGridProps> = ({
                 label: 'Insert Row Below',
                 action: async () => {
                     if (fileData) {
-                        await ExecuteInsertRow(fileData, rowIndex + 1);
-                        onRefresh?.();
+                        const updatedData = await ExecuteInsertRow(fileData, rowIndex + 1);
+                        onRefresh?.(updatedData);
                     }
                 },
                 icon: '⬇️'
@@ -230,8 +230,8 @@ export const CSVGrid: React.FC<CSVGridProps> = ({
                             ? selectedRows.map(row => row.id)
                             : [rowIndex];
                         
-                        await ExecuteDuplicateRows(fileData, rowIndices);
-                        onRefresh?.();
+                        const updatedData = await ExecuteDuplicateRows(fileData, rowIndices);
+                        onRefresh?.(updatedData);
                     }
                 },
                 icon: '📋'
@@ -250,8 +250,8 @@ export const CSVGrid: React.FC<CSVGridProps> = ({
                             : 'Delete this row?';
                             
                         if (confirm(confirmMsg)) {
-                            await ExecuteDeleteRows(fileData, rowIndices);
-                            onRefresh?.();
+                            const updatedData = await ExecuteDeleteRows(fileData, rowIndices);
+                            onRefresh?.(updatedData);
                         }
                     }
                 },
@@ -422,8 +422,8 @@ export const CSVGrid: React.FC<CSVGridProps> = ({
                     : 'Delete selected row?';
                     
                 if (confirm(confirmMsg)) {
-                    ExecuteDeleteRows(fileData, rowIndices).then(() => {
-                        onRefresh?.();
+                    ExecuteDeleteRows(fileData, rowIndices).then((updatedData) => {
+                        onRefresh?.(updatedData);
                     });
                 }
             }
@@ -435,8 +435,8 @@ export const CSVGrid: React.FC<CSVGridProps> = ({
             const selectedRows = gridApi.getSelectedRows();
             if (selectedRows.length > 0) {
                 const rowIndices = selectedRows.map(row => row.id);
-                ExecuteDuplicateRows(fileData, rowIndices).then(() => {
-                    onRefresh?.();
+                ExecuteDuplicateRows(fileData, rowIndices).then((updatedData) => {
+                    onRefresh?.(updatedData);
                 });
             }
         }

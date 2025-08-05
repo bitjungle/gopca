@@ -16,19 +16,19 @@ export function DownloadGoPCA():Promise<void>;
 
 export function ExecuteCellEdit(arg1:main.FileData,arg2:number,arg3:number,arg4:string,arg5:string):Promise<void>;
 
-export function ExecuteDeleteColumns(arg1:main.FileData,arg2:Array<number>):Promise<void>;
+export function ExecuteDeleteColumns(arg1:main.FileData,arg2:Array<number>):Promise<main.FileData>;
 
-export function ExecuteDeleteRows(arg1:main.FileData,arg2:Array<number>):Promise<void>;
+export function ExecuteDeleteRows(arg1:main.FileData,arg2:Array<number>):Promise<main.FileData>;
 
-export function ExecuteDuplicateRows(arg1:main.FileData,arg2:Array<number>):Promise<void>;
+export function ExecuteDuplicateRows(arg1:main.FileData,arg2:Array<number>):Promise<main.FileData>;
 
 export function ExecuteFillMissingValues(arg1:main.FileData,arg2:string,arg3:string,arg4:string):Promise<main.FileData>;
 
-export function ExecuteHeaderEdit(arg1:main.FileData,arg2:number,arg3:string,arg4:string):Promise<void>;
+export function ExecuteHeaderEdit(arg1:main.FileData,arg2:number,arg3:string,arg4:string):Promise<main.FileData>;
 
-export function ExecuteInsertColumn(arg1:main.FileData,arg2:number,arg3:string):Promise<void>;
+export function ExecuteInsertColumn(arg1:main.FileData,arg2:number,arg3:string):Promise<main.FileData>;
 
-export function ExecuteInsertRow(arg1:main.FileData,arg2:number):Promise<void>;
+export function ExecuteInsertRow(arg1:main.FileData,arg2:number):Promise<main.FileData>;
 
 export function ExecuteToggleTargetColumn(arg1:main.FileData,arg2:number):Promise<main.FileData>;
 

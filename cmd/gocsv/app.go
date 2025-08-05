@@ -2210,13 +2210,13 @@ func (a *App) ExecuteCellEdit(data *FileData, row, col int, oldValue, newValue s
 }
 
 // ExecuteHeaderEdit executes a header edit command
-func (a *App) ExecuteHeaderEdit(data *FileData, col int, oldValue, newValue string) error {
+func (a *App) ExecuteHeaderEdit(data *FileData, col int, oldValue, newValue string) (*FileData, error) {
 	cmd := NewHeaderEditCommand(a, data, col, oldValue, newValue)
 	if err := a.history.Execute(cmd); err != nil {
-		return err
+		return nil, err
 	}
 	wailsruntime.EventsEmit(a.ctx, "undo-redo-state-changed", a.GetUndoRedoState())
-	return nil
+	return data, nil
 }
 
 // ExecuteFillMissingValues executes a fill missing values command
@@ -3509,27 +3509,43 @@ func (a *App) GetTransformableColumns(data *FileData, transformType Transformati
 }
 
 // ExecuteDeleteRows deletes multiple rows with undo support
-func (a *App) ExecuteDeleteRows(data *FileData, rowIndices []int) error {
+func (a *App) ExecuteDeleteRows(data *FileData, rowIndices []int) (*FileData, error) {
 	cmd := NewDeleteRowsCommand(a, data, rowIndices)
-	return a.history.Execute(cmd)
+	err := a.history.Execute(cmd)
+	if err != nil {
+		return nil, err
+	}
+	return data, nil
 }
 
 // ExecuteDeleteColumns deletes multiple columns with undo support
-func (a *App) ExecuteDeleteColumns(data *FileData, colIndices []int) error {
+func (a *App) ExecuteDeleteColumns(data *FileData, colIndices []int) (*FileData, error) {
 	cmd := NewDeleteColumnsCommand(a, data, colIndices)
-	return a.history.Execute(cmd)
+	err := a.history.Execute(cmd)
+	if err != nil {
+		return nil, err
+	}
+	return data, nil
 }
 
 // ExecuteInsertRow inserts a new row with undo support
-func (a *App) ExecuteInsertRow(data *FileData, index int) error {
+func (a *App) ExecuteInsertRow(data *FileData, index int) (*FileData, error) {
 	cmd := NewInsertRowCommand(a, data, index)
-	return a.history.Execute(cmd)
+	err := a.history.Execute(cmd)
+	if err != nil {
+		return nil, err
+	}
+	return data, nil
 }
 
 // ExecuteInsertColumn inserts a new column with undo support
-func (a *App) ExecuteInsertColumn(data *FileData, index int, name string) error {
+func (a *App) ExecuteInsertColumn(data *FileData, index int, name string) (*FileData, error) {
 	cmd := NewInsertColumnCommand(a, data, index, name)
-	return a.history.Execute(cmd)
+	err := a.history.Execute(cmd)
+	if err != nil {
+		return nil, err
+	}
+	return data, nil
 }
 
 // ExecuteToggleTargetColumn toggles the #target suffix on a column with undo support
@@ -3553,11 +3569,15 @@ func (a *App) ExecuteToggleTargetColumn(data *FileData, colIndex int) (*FileData
 }
 
 // ExecuteDuplicateRows duplicates selected rows with undo support
-func (a *App) ExecuteDuplicateRows(data *FileData, rowIndices []int) error {
+func (a *App) ExecuteDuplicateRows(data *FileData, rowIndices []int) (*FileData, error) {
 	if len(rowIndices) == 0 {
-		return fmt.Errorf("no rows selected for duplication")
+		return nil, fmt.Errorf("no rows selected for duplication")
 	}
 	
 	cmd := NewDuplicateRowCommand(a, data, rowIndices)
-	return a.history.Execute(cmd)
+	err := a.history.Execute(cmd)
+	if err != nil {
+		return nil, err
+	}
+	return data, nil
 }
