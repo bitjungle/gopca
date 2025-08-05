@@ -1,6 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react';
 import './App.css';
-import { CSVGrid, ValidationResults, MissingValueSummary, MissingValueDialog, DataQualityDashboard, UndoRedoControls, ImportWizard, DataTransformDialog, DocumentationViewer } from './components';
+import { CSVGrid, ValidationResults, MissingValueSummary, MissingValueDialog, DataQualityDashboard, UndoRedoControls, ImportWizard, DataTransformDialog, DocumentationViewer, ConfirmDialog } from './components';
 import { ThemeProvider, ThemeToggle } from '@gopca/ui-components';
 import logo from './assets/images/GoCSV-logo-1024-transp.png';
 import { LoadCSV, SaveCSV, SaveExcel, ValidateForGoPCA, AnalyzeMissingValues, FillMissingValues, AnalyzeDataQuality, CheckGoPCAStatus, OpenInGoPCA, DownloadGoPCA, ExecuteCellEdit, ExecuteHeaderEdit, ExecuteFillMissingValues, ClearHistory } from '../wailsjs/go/main/App';
@@ -27,6 +27,7 @@ function AppContent() {
     const [showImportWizard, setShowImportWizard] = useState(false);
     const [showTransformDialog, setShowTransformDialog] = useState(false);
     const [showDocumentation, setShowDocumentation] = useState(false);
+    const [showDownloadConfirm, setShowDownloadConfirm] = useState(false);
     
     // Ref for scrolling to Step 2
     const step2Ref = useRef<HTMLDivElement>(null);
@@ -523,12 +524,7 @@ function AppContent() {
                                             
                                             // Check if GoPCA is installed
                                             if (!gopcaStatus?.installed) {
-                                                const shouldDownload = confirm(
-                                                    'GoPCA Desktop is not installed. Would you like to download it?'
-                                                );
-                                                if (shouldDownload) {
-                                                    await DownloadGoPCA();
-                                                }
+                                                setShowDownloadConfirm(true);
                                                 return;
                                             }
                                             
@@ -677,6 +673,24 @@ function AppContent() {
             <DocumentationViewer 
                 isOpen={showDocumentation}
                 onClose={() => setShowDocumentation(false)}
+            />
+            
+            {/* Download GoPCA Confirmation */}
+            <ConfirmDialog
+                isOpen={showDownloadConfirm}
+                onClose={() => setShowDownloadConfirm(false)}
+                onConfirm={async () => {
+                    setShowDownloadConfirm(false);
+                    try {
+                        await DownloadGoPCA();
+                    } catch (error) {
+                        console.error('Error downloading GoPCA:', error);
+                    }
+                }}
+                title="GoPCA Not Installed"
+                message="GoPCA Desktop is not installed. Would you like to download it?"
+                confirmText="Download"
+                cancelText="Cancel"
             />
         </div>
     );

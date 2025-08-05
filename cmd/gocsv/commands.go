@@ -8,18 +8,95 @@ import (
 	"github.com/bitjungle/gopca/pkg/types"
 )
 
-// Command interface defines operations that can be undone/redone
+// deepCopyFileData creates a complete deep copy of FileData
+// This ensures that undo operations work correctly without side effects
+func deepCopyFileData(data *FileData) *FileData {
+	if data == nil {
+		return nil
+	}
+	
+	// Create new FileData with basic fields
+	copied := &FileData{
+		Rows:    data.Rows,
+		Columns: data.Columns,
+	}
+	
+	// Deep copy headers
+	if data.Headers != nil {
+		copied.Headers = make([]string, len(data.Headers))
+		copy(copied.Headers, data.Headers)
+	}
+	
+	// Deep copy row names
+	if data.RowNames != nil {
+		copied.RowNames = make([]string, len(data.RowNames))
+		copy(copied.RowNames, data.RowNames)
+	}
+	
+	// Deep copy data matrix
+	if data.Data != nil {
+		copied.Data = make([][]string, len(data.Data))
+		for i := range data.Data {
+			copied.Data[i] = make([]string, len(data.Data[i]))
+			copy(copied.Data[i], data.Data[i])
+		}
+	}
+	
+	// Deep copy categorical columns map
+	if data.CategoricalColumns != nil {
+		copied.CategoricalColumns = make(map[string][]string)
+		for k, v := range data.CategoricalColumns {
+			newSlice := make([]string, len(v))
+			copy(newSlice, v)
+			copied.CategoricalColumns[k] = newSlice
+		}
+	}
+	
+	// Deep copy numeric target columns map
+	if data.NumericTargetColumns != nil {
+		copied.NumericTargetColumns = make(map[string][]types.JSONFloat64)
+		for k, v := range data.NumericTargetColumns {
+			newSlice := make([]types.JSONFloat64, len(v))
+			copy(newSlice, v)
+			copied.NumericTargetColumns[k] = newSlice
+		}
+	}
+	
+	// Deep copy column types map
+	if data.ColumnTypes != nil {
+		copied.ColumnTypes = make(map[string]string)
+		for k, v := range data.ColumnTypes {
+			copied.ColumnTypes[k] = v
+		}
+	}
+	
+	return copied
+}
+
+// Command interface defines operations that can be undone/redone.
+// This implements the Command design pattern to provide undo/redo functionality.
+// 
+// Each command:
+// - Stores the state needed to undo the operation
+// - Implements Execute() to perform the operation
+// - Implements Undo() to revert the operation
+// - Provides a human-readable description via GetDescription()
+//
+// Commands modify the FileData in-place and store enough information
+// to restore the previous state when undone.
 type Command interface {
 	Execute() error
 	Undo() error
 	GetDescription() string
 }
 
-// CommandHistory manages the command history for undo/redo
+// CommandHistory manages the command history for undo/redo.
+// It maintains a linear history of commands with a current position pointer.
+// When a new command is executed after undoing, it removes the "future" commands.
 type CommandHistory struct {
-	commands []Command
-	current  int
-	maxSize  int
+	commands []Command  // Linear history of executed commands
+	current  int        // Index of the last executed command (-1 if none)
+	maxSize  int        // Maximum number of commands to keep in history
 }
 
 // NewCommandHistory creates a new command history with a maximum size
@@ -265,28 +342,10 @@ type FillMissingValuesCommand struct {
 
 // NewFillMissingValuesCommand creates a new fill missing values command
 func NewFillMissingValuesCommand(app *App, data *FileData, strategy, column, customValue string) *FillMissingValuesCommand {
-	// Create a deep copy of the current data for undo
-	oldData := &FileData{
-		Headers:              data.Headers,
-		RowNames:             data.RowNames,
-		Data:                 make([][]string, len(data.Data)),
-		Rows:                 data.Rows,
-		Columns:              data.Columns,
-		CategoricalColumns:   data.CategoricalColumns,
-		NumericTargetColumns: data.NumericTargetColumns,
-		ColumnTypes:          data.ColumnTypes,
-	}
-	
-	// Deep copy the data
-	for i := range data.Data {
-		oldData.Data[i] = make([]string, len(data.Data[i]))
-		copy(oldData.Data[i], data.Data[i])
-	}
-	
 	return &FillMissingValuesCommand{
 		app:         app,
 		data:        data,
-		oldData:     oldData,
+		oldData:     deepCopyFileData(data),
 		strategy:    strategy,
 		column:      column,
 		customValue: customValue,
@@ -313,12 +372,15 @@ func (c *FillMissingValuesCommand) Execute() error {
 
 // Undo reverts the fill operation
 func (c *FillMissingValuesCommand) Undo() error {
-	// Restore the old data
-	c.data.Data = make([][]string, len(c.oldData.Data))
-	for i := range c.oldData.Data {
-		c.data.Data[i] = make([]string, len(c.oldData.Data[i]))
-		copy(c.data.Data[i], c.oldData.Data[i])
-	}
+	// Restore all fields from the old data
+	c.data.Headers = c.oldData.Headers
+	c.data.RowNames = c.oldData.RowNames
+	c.data.Data = c.oldData.Data
+	c.data.Rows = c.oldData.Rows
+	c.data.Columns = c.oldData.Columns
+	c.data.CategoricalColumns = c.oldData.CategoricalColumns
+	c.data.NumericTargetColumns = c.oldData.NumericTargetColumns
+	c.data.ColumnTypes = c.oldData.ColumnTypes
 	return nil
 }
 
@@ -1050,42 +1112,10 @@ type TransformCommand struct {
 
 // NewTransformCommand creates a new transform command
 func NewTransformCommand(app *App, data *FileData, options TransformOptions) *TransformCommand {
-	// Create a deep copy of the current data for undo
-	oldData := &FileData{
-		Headers:              make([]string, len(data.Headers)),
-		RowNames:             data.RowNames,
-		Data:                 make([][]string, len(data.Data)),
-		Rows:                 data.Rows,
-		Columns:              data.Columns,
-		CategoricalColumns:   make(map[string][]string),
-		NumericTargetColumns: make(map[string][]types.JSONFloat64),
-		ColumnTypes:          make(map[string]string),
-	}
-	
-	// Deep copy headers
-	copy(oldData.Headers, data.Headers)
-	
-	// Deep copy the data
-	for i := range data.Data {
-		oldData.Data[i] = make([]string, len(data.Data[i]))
-		copy(oldData.Data[i], data.Data[i])
-	}
-	
-	// Copy maps
-	for k, v := range data.CategoricalColumns {
-		oldData.CategoricalColumns[k] = v
-	}
-	for k, v := range data.NumericTargetColumns {
-		oldData.NumericTargetColumns[k] = v
-	}
-	for k, v := range data.ColumnTypes {
-		oldData.ColumnTypes[k] = v
-	}
-	
 	return &TransformCommand{
 		app:     app,
 		data:    data,
-		oldData: oldData,
+		oldData: deepCopyFileData(data),
 		options: options,
 	}
 }
@@ -1115,36 +1145,15 @@ func (c *TransformCommand) Execute() error {
 
 // Undo reverts the transformation
 func (c *TransformCommand) Undo() error {
-	// Restore the old data
-	c.data.Headers = make([]string, len(c.oldData.Headers))
-	copy(c.data.Headers, c.oldData.Headers)
-	
-	c.data.Data = make([][]string, len(c.oldData.Data))
-	for i := range c.oldData.Data {
-		c.data.Data[i] = make([]string, len(c.oldData.Data[i]))
-		copy(c.data.Data[i], c.oldData.Data[i])
-	}
-	
+	// Restore all fields from the old data
+	c.data.Headers = c.oldData.Headers
 	c.data.RowNames = c.oldData.RowNames
+	c.data.Data = c.oldData.Data
 	c.data.Rows = c.oldData.Rows
 	c.data.Columns = c.oldData.Columns
-	
-	// Restore maps
-	c.data.CategoricalColumns = make(map[string][]string)
-	for k, v := range c.oldData.CategoricalColumns {
-		c.data.CategoricalColumns[k] = v
-	}
-	
-	c.data.NumericTargetColumns = make(map[string][]types.JSONFloat64)
-	for k, v := range c.oldData.NumericTargetColumns {
-		c.data.NumericTargetColumns[k] = v
-	}
-	
-	c.data.ColumnTypes = make(map[string]string)
-	for k, v := range c.oldData.ColumnTypes {
-		c.data.ColumnTypes[k] = v
-	}
-	
+	c.data.CategoricalColumns = c.oldData.CategoricalColumns
+	c.data.NumericTargetColumns = c.oldData.NumericTargetColumns
+	c.data.ColumnTypes = c.oldData.ColumnTypes
 	return nil
 }
 

@@ -2202,37 +2202,43 @@ func (a *App) ClearHistory() {
 	wailsruntime.EventsEmit(a.ctx, "undo-redo-state-changed", a.GetUndoRedoState())
 }
 
-// ExecuteCellEdit executes a cell edit command
-func (a *App) ExecuteCellEdit(data *FileData, row, col int, oldValue, newValue string) (*FileData, error) {
-	cmd := NewCellEditCommand(a, data, row, col, oldValue, newValue)
+// Command Execution Methods
+// ========================
+// The following Execute* methods provide undo/redo support for all data operations.
+// They follow a consistent pattern:
+// 1. Create a command object with the current state
+// 2. Execute the command through the history manager
+// 3. Update the current data reference
+// 4. Emit state change event for UI updates
+//
+// All methods return the updated FileData to ensure the frontend stays synchronized.
+
+// executeCommand is a helper that executes a command and handles common operations
+func (a *App) executeCommand(cmd Command, data *FileData, operation string) (*FileData, error) {
 	if err := a.history.Execute(cmd); err != nil {
-		return nil, err
+		return nil, fmt.Errorf("%s: %w", operation, err)
 	}
 	a.currentData = data // Store the current data
 	wailsruntime.EventsEmit(a.ctx, "undo-redo-state-changed", a.GetUndoRedoState())
 	return data, nil
+}
+
+// ExecuteCellEdit executes a cell edit command
+func (a *App) ExecuteCellEdit(data *FileData, row, col int, oldValue, newValue string) (*FileData, error) {
+	cmd := NewCellEditCommand(a, data, row, col, oldValue, newValue)
+	return a.executeCommand(cmd, data, "edit cell")
 }
 
 // ExecuteHeaderEdit executes a header edit command
 func (a *App) ExecuteHeaderEdit(data *FileData, col int, oldValue, newValue string) (*FileData, error) {
 	cmd := NewHeaderEditCommand(a, data, col, oldValue, newValue)
-	if err := a.history.Execute(cmd); err != nil {
-		return nil, err
-	}
-	a.currentData = data // Store the current data
-	wailsruntime.EventsEmit(a.ctx, "undo-redo-state-changed", a.GetUndoRedoState())
-	return data, nil
+	return a.executeCommand(cmd, data, "edit header")
 }
 
 // ExecuteFillMissingValues executes a fill missing values command
 func (a *App) ExecuteFillMissingValues(data *FileData, strategy, column, customValue string) (*FileData, error) {
 	cmd := NewFillMissingValuesCommand(a, data, strategy, column, customValue)
-	if err := a.history.Execute(cmd); err != nil {
-		return nil, err
-	}
-	a.currentData = data // Store the current data
-	wailsruntime.EventsEmit(a.ctx, "undo-redo-state-changed", a.GetUndoRedoState())
-	return data, nil
+	return a.executeCommand(cmd, data, "fill missing values")
 }
 
 // ImportFileInfo represents information about a file to be imported
@@ -2978,9 +2984,8 @@ type TransformationResult struct {
 func (a *App) ApplyTransformation(data *FileData, options TransformOptions) (*TransformationResult, error) {
 	// Use the command pattern for undo support
 	cmd := NewTransformCommand(a, data, options)
-	err := a.history.Execute(cmd)
-	if err != nil {
-		return nil, err
+	if err := a.history.Execute(cmd); err != nil {
+		return nil, fmt.Errorf("apply transformation: %w", err)
 	}
 	a.currentData = data // Store the current data
 	wailsruntime.EventsEmit(a.ctx, "undo-redo-state-changed", a.GetUndoRedoState())
@@ -3532,86 +3537,49 @@ func (a *App) GetTransformableColumns(data *FileData, transformType Transformati
 // ExecuteDeleteRows deletes multiple rows with undo support
 func (a *App) ExecuteDeleteRows(data *FileData, rowIndices []int) (*FileData, error) {
 	cmd := NewDeleteRowsCommand(a, data, rowIndices)
-	err := a.history.Execute(cmd)
-	if err != nil {
-		return nil, err
-	}
-	a.currentData = data // Store the current data
-	wailsruntime.EventsEmit(a.ctx, "undo-redo-state-changed", a.GetUndoRedoState())
-	return data, nil
+	return a.executeCommand(cmd, data, "delete rows")
 }
 
 // ExecuteDeleteColumns deletes multiple columns with undo support
 func (a *App) ExecuteDeleteColumns(data *FileData, colIndices []int) (*FileData, error) {
 	cmd := NewDeleteColumnsCommand(a, data, colIndices)
-	err := a.history.Execute(cmd)
-	if err != nil {
-		return nil, err
-	}
-	a.currentData = data // Store the current data
-	wailsruntime.EventsEmit(a.ctx, "undo-redo-state-changed", a.GetUndoRedoState())
-	return data, nil
+	return a.executeCommand(cmd, data, "delete columns")
 }
 
 // ExecuteInsertRow inserts a new row with undo support
 func (a *App) ExecuteInsertRow(data *FileData, index int) (*FileData, error) {
 	cmd := NewInsertRowCommand(a, data, index)
-	err := a.history.Execute(cmd)
-	if err != nil {
-		return nil, err
-	}
-	a.currentData = data // Store the current data
-	wailsruntime.EventsEmit(a.ctx, "undo-redo-state-changed", a.GetUndoRedoState())
-	return data, nil
+	return a.executeCommand(cmd, data, "insert row")
 }
 
 // ExecuteInsertColumn inserts a new column with undo support
 func (a *App) ExecuteInsertColumn(data *FileData, index int, name string) (*FileData, error) {
 	cmd := NewInsertColumnCommand(a, data, index, name)
-	err := a.history.Execute(cmd)
-	if err != nil {
-		return nil, err
-	}
-	a.currentData = data // Store the current data
-	wailsruntime.EventsEmit(a.ctx, "undo-redo-state-changed", a.GetUndoRedoState())
-	return data, nil
+	return a.executeCommand(cmd, data, "insert column")
 }
 
 // ExecuteToggleTargetColumn toggles the #target suffix on a column with undo support
 func (a *App) ExecuteToggleTargetColumn(data *FileData, colIndex int) (*FileData, error) {
 	// Validate bounds
 	if colIndex < 0 || colIndex >= len(data.Headers) {
-		return nil, fmt.Errorf("invalid column index: %d", colIndex)
+		return nil, fmt.Errorf("toggle target column: invalid column index: %d", colIndex)
 	}
 	
 	cmd := NewToggleTargetColumnCommand(a, data, colIndex)
 	if cmd == nil {
-		return nil, fmt.Errorf("invalid column index: %d", colIndex)
+		return nil, fmt.Errorf("toggle target column: invalid column index: %d", colIndex)
 	}
 	
-	err := a.history.Execute(cmd)
-	if err != nil {
-		return nil, err
-	}
-	
-	a.currentData = data // Store the current data
-	wailsruntime.EventsEmit(a.ctx, "undo-redo-state-changed", a.GetUndoRedoState())
-	return data, nil
+	return a.executeCommand(cmd, data, "toggle target column")
 }
 
 // ExecuteDuplicateRows duplicates selected rows with undo support
 func (a *App) ExecuteDuplicateRows(data *FileData, rowIndices []int) (*FileData, error) {
 	if len(rowIndices) == 0 {
-		return nil, fmt.Errorf("no rows selected for duplication")
+		return nil, fmt.Errorf("duplicate rows: no rows selected for duplication")
 	}
 	
 	cmd := NewDuplicateRowCommand(a, data, rowIndices)
-	err := a.history.Execute(cmd)
-	if err != nil {
-		return nil, err
-	}
-	a.currentData = data // Store the current data
-	wailsruntime.EventsEmit(a.ctx, "undo-redo-state-changed", a.GetUndoRedoState())
-	return data, nil
+	return a.executeCommand(cmd, data, "duplicate rows")
 }
 
