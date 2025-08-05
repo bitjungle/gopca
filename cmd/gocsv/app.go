@@ -21,8 +21,9 @@ import (
 
 // App struct
 type App struct {
-	ctx     context.Context
-	history *CommandHistory
+	ctx         context.Context
+	history     *CommandHistory
+	currentData *FileData
 }
 
 // NewApp creates a new App application struct
@@ -2174,23 +2175,25 @@ func (a *App) GetUndoRedoState() *UndoRedoState {
 }
 
 // Undo performs an undo operation
-func (a *App) Undo() error {
+func (a *App) Undo() (*FileData, error) {
 	if err := a.history.Undo(); err != nil {
-		return err
+		return nil, err
 	}
 	// Emit event to update UI
 	wailsruntime.EventsEmit(a.ctx, "undo-redo-state-changed", a.GetUndoRedoState())
-	return nil
+	// Return the current data
+	return a.currentData, nil
 }
 
 // Redo performs a redo operation
-func (a *App) Redo() error {
+func (a *App) Redo() (*FileData, error) {
 	if err := a.history.Redo(); err != nil {
-		return err
+		return nil, err
 	}
 	// Emit event to update UI
 	wailsruntime.EventsEmit(a.ctx, "undo-redo-state-changed", a.GetUndoRedoState())
-	return nil
+	// Return the current data
+	return a.currentData, nil
 }
 
 // ClearHistory clears the command history
@@ -2205,6 +2208,7 @@ func (a *App) ExecuteCellEdit(data *FileData, row, col int, oldValue, newValue s
 	if err := a.history.Execute(cmd); err != nil {
 		return err
 	}
+	a.currentData = data // Store the current data
 	wailsruntime.EventsEmit(a.ctx, "undo-redo-state-changed", a.GetUndoRedoState())
 	return nil
 }
@@ -2215,6 +2219,7 @@ func (a *App) ExecuteHeaderEdit(data *FileData, col int, oldValue, newValue stri
 	if err := a.history.Execute(cmd); err != nil {
 		return nil, err
 	}
+	a.currentData = data // Store the current data
 	wailsruntime.EventsEmit(a.ctx, "undo-redo-state-changed", a.GetUndoRedoState())
 	return data, nil
 }
@@ -2225,6 +2230,7 @@ func (a *App) ExecuteFillMissingValues(data *FileData, strategy, column, customV
 	if err := a.history.Execute(cmd); err != nil {
 		return nil, err
 	}
+	a.currentData = data // Store the current data
 	wailsruntime.EventsEmit(a.ctx, "undo-redo-state-changed", a.GetUndoRedoState())
 	return data, nil
 }
@@ -3515,6 +3521,8 @@ func (a *App) ExecuteDeleteRows(data *FileData, rowIndices []int) (*FileData, er
 	if err != nil {
 		return nil, err
 	}
+	a.currentData = data // Store the current data
+	wailsruntime.EventsEmit(a.ctx, "undo-redo-state-changed", a.GetUndoRedoState())
 	return data, nil
 }
 
@@ -3525,6 +3533,8 @@ func (a *App) ExecuteDeleteColumns(data *FileData, colIndices []int) (*FileData,
 	if err != nil {
 		return nil, err
 	}
+	a.currentData = data // Store the current data
+	wailsruntime.EventsEmit(a.ctx, "undo-redo-state-changed", a.GetUndoRedoState())
 	return data, nil
 }
 
@@ -3535,6 +3545,8 @@ func (a *App) ExecuteInsertRow(data *FileData, index int) (*FileData, error) {
 	if err != nil {
 		return nil, err
 	}
+	a.currentData = data // Store the current data
+	wailsruntime.EventsEmit(a.ctx, "undo-redo-state-changed", a.GetUndoRedoState())
 	return data, nil
 }
 
@@ -3545,6 +3557,8 @@ func (a *App) ExecuteInsertColumn(data *FileData, index int, name string) (*File
 	if err != nil {
 		return nil, err
 	}
+	a.currentData = data // Store the current data
+	wailsruntime.EventsEmit(a.ctx, "undo-redo-state-changed", a.GetUndoRedoState())
 	return data, nil
 }
 
@@ -3565,6 +3579,8 @@ func (a *App) ExecuteToggleTargetColumn(data *FileData, colIndex int) (*FileData
 		return nil, err
 	}
 	
+	a.currentData = data // Store the current data
+	wailsruntime.EventsEmit(a.ctx, "undo-redo-state-changed", a.GetUndoRedoState())
 	return data, nil
 }
 
@@ -3579,5 +3595,7 @@ func (a *App) ExecuteDuplicateRows(data *FileData, rowIndices []int) (*FileData,
 	if err != nil {
 		return nil, err
 	}
+	a.currentData = data // Store the current data
+	wailsruntime.EventsEmit(a.ctx, "undo-redo-state-changed", a.GetUndoRedoState())
 	return data, nil
 }
