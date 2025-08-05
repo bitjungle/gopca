@@ -37,10 +37,7 @@ export const UndoRedoControls: React.FC<UndoRedoControlsProps> = ({ className = 
     };
 
     const handleUndo = async () => {
-        if (!fileData) {
-            console.error('No file data available for undo');
-            return;
-        }
+        if (!fileData) return;
         try {
             const updatedData = await Undo(fileData);
             if (updatedData && onDataUpdate) {
@@ -52,10 +49,7 @@ export const UndoRedoControls: React.FC<UndoRedoControlsProps> = ({ className = 
     };
 
     const handleRedo = async () => {
-        if (!fileData) {
-            console.error('No file data available for redo');
-            return;
-        }
+        if (!fileData) return;
         try {
             const updatedData = await Redo(fileData);
             if (updatedData && onDataUpdate) {

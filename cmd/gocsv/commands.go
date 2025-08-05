@@ -78,15 +78,15 @@ func deepCopyFileData(data *FileData) *FileData {
 // 
 // Each command:
 // - Stores the state needed to undo the operation
-// - Implements Execute() to perform the operation
-// - Implements Undo() to revert the operation
+// - Implements Execute() to perform the operation on the provided data
+// - Implements Undo() to revert the operation on the provided data
 // - Provides a human-readable description via GetDescription()
 //
-// Commands modify the FileData in-place and store enough information
-// to restore the previous state when undone.
+// Commands receive FileData as a parameter to work with Wails' serialization model.
+// They store only the information needed to apply/revert changes, not data references.
 type Command interface {
-	Execute() error
-	Undo() error
+	Execute(data *FileData) error
+	Undo(data *FileData) error
 	GetDescription() string
 }
 
@@ -112,9 +112,9 @@ func NewCommandHistory(maxSize int) *CommandHistory {
 }
 
 // Execute adds a command to the history and executes it
-func (h *CommandHistory) Execute(cmd Command) error {
+func (h *CommandHistory) Execute(cmd Command, data *FileData) error {
 	// Execute the command first
-	if err := cmd.Execute(); err != nil {
+	if err := cmd.Execute(data); err != nil {
 		return err
 	}
 
@@ -137,13 +137,13 @@ func (h *CommandHistory) Execute(cmd Command) error {
 }
 
 // Undo undoes the last command
-func (h *CommandHistory) Undo() error {
+func (h *CommandHistory) Undo(data *FileData) error {
 	if !h.CanUndo() {
 		return fmt.Errorf("nothing to undo")
 	}
 
 	cmd := h.commands[h.current]
-	if err := cmd.Undo(); err != nil {
+	if err := cmd.Undo(data); err != nil {
 		return fmt.Errorf("undo failed: %w", err)
 	}
 
@@ -152,14 +152,14 @@ func (h *CommandHistory) Undo() error {
 }
 
 // Redo redoes the next command
-func (h *CommandHistory) Redo() error {
+func (h *CommandHistory) Redo(data *FileData) error {
 	if !h.CanRedo() {
 		return fmt.Errorf("nothing to redo")
 	}
 
 	h.current++
 	cmd := h.commands[h.current]
-	if err := cmd.Execute(); err != nil {
+	if err := cmd.Execute(data); err != nil {
 		h.current-- // Revert on failure
 		return fmt.Errorf("redo failed: %w", err)
 	}
@@ -194,8 +194,6 @@ func (h *CommandHistory) Clear() {
 
 // CellEditCommand represents an edit to a single cell
 type CellEditCommand struct {
-	app      *App
-	data     *FileData
 	row      int
 	col      int
 	oldValue string
@@ -203,10 +201,8 @@ type CellEditCommand struct {
 }
 
 // NewCellEditCommand creates a new cell edit command
-func NewCellEditCommand(app *App, data *FileData, row, col int, oldValue, newValue string) *CellEditCommand {
+func NewCellEditCommand(row, col int, oldValue, newValue string) *CellEditCommand {
 	return &CellEditCommand{
-		app:      app,
-		data:     data,
 		row:      row,
 		col:      col,
 		oldValue: oldValue,
@@ -215,20 +211,26 @@ func NewCellEditCommand(app *App, data *FileData, row, col int, oldValue, newVal
 }
 
 // Execute applies the cell edit
-func (c *CellEditCommand) Execute() error {
-	if c.row >= len(c.data.Data) || c.col >= len(c.data.Data[c.row]) {
+func (c *CellEditCommand) Execute(data *FileData) error {
+	if data == nil {
+		return fmt.Errorf("data is nil")
+	}
+	if c.row >= len(data.Data) || c.col >= len(data.Data[c.row]) {
 		return fmt.Errorf("invalid cell position: row=%d, col=%d", c.row, c.col)
 	}
-	c.data.Data[c.row][c.col] = c.newValue
+	data.Data[c.row][c.col] = c.newValue
 	return nil
 }
 
 // Undo reverts the cell edit
-func (c *CellEditCommand) Undo() error {
-	if c.row >= len(c.data.Data) || c.col >= len(c.data.Data[c.row]) {
+func (c *CellEditCommand) Undo(data *FileData) error {
+	if data == nil {
+		return fmt.Errorf("data is nil")
+	}
+	if c.row >= len(data.Data) || c.col >= len(data.Data[c.row]) {
 		return fmt.Errorf("invalid cell position: row=%d, col=%d", c.row, c.col)
 	}
-	c.data.Data[c.row][c.col] = c.oldValue
+	data.Data[c.row][c.col] = c.oldValue
 	return nil
 }
 
@@ -239,18 +241,14 @@ func (c *CellEditCommand) GetDescription() string {
 
 // HeaderEditCommand represents an edit to a column header
 type HeaderEditCommand struct {
-	app      *App
-	data     *FileData
 	col      int
 	oldValue string
 	newValue string
 }
 
 // NewHeaderEditCommand creates a new header edit command
-func NewHeaderEditCommand(app *App, data *FileData, col int, oldValue, newValue string) *HeaderEditCommand {
+func NewHeaderEditCommand(col int, oldValue, newValue string) *HeaderEditCommand {
 	return &HeaderEditCommand{
-		app:      app,
-		data:     data,
 		col:      col,
 		oldValue: oldValue,
 		newValue: newValue,
@@ -258,33 +256,36 @@ func NewHeaderEditCommand(app *App, data *FileData, col int, oldValue, newValue 
 }
 
 // Execute applies the header edit
-func (c *HeaderEditCommand) Execute() error {
-	if c.col >= len(c.data.Headers) {
+func (c *HeaderEditCommand) Execute(data *FileData) error {
+	if data == nil {
+		return fmt.Errorf("data is nil")
+	}
+	if c.col >= len(data.Headers) {
 		return fmt.Errorf("invalid column index: %d", c.col)
 	}
-	c.data.Headers[c.col] = c.newValue
+	data.Headers[c.col] = c.newValue
 	
 	// Update column types if needed
-	if c.data.ColumnTypes != nil {
-		if colType, exists := c.data.ColumnTypes[c.oldValue]; exists {
-			delete(c.data.ColumnTypes, c.oldValue)
-			c.data.ColumnTypes[c.newValue] = colType
+	if data.ColumnTypes != nil {
+		if colType, exists := data.ColumnTypes[c.oldValue]; exists {
+			delete(data.ColumnTypes, c.oldValue)
+			data.ColumnTypes[c.newValue] = colType
 		}
 	}
 	
 	// Update categorical columns if needed
-	if c.data.CategoricalColumns != nil {
-		if values, exists := c.data.CategoricalColumns[c.oldValue]; exists {
-			delete(c.data.CategoricalColumns, c.oldValue)
-			c.data.CategoricalColumns[c.newValue] = values
+	if data.CategoricalColumns != nil {
+		if values, exists := data.CategoricalColumns[c.oldValue]; exists {
+			delete(data.CategoricalColumns, c.oldValue)
+			data.CategoricalColumns[c.newValue] = values
 		}
 	}
 	
 	// Update numeric target columns if needed
-	if c.data.NumericTargetColumns != nil {
-		if values, exists := c.data.NumericTargetColumns[c.oldValue]; exists {
-			delete(c.data.NumericTargetColumns, c.oldValue)
-			c.data.NumericTargetColumns[c.newValue] = values
+	if data.NumericTargetColumns != nil {
+		if values, exists := data.NumericTargetColumns[c.oldValue]; exists {
+			delete(data.NumericTargetColumns, c.oldValue)
+			data.NumericTargetColumns[c.newValue] = values
 		}
 	}
 	
@@ -292,33 +293,36 @@ func (c *HeaderEditCommand) Execute() error {
 }
 
 // Undo reverts the header edit
-func (c *HeaderEditCommand) Undo() error {
-	if c.col >= len(c.data.Headers) {
+func (c *HeaderEditCommand) Undo(data *FileData) error {
+	if data == nil {
+		return fmt.Errorf("data is nil")
+	}
+	if c.col >= len(data.Headers) {
 		return fmt.Errorf("invalid column index: %d", c.col)
 	}
-	c.data.Headers[c.col] = c.oldValue
+	data.Headers[c.col] = c.oldValue
 	
 	// Revert column types if needed
-	if c.data.ColumnTypes != nil {
-		if colType, exists := c.data.ColumnTypes[c.newValue]; exists {
-			delete(c.data.ColumnTypes, c.newValue)
-			c.data.ColumnTypes[c.oldValue] = colType
+	if data.ColumnTypes != nil {
+		if colType, exists := data.ColumnTypes[c.newValue]; exists {
+			delete(data.ColumnTypes, c.newValue)
+			data.ColumnTypes[c.oldValue] = colType
 		}
 	}
 	
 	// Revert categorical columns if needed
-	if c.data.CategoricalColumns != nil {
-		if values, exists := c.data.CategoricalColumns[c.newValue]; exists {
-			delete(c.data.CategoricalColumns, c.newValue)
-			c.data.CategoricalColumns[c.oldValue] = values
+	if data.CategoricalColumns != nil {
+		if values, exists := data.CategoricalColumns[c.newValue]; exists {
+			delete(data.CategoricalColumns, c.newValue)
+			data.CategoricalColumns[c.oldValue] = values
 		}
 	}
 	
 	// Revert numeric target columns if needed
-	if c.data.NumericTargetColumns != nil {
-		if values, exists := c.data.NumericTargetColumns[c.newValue]; exists {
-			delete(c.data.NumericTargetColumns, c.newValue)
-			c.data.NumericTargetColumns[c.oldValue] = values
+	if data.NumericTargetColumns != nil {
+		if values, exists := data.NumericTargetColumns[c.newValue]; exists {
+			delete(data.NumericTargetColumns, c.newValue)
+			data.NumericTargetColumns[c.oldValue] = values
 		}
 	}
 	
@@ -333,7 +337,6 @@ func (c *HeaderEditCommand) GetDescription() string {
 // FillMissingValuesCommand represents a missing value fill operation
 type FillMissingValuesCommand struct {
 	app         *App
-	data        *FileData
 	oldData     *FileData
 	strategy    string
 	column      string
@@ -344,7 +347,6 @@ type FillMissingValuesCommand struct {
 func NewFillMissingValuesCommand(app *App, data *FileData, strategy, column, customValue string) *FillMissingValuesCommand {
 	return &FillMissingValuesCommand{
 		app:         app,
-		data:        data,
 		oldData:     deepCopyFileData(data),
 		strategy:    strategy,
 		column:      column,
@@ -353,34 +355,45 @@ func NewFillMissingValuesCommand(app *App, data *FileData, strategy, column, cus
 }
 
 // Execute applies the fill operation
-func (c *FillMissingValuesCommand) Execute() error {
+func (c *FillMissingValuesCommand) Execute(data *FileData) error {
+	if data == nil {
+		return fmt.Errorf("data is nil")
+	}
+	
 	request := FillMissingValuesRequest{
 		Strategy: c.strategy,
 		Column:   c.column,
 		Value:    c.customValue,
 	}
 	
-	newData, err := c.app.FillMissingValues(c.data, request)
+	newData, err := c.app.FillMissingValues(data, request)
 	if err != nil {
 		return err
 	}
 	
 	// Update the data in place
-	c.data.Data = newData.Data
+	data.Data = newData.Data
 	return nil
 }
 
 // Undo reverts the fill operation
-func (c *FillMissingValuesCommand) Undo() error {
+func (c *FillMissingValuesCommand) Undo(data *FileData) error {
+	if data == nil {
+		return fmt.Errorf("data is nil")
+	}
+	if c.oldData == nil {
+		return fmt.Errorf("no old data to restore")
+	}
+	
 	// Restore all fields from the old data
-	c.data.Headers = c.oldData.Headers
-	c.data.RowNames = c.oldData.RowNames
-	c.data.Data = c.oldData.Data
-	c.data.Rows = c.oldData.Rows
-	c.data.Columns = c.oldData.Columns
-	c.data.CategoricalColumns = c.oldData.CategoricalColumns
-	c.data.NumericTargetColumns = c.oldData.NumericTargetColumns
-	c.data.ColumnTypes = c.oldData.ColumnTypes
+	data.Headers = c.oldData.Headers
+	data.RowNames = c.oldData.RowNames
+	data.Data = c.oldData.Data
+	data.Rows = c.oldData.Rows
+	data.Columns = c.oldData.Columns
+	data.CategoricalColumns = c.oldData.CategoricalColumns
+	data.NumericTargetColumns = c.oldData.NumericTargetColumns
+	data.ColumnTypes = c.oldData.ColumnTypes
 	return nil
 }
 
@@ -407,12 +420,16 @@ func NewBatchCommand(description string, commands ...Command) *BatchCommand {
 }
 
 // Execute executes all commands in the batch
-func (c *BatchCommand) Execute() error {
+func (c *BatchCommand) Execute(data *FileData) error {
+	if data == nil {
+		return fmt.Errorf("data is nil")
+	}
+	
 	for i, cmd := range c.commands {
-		if err := cmd.Execute(); err != nil {
+		if err := cmd.Execute(data); err != nil {
 			// Undo previously executed commands
 			for j := i - 1; j >= 0; j-- {
-				c.commands[j].Undo() // Ignore undo errors
+				c.commands[j].Undo(data) // Ignore undo errors
 			}
 			return fmt.Errorf("batch command failed at step %d: %w", i+1, err)
 		}
@@ -421,9 +438,13 @@ func (c *BatchCommand) Execute() error {
 }
 
 // Undo undoes all commands in reverse order
-func (c *BatchCommand) Undo() error {
+func (c *BatchCommand) Undo(data *FileData) error {
+	if data == nil {
+		return fmt.Errorf("data is nil")
+	}
+	
 	for i := len(c.commands) - 1; i >= 0; i-- {
-		if err := c.commands[i].Undo(); err != nil {
+		if err := c.commands[i].Undo(data); err != nil {
 			return fmt.Errorf("batch undo failed at step %d: %w", len(c.commands)-i, err)
 		}
 	}
@@ -437,15 +458,13 @@ func (c *BatchCommand) GetDescription() string {
 
 // DeleteRowsCommand represents deletion of multiple rows
 type DeleteRowsCommand struct {
-	app        *App
-	data       *FileData
 	rowIndices []int
 	oldRows    [][]string
 	oldRowNames []string
 }
 
 // NewDeleteRowsCommand creates a new delete rows command
-func NewDeleteRowsCommand(app *App, data *FileData, rowIndices []int) *DeleteRowsCommand {
+func NewDeleteRowsCommand(data *FileData, rowIndices []int) *DeleteRowsCommand {
 	// Sort indices in descending order for easier deletion
 	sortedIndices := make([]int, len(rowIndices))
 	copy(sortedIndices, rowIndices)
@@ -485,8 +504,6 @@ func NewDeleteRowsCommand(app *App, data *FileData, rowIndices []int) *DeleteRow
 	}
 	
 	return &DeleteRowsCommand{
-		app:        app,
-		data:       data,
 		rowIndices: sortedIndices,
 		oldRows:    oldRows,
 		oldRowNames: oldRowNames,
@@ -494,27 +511,35 @@ func NewDeleteRowsCommand(app *App, data *FileData, rowIndices []int) *DeleteRow
 }
 
 // Execute deletes the rows
-func (c *DeleteRowsCommand) Execute() error {
+func (c *DeleteRowsCommand) Execute(data *FileData) error {
+	if data == nil {
+		return fmt.Errorf("data is nil")
+	}
+	
 	// Delete rows in descending order to maintain indices
 	for _, idx := range c.rowIndices {
-		if idx >= 0 && idx < len(c.data.Data) {
-			c.data.Data = append(c.data.Data[:idx], c.data.Data[idx+1:]...)
+		if idx >= 0 && idx < len(data.Data) {
+			data.Data = append(data.Data[:idx], data.Data[idx+1:]...)
 			
 			// Update row names if present
-			if c.data.RowNames != nil && idx < len(c.data.RowNames) {
-				c.data.RowNames = append(c.data.RowNames[:idx], c.data.RowNames[idx+1:]...)
+			if data.RowNames != nil && idx < len(data.RowNames) {
+				data.RowNames = append(data.RowNames[:idx], data.RowNames[idx+1:]...)
 			}
 		}
 	}
 	
 	// Update row count
-	c.data.Rows = len(c.data.Data)
+	data.Rows = len(data.Data)
 	
 	return nil
 }
 
 // Undo restores the deleted rows
-func (c *DeleteRowsCommand) Undo() error {
+func (c *DeleteRowsCommand) Undo(data *FileData) error {
+	if data == nil {
+		return fmt.Errorf("data is nil")
+	}
+	
 	// Get sorted indices for restoration
 	indices := make([]int, len(c.rowIndices))
 	copy(indices, c.rowIndices)
@@ -522,19 +547,19 @@ func (c *DeleteRowsCommand) Undo() error {
 	
 	// Restore rows and names
 	for i, idx := range indices {
-		if idx <= len(c.data.Data) && i < len(c.oldRows) {
+		if idx <= len(data.Data) && i < len(c.oldRows) {
 			// Insert row at original position
-			c.data.Data = append(c.data.Data[:idx], append([][]string{c.oldRows[i]}, c.data.Data[idx:]...)...)
+			data.Data = append(data.Data[:idx], append([][]string{c.oldRows[i]}, data.Data[idx:]...)...)
 			
 			// Restore row name if it existed
-			if c.data.RowNames != nil && i < len(c.oldRowNames) {
-				c.data.RowNames = append(c.data.RowNames[:idx], append([]string{c.oldRowNames[i]}, c.data.RowNames[idx:]...)...)
+			if data.RowNames != nil && i < len(c.oldRowNames) {
+				data.RowNames = append(data.RowNames[:idx], append([]string{c.oldRowNames[i]}, data.RowNames[idx:]...)...)
 			}
 		}
 	}
 	
 	// Update row count
-	c.data.Rows = len(c.data.Data)
+	data.Rows = len(data.Data)
 	
 	return nil
 }
@@ -550,7 +575,6 @@ func (c *DeleteRowsCommand) GetDescription() string {
 // DeleteColumnsCommand represents deletion of multiple columns
 type DeleteColumnsCommand struct {
 	app         *App
-	data        *FileData
 	colIndices  []int
 	oldHeaders  []string
 	oldColumns  [][]string
@@ -628,7 +652,6 @@ func NewDeleteColumnsCommand(app *App, data *FileData, colIndices []int) *Delete
 	
 	return &DeleteColumnsCommand{
 		app:         app,
-		data:        data,
 		colIndices:  sortedIndices,
 		oldHeaders:  oldHeaders,
 		oldColumns:  oldColumns,
@@ -639,81 +662,81 @@ func NewDeleteColumnsCommand(app *App, data *FileData, colIndices []int) *Delete
 }
 
 // Execute deletes the columns
-func (c *DeleteColumnsCommand) Execute() error {
+func (c *DeleteColumnsCommand) Execute(data *FileData) error {
 	// Delete columns in descending order
 	for _, idx := range c.colIndices {
-		if idx >= 0 && idx < len(c.data.Headers) {
-			header := c.data.Headers[idx]
+		if idx >= 0 && idx < len(data.Headers) {
+			header := data.Headers[idx]
 			
 			// Delete header
-			c.data.Headers = append(c.data.Headers[:idx], c.data.Headers[idx+1:]...)
+			data.Headers = append(data.Headers[:idx], data.Headers[idx+1:]...)
 			
 			// Delete column data from each row
-			for i := range c.data.Data {
-				if idx < len(c.data.Data[i]) {
-					c.data.Data[i] = append(c.data.Data[i][:idx], c.data.Data[i][idx+1:]...)
+			for i := range data.Data {
+				if idx < len(data.Data[i]) {
+					data.Data[i] = append(data.Data[i][:idx], data.Data[i][idx+1:]...)
 				}
 			}
 			
 			// Remove metadata
-			if c.data.ColumnTypes != nil {
-				delete(c.data.ColumnTypes, header)
+			if data.ColumnTypes != nil {
+				delete(data.ColumnTypes, header)
 			}
-			if c.data.CategoricalColumns != nil {
-				delete(c.data.CategoricalColumns, header)
+			if data.CategoricalColumns != nil {
+				delete(data.CategoricalColumns, header)
 			}
-			if c.data.NumericTargetColumns != nil {
-				delete(c.data.NumericTargetColumns, header)
+			if data.NumericTargetColumns != nil {
+				delete(data.NumericTargetColumns, header)
 			}
 		}
 	}
 	
 	// Update column count
-	c.data.Columns = len(c.data.Headers)
+	data.Columns = len(data.Headers)
 	
 	return nil
 }
 
 // Undo restores the deleted columns
-func (c *DeleteColumnsCommand) Undo() error {
+func (c *DeleteColumnsCommand) Undo(data *FileData) error {
 	// Restore columns in original order
 	indices := make([]int, len(c.colIndices))
 	copy(indices, c.colIndices)
 	sort.Ints(indices)
 	
 	for i, idx := range indices {
-		if idx <= len(c.data.Headers) {
+		if idx <= len(data.Headers) {
 			header := c.oldHeaders[i]
 			
 			// Insert header
-			c.data.Headers = append(c.data.Headers[:idx], append([]string{header}, c.data.Headers[idx:]...)...)
+			data.Headers = append(data.Headers[:idx], append([]string{header}, data.Headers[idx:]...)...)
 			
 			// Insert column data
-			for j := range c.data.Data {
+			for j := range data.Data {
 				value := ""
 				if j < len(c.oldColumns[i]) {
 					value = c.oldColumns[i][j]
 				}
-				c.data.Data[j] = append(c.data.Data[j][:idx], append([]string{value}, c.data.Data[j][idx:]...)...)
+				data.Data[j] = append(data.Data[j][:idx], append([]string{value}, data.Data[j][idx:]...)...)
 			}
 			
 			// Restore metadata
-			if c.data.ColumnTypes == nil {
-				c.data.ColumnTypes = make(map[string]string)
+			if data.ColumnTypes == nil {
+				data.ColumnTypes = make(map[string]string)
 			}
 			if colType, exists := c.oldTypes[header]; exists {
-				c.data.ColumnTypes[header] = colType
+				data.ColumnTypes[header] = colType
 			}
 			
-			if c.data.CategoricalColumns == nil {
-				c.data.CategoricalColumns = make(map[string][]string)
+			if data.CategoricalColumns == nil {
+				data.CategoricalColumns = make(map[string][]string)
 			}
 			if values, exists := c.oldCategorical[header]; exists {
-				c.data.CategoricalColumns[header] = values
+				data.CategoricalColumns[header] = values
 			}
 			
-			if c.data.NumericTargetColumns == nil {
-				c.data.NumericTargetColumns = make(map[string][]types.JSONFloat64)
+			if data.NumericTargetColumns == nil {
+				data.NumericTargetColumns = make(map[string][]types.JSONFloat64)
 			}
 			if values, exists := c.oldNumericTarget[header]; exists {
 				// Convert float64 back to JSONFloat64
@@ -721,13 +744,13 @@ func (c *DeleteColumnsCommand) Undo() error {
 				for j, v := range values {
 					jsonValues[j] = types.JSONFloat64(v)
 				}
-				c.data.NumericTargetColumns[header] = jsonValues
+				data.NumericTargetColumns[header] = jsonValues
 			}
 		}
 	}
 	
 	// Update column count
-	c.data.Columns = len(c.data.Headers)
+	data.Columns = len(data.Headers)
 	
 	return nil
 }
@@ -743,7 +766,6 @@ func (c *DeleteColumnsCommand) GetDescription() string {
 // InsertRowCommand represents insertion of a new row
 type InsertRowCommand struct {
 	app      *App
-	data     *FileData
 	index    int
 	rowName  string
 }
@@ -757,47 +779,46 @@ func NewInsertRowCommand(app *App, data *FileData, index int) *InsertRowCommand 
 	
 	return &InsertRowCommand{
 		app:     app,
-		data:    data,
 		index:   index,
 		rowName: rowName,
 	}
 }
 
 // Execute inserts a new row
-func (c *InsertRowCommand) Execute() error {
+func (c *InsertRowCommand) Execute(data *FileData) error {
 	// Create empty row
-	newRow := make([]string, len(c.data.Headers))
+	newRow := make([]string, len(data.Headers))
 	
 	// Insert at specified index
-	if c.index >= len(c.data.Data) {
-		c.data.Data = append(c.data.Data, newRow)
-		if c.data.RowNames != nil {
-			c.data.RowNames = append(c.data.RowNames, c.rowName)
+	if c.index >= len(data.Data) {
+		data.Data = append(data.Data, newRow)
+		if data.RowNames != nil {
+			data.RowNames = append(data.RowNames, c.rowName)
 		}
 	} else {
-		c.data.Data = append(c.data.Data[:c.index], append([][]string{newRow}, c.data.Data[c.index:]...)...)
-		if c.data.RowNames != nil {
-			c.data.RowNames = append(c.data.RowNames[:c.index], append([]string{c.rowName}, c.data.RowNames[c.index:]...)...)
+		data.Data = append(data.Data[:c.index], append([][]string{newRow}, data.Data[c.index:]...)...)
+		if data.RowNames != nil {
+			data.RowNames = append(data.RowNames[:c.index], append([]string{c.rowName}, data.RowNames[c.index:]...)...)
 		}
 	}
 	
 	// Update row count
-	c.data.Rows = len(c.data.Data)
+	data.Rows = len(data.Data)
 	
 	return nil
 }
 
 // Undo removes the inserted row
-func (c *InsertRowCommand) Undo() error {
-	if c.index < len(c.data.Data) {
-		c.data.Data = append(c.data.Data[:c.index], c.data.Data[c.index+1:]...)
-		if c.data.RowNames != nil && c.index < len(c.data.RowNames) {
-			c.data.RowNames = append(c.data.RowNames[:c.index], c.data.RowNames[c.index+1:]...)
+func (c *InsertRowCommand) Undo(data *FileData) error {
+	if c.index < len(data.Data) {
+		data.Data = append(data.Data[:c.index], data.Data[c.index+1:]...)
+		if data.RowNames != nil && c.index < len(data.RowNames) {
+			data.RowNames = append(data.RowNames[:c.index], data.RowNames[c.index+1:]...)
 		}
 	}
 	
 	// Update row count
-	c.data.Rows = len(c.data.Data)
+	data.Rows = len(data.Data)
 	
 	return nil
 }
@@ -810,7 +831,6 @@ func (c *InsertRowCommand) GetDescription() string {
 // InsertColumnCommand represents insertion of a new column
 type InsertColumnCommand struct {
 	app    *App
-	data   *FileData
 	index  int
 	name   string
 }
@@ -823,47 +843,46 @@ func NewInsertColumnCommand(app *App, data *FileData, index int, name string) *I
 	
 	return &InsertColumnCommand{
 		app:   app,
-		data:  data,
 		index: index,
 		name:  name,
 	}
 }
 
 // Execute inserts a new column
-func (c *InsertColumnCommand) Execute() error {
+func (c *InsertColumnCommand) Execute(data *FileData) error {
 	// Insert header
-	if c.index >= len(c.data.Headers) {
-		c.data.Headers = append(c.data.Headers, c.name)
+	if c.index >= len(data.Headers) {
+		data.Headers = append(data.Headers, c.name)
 	} else {
-		c.data.Headers = append(c.data.Headers[:c.index], append([]string{c.name}, c.data.Headers[c.index:]...)...)
+		data.Headers = append(data.Headers[:c.index], append([]string{c.name}, data.Headers[c.index:]...)...)
 	}
 	
 	// Insert empty values in each row
-	for i := range c.data.Data {
-		if c.index >= len(c.data.Data[i]) {
-			c.data.Data[i] = append(c.data.Data[i], "")
+	for i := range data.Data {
+		if c.index >= len(data.Data[i]) {
+			data.Data[i] = append(data.Data[i], "")
 		} else {
-			c.data.Data[i] = append(c.data.Data[i][:c.index], append([]string{""}, c.data.Data[i][c.index:]...)...)
+			data.Data[i] = append(data.Data[i][:c.index], append([]string{""}, data.Data[i][c.index:]...)...)
 		}
 	}
 	
 	// Add column type as text by default
-	if c.data.ColumnTypes == nil {
-		c.data.ColumnTypes = make(map[string]string)
+	if data.ColumnTypes == nil {
+		data.ColumnTypes = make(map[string]string)
 	}
-	c.data.ColumnTypes[c.name] = "text"
+	data.ColumnTypes[c.name] = "text"
 	
 	// Update column count
-	c.data.Columns = len(c.data.Headers)
+	data.Columns = len(data.Headers)
 	
 	return nil
 }
 
 // Undo removes the inserted column
-func (c *InsertColumnCommand) Undo() error {
+func (c *InsertColumnCommand) Undo(data *FileData) error {
 	// Find column index by name (in case columns were reordered)
 	idx := -1
-	for i, header := range c.data.Headers {
+	for i, header := range data.Headers {
 		if header == c.name {
 			idx = i
 			break
@@ -872,23 +891,23 @@ func (c *InsertColumnCommand) Undo() error {
 	
 	if idx >= 0 {
 		// Remove header
-		c.data.Headers = append(c.data.Headers[:idx], c.data.Headers[idx+1:]...)
+		data.Headers = append(data.Headers[:idx], data.Headers[idx+1:]...)
 		
 		// Remove column data
-		for i := range c.data.Data {
-			if idx < len(c.data.Data[i]) {
-				c.data.Data[i] = append(c.data.Data[i][:idx], c.data.Data[i][idx+1:]...)
+		for i := range data.Data {
+			if idx < len(data.Data[i]) {
+				data.Data[i] = append(data.Data[i][:idx], data.Data[i][idx+1:]...)
 			}
 		}
 		
 		// Remove metadata
-		if c.data.ColumnTypes != nil {
-			delete(c.data.ColumnTypes, c.name)
+		if data.ColumnTypes != nil {
+			delete(data.ColumnTypes, c.name)
 		}
 	}
 	
 	// Update column count
-	c.data.Columns = len(c.data.Headers)
+	data.Columns = len(data.Headers)
 	
 	return nil
 }
@@ -901,7 +920,6 @@ func (c *InsertColumnCommand) GetDescription() string {
 // ToggleTargetColumnCommand represents toggling the #target suffix on a column
 type ToggleTargetColumnCommand struct {
 	app        *App
-	data       *FileData
 	colIndex   int
 	oldName    string
 	newName    string
@@ -940,7 +958,6 @@ func NewToggleTargetColumnCommand(app *App, data *FileData, colIndex int) *Toggl
 	
 	return &ToggleTargetColumnCommand{
 		app:       app,
-		data:      data,
 		colIndex:  colIndex,
 		oldName:   oldName,
 		newName:   newName,
@@ -949,22 +966,22 @@ func NewToggleTargetColumnCommand(app *App, data *FileData, colIndex int) *Toggl
 }
 
 // Execute toggles the target column suffix
-func (c *ToggleTargetColumnCommand) Execute() error {
+func (c *ToggleTargetColumnCommand) Execute(data *FileData) error {
 	// Use the existing header edit logic
-	headerCmd := NewHeaderEditCommand(c.app, c.data, c.colIndex, c.oldName, c.newName)
-	err := headerCmd.Execute()
+	headerCmd := NewHeaderEditCommand(c.colIndex, c.oldName, c.newName)
+	err := headerCmd.Execute(data)
 	if err != nil {
 		return err
 	}
 	
 	// Update column type based on whether it's now a target column
-	if c.data.ColumnTypes != nil {
+	if data.ColumnTypes != nil {
 		if c.wasTarget {
 			// Was target, now is not - change from "target" to "numeric"
-			c.data.ColumnTypes[c.newName] = "numeric"
+			data.ColumnTypes[c.newName] = "numeric"
 		} else {
 			// Was not target, now is - change to "target"
-			c.data.ColumnTypes[c.newName] = "target"
+			data.ColumnTypes[c.newName] = "target"
 		}
 	}
 	
@@ -972,21 +989,21 @@ func (c *ToggleTargetColumnCommand) Execute() error {
 }
 
 // Undo reverts the toggle
-func (c *ToggleTargetColumnCommand) Undo() error {
-	headerCmd := NewHeaderEditCommand(c.app, c.data, c.colIndex, c.newName, c.oldName)
-	err := headerCmd.Execute()
+func (c *ToggleTargetColumnCommand) Undo(data *FileData) error {
+	headerCmd := NewHeaderEditCommand(c.colIndex, c.newName, c.oldName)
+	err := headerCmd.Execute(data)
 	if err != nil {
 		return err
 	}
 	
 	// Restore column type
-	if c.data.ColumnTypes != nil {
+	if data.ColumnTypes != nil {
 		if c.wasTarget {
 			// Was target before toggle, restore to "target"
-			c.data.ColumnTypes[c.oldName] = "target"
+			data.ColumnTypes[c.oldName] = "target"
 		} else {
 			// Was not target before toggle, restore to "numeric"
-			c.data.ColumnTypes[c.oldName] = "numeric"
+			data.ColumnTypes[c.oldName] = "numeric"
 		}
 	}
 	
@@ -1004,7 +1021,6 @@ func (c *ToggleTargetColumnCommand) GetDescription() string {
 // DuplicateRowCommand represents duplication of one or more rows
 type DuplicateRowCommand struct {
 	app         *App
-	data        *FileData
 	sourceIndices []int
 	targetIndices []int
 	duplicatedRowNames []string
@@ -1035,7 +1051,6 @@ func NewDuplicateRowCommand(app *App, data *FileData, sourceIndices []int) *Dupl
 	
 	return &DuplicateRowCommand{
 		app:               app,
-		data:              data,
 		sourceIndices:     sortedIndices,
 		targetIndices:     targetIndices,
 		duplicatedRowNames: duplicatedRowNames,
@@ -1043,52 +1058,52 @@ func NewDuplicateRowCommand(app *App, data *FileData, sourceIndices []int) *Dupl
 }
 
 // Execute duplicates the rows
-func (c *DuplicateRowCommand) Execute() error {
+func (c *DuplicateRowCommand) Execute(data *FileData) error {
 	// Work backwards to avoid index shifting issues
 	for i := len(c.sourceIndices) - 1; i >= 0; i-- {
 		sourceIdx := c.sourceIndices[i]
 		targetIdx := c.targetIndices[i]
 		
-		if sourceIdx < 0 || sourceIdx >= len(c.data.Data) {
+		if sourceIdx < 0 || sourceIdx >= len(data.Data) {
 			continue
 		}
 		
 		// Duplicate the row data
-		newRow := make([]string, len(c.data.Data[sourceIdx]))
-		copy(newRow, c.data.Data[sourceIdx])
+		newRow := make([]string, len(data.Data[sourceIdx]))
+		copy(newRow, data.Data[sourceIdx])
 		
 		// Insert the duplicated row
-		c.data.Data = append(c.data.Data[:targetIdx], append([][]string{newRow}, c.data.Data[targetIdx:]...)...)
+		data.Data = append(data.Data[:targetIdx], append([][]string{newRow}, data.Data[targetIdx:]...)...)
 		
 		// Insert row name if applicable
-		if c.data.RowNames != nil {
-			c.data.RowNames = append(c.data.RowNames[:targetIdx], append([]string{c.duplicatedRowNames[i]}, c.data.RowNames[targetIdx:]...)...)
+		if data.RowNames != nil {
+			data.RowNames = append(data.RowNames[:targetIdx], append([]string{c.duplicatedRowNames[i]}, data.RowNames[targetIdx:]...)...)
 		}
 	}
 	
 	// Update row count
-	c.data.Rows = len(c.data.Data)
+	data.Rows = len(data.Data)
 	
 	return nil
 }
 
 // Undo removes the duplicated rows
-func (c *DuplicateRowCommand) Undo() error {
+func (c *DuplicateRowCommand) Undo(data *FileData) error {
 	// Remove in reverse order to maintain indices
 	for i := len(c.targetIndices) - 1; i >= 0; i-- {
 		targetIdx := c.targetIndices[i]
 		
-		if targetIdx < len(c.data.Data) {
-			c.data.Data = append(c.data.Data[:targetIdx], c.data.Data[targetIdx+1:]...)
+		if targetIdx < len(data.Data) {
+			data.Data = append(data.Data[:targetIdx], data.Data[targetIdx+1:]...)
 			
-			if c.data.RowNames != nil && targetIdx < len(c.data.RowNames) {
-				c.data.RowNames = append(c.data.RowNames[:targetIdx], c.data.RowNames[targetIdx+1:]...)
+			if data.RowNames != nil && targetIdx < len(data.RowNames) {
+				data.RowNames = append(data.RowNames[:targetIdx], data.RowNames[targetIdx+1:]...)
 			}
 		}
 	}
 	
 	// Update row count
-	c.data.Rows = len(c.data.Data)
+	data.Rows = len(data.Data)
 	
 	return nil
 }
@@ -1104,7 +1119,6 @@ func (c *DuplicateRowCommand) GetDescription() string {
 // TransformCommand represents a data transformation operation
 type TransformCommand struct {
 	app       *App
-	data      *FileData
 	oldData   *FileData
 	options   TransformOptions
 	result    *TransformationResult
@@ -1114,15 +1128,14 @@ type TransformCommand struct {
 func NewTransformCommand(app *App, data *FileData, options TransformOptions) *TransformCommand {
 	return &TransformCommand{
 		app:     app,
-		data:    data,
 		oldData: deepCopyFileData(data),
 		options: options,
 	}
 }
 
 // Execute applies the transformation
-func (c *TransformCommand) Execute() error {
-	result, err := c.app.applyTransformationInternal(c.data, c.options)
+func (c *TransformCommand) Execute(data *FileData) error {
+	result, err := c.app.applyTransformationInternal(data, c.options)
 	if err != nil {
 		return err
 	}
@@ -1130,30 +1143,30 @@ func (c *TransformCommand) Execute() error {
 	
 	// Update the data in place with the transformed data
 	if result.Data != nil {
-		c.data.Headers = result.Data.Headers
-		c.data.Data = result.Data.Data
-		c.data.RowNames = result.Data.RowNames
-		c.data.Rows = result.Data.Rows
-		c.data.Columns = result.Data.Columns
-		c.data.CategoricalColumns = result.Data.CategoricalColumns
-		c.data.NumericTargetColumns = result.Data.NumericTargetColumns
-		c.data.ColumnTypes = result.Data.ColumnTypes
+		data.Headers = result.Data.Headers
+		data.Data = result.Data.Data
+		data.RowNames = result.Data.RowNames
+		data.Rows = result.Data.Rows
+		data.Columns = result.Data.Columns
+		data.CategoricalColumns = result.Data.CategoricalColumns
+		data.NumericTargetColumns = result.Data.NumericTargetColumns
+		data.ColumnTypes = result.Data.ColumnTypes
 	}
 	
 	return nil
 }
 
 // Undo reverts the transformation
-func (c *TransformCommand) Undo() error {
+func (c *TransformCommand) Undo(data *FileData) error {
 	// Restore all fields from the old data
-	c.data.Headers = c.oldData.Headers
-	c.data.RowNames = c.oldData.RowNames
-	c.data.Data = c.oldData.Data
-	c.data.Rows = c.oldData.Rows
-	c.data.Columns = c.oldData.Columns
-	c.data.CategoricalColumns = c.oldData.CategoricalColumns
-	c.data.NumericTargetColumns = c.oldData.NumericTargetColumns
-	c.data.ColumnTypes = c.oldData.ColumnTypes
+	data.Headers = c.oldData.Headers
+	data.RowNames = c.oldData.RowNames
+	data.Data = c.oldData.Data
+	data.Rows = c.oldData.Rows
+	data.Columns = c.oldData.Columns
+	data.CategoricalColumns = c.oldData.CategoricalColumns
+	data.NumericTargetColumns = c.oldData.NumericTargetColumns
+	data.ColumnTypes = c.oldData.ColumnTypes
 	return nil
 }
 
