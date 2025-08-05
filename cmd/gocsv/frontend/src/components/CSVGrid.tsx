@@ -5,6 +5,7 @@ import 'ag-grid-community/styles/ag-grid.css';
 import 'ag-grid-community/styles/ag-theme-quartz.css';
 import { useTheme } from '@gopca/ui-components';
 import { ExecuteDeleteRows, ExecuteDeleteColumns, ExecuteInsertRow, ExecuteInsertColumn, ExecuteToggleTargetColumn, ExecuteHeaderEdit, ExecuteDuplicateRows } from '../../wailsjs/go/main/App';
+import { RenameDialog } from './RenameDialog';
 
 interface CSVGridProps {
     data: string[][];
@@ -100,6 +101,13 @@ export const CSVGrid: React.FC<CSVGridProps> = ({
         items: ContextMenuItem[];
     } | null>(null);
     
+    // Rename dialog state
+    const [renameDialog, setRenameDialog] = useState<{
+        isOpen: boolean;
+        colIndex: number;
+        currentName: string;
+    }>({ isOpen: false, colIndex: -1, currentName: '' });
+    
     // Detect column types
     const detectColumnType = useCallback((colIndex: number): 'numeric' | 'text' | 'mixed' => {
         let hasNumeric = false;
@@ -147,8 +155,11 @@ export const CSVGrid: React.FC<CSVGridProps> = ({
             {
                 label: 'Rename Column',
                 action: () => {
-                    // For now, just inform the user to click on the column header to edit
-                    alert('To rename a column, click directly on the column header and type the new name.');
+                    setRenameDialog({
+                        isOpen: true,
+                        colIndex: colIndex,
+                        currentName: header
+                    });
                 },
                 icon: '✏️'
             },
@@ -572,6 +583,23 @@ export const CSVGrid: React.FC<CSVGridProps> = ({
                     onClose={() => setContextMenu(null)}
                 />
             )}
+            
+            {/* Rename dialog */}
+            <RenameDialog
+                isOpen={renameDialog.isOpen}
+                onClose={() => setRenameDialog({ isOpen: false, colIndex: -1, currentName: '' })}
+                onRename={async (newName) => {
+                    if (fileData && onHeaderChange) {
+                        try {
+                            await onHeaderChange(renameDialog.colIndex, newName);
+                        } catch (error) {
+                            console.error('Error renaming column:', error);
+                        }
+                    }
+                }}
+                currentName={renameDialog.currentName}
+                title="Rename Column"
+            />
         </div>
     );
 };
