@@ -118,7 +118,17 @@ func (a *App) LoadCSV(filePath string) (*FileData, error) {
 	}
 
 	// Store the filename for display
-	wailsruntime.EventsEmit(a.ctx, "file-loaded", filepath.Base(filePath))
+	if a.ctx != nil {
+		wailsruntime.EventsEmit(a.ctx, "file-loaded", filepath.Base(filePath))
+	}
+
+	// Store the current data reference for undo/redo operations
+	a.currentData = fileData
+	// Clear history when loading new file
+	a.history.Clear()
+	if a.ctx != nil {
+		wailsruntime.EventsEmit(a.ctx, "undo-redo-state-changed", a.GetUndoRedoState())
+	}
 
 	return fileData, nil
 }
@@ -2180,7 +2190,9 @@ func (a *App) Undo() (*FileData, error) {
 		return nil, err
 	}
 	// Emit event to update UI
-	wailsruntime.EventsEmit(a.ctx, "undo-redo-state-changed", a.GetUndoRedoState())
+	if a.ctx != nil {
+		wailsruntime.EventsEmit(a.ctx, "undo-redo-state-changed", a.GetUndoRedoState())
+	}
 	// Return the current data
 	return a.currentData, nil
 }
@@ -2191,7 +2203,9 @@ func (a *App) Redo() (*FileData, error) {
 		return nil, err
 	}
 	// Emit event to update UI
-	wailsruntime.EventsEmit(a.ctx, "undo-redo-state-changed", a.GetUndoRedoState())
+	if a.ctx != nil {
+		wailsruntime.EventsEmit(a.ctx, "undo-redo-state-changed", a.GetUndoRedoState())
+	}
 	// Return the current data
 	return a.currentData, nil
 }
@@ -2199,7 +2213,9 @@ func (a *App) Redo() (*FileData, error) {
 // ClearHistory clears the command history
 func (a *App) ClearHistory() {
 	a.history.Clear()
-	wailsruntime.EventsEmit(a.ctx, "undo-redo-state-changed", a.GetUndoRedoState())
+	if a.ctx != nil {
+		wailsruntime.EventsEmit(a.ctx, "undo-redo-state-changed", a.GetUndoRedoState())
+	}
 }
 
 // Command Execution Methods
@@ -2219,7 +2235,9 @@ func (a *App) executeCommand(cmd Command, data *FileData, operation string) (*Fi
 		return nil, fmt.Errorf("%s: %w", operation, err)
 	}
 	a.currentData = data // Store the current data
-	wailsruntime.EventsEmit(a.ctx, "undo-redo-state-changed", a.GetUndoRedoState())
+	if a.ctx != nil {
+		wailsruntime.EventsEmit(a.ctx, "undo-redo-state-changed", a.GetUndoRedoState())
+	}
 	return data, nil
 }
 
@@ -2988,7 +3006,9 @@ func (a *App) ApplyTransformation(data *FileData, options TransformOptions) (*Tr
 		return nil, fmt.Errorf("apply transformation: %w", err)
 	}
 	a.currentData = data // Store the current data
-	wailsruntime.EventsEmit(a.ctx, "undo-redo-state-changed", a.GetUndoRedoState())
+	if a.ctx != nil {
+		wailsruntime.EventsEmit(a.ctx, "undo-redo-state-changed", a.GetUndoRedoState())
+	}
 	
 	// Return the transformation result
 	return cmd.result, nil
