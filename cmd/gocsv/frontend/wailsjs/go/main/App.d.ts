@@ -20,6 +20,8 @@ export function ExecuteDeleteColumns(arg1:main.FileData,arg2:Array<number>):Prom
 
 export function ExecuteDeleteRows(arg1:main.FileData,arg2:Array<number>):Promise<void>;
 
+export function ExecuteDuplicateRows(arg1:main.FileData,arg2:Array<number>):Promise<void>;
+
 export function ExecuteFillMissingValues(arg1:main.FileData,arg2:string,arg3:string,arg4:string):Promise<main.FileData>;
 
 export function ExecuteHeaderEdit(arg1:main.FileData,arg2:number,arg3:string,arg4:string):Promise<void>;
@@ -28,7 +30,7 @@ export function ExecuteInsertColumn(arg1:main.FileData,arg2:number,arg3:string):
 
 export function ExecuteInsertRow(arg1:main.FileData,arg2:number):Promise<void>;
 
-export function ExecuteToggleTargetColumn(arg1:main.FileData,arg2:number):Promise<void>;
+export function ExecuteToggleTargetColumn(arg1:main.FileData,arg2:number):Promise<main.FileData>;
 
 export function FillMissingValues(arg1:main.FileData,arg2:main.FillMissingValuesRequest):Promise<main.FileData>;
 

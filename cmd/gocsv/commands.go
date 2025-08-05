@@ -938,3 +938,103 @@ func (c *ToggleTargetColumnCommand) GetDescription() string {
 	}
 	return fmt.Sprintf("Mark '%s' as target column", c.oldName)
 }
+
+// DuplicateRowCommand represents duplication of one or more rows
+type DuplicateRowCommand struct {
+	app         *App
+	data        *FileData
+	sourceIndices []int
+	targetIndices []int
+	duplicatedRowNames []string
+}
+
+// NewDuplicateRowCommand creates a new duplicate row command
+func NewDuplicateRowCommand(app *App, data *FileData, sourceIndices []int) *DuplicateRowCommand {
+	// Sort indices to ensure consistent ordering
+	sortedIndices := make([]int, len(sourceIndices))
+	copy(sortedIndices, sourceIndices)
+	sort.Ints(sortedIndices)
+	
+	// Calculate target indices (insert after each source)
+	targetIndices := make([]int, len(sortedIndices))
+	for i, idx := range sortedIndices {
+		targetIndices[i] = idx + i + 1
+	}
+	
+	// Generate names for duplicated rows
+	duplicatedRowNames := make([]string, len(sortedIndices))
+	for i, idx := range sortedIndices {
+		if data.RowNames != nil && idx < len(data.RowNames) {
+			duplicatedRowNames[i] = data.RowNames[idx] + "_copy"
+		} else {
+			duplicatedRowNames[i] = fmt.Sprintf("Row_%d_copy", idx+1)
+		}
+	}
+	
+	return &DuplicateRowCommand{
+		app:               app,
+		data:              data,
+		sourceIndices:     sortedIndices,
+		targetIndices:     targetIndices,
+		duplicatedRowNames: duplicatedRowNames,
+	}
+}
+
+// Execute duplicates the rows
+func (c *DuplicateRowCommand) Execute() error {
+	// Work backwards to avoid index shifting issues
+	for i := len(c.sourceIndices) - 1; i >= 0; i-- {
+		sourceIdx := c.sourceIndices[i]
+		targetIdx := c.targetIndices[i]
+		
+		if sourceIdx < 0 || sourceIdx >= len(c.data.Data) {
+			continue
+		}
+		
+		// Duplicate the row data
+		newRow := make([]string, len(c.data.Data[sourceIdx]))
+		copy(newRow, c.data.Data[sourceIdx])
+		
+		// Insert the duplicated row
+		c.data.Data = append(c.data.Data[:targetIdx], append([][]string{newRow}, c.data.Data[targetIdx:]...)...)
+		
+		// Insert row name if applicable
+		if c.data.RowNames != nil {
+			c.data.RowNames = append(c.data.RowNames[:targetIdx], append([]string{c.duplicatedRowNames[i]}, c.data.RowNames[targetIdx:]...)...)
+		}
+	}
+	
+	// Update row count
+	c.data.Rows = len(c.data.Data)
+	
+	return nil
+}
+
+// Undo removes the duplicated rows
+func (c *DuplicateRowCommand) Undo() error {
+	// Remove in reverse order to maintain indices
+	for i := len(c.targetIndices) - 1; i >= 0; i-- {
+		targetIdx := c.targetIndices[i]
+		
+		if targetIdx < len(c.data.Data) {
+			c.data.Data = append(c.data.Data[:targetIdx], c.data.Data[targetIdx+1:]...)
+			
+			if c.data.RowNames != nil && targetIdx < len(c.data.RowNames) {
+				c.data.RowNames = append(c.data.RowNames[:targetIdx], c.data.RowNames[targetIdx+1:]...)
+			}
+		}
+	}
+	
+	// Update row count
+	c.data.Rows = len(c.data.Data)
+	
+	return nil
+}
+
+// GetDescription returns a description of the command
+func (c *DuplicateRowCommand) GetDescription() string {
+	if len(c.sourceIndices) == 1 {
+		return fmt.Sprintf("Duplicate row %d", c.sourceIndices[0]+1)
+	}
+	return fmt.Sprintf("Duplicate %d rows", len(c.sourceIndices))
+}

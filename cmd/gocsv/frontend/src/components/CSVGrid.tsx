@@ -4,7 +4,7 @@ import { ColDef, GridReadyEvent, CellValueChangedEvent, GridApi, ColumnApi, Cell
 import 'ag-grid-community/styles/ag-grid.css';
 import 'ag-grid-community/styles/ag-theme-quartz.css';
 import { useTheme } from '@gopca/ui-components';
-import { ExecuteDeleteRows, ExecuteDeleteColumns, ExecuteInsertRow, ExecuteInsertColumn, ExecuteToggleTargetColumn } from '../../wailsjs/go/main/App';
+import { ExecuteDeleteRows, ExecuteDeleteColumns, ExecuteInsertRow, ExecuteInsertColumn, ExecuteToggleTargetColumn, ExecuteHeaderEdit, ExecuteDuplicateRows } from '../../wailsjs/go/main/App';
 
 interface CSVGridProps {
     data: string[][];
@@ -145,6 +145,22 @@ export const CSVGrid: React.FC<CSVGridProps> = ({
                 icon: '🎯'
             },
             {
+                label: 'Rename Column',
+                action: async () => {
+                    const newName = prompt(`Rename column '${header}':`);
+                    if (newName && newName !== header && fileData) {
+                        try {
+                            await ExecuteHeaderEdit(fileData, colIndex, header, newName);
+                            onRefresh?.();
+                        } catch (error) {
+                            console.error('Error renaming column:', error);
+                            alert('Failed to rename column: ' + error);
+                        }
+                    }
+                },
+                icon: '✏️'
+            },
+            {
                 label: 'Insert Column Before',
                 action: async () => {
                     if (fileData) {
@@ -205,6 +221,21 @@ export const CSVGrid: React.FC<CSVGridProps> = ({
                 icon: '⬇️'
             },
             { separator: true },
+            {
+                label: 'Duplicate Row',
+                action: async () => {
+                    if (fileData) {
+                        const selectedRows = gridApi?.getSelectedRows() || [];
+                        const rowIndices = selectedRows.length > 0 
+                            ? selectedRows.map(row => row.id)
+                            : [rowIndex];
+                        
+                        await ExecuteDuplicateRows(fileData, rowIndices);
+                        onRefresh?.();
+                    }
+                },
+                icon: '📋'
+            },
             {
                 label: 'Delete Row',
                 action: async () => {
@@ -374,22 +405,39 @@ export const CSVGrid: React.FC<CSVGridProps> = ({
     
     // Handle keyboard shortcuts
     const handleKeyDown = useCallback((event: KeyboardEvent) => {
-        if (gridApi && fileData) {
-            if (event.key === 'Delete' || event.key === 'Backspace') {
-                const selectedRows = gridApi.getSelectedRows();
-                if (selectedRows.length > 0) {
-                    event.preventDefault();
-                    const rowIndices = selectedRows.map(row => row.id);
-                    const confirmMsg = rowIndices.length > 1 
-                        ? `Delete ${rowIndices.length} rows?`
-                        : 'Delete selected row?';
-                        
-                    if (confirm(confirmMsg)) {
-                        ExecuteDeleteRows(fileData, rowIndices).then(() => {
-                            onRefresh?.();
-                        });
-                    }
+        if (!gridApi || !fileData) return;
+        
+        // Check if we're editing a cell
+        const editingCells = gridApi.getEditingCells();
+        if (editingCells && editingCells.length > 0) return;
+        
+        // Delete key - delete selected rows
+        if (event.key === 'Delete' || event.key === 'Backspace') {
+            const selectedRows = gridApi.getSelectedRows();
+            if (selectedRows.length > 0) {
+                event.preventDefault();
+                const rowIndices = selectedRows.map(row => row.id);
+                const confirmMsg = rowIndices.length > 1 
+                    ? `Delete ${rowIndices.length} rows?`
+                    : 'Delete selected row?';
+                    
+                if (confirm(confirmMsg)) {
+                    ExecuteDeleteRows(fileData, rowIndices).then(() => {
+                        onRefresh?.();
+                    });
                 }
+            }
+        }
+        
+        // Ctrl/Cmd+D - duplicate selected rows
+        if ((event.ctrlKey || event.metaKey) && event.key === 'd') {
+            event.preventDefault();
+            const selectedRows = gridApi.getSelectedRows();
+            if (selectedRows.length > 0) {
+                const rowIndices = selectedRows.map(row => row.id);
+                ExecuteDuplicateRows(fileData, rowIndices).then(() => {
+                    onRefresh?.();
+                });
             }
         }
     }, [gridApi, fileData, onRefresh]);

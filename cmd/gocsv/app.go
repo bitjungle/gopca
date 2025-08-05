@@ -3551,3 +3551,13 @@ func (a *App) ExecuteToggleTargetColumn(data *FileData, colIndex int) (*FileData
 	
 	return data, nil
 }
+
+// ExecuteDuplicateRows duplicates selected rows with undo support
+func (a *App) ExecuteDuplicateRows(data *FileData, rowIndices []int) error {
+	if len(rowIndices) == 0 {
+		return fmt.Errorf("no rows selected for duplication")
+	}
+	
+	cmd := NewDuplicateRowCommand(a, data, rowIndices)
+	return a.history.Execute(cmd)
+}

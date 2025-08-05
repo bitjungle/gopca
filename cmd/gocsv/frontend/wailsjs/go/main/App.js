@@ -38,6 +38,10 @@ export function ExecuteDeleteRows(arg1, arg2) {
   return window['go']['main']['App']['ExecuteDeleteRows'](arg1, arg2);
 }
 
+export function ExecuteDuplicateRows(arg1, arg2) {
+  return window['go']['main']['App']['ExecuteDuplicateRows'](arg1, arg2);
+}
+
 export function ExecuteFillMissingValues(arg1, arg2, arg3, arg4) {
   return window['go']['main']['App']['ExecuteFillMissingValues'](arg1, arg2, arg3, arg4);
 }
