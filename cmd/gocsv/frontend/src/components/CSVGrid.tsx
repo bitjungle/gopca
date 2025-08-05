@@ -1,26 +1,90 @@
 import React, { useCallback, useMemo, useRef, useState, useEffect } from 'react';
 import { AgGridReact } from 'ag-grid-react';
-import { ColDef, GridReadyEvent, CellValueChangedEvent, GridApi, ColumnApi } from 'ag-grid-community';
+import { ColDef, GridReadyEvent, CellValueChangedEvent, GridApi, ColumnApi, CellClickedEvent, RowClickedEvent } from 'ag-grid-community';
 import 'ag-grid-community/styles/ag-grid.css';
 import 'ag-grid-community/styles/ag-theme-quartz.css';
 import { useTheme } from '@gopca/ui-components';
+import { ExecuteDeleteRows, ExecuteDeleteColumns, ExecuteInsertRow, ExecuteInsertColumn, ExecuteToggleTargetColumn, ExecuteHeaderEdit, ExecuteDuplicateRows } from '../../wailsjs/go/main/App';
+import { RenameDialog } from './RenameDialog';
+import { ConfirmDialog } from './ConfirmDialog';
 
 interface CSVGridProps {
     data: string[][];
     headers: string[];
     rowNames?: string[];
+    fileData: any; // The full FileData object for operations
     onDataChange?: (rowIndex: number, colIndex: number, newValue: string) => void;
     onHeaderChange?: (colIndex: number, newHeader: string) => void;
     onRowNameChange?: (rowIndex: number, newRowName: string) => void;
+    onRefresh?: (updatedData?: any) => void; // Callback to refresh data after operations
 }
+
+// Context menu component
+interface ContextMenuItem {
+    label?: string;
+    action?: () => void;
+    icon?: string;
+    separator?: boolean;
+}
+
+interface ContextMenuProps {
+    x: number;
+    y: number;
+    items: ContextMenuItem[];
+    onClose: () => void;
+}
+
+const ContextMenu: React.FC<ContextMenuProps> = ({ x, y, items, onClose }) => {
+    const menuRef = useRef<HTMLDivElement>(null);
+    
+    useEffect(() => {
+        const handleClickOutside = (event: MouseEvent) => {
+            if (menuRef.current && !menuRef.current.contains(event.target as Node)) {
+                onClose();
+            }
+        };
+        
+        document.addEventListener('mousedown', handleClickOutside);
+        return () => document.removeEventListener('mousedown', handleClickOutside);
+    }, [onClose]);
+    
+    return (
+        <div
+            ref={menuRef}
+            className="fixed z-50 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg shadow-lg py-1 min-w-[200px]"
+            style={{ left: x, top: y }}
+        >
+            {items.map((item, index) => {
+                if (item.separator) {
+                    return <div key={index} className="border-t border-gray-200 dark:border-gray-700 my-1" />;
+                }
+                return (
+                    <button
+                        key={index}
+                        onClick={() => {
+                            item.action?.();
+                            onClose();
+                        }}
+                        className="w-full px-4 py-2 text-left text-sm hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center gap-2"
+                    >
+                        {item.icon && <span dangerouslySetInnerHTML={{ __html: item.icon }} />}
+                        <span>{item.label}</span>
+                    </button>
+                );
+            })}
+        </div>
+    );
+};
 
 export const CSVGrid: React.FC<CSVGridProps> = ({ 
     data, 
     headers,
     rowNames,
+    fileData,
     onDataChange,
     onHeaderChange,
-    onRowNameChange
+    onRowNameChange,
+    onRefresh
 }) => {
     // Validate inputs
     if (!data || !headers || data.length === 0 || headers.length === 0) {
@@ -30,6 +94,28 @@ export const CSVGrid: React.FC<CSVGridProps> = ({
     const [gridApi, setGridApi] = useState<GridApi | null>(null);
     const [columnApi, setColumnApi] = useState<ColumnApi | null>(null);
     const { theme } = useTheme();
+    
+    // Context menu state
+    const [contextMenu, setContextMenu] = useState<{
+        x: number;
+        y: number;
+        items: ContextMenuItem[];
+    } | null>(null);
+    
+    // Rename dialog state
+    const [renameDialog, setRenameDialog] = useState<{
+        isOpen: boolean;
+        colIndex: number;
+        currentName: string;
+    }>({ isOpen: false, colIndex: -1, currentName: '' });
+    
+    // Confirm dialog state
+    const [confirmDialog, setConfirmDialog] = useState<{
+        isOpen: boolean;
+        title: string;
+        message: string;
+        onConfirm: () => void;
+    }>({ isOpen: false, title: '', message: '', onConfirm: () => {} });
     
     // Detect column types
     const detectColumnType = useCallback((colIndex: number): 'numeric' | 'text' | 'mixed' => {
@@ -51,6 +137,162 @@ export const CSVGrid: React.FC<CSVGridProps> = ({
         if (hasText && !hasNumeric) return 'text';
         return 'mixed';
     }, [data]);
+    
+    // Declare context menu handlers early
+    const handleHeaderContextMenu = useCallback((event: React.MouseEvent, colIndex: number) => {
+        event.preventDefault();
+        
+        const header = headers[colIndex];
+        const isTargetColumn = header.toLowerCase().endsWith('#target') || 
+                              header.toLowerCase().endsWith('# target');
+        
+        const items: ContextMenuItem[] = [
+            {
+                label: isTargetColumn ? 'Remove Target Flag' : 'Mark as Target Column',
+                action: async () => {
+                    if (fileData) {
+                        try {
+                            const updatedData = await ExecuteToggleTargetColumn(fileData, colIndex);
+                            onRefresh?.(updatedData);
+                        } catch (error) {
+                            console.error('Error toggling target column:', error);
+                        }
+                    }
+                },
+                icon: '🎯'
+            },
+            {
+                label: 'Rename Column',
+                action: () => {
+                    setRenameDialog({
+                        isOpen: true,
+                        colIndex: colIndex,
+                        currentName: header
+                    });
+                },
+                icon: '✏️'
+            },
+            {
+                label: 'Insert Column Before',
+                action: async () => {
+                    if (fileData) {
+                        const updatedData = await ExecuteInsertColumn(fileData, colIndex, '');
+                        onRefresh?.(updatedData);
+                    }
+                },
+                icon: '⬅️'
+            },
+            {
+                label: 'Insert Column After',
+                action: async () => {
+                    if (fileData) {
+                        const updatedData = await ExecuteInsertColumn(fileData, colIndex + 1, '');
+                        onRefresh?.(updatedData);
+                    }
+                },
+                icon: '➡️'
+            },
+            { separator: true },
+            {
+                label: 'Delete Column',
+                action: () => {
+                    if (fileData) {
+                        setConfirmDialog({
+                            isOpen: true,
+                            title: 'Delete Column',
+                            message: `Are you sure you want to delete column '${header}'?`,
+                            onConfirm: async () => {
+                                try {
+                                    const updatedData = await ExecuteDeleteColumns(fileData, [colIndex]);
+                                    onRefresh?.(updatedData);
+                                } catch (error) {
+                                    console.error('Error deleting column:', error);
+                                }
+                            }
+                        });
+                    }
+                },
+                icon: '🗑️'
+            }
+        ];
+        
+        setContextMenu({ x: event.clientX, y: event.clientY, items });
+    }, [fileData, headers, onRefresh]);
+    
+    const handleRowContextMenu = useCallback((event: React.MouseEvent, rowIndex: number) => {
+        event.preventDefault();
+        
+        const items: ContextMenuItem[] = [
+            {
+                label: 'Insert Row Above',
+                action: async () => {
+                    if (fileData) {
+                        const updatedData = await ExecuteInsertRow(fileData, rowIndex);
+                        onRefresh?.(updatedData);
+                    }
+                },
+                icon: '⬆️'
+            },
+            {
+                label: 'Insert Row Below',
+                action: async () => {
+                    if (fileData) {
+                        const updatedData = await ExecuteInsertRow(fileData, rowIndex + 1);
+                        onRefresh?.(updatedData);
+                    }
+                },
+                icon: '⬇️'
+            },
+            { separator: true },
+            {
+                label: 'Duplicate Row',
+                action: async () => {
+                    if (fileData) {
+                        const selectedRows = gridApi?.getSelectedRows() || [];
+                        const rowIndices = selectedRows.length > 0 
+                            ? selectedRows.map(row => row.id)
+                            : [rowIndex];
+                        
+                        const updatedData = await ExecuteDuplicateRows(fileData, rowIndices);
+                        onRefresh?.(updatedData);
+                    }
+                },
+                icon: '📋'
+            },
+            {
+                label: 'Delete Row',
+                action: () => {
+                    if (fileData) {
+                        const selectedRows = gridApi?.getSelectedRows() || [];
+                        const rowIndices = selectedRows.length > 0 
+                            ? selectedRows.map(row => row.id)
+                            : [rowIndex];
+                        
+                        const confirmMsg = rowIndices.length > 1 
+                            ? `Are you sure you want to delete ${rowIndices.length} rows?`
+                            : 'Are you sure you want to delete this row?';
+                        
+                        setConfirmDialog({
+                            isOpen: true,
+                            title: 'Delete Row',
+                            message: confirmMsg,
+                            onConfirm: async () => {
+                                try {
+                                    const updatedData = await ExecuteDeleteRows(fileData, rowIndices);
+                                    onRefresh?.(updatedData);
+                                } catch (error) {
+                                    console.error('Error deleting rows:', error);
+                                }
+                            }
+                        });
+                    }
+                },
+                icon: '🗑️'
+            }
+        ];
+        
+        setContextMenu({ x: event.clientX, y: event.clientY, items });
+    }, [fileData, gridApi, onRefresh]);
     
     // Create column definitions
     const columnDefs = useMemo<ColDef[]>(() => {
@@ -85,7 +327,7 @@ export const CSVGrid: React.FC<CSVGridProps> = ({
             
             cols.push({
                 field: `col${index}`,
-                headerName: header,
+                headerName: isTargetColumn ? `${header} 🎯` : header,
                 editable: true,
                 sortable: true,
                 filter: true,
@@ -113,9 +355,14 @@ export const CSVGrid: React.FC<CSVGridProps> = ({
                     if (isTargetColumn) classes.push('target-header');
                     return classes.join(' ');
                 },
-                headerTooltip: isTargetColumn ? 'Target column - excluded from PCA' : 
+                headerTooltip: isTargetColumn ? 'Target column - excluded from PCA (right-click to toggle)' : 
                               colType === 'numeric' ? 'Numeric column' : 
                               colType === 'mixed' ? 'Mixed column' : 'Text column',
+                headerComponentParams: {
+                    isTargetColumn,
+                    colIndex: index,
+                    onContextMenu: handleHeaderContextMenu
+                },
                 valueFormatter: (params: any) => {
                     if (colType === 'numeric' && params.value) {
                         const num = Number(params.value);
@@ -129,7 +376,7 @@ export const CSVGrid: React.FC<CSVGridProps> = ({
         });
         
         return cols;
-    }, [headers, detectColumnType, rowNames, theme]);
+    }, [headers, detectColumnType, rowNames, theme, handleHeaderContextMenu]);
     
     // Convert data to row format for ag-Grid
     const rowData = useMemo(() => {
@@ -158,6 +405,11 @@ export const CSVGrid: React.FC<CSVGridProps> = ({
         params.api.sizeColumnsToFit();
     }, []);
     
+    // Handle cell right-click
+    const onCellContextMenu = useCallback((event: any) => {
+        handleRowContextMenu(event.event, event.rowIndex);
+    }, [handleRowContextMenu]);
+    
     // Cell value changed event
     const onCellValueChanged = useCallback((event: CellValueChangedEvent) => {
         if (event.colDef?.field) {
@@ -182,6 +434,61 @@ export const CSVGrid: React.FC<CSVGridProps> = ({
         resizable: true,
     }), []);
     
+    
+    // Handle keyboard shortcuts
+    const handleKeyDown = useCallback((event: KeyboardEvent) => {
+        if (!gridApi || !fileData) return;
+        
+        // Check if we're editing a cell
+        const editingCells = gridApi.getEditingCells();
+        if (editingCells && editingCells.length > 0) return;
+        
+        // Delete key - delete selected rows
+        if (event.key === 'Delete' || event.key === 'Backspace') {
+            const selectedRows = gridApi.getSelectedRows();
+            if (selectedRows.length > 0) {
+                event.preventDefault();
+                const rowIndices = selectedRows.map(row => row.id);
+                const confirmMsg = rowIndices.length > 1 
+                    ? `Are you sure you want to delete ${rowIndices.length} rows?`
+                    : 'Are you sure you want to delete this row?';
+                
+                setConfirmDialog({
+                    isOpen: true,
+                    title: 'Delete Row',
+                    message: confirmMsg,
+                    onConfirm: async () => {
+                        try {
+                            const updatedData = await ExecuteDeleteRows(fileData, rowIndices);
+                            onRefresh?.(updatedData);
+                        } catch (error) {
+                            console.error('Error deleting rows:', error);
+                        }
+                    }
+                });
+            }
+        }
+        
+        // Ctrl/Cmd+D - duplicate selected rows
+        if ((event.ctrlKey || event.metaKey) && event.key === 'd') {
+            event.preventDefault();
+            const selectedRows = gridApi.getSelectedRows();
+            if (selectedRows.length > 0) {
+                const rowIndices = selectedRows.map(row => row.id);
+                ExecuteDuplicateRows(fileData, rowIndices).then((updatedData) => {
+                    onRefresh?.(updatedData);
+                });
+            }
+        }
+    }, [gridApi, fileData, onRefresh, setConfirmDialog]);
+    
+    useEffect(() => {
+        window.addEventListener('keydown', handleKeyDown);
+        return () => {
+            window.removeEventListener('keydown', handleKeyDown);
+        };
+    }, [handleKeyDown]);
+    
     // Grid options for performance
     const gridOptions = useMemo(() => ({
         // Performance optimizations
@@ -197,6 +504,10 @@ export const CSVGrid: React.FC<CSVGridProps> = ({
         
         // Selection
         rowSelection: 'multiple' as const,
+        rowMultiSelectWithClick: true,
+        
+        // Suppress default context menu
+        suppressContextMenu: true,
         
         // Pagination for very large datasets
         pagination: data.length > 10000,
@@ -219,6 +530,37 @@ export const CSVGrid: React.FC<CSVGridProps> = ({
         window.addEventListener('resize', handleResize);
         return () => window.removeEventListener('resize', handleResize);
     }, [gridApi]);
+    
+    // Add header right-click handling after grid is ready
+    useEffect(() => {
+        if (!gridApi || !columnApi) return;
+        
+        // Add event listener to ag-grid header
+        const headerContainer = document.querySelector('.ag-header-container');
+        if (!headerContainer) return;
+        
+        const handleHeaderRightClick = (e: Event) => {
+            const event = e as MouseEvent;
+            event.preventDefault();
+            
+            // Find which column was clicked
+            const target = event.target as HTMLElement;
+            const headerCell = target.closest('.ag-header-cell');
+            if (!headerCell) return;
+            
+            const colId = headerCell.getAttribute('col-id');
+            if (colId && colId.startsWith('col')) {
+                const colIndex = parseInt(colId.replace('col', ''));
+                handleHeaderContextMenu(event as any as React.MouseEvent, colIndex);
+            }
+        };
+        
+        headerContainer.addEventListener('contextmenu', handleHeaderRightClick);
+        
+        return () => {
+            headerContainer.removeEventListener('contextmenu', handleHeaderRightClick);
+        };
+    }, [gridApi, columnApi, handleHeaderContextMenu]);
     
     return (
         <div className="w-full h-full">
@@ -264,9 +606,48 @@ export const CSVGrid: React.FC<CSVGridProps> = ({
                     defaultColDef={defaultColDef}
                     onGridReady={onGridReady}
                     onCellValueChanged={onCellValueChanged}
+                    onCellContextMenu={onCellContextMenu}
                     {...gridOptions}
                 />
             </div>
+            
+            {/* Custom context menu */}
+            {contextMenu && (
+                <ContextMenu
+                    x={contextMenu.x}
+                    y={contextMenu.y}
+                    items={contextMenu.items}
+                    onClose={() => setContextMenu(null)}
+                />
+            )}
+            
+            {/* Rename dialog */}
+            <RenameDialog
+                isOpen={renameDialog.isOpen}
+                onClose={() => setRenameDialog({ isOpen: false, colIndex: -1, currentName: '' })}
+                onRename={async (newName) => {
+                    if (fileData && onHeaderChange) {
+                        try {
+                            await onHeaderChange(renameDialog.colIndex, newName);
+                        } catch (error) {
+                            console.error('Error renaming column:', error);
+                        }
+                    }
+                }}
+                currentName={renameDialog.currentName}
+                title="Rename Column"
+            />
+            
+            {/* Confirm dialog */}
+            <ConfirmDialog
+                isOpen={confirmDialog.isOpen}
+                onClose={() => setConfirmDialog({ ...confirmDialog, isOpen: false })}
+                onConfirm={confirmDialog.onConfirm}
+                title={confirmDialog.title}
+                message={confirmDialog.message}
+                confirmText="Delete"
+                destructive={true}
+            />
         </div>
     );
 };

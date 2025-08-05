@@ -14,11 +14,23 @@ export function ClearHistory():Promise<void>;
 
 export function DownloadGoPCA():Promise<void>;
 
-export function ExecuteCellEdit(arg1:main.FileData,arg2:number,arg3:number,arg4:string,arg5:string):Promise<void>;
+export function ExecuteCellEdit(arg1:main.FileData,arg2:number,arg3:number,arg4:string,arg5:string):Promise<main.FileData>;
+
+export function ExecuteDeleteColumns(arg1:main.FileData,arg2:Array<number>):Promise<main.FileData>;
+
+export function ExecuteDeleteRows(arg1:main.FileData,arg2:Array<number>):Promise<main.FileData>;
+
+export function ExecuteDuplicateRows(arg1:main.FileData,arg2:Array<number>):Promise<main.FileData>;
 
 export function ExecuteFillMissingValues(arg1:main.FileData,arg2:string,arg3:string,arg4:string):Promise<main.FileData>;
 
-export function ExecuteHeaderEdit(arg1:main.FileData,arg2:number,arg3:string,arg4:string):Promise<void>;
+export function ExecuteHeaderEdit(arg1:main.FileData,arg2:number,arg3:string,arg4:string):Promise<main.FileData>;
+
+export function ExecuteInsertColumn(arg1:main.FileData,arg2:number,arg3:string):Promise<main.FileData>;
+
+export function ExecuteInsertRow(arg1:main.FileData,arg2:number):Promise<main.FileData>;
+
+export function ExecuteToggleTargetColumn(arg1:main.FileData,arg2:number):Promise<main.FileData>;
 
 export function FillMissingValues(arg1:main.FileData,arg2:main.FillMissingValuesRequest):Promise<main.FileData>;
 
@@ -38,7 +50,7 @@ export function OpenInGoPCA(arg1:main.FileData):Promise<void>;
 
 export function PreviewFile(arg1:string,arg2:main.ImportOptions):Promise<main.FilePreview>;
 
-export function Redo():Promise<void>;
+export function Redo():Promise<main.FileData>;
 
 export function SaveCSV(arg1:main.FileData):Promise<void>;
 
@@ -46,6 +58,6 @@ export function SaveExcel(arg1:main.FileData):Promise<void>;
 
 export function SelectFileForImport():Promise<string>;
 
-export function Undo():Promise<void>;
+export function Undo():Promise<main.FileData>;
 
 export function ValidateForGoPCA(arg1:main.FileData):Promise<main.ValidationResult>;

@@ -5,9 +5,10 @@ import { EventsOn, EventsOff } from '../../wailsjs/runtime/runtime';
 
 interface UndoRedoControlsProps {
     className?: string;
+    onDataUpdate?: (data: main.FileData) => void;
 }
 
-export const UndoRedoControls: React.FC<UndoRedoControlsProps> = ({ className = '' }) => {
+export const UndoRedoControls: React.FC<UndoRedoControlsProps> = ({ className = '', onDataUpdate }) => {
     const [undoRedoState, setUndoRedoState] = useState<main.UndoRedoState | null>(null);
     const [showHistory, setShowHistory] = useState(false);
 
@@ -36,7 +37,10 @@ export const UndoRedoControls: React.FC<UndoRedoControlsProps> = ({ className = 
 
     const handleUndo = async () => {
         try {
-            await Undo();
+            const updatedData = await Undo();
+            if (updatedData && onDataUpdate) {
+                onDataUpdate(updatedData);
+            }
         } catch (error) {
             console.error('Undo error:', error);
         }
@@ -44,7 +48,10 @@ export const UndoRedoControls: React.FC<UndoRedoControlsProps> = ({ className = 
 
     const handleRedo = async () => {
         try {
-            await Redo();
+            const updatedData = await Redo();
+            if (updatedData && onDataUpdate) {
+                onDataUpdate(updatedData);
+            }
         } catch (error) {
             console.error('Redo error:', error);
         }

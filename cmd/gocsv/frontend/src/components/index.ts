@@ -14,3 +14,5 @@ export { DataPreview } from './DataPreview';
 export { ImportProgress } from './ImportProgress';
 export { DataTransformDialog } from './DataTransformDialog';
 export { DocumentationViewer } from './DocumentationViewer';
+export { RenameDialog } from './RenameDialog';
+export { ConfirmDialog } from './ConfirmDialog';

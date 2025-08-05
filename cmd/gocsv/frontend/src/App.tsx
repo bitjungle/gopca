@@ -1,6 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react';
 import './App.css';
-import { CSVGrid, ValidationResults, MissingValueSummary, MissingValueDialog, DataQualityDashboard, UndoRedoControls, ImportWizard, DataTransformDialog, DocumentationViewer } from './components';
+import { CSVGrid, ValidationResults, MissingValueSummary, MissingValueDialog, DataQualityDashboard, UndoRedoControls, ImportWizard, DataTransformDialog, DocumentationViewer, ConfirmDialog } from './components';
 import { ThemeProvider, ThemeToggle } from '@gopca/ui-components';
 import logo from './assets/images/GoCSV-logo-1024-transp.png';
 import { LoadCSV, SaveCSV, SaveExcel, ValidateForGoPCA, AnalyzeMissingValues, FillMissingValues, AnalyzeDataQuality, CheckGoPCAStatus, OpenInGoPCA, DownloadGoPCA, ExecuteCellEdit, ExecuteHeaderEdit, ExecuteFillMissingValues, ClearHistory } from '../wailsjs/go/main/App';
@@ -27,6 +27,7 @@ function AppContent() {
     const [showImportWizard, setShowImportWizard] = useState(false);
     const [showTransformDialog, setShowTransformDialog] = useState(false);
     const [showDocumentation, setShowDocumentation] = useState(false);
+    const [showDownloadConfirm, setShowDownloadConfirm] = useState(false);
     
     // Ref for scrolling to Step 2
     const step2Ref = useRef<HTMLDivElement>(null);
@@ -156,24 +157,31 @@ function AppContent() {
     };
     
     // Handle data changes
-    const handleDataChange = (rowIndex: number, colIndex: number, newValue: string) => {
-        if (fileData) {
-            const newData = [...fileData.data];
-            newData[rowIndex][colIndex] = newValue;
-            setFileData({ ...fileData, data: newData });
-            // Clear validation when data changes
-            setValidationResult(null);
+    const handleDataChange = async (rowIndex: number, colIndex: number, newValue: string) => {
+        if (fileData && fileData.data[rowIndex][colIndex] !== newValue) {
+            try {
+                const oldValue = fileData.data[rowIndex][colIndex];
+                const updatedData = await ExecuteCellEdit(fileData, rowIndex, colIndex, oldValue, newValue);
+                setFileData(updatedData);
+                setValidationResult(null);
+            } catch (error) {
+                console.error('Error updating cell:', error);
+                // Optionally show an error message to the user
+            }
         }
     };
     
     // Handle header changes
-    const handleHeaderChange = (colIndex: number, newHeader: string) => {
-        if (fileData) {
-            const newHeaders = [...fileData.headers];
-            newHeaders[colIndex] = newHeader;
-            setFileData({ ...fileData, headers: newHeaders });
-            // Clear validation when headers change
-            setValidationResult(null);
+    const handleHeaderChange = async (colIndex: number, newHeader: string) => {
+        if (fileData && fileData.headers[colIndex] !== newHeader) {
+            try {
+                const oldHeader = fileData.headers[colIndex];
+                const updatedData = await ExecuteHeaderEdit(fileData, colIndex, oldHeader, newHeader);
+                setFileData(updatedData);
+                setValidationResult(null);
+            } catch (error) {
+                console.error('Error updating header:', error);
+            }
         }
     };
     
@@ -390,7 +398,7 @@ function AppContent() {
                             {/* Data Quality Toolbar */}
                             <div className="flex items-center justify-between mb-4 p-3 bg-gray-50 dark:bg-gray-700 rounded-lg">
                                 <div className="flex items-center gap-4">
-                                    <UndoRedoControls />
+                                    <UndoRedoControls onDataUpdate={setFileData} />
                                     <div className="w-px h-6 bg-gray-300 dark:bg-gray-600" />
                                     <button
                                         onClick={async () => {
@@ -463,6 +471,7 @@ function AppContent() {
                                     data={fileData.data}
                                     headers={fileData.headers}
                                     rowNames={fileData.rowNames}
+                                    fileData={fileData}
                                     onDataChange={handleDataChange}
                                     onHeaderChange={handleHeaderChange}
                                     onRowNameChange={(rowIndex, newRowName) => {
@@ -470,6 +479,21 @@ function AppContent() {
                                             const newRowNames = [...fileData.rowNames];
                                             newRowNames[rowIndex] = newRowName;
                                             setFileData({ ...fileData, rowNames: newRowNames });
+                                            setValidationResult(null);
+                                        }
+                                    }}
+                                    onRefresh={async (updatedData?: any) => {
+                                        if (updatedData) {
+                                            // Use the updated data returned from backend
+                                            setFileData(updatedData);
+                                            setValidationResult(null);
+                                        } else if (fileData) {
+                                            // Fallback: Force React to re-render with updated data
+                                            setFileData({
+                                                ...fileData,
+                                                headers: [...fileData.headers],
+                                                data: fileData.data.map(row => [...row])
+                                            });
                                             setValidationResult(null);
                                         }
                                     }}
@@ -500,12 +524,7 @@ function AppContent() {
                                             
                                             // Check if GoPCA is installed
                                             if (!gopcaStatus?.installed) {
-                                                const shouldDownload = confirm(
-                                                    'GoPCA Desktop is not installed. Would you like to download it?'
-                                                );
-                                                if (shouldDownload) {
-                                                    await DownloadGoPCA();
-                                                }
+                                                setShowDownloadConfirm(true);
                                                 return;
                                             }
                                             
@@ -654,6 +673,24 @@ function AppContent() {
             <DocumentationViewer 
                 isOpen={showDocumentation}
                 onClose={() => setShowDocumentation(false)}
+            />
+            
+            {/* Download GoPCA Confirmation */}
+            <ConfirmDialog
+                isOpen={showDownloadConfirm}
+                onClose={() => setShowDownloadConfirm(false)}
+                onConfirm={async () => {
+                    setShowDownloadConfirm(false);
+                    try {
+                        await DownloadGoPCA();
+                    } catch (error) {
+                        console.error('Error downloading GoPCA:', error);
+                    }
+                }}
+                title="GoPCA Not Installed"
+                message="GoPCA Desktop is not installed. Would you like to download it?"
+                confirmText="Download"
+                cancelText="Cancel"
             />
         </div>
     );
