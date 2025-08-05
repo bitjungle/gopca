@@ -474,13 +474,19 @@ function AppContent() {
                                             setValidationResult(null);
                                         }
                                     }}
-                                    onRefresh={async () => {
-                                        // Reload the file data to reflect changes
-                                        if (fileName) {
-                                            const result = await LoadCSV(fileName);
-                                            if (result && result.data && result.data.length > 0) {
-                                                setFileData(result);
-                                            }
+                                    onRefresh={async (updatedData?: any) => {
+                                        if (updatedData) {
+                                            // Use the updated data returned from backend
+                                            setFileData(updatedData);
+                                            setValidationResult(null);
+                                        } else if (fileData) {
+                                            // Fallback: Force React to re-render with updated data
+                                            setFileData({
+                                                ...fileData,
+                                                headers: [...fileData.headers],
+                                                data: fileData.data.map(row => [...row])
+                                            });
+                                            setValidationResult(null);
                                         }
                                     }}
                                 />

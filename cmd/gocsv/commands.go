@@ -890,13 +890,45 @@ func NewToggleTargetColumnCommand(app *App, data *FileData, colIndex int) *Toggl
 func (c *ToggleTargetColumnCommand) Execute() error {
 	// Use the existing header edit logic
 	headerCmd := NewHeaderEditCommand(c.app, c.data, c.colIndex, c.oldName, c.newName)
-	return headerCmd.Execute()
+	err := headerCmd.Execute()
+	if err != nil {
+		return err
+	}
+	
+	// Update column type based on whether it's now a target column
+	if c.data.ColumnTypes != nil {
+		if c.wasTarget {
+			// Was target, now is not - change from "target" to "numeric"
+			c.data.ColumnTypes[c.newName] = "numeric"
+		} else {
+			// Was not target, now is - change to "target"
+			c.data.ColumnTypes[c.newName] = "target"
+		}
+	}
+	
+	return nil
 }
 
 // Undo reverts the toggle
 func (c *ToggleTargetColumnCommand) Undo() error {
 	headerCmd := NewHeaderEditCommand(c.app, c.data, c.colIndex, c.newName, c.oldName)
-	return headerCmd.Execute()
+	err := headerCmd.Execute()
+	if err != nil {
+		return err
+	}
+	
+	// Restore column type
+	if c.data.ColumnTypes != nil {
+		if c.wasTarget {
+			// Was target before toggle, restore to "target"
+			c.data.ColumnTypes[c.oldName] = "target"
+		} else {
+			// Was not target before toggle, restore to "numeric"
+			c.data.ColumnTypes[c.oldName] = "numeric"
+		}
+	}
+	
+	return nil
 }
 
 // GetDescription returns a description of the command

@@ -3533,10 +3533,21 @@ func (a *App) ExecuteInsertColumn(data *FileData, index int, name string) error 
 }
 
 // ExecuteToggleTargetColumn toggles the #target suffix on a column with undo support
-func (a *App) ExecuteToggleTargetColumn(data *FileData, colIndex int) error {
+func (a *App) ExecuteToggleTargetColumn(data *FileData, colIndex int) (*FileData, error) {
+	// Validate bounds
+	if colIndex < 0 || colIndex >= len(data.Headers) {
+		return nil, fmt.Errorf("invalid column index: %d", colIndex)
+	}
+	
 	cmd := NewToggleTargetColumnCommand(a, data, colIndex)
 	if cmd == nil {
-		return fmt.Errorf("invalid column index: %d", colIndex)
+		return nil, fmt.Errorf("invalid column index: %d", colIndex)
 	}
-	return a.history.Execute(cmd)
+	
+	err := a.history.Execute(cmd)
+	if err != nil {
+		return nil, err
+	}
+	
+	return data, nil
 }

@@ -14,7 +14,7 @@ interface CSVGridProps {
     onDataChange?: (rowIndex: number, colIndex: number, newValue: string) => void;
     onHeaderChange?: (colIndex: number, newHeader: string) => void;
     onRowNameChange?: (rowIndex: number, newRowName: string) => void;
-    onRefresh?: () => void; // Callback to refresh data after operations
+    onRefresh?: (updatedData?: any) => void; // Callback to refresh data after operations
 }
 
 // Context menu component
@@ -134,8 +134,12 @@ export const CSVGrid: React.FC<CSVGridProps> = ({
                 label: isTargetColumn ? 'Remove Target Flag' : 'Mark as Target Column',
                 action: async () => {
                     if (fileData) {
-                        await ExecuteToggleTargetColumn(fileData, colIndex);
-                        onRefresh?.();
+                        try {
+                            const updatedData = await ExecuteToggleTargetColumn(fileData, colIndex);
+                            onRefresh?.(updatedData);
+                        } catch (error) {
+                            console.error('Error toggling target column:', error);
+                        }
                     }
                 },
                 icon: '🎯'
