@@ -50,6 +50,10 @@ cd ../..
 # Run tests for GoPCA Desktop
 echo ""
 echo "=== Testing GoPCA Desktop ==="
+# Create minimal frontend/dist for GoPCA Desktop tests (avoids embed errors)
+mkdir -p cmd/gopca-desktop/frontend/dist
+echo '<!DOCTYPE html><html><body>Test</body></html>' > cmd/gopca-desktop/frontend/dist/index.html
+
 if go test -v -cover ./cmd/gopca-desktop; then
     echo "✓ GoPCA Desktop tests passed"
 else
