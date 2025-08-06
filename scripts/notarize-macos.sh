@@ -94,17 +94,30 @@ notarize_binary() {
         # Clean up zip
         rm -f "$zip_file"
         
-        # Staple to original binary
-        echo "  Stapling ticket to binary..."
-        xcrun stapler staple "$binary"
+        # Note: Cannot staple to standalone executables, only to .app, .dmg, or .pkg
+        # The notarization ticket will be checked online when the binary runs
+        echo "  Note: Standalone executables cannot be stapled, but notarization is complete."
+        echo "  The notarization will be verified online when the binary runs."
     else
-        # For .app bundles, submit directly
+        # For .app bundles, we need to zip them first too
+        local zip_file="${binary}.zip"
+        echo "  Creating zip archive of app bundle..."
+        
+        # Remove old zip if exists
+        rm -f "$zip_file"
+        
+        # Use ditto to create zip while preserving attributes
+        ditto -c -k --keepParent "$binary" "$zip_file"
+        
         echo "  Submitting app bundle for notarization..."
-        xcrun notarytool submit "$binary" \
+        xcrun notarytool submit "$zip_file" \
             --apple-id "$APPLE_ID" \
             --password "$APPLE_APP_SPECIFIC_PASSWORD" \
             --team-id "$APPLE_TEAM_ID" \
             --wait
+        
+        # Clean up zip
+        rm -f "$zip_file"
         
         # Staple to app bundle
         echo "  Stapling ticket to app bundle..."
@@ -113,10 +126,17 @@ notarize_binary() {
     
     # Verify notarization
     echo "  Verifying notarization..."
-    if spctl -a -vvv -t install "$binary" 2>&1 | grep -q "accepted"; then
-        echo -e "${GREEN}✅ $name notarized successfully${NC}"
+    if [ "$is_app" = "true" ]; then
+        # For .app bundles, we can verify with spctl
+        if spctl -a -vvv -t install "$binary" 2>&1 | grep -q "accepted"; then
+            echo -e "${GREEN}✅ $name notarized and stapled successfully${NC}"
+        else
+            echo -e "${YELLOW}⚠️  $name notarization may have issues - check with: spctl -a -vvv -t install $binary${NC}"
+        fi
     else
-        echo -e "${YELLOW}⚠️  $name notarization may have issues - check with: spctl -a -vvv -t install $binary${NC}"
+        # For standalone binaries, notarization is complete but can't be verified locally
+        echo -e "${GREEN}✅ $name notarized successfully${NC}"
+        echo "  (Verification will happen online when the binary runs)"
     fi
     echo ""
 }
