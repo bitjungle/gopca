@@ -55,3 +55,7 @@ node_modules/
 # Python 
 __pycache__/
 .venv/
+# Screenshots and temporary images
+Skjermbilde*.png
+Screenshot*.png
+*.tmp.png
