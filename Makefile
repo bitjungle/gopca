@@ -69,7 +69,7 @@ WAILS := $(shell which wails 2> /dev/null || echo "$${HOME}/go/bin/wails")
 .DEFAULT_GOAL := all
 
 # Phony targets
-.PHONY: all build cli cli-all build-cross build-darwin-amd64 build-darwin-arm64 build-linux-amd64 build-linux-arm64 build-windows-amd64 build-all pca-dev pca-build pca-build-all pca-run pca-deps csv-dev csv-build csv-build-all csv-run csv-deps build-everything test test-verbose test-coverage fmt lint run-pca-iris clean clean-cross install deps deps-all install-hooks sign sign-cli sign-desktop sign-csv help
+.PHONY: all build cli cli-all build-cross build-darwin-amd64 build-darwin-arm64 build-linux-amd64 build-linux-arm64 build-windows-amd64 build-all pca-dev pca-build pca-build-all pca-run pca-deps csv-dev csv-build csv-build-all csv-run csv-deps build-everything test test-verbose test-coverage fmt lint run-pca-iris clean clean-cross install deps deps-all install-hooks sign sign-cli sign-desktop sign-csv notarize notarize-cli notarize-desktop notarize-csv sign-and-notarize help
 
 ## all: Build all applications for current platform and run tests
 all: build pca-build csv-build test
@@ -230,6 +230,61 @@ sign-csv:
 		echo "GoCSV app not found. Build it first with 'make csv-build'"; \
 		exit 1; \
 	fi
+
+## notarize: Notarize all macOS binaries (requires .env with APPLE_APP_SPECIFIC_PASSWORD)
+notarize:
+	@echo "Notarizing macOS binaries..."
+	@if [ -f .env ]; then \
+		export $$(grep -v '^#' .env | xargs) && ./scripts/notarize-macos.sh; \
+	else \
+		./scripts/notarize-macos.sh; \
+	fi
+
+## notarize-cli: Notarize only the CLI binary
+notarize-cli:
+	@echo "Notarizing CLI binary..."
+	@if [ ! -f "$(BUILD_DIR)/$(BINARY_NAME)" ]; then \
+		echo "CLI binary not found. Build it first with 'make build'"; \
+		exit 1; \
+	fi
+	@if [ -f .env ]; then \
+		export $$(grep -v '^#' .env | xargs); \
+	fi; \
+	APPLE_ID="$${APPLE_ID:-mathrune@icloud.com}" \
+	APPLE_TEAM_ID="$${APPLE_TEAM_ID:-LV599Q54BU}" \
+	./scripts/notarize-macos.sh cli-only
+
+## notarize-desktop: Notarize only the GoPCA Desktop app
+notarize-desktop:
+	@echo "Notarizing GoPCA Desktop app..."
+	@if [ ! -d "$(DESKTOP_PATH)/build/bin/gopca-desktop.app" ]; then \
+		echo "GoPCA Desktop app not found. Build it first with 'make pca-build'"; \
+		exit 1; \
+	fi
+	@if [ -f .env ]; then \
+		export $$(grep -v '^#' .env | xargs); \
+	fi; \
+	APPLE_ID="$${APPLE_ID:-mathrune@icloud.com}" \
+	APPLE_TEAM_ID="$${APPLE_TEAM_ID:-LV599Q54BU}" \
+	./scripts/notarize-macos.sh desktop-only
+
+## notarize-csv: Notarize only the GoCSV app
+notarize-csv:
+	@echo "Notarizing GoCSV app..."
+	@if [ ! -d "$(CSV_PATH)/build/bin/gocsv.app" ]; then \
+		echo "GoCSV app not found. Build it first with 'make csv-build'"; \
+		exit 1; \
+	fi
+	@if [ -f .env ]; then \
+		export $$(grep -v '^#' .env | xargs); \
+	fi; \
+	APPLE_ID="$${APPLE_ID:-mathrune@icloud.com}" \
+	APPLE_TEAM_ID="$${APPLE_TEAM_ID:-LV599Q54BU}" \
+	./scripts/notarize-macos.sh csv-only
+
+## sign-and-notarize: Sign and notarize all macOS binaries
+sign-and-notarize: sign notarize
+	@echo "All binaries signed and notarized!"
 
 ## csv-deps: Install frontend dependencies for CSV editor
 csv-deps:
@@ -403,6 +458,13 @@ help:
 	@echo "  make sign-cli         # Sign CLI binary only"
 	@echo "  make sign-desktop     # Sign GoPCA Desktop app only"
 	@echo "  make sign-csv         # Sign GoCSV app only"
+	@echo ""
+	@echo "Notarization (macOS):"
+	@echo "  make notarize         # Notarize all signed binaries"
+	@echo "  make notarize-cli     # Notarize CLI only"
+	@echo "  make notarize-desktop # Notarize GoPCA Desktop only"
+	@echo "  make notarize-csv     # Notarize GoCSV only"
+	@echo "  make sign-and-notarize # Sign and notarize everything"
 	@echo "  make build-windows-amd64 # Build for Windows x64"
 	@echo ""
 	@echo "PCA Desktop application:"
