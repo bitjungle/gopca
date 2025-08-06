@@ -69,10 +69,10 @@ WAILS := $(shell which wails 2> /dev/null || echo "$${HOME}/go/bin/wails")
 .DEFAULT_GOAL := all
 
 # Phony targets
-.PHONY: all build cli cli-all build-cross build-darwin-amd64 build-darwin-arm64 build-linux-amd64 build-linux-arm64 build-windows-amd64 build-all pca-dev pca-build pca-build-all pca-run pca-deps csv-dev csv-build csv-build-all csv-run csv-deps build-everything test test-verbose test-coverage fmt lint run-pca-iris clean clean-cross install deps deps-all install-hooks help
+.PHONY: all build cli cli-all build-cross build-darwin-amd64 build-darwin-arm64 build-linux-amd64 build-linux-arm64 build-windows-amd64 build-all pca-dev pca-build pca-build-all pca-run pca-deps csv-dev csv-build csv-build-all csv-run csv-deps build-everything test test-verbose test-coverage fmt lint run-pca-iris clean clean-cross install deps deps-all install-hooks sign sign-cli sign-desktop sign-csv help
 
-## all: Build the binary and run tests
-all: build test
+## all: Build all applications for current platform and run tests
+all: build pca-build csv-build test
 
 ## build: Build the CLI binary
 build:
@@ -192,6 +192,42 @@ csv-run:
 		$(CSV_PATH)/build/bin/gocsv; \
 	else \
 		echo "CSV editor application not found. Build it first with 'make csv-build'"; \
+		exit 1; \
+	fi
+
+## sign: Sign all macOS binaries (requires Apple Developer ID)
+sign:
+	@echo "Signing macOS binaries..."
+	@./scripts/sign-macos.sh
+
+## sign-cli: Sign only the CLI binary
+sign-cli:
+	@echo "Signing CLI binary..."
+	@./scripts/sign-macos.sh | grep -A 3 "CLI"
+
+## sign-desktop: Sign only the GoPCA Desktop app
+sign-desktop:
+	@echo "Signing GoPCA Desktop app..."
+	@if [ -f "$(PCA_PATH)/build/bin/gopca-desktop.app" ]; then \
+		codesign --force --deep --sign "$${APPLE_DEVELOPER_ID:-Developer ID Application: Rune Mathisen (LV599Q54BU)}" \
+			--options runtime --timestamp \
+			"$(PCA_PATH)/build/bin/gopca-desktop.app" && \
+		codesign --verify --verbose "$(PCA_PATH)/build/bin/gopca-desktop.app"; \
+	else \
+		echo "GoPCA Desktop app not found. Build it first with 'make pca-build'"; \
+		exit 1; \
+	fi
+
+## sign-csv: Sign only the GoCSV app
+sign-csv:
+	@echo "Signing GoCSV app..."
+	@if [ -f "$(CSV_PATH)/build/bin/gocsv.app" ]; then \
+		codesign --force --deep --sign "$${APPLE_DEVELOPER_ID:-Developer ID Application: Rune Mathisen (LV599Q54BU)}" \
+			--options runtime --timestamp \
+			"$(CSV_PATH)/build/bin/gocsv.app" && \
+		codesign --verify --verbose "$(CSV_PATH)/build/bin/gocsv.app"; \
+	else \
+		echo "GoCSV app not found. Build it first with 'make csv-build'"; \
 		exit 1; \
 	fi
 
@@ -361,6 +397,12 @@ help:
 	@echo "  make build-all        # Build CLI for all platforms"
 	@echo "  make build-linux-amd64   # Build for Linux x64"
 	@echo "  make build-darwin-arm64  # Build for macOS Apple Silicon"
+	@echo ""
+	@echo "Code Signing (macOS):"
+	@echo "  make sign             # Sign all macOS binaries"
+	@echo "  make sign-cli         # Sign CLI binary only"
+	@echo "  make sign-desktop     # Sign GoPCA Desktop app only"
+	@echo "  make sign-csv         # Sign GoCSV app only"
 	@echo "  make build-windows-amd64 # Build for Windows x64"
 	@echo ""
 	@echo "PCA Desktop application:"
