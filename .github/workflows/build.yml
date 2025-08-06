@@ -108,7 +108,7 @@ jobs:
   build-cli:
     name: Build CLI
     needs: test
-    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+    if: github.ref == 'refs/heads/main' && github.event_name == 'push' || github.ref == 'refs/heads/160-macos-signing'
     runs-on: ubuntu-latest
     
     steps:
@@ -146,7 +146,7 @@ jobs:
   build-desktop:
     name: Build Desktop App
     needs: test
-    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+    if: github.ref == 'refs/heads/main' && github.event_name == 'push' || github.ref == 'refs/heads/160-macos-signing'
     strategy:
       fail-fast: false  # Continue building other platforms even if one fails
       matrix:
@@ -224,7 +224,7 @@ jobs:
   build-gocsv:
     name: Build GoCSV App
     needs: test
-    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+    if: github.ref == 'refs/heads/main' && github.event_name == 'push' || github.ref == 'refs/heads/160-macos-signing'
     strategy:
       fail-fast: false  # Continue building other platforms even if one fails
       matrix:
