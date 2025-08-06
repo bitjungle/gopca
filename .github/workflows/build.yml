@@ -178,7 +178,7 @@ jobs:
       with:
         node-version: '20'
         cache: 'npm'
-        cache-dependency-path: cmd/gopca-desktop/frontend/package-lock.json
+        cache-dependency-path: package-lock.json
     
     - name: Install Wails
       run: go install github.com/wailsapp/wails/v2/cmd/wails@latest
@@ -187,15 +187,15 @@ jobs:
       if: matrix.os == 'ubuntu-latest'
       run: ./scripts/ci/install-linux-deps.sh
     
-    - name: Install frontend dependencies
-      working-directory: cmd/gopca-desktop/frontend
+    - name: Install all dependencies (monorepo)
       run: |
-        # Retry logic for npm ci
-        for i in 1 2 3; do
-          npm ci && break
-          echo "npm ci failed, attempt $i of 3"
-          [ $i -lt 3 ] && sleep 5
-        done || exit 1
+        # Install from root to get all workspace dependencies
+        npm ci
+    
+    - name: Build shared UI components
+      run: |
+        # Build the shared components that both apps depend on
+        npm run build-ui
     
     - name: Build desktop app
       run: PLATFORM=${{ matrix.platform }} ./scripts/ci/build-desktop.sh
@@ -246,7 +246,7 @@ jobs:
       with:
         node-version: '20'
         cache: 'npm'
-        cache-dependency-path: cmd/gocsv/frontend/package-lock.json
+        cache-dependency-path: package-lock.json
     
     - name: Install Wails
       run: go install github.com/wailsapp/wails/v2/cmd/wails@latest
@@ -255,15 +255,15 @@ jobs:
       if: matrix.os == 'ubuntu-latest'
       run: ./scripts/ci/install-linux-deps.sh
     
-    - name: Install frontend dependencies
-      working-directory: cmd/gocsv/frontend
+    - name: Install all dependencies (monorepo)
       run: |
-        # Retry logic for npm ci
-        for i in 1 2 3; do
-          npm ci && break
-          echo "npm ci failed, attempt $i of 3"
-          [ $i -lt 3 ] && sleep 5
-        done || exit 1
+        # Install from root to get all workspace dependencies
+        npm ci
+    
+    - name: Build shared UI components
+      run: |
+        # Build the shared components that both apps depend on
+        npm run build-ui
     
     - name: Build GoCSV app
       run: PLATFORM=${{ matrix.platform }} APPNAME=gocsv ./scripts/ci/build-gocsv.sh
