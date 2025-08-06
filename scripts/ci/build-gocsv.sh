@@ -47,19 +47,9 @@ echo "- Wails: $(wails version 2>/dev/null || echo 'version unknown')"
 # Change to GoCSV directory
 cd cmd/gocsv
 
-# Install frontend dependencies (wails build needs this)
+# Skip installing dependencies - they're installed at the root in CI
 echo ""
-echo "Installing frontend dependencies..."
-cd frontend
-if [ -f "package.json" ]; then
-    npm ci || npm install
-else
-    echo "ERROR: frontend/package.json not found"
-    exit 1
-fi
-
-# Return to GoCSV directory
-cd ..
+echo "Skipping frontend dependency installation (handled by CI)"
 
 # Build the GoCSV app
 echo ""
