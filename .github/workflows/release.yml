@@ -72,20 +72,25 @@ jobs:
   build-cli-binaries:
     name: Build CLI - ${{ matrix.goos }}-${{ matrix.goarch }}
     needs: create-release
-    runs-on: ubuntu-latest
+    runs-on: ${{ matrix.runner }}
     strategy:
       matrix:
         include:
           - goos: darwin
             goarch: amd64
+            runner: macos-latest
           - goos: darwin
             goarch: arm64
+            runner: macos-latest
           - goos: linux
             goarch: amd64
+            runner: ubuntu-latest
           - goos: linux
             goarch: arm64
+            runner: ubuntu-latest
           - goos: windows
             goarch: amd64
+            runner: ubuntu-latest
     
     steps:
     - name: Checkout code
@@ -127,6 +132,29 @@ jobs:
         fi
         echo "ARCHIVE_NAME=${ARCHIVE_NAME}" >> $GITHUB_ENV
         echo "BINARY_NAME=${BINARY_NAME}" >> $GITHUB_ENV
+    
+    - name: Sign CLI binary (macOS)
+      if: matrix.goos == 'darwin'
+      env:
+        APPLE_CERTIFICATE_BASE64: ${{ secrets.APPLE_CERTIFICATE_BASE64 }}
+        APPLE_CERTIFICATE_PASSWORD: ${{ secrets.APPLE_CERTIFICATE_PASSWORD }}
+        APPLE_IDENTITY: ${{ secrets.APPLE_IDENTITY }}
+      run: |
+        # Sign the binary before archiving
+        ./scripts/ci/sign-macos-ci.sh "build/${{ env.BINARY_NAME }}"
+        
+        # Re-create the archive with the signed binary
+        cd build
+        tar -czf "${BINARY_NAME}.tar.gz" "$BINARY_NAME"
+    
+    - name: Notarize CLI binary (macOS)
+      if: matrix.goos == 'darwin'
+      env:
+        APPLE_ID: ${{ secrets.APPLE_ID }}
+        APPLE_APP_SPECIFIC_PASSWORD: ${{ secrets.APPLE_APP_SPECIFIC_PASSWORD }}
+        APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
+      run: |
+        ./scripts/ci/notarize-macos-ci.sh "build/${{ env.BINARY_NAME }}"
     
     - name: Upload Release Asset
       uses: actions/upload-release-asset@v1
@@ -172,7 +200,7 @@ jobs:
       with:
         node-version: '20'
         cache: 'npm'
-        cache-dependency-path: cmd/gopca-desktop/frontend/package-lock.json
+        cache-dependency-path: package-lock.json
     
     - name: Install Wails
       run: go install github.com/wailsapp/wails/v2/cmd/wails@latest
@@ -183,9 +211,15 @@ jobs:
         sudo apt-get update
         sudo apt-get install -y libgtk-3-dev libwebkit2gtk-4.0-dev
     
-    - name: Install frontend dependencies
-      working-directory: cmd/gopca-desktop/frontend
-      run: npm ci
+    - name: Install all dependencies (monorepo)
+      run: |
+        # Install from root to get all workspace dependencies
+        npm ci
+    
+    - name: Build shared UI components
+      run: |
+        # Build the shared components that both apps depend on
+        npm run build-ui
     
     - name: Build desktop app
       working-directory: cmd/gopca-desktop
@@ -197,6 +231,24 @@ jobs:
           -X github.com/bitjungle/gopca/internal/version.Version=${VERSION} \
           -X github.com/bitjungle/gopca/internal/version.GitCommit=$(git rev-parse --short HEAD) \
           -X github.com/bitjungle/gopca/internal/version.BuildDate=$(date -u +\"%Y-%m-%dT%H:%M:%SZ\")"
+    
+    - name: Sign Desktop app (macOS)
+      if: matrix.os == 'macos-latest'
+      env:
+        APPLE_CERTIFICATE_BASE64: ${{ secrets.APPLE_CERTIFICATE_BASE64 }}
+        APPLE_CERTIFICATE_PASSWORD: ${{ secrets.APPLE_CERTIFICATE_PASSWORD }}
+        APPLE_IDENTITY: ${{ secrets.APPLE_IDENTITY }}
+      run: |
+        ./scripts/ci/sign-macos-ci.sh cmd/gopca-desktop/build/bin/gopca-desktop.app
+    
+    - name: Notarize Desktop app (macOS)
+      if: matrix.os == 'macos-latest'
+      env:
+        APPLE_ID: ${{ secrets.APPLE_ID }}
+        APPLE_APP_SPECIFIC_PASSWORD: ${{ secrets.APPLE_APP_SPECIFIC_PASSWORD }}
+        APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
+      run: |
+        ./scripts/ci/notarize-macos-ci.sh cmd/gopca-desktop/build/bin/gopca-desktop.app
     
     - name: Prepare macOS artifact
       if: matrix.os == 'macos-latest'
@@ -262,7 +314,7 @@ jobs:
       with:
         node-version: '20'
         cache: 'npm'
-        cache-dependency-path: cmd/gocsv/frontend/package-lock.json
+        cache-dependency-path: package-lock.json
     
     - name: Install Wails
       run: go install github.com/wailsapp/wails/v2/cmd/wails@latest
@@ -273,9 +325,15 @@ jobs:
         sudo apt-get update
         sudo apt-get install -y libgtk-3-dev libwebkit2gtk-4.0-dev
     
-    - name: Install frontend dependencies
-      working-directory: cmd/gocsv/frontend
-      run: npm ci
+    - name: Install all dependencies (monorepo)
+      run: |
+        # Install from root to get all workspace dependencies
+        npm ci
+    
+    - name: Build shared UI components
+      run: |
+        # Build the shared components that both apps depend on
+        npm run build-ui
     
     - name: Build GoCSV app
       working-directory: cmd/gocsv
@@ -287,6 +345,24 @@ jobs:
           -X github.com/bitjungle/gopca/internal/version.Version=${VERSION} \
           -X github.com/bitjungle/gopca/internal/version.GitCommit=$(git rev-parse --short HEAD) \
           -X github.com/bitjungle/gopca/internal/version.BuildDate=$(date -u +\"%Y-%m-%dT%H:%M:%SZ\")"
+    
+    - name: Sign GoCSV app (macOS)
+      if: matrix.os == 'macos-latest'
+      env:
+        APPLE_CERTIFICATE_BASE64: ${{ secrets.APPLE_CERTIFICATE_BASE64 }}
+        APPLE_CERTIFICATE_PASSWORD: ${{ secrets.APPLE_CERTIFICATE_PASSWORD }}
+        APPLE_IDENTITY: ${{ secrets.APPLE_IDENTITY }}
+      run: |
+        ./scripts/ci/sign-macos-ci.sh cmd/gocsv/build/bin/gocsv.app
+    
+    - name: Notarize GoCSV app (macOS)
+      if: matrix.os == 'macos-latest'
+      env:
+        APPLE_ID: ${{ secrets.APPLE_ID }}
+        APPLE_APP_SPECIFIC_PASSWORD: ${{ secrets.APPLE_APP_SPECIFIC_PASSWORD }}
+        APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
+      run: |
+        ./scripts/ci/notarize-macos-ci.sh cmd/gocsv/build/bin/gocsv.app
     
     - name: Prepare macOS artifact
       if: matrix.os == 'macos-latest'

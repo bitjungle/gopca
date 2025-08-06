@@ -201,6 +201,16 @@ jobs:
       run: PLATFORM=${{ matrix.platform }} ./scripts/ci/build-desktop.sh
       shell: bash
     
+    - name: Sign desktop app (macOS)
+      if: matrix.os == 'macos-latest'
+      env:
+        APPLE_CERTIFICATE_BASE64: ${{ secrets.APPLE_CERTIFICATE_BASE64 }}
+        APPLE_CERTIFICATE_PASSWORD: ${{ secrets.APPLE_CERTIFICATE_PASSWORD }}
+        APPLE_IDENTITY: ${{ secrets.APPLE_IDENTITY }}
+      run: |
+        ./scripts/ci/sign-macos-ci.sh cmd/gopca-desktop/build/bin/gopca-desktop.app
+      shell: bash
+    
     - name: Upload desktop artifacts
       uses: actions/upload-artifact@v4
       with:
@@ -267,6 +277,16 @@ jobs:
     
     - name: Build GoCSV app
       run: PLATFORM=${{ matrix.platform }} APPNAME=gocsv ./scripts/ci/build-gocsv.sh
+      shell: bash
+    
+    - name: Sign GoCSV app (macOS)
+      if: matrix.os == 'macos-latest'
+      env:
+        APPLE_CERTIFICATE_BASE64: ${{ secrets.APPLE_CERTIFICATE_BASE64 }}
+        APPLE_CERTIFICATE_PASSWORD: ${{ secrets.APPLE_CERTIFICATE_PASSWORD }}
+        APPLE_IDENTITY: ${{ secrets.APPLE_IDENTITY }}
+      run: |
+        ./scripts/ci/sign-macos-ci.sh cmd/gocsv/build/bin/gocsv.app
       shell: bash
     
     - name: Upload GoCSV artifacts
