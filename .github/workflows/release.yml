@@ -207,9 +207,7 @@ jobs:
     
     - name: Install Linux dependencies
       if: matrix.os == 'ubuntu-latest'
-      run: |
-        sudo apt-get update
-        sudo apt-get install -y libgtk-3-dev libwebkit2gtk-4.0-dev
+      run: ./scripts/ci/install-linux-deps.sh
     
     - name: Install all dependencies (monorepo)
       run: |
@@ -321,9 +319,7 @@ jobs:
     
     - name: Install Linux dependencies
       if: matrix.os == 'ubuntu-latest'
-      run: |
-        sudo apt-get update
-        sudo apt-get install -y libgtk-3-dev libwebkit2gtk-4.0-dev
+      run: ./scripts/ci/install-linux-deps.sh
     
     - name: Install all dependencies (monorepo)
       run: |
