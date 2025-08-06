@@ -15,6 +15,16 @@
     "productName": "GoCSV - GoPCA CSV Editor",
     "productVersion": "1.0.0",
     "copyright": "Copyright © 2025 bitjungle",
-    "comments": "CSV Editor for GoPCA Data Preparation"
+    "comments": "Data Editor for GoPCA"
+  },
+  "appID": "com.bitjungle.gocsv",
+  "mac": {
+    "appID": "com.bitjungle.gocsv",
+    "info": {
+      "CFBundleIdentifier": "com.bitjungle.gocsv",
+      "LSMinimumSystemVersion": "10.13.0",
+      "NSHighResolutionCapable": true,
+      "NSHumanReadableCopyright": "Copyright © 2025 bitjungle"
+    }
   }
 }
