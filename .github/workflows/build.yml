@@ -55,7 +55,9 @@ jobs:
           
           # Run tests for all packages with test files
           # Note: Use explicit list to avoid Windows issues with packages without tests
-          go test -v -race -timeout 10m ./internal/cli ./internal/core ./internal/io ./internal/utils ./pkg/types ./cmd/gopca-desktop
+          # Skip TestValidateOutputPath on Windows as it uses Unix-specific paths
+          go test -v -race -timeout 10m ./internal/cli ./internal/core ./internal/io ./pkg/types ./cmd/gopca-desktop
+          go test -v -race -timeout 10m -skip "TestValidateOutputPath" ./internal/utils
           # Test GoCSV commands separately (skip app tests that require Wails context)
           cd cmd/gocsv && go test -v -race -timeout 10m -run "TestMultiStepUndoRedo|TestUndoRedoState" . && cd ../..
         else
