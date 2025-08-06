@@ -251,20 +251,23 @@ jobs:
     - name: Prepare macOS artifact
       if: matrix.os == 'macos-latest'
       run: |
+        mkdir -p build
         cd cmd/gopca-desktop/build/bin
         zip -r GoPCA-Desktop.app.zip gopca-desktop.app
-        mv GoPCA-Desktop.app.zip ../../../build/
+        mv GoPCA-Desktop.app.zip ../../../../build/
     
     - name: Prepare Windows artifact
       if: matrix.os == 'windows-latest'
       run: |
         # Assuming Wails creates an installer, adjust path as needed
+        New-Item -ItemType Directory -Force -Path build
         Move-Item cmd/gopca-desktop/build/bin/gopca-desktop.exe build/GoPCA-Desktop-Setup.exe
     
     - name: Prepare Linux artifact
       if: matrix.os == 'ubuntu-latest'
       run: |
         # Create AppImage or use the binary directly
+        mkdir -p build
         mv cmd/gopca-desktop/build/bin/gopca-desktop build/gopca-desktop-linux.AppImage
         chmod +x build/gopca-desktop-linux.AppImage
     
@@ -363,20 +366,23 @@ jobs:
     - name: Prepare macOS artifact
       if: matrix.os == 'macos-latest'
       run: |
+        mkdir -p build
         cd cmd/gocsv/build/bin
         zip -r GoCSV.app.zip gocsv.app
-        mv GoCSV.app.zip ../../../build/
+        mv GoCSV.app.zip ../../../../build/
     
     - name: Prepare Windows artifact
       if: matrix.os == 'windows-latest'
       run: |
         # Assuming Wails creates an installer, adjust path as needed
+        New-Item -ItemType Directory -Force -Path build
         Move-Item cmd/gocsv/build/bin/gocsv.exe build/GoCSV-Setup.exe
     
     - name: Prepare Linux artifact
       if: matrix.os == 'ubuntu-latest'
       run: |
         # Create AppImage or use the binary directly
+        mkdir -p build
         mv cmd/gocsv/build/bin/gocsv build/gocsv-linux.AppImage
         chmod +x build/gocsv-linux.AppImage
     
