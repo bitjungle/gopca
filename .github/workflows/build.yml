@@ -47,11 +47,17 @@ jobs:
     - name: Run tests
       run: |
         if [ "$RUNNER_OS" == "Windows" ]; then
+          # Create minimal frontend/dist directories for Wails apps (avoids embed errors)
+          mkdir -p cmd/gopca-desktop/frontend/dist
+          echo '<!DOCTYPE html><html><body>Test</body></html>' > cmd/gopca-desktop/frontend/dist/index.html
+          mkdir -p cmd/gocsv/frontend/dist
+          echo '<!DOCTYPE html><html><body>Test</body></html>' > cmd/gocsv/frontend/dist/index.html
+          
           # Run tests for all packages with test files
-          # Note: GoCSV app_test.go requires Wails context, skip it with pattern
+          # Note: Use explicit list to avoid Windows issues with packages without tests
           go test -v -race -timeout 10m ./internal/cli ./internal/core ./internal/io ./internal/utils ./pkg/types ./cmd/gopca-desktop
           # Test GoCSV commands separately (skip app tests that require Wails context)
-          go test -v -race -timeout 10m -run "TestMultiStepUndoRedo|TestUndoRedoState" ./cmd/gocsv
+          cd cmd/gocsv && go test -v -race -timeout 10m -run "TestMultiStepUndoRedo|TestUndoRedoState" . && cd ../..
         else
           make ci-test
         fi
