@@ -4,7 +4,7 @@ import (
 	"testing"
 )
 
-func TestMultiStepUndoRedo(t *testing.T) {
+func TestAppMultiStepUndoRedo(t *testing.T) {
 	// Create app
 	app := NewApp()
 	

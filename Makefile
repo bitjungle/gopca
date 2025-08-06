@@ -297,6 +297,16 @@ endif
 ## ci-build-cli: Build CLI for all platforms in CI
 ci-build-cli: build-all
 
+## ci-build-gocsv: Build GoCSV app in CI
+ci-build-gocsv:
+	@echo "Building GoCSV app for CI..."
+	@PLATFORM=$(GOOS) APPNAME=gocsv ./scripts/ci/build-gocsv.sh
+
+## ci-test-all: Run all tests including Wails apps
+ci-test-all:
+	@echo "Running all tests..."
+	@./scripts/ci/test-all.sh
+
 ## pca-build-all: Build PCA Desktop for all platforms
 pca-build-all:
 	@if [ -x "$(WAILS)" ]; then \
