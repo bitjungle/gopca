@@ -39,13 +39,14 @@ CLAUDE.md.bak
 docs_tmp/
 
 # Build artifacts
-build/
-!cmd/gopca-desktop/build/appicon.png
-!cmd/gopca-desktop/build/darwin/
-!cmd/gopca-desktop/build/windows/
-!cmd/gopca-desktop/build/icons/
 results/
-bin/
+
+# Only ignore the binary outputs, not build configuration
+cmd/gopca-desktop/build/bin/
+cmd/gocsv/build/bin/
+
+# Legacy build directory if it exists elsewhere
+build/
 cmd/gocsv/gocsv
 
 # Node modules

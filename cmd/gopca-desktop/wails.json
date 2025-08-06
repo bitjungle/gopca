@@ -16,5 +16,15 @@
     "productVersion": "1.0.0",
     "copyright": "Copyright © 2025 bitjungle",
     "comments": "Professional PCA Analysis Tool"
+  },
+  "appID": "com.bitjungle.gopca",
+  "mac": {
+    "appID": "com.bitjungle.gopca",
+    "info": {
+      "CFBundleIdentifier": "com.bitjungle.gopca",
+      "LSMinimumSystemVersion": "10.13.0",
+      "NSHighResolutionCapable": true,
+      "NSHumanReadableCopyright": "Copyright © 2025 bitjungle"
+    }
   }
 }
