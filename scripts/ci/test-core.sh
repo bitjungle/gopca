@@ -22,17 +22,38 @@ echo "Running tests (excluding desktop package)..."
 # Method 1: Explicitly list packages to test
 # This is the most reliable method as it doesn't require Go to parse the desktop package
 # We only test packages that have test files to avoid Windows CI issues
-if go test -v -cover ./internal/cli ./internal/core ./internal/io ./internal/utils ./pkg/types; then
-    echo "✓ All core tests passed"
-else
-    echo "✗ Some tests failed"
+# Note: GoCSV app tests require Wails context and should be run separately
+
+# Create minimal frontend/dist for GoPCA Desktop tests (avoids embed errors)
+mkdir -p cmd/gopca-desktop/frontend/dist
+echo '<!DOCTYPE html><html><body>Test</body></html>' > cmd/gopca-desktop/frontend/dist/index.html
+
+# First run core packages and GoPCA Desktop tests
+if ! go test -v -cover ./internal/cli ./internal/core ./internal/io ./internal/utils ./pkg/types ./cmd/gopca-desktop; then
+    echo "✗ Core tests failed"
     exit 1
 fi
+
+# Then run GoCSV tests that don't require Wails context
+cd cmd/gocsv
+
+# Create minimal frontend/dist for GoCSV tests (avoids embed errors)
+mkdir -p frontend/dist
+echo '<!DOCTYPE html><html><body>Test</body></html>' > frontend/dist/index.html
+
+if ! go test -v -cover -run "TestMultiStepUndoRedo|TestUndoRedoState" .; then
+    echo "✗ GoCSV tests failed"
+    cd ../..
+    exit 1
+fi
+cd ../..
+
+echo "✓ All core tests passed"
 
 # Show coverage summary
 echo ""
 echo "=== Coverage Summary ==="
-go test -cover ./internal/cli ./internal/core ./internal/io ./internal/utils ./pkg/types 2>/dev/null | grep -E "coverage:|ok" || true
+go test -cover ./internal/cli ./internal/core ./internal/io ./internal/utils ./pkg/types ./cmd/gocsv ./cmd/gopca-desktop 2>/dev/null | grep -E "coverage:|ok" || true
 
 echo ""
 echo "=== Core tests completed successfully ===" 
