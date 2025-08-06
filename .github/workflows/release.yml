@@ -223,6 +223,7 @@ jobs:
       working-directory: cmd/gopca-desktop
       env:
         VERSION: ${{ needs.create-release.outputs.version }}
+      shell: bash
       run: |
         export PATH=$PATH:$(go env GOPATH)/bin
         wails build -platform ${{ matrix.platform }} -ldflags "-s -w \
@@ -338,6 +339,7 @@ jobs:
       working-directory: cmd/gocsv
       env:
         VERSION: ${{ needs.create-release.outputs.version }}
+      shell: bash
       run: |
         export PATH=$PATH:$(go env GOPATH)/bin
         wails build -platform ${{ matrix.platform }} -ldflags "-s -w \
