@@ -84,13 +84,13 @@ jobs:
             runner: macos-latest
           - goos: linux
             goarch: amd64
-            runner: ubuntu-latest
+            runner: self-hosted  # was: ubuntu-latest
           - goos: linux
             goarch: arm64
-            runner: ubuntu-latest
+            runner: self-hosted  # was: ubuntu-latest
           - goos: windows
             goarch: amd64
-            runner: ubuntu-latest
+            runner: self-hosted  # was: ubuntu-latest
     
     steps:
     - name: Checkout code
