@@ -24,9 +24,11 @@ The application uses sensible defaults for all configuration options. Currently,
 ## GUI Configuration
 
 ### Visualization
-- **Loadings Variable Threshold**: Percentage of variables to show in loadings plot (default: 50)
+- **Loadings Variable Threshold**: Maximum number of variables to show in loadings plot (default: 100)
+- **Biplot Max Variables**: Maximum variables to display in biplot (default: 100)
+- **Circle Max Variables**: Maximum variables in circle of correlations (default: 100)
 - **Correlation Threshold**: Minimum correlation to display in circle of correlations (default: 0.3)
-- **Elbow Threshold**: Threshold for elbow detection in scree plot (default: 80%)
+- **Elbow Threshold**: Threshold for elbow detection in scree plot (default: 80.0)
 - **Mahalanobis Threshold**: Outlier detection threshold for Mahalanobis distance (default: 3.0)
 - **RSS Threshold**: Outlier detection threshold for residual sum of squares (default: 0.03)
 - **Default Confidence Level**: Confidence level for ellipses (default: 0.95)

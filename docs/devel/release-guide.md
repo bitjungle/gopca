@@ -27,6 +27,8 @@ This script will:
 - Update the version in `cmd/gopca-desktop/wails.json`
 - Commit the version change
 
+**Note:** GoCSV version in `cmd/gocsv/wails.json` should be updated manually if needed before the release.
+
 ### 2. Create Pull Request
 
 Push the release branch to GitHub:
@@ -77,7 +79,7 @@ This script will:
 After the release is created:
 1. Review the auto-generated release notes on GitHub
 2. Edit the release notes if needed to highlight important changes
-3. Upload binary artifacts when the build system generates them (future feature)
+3. Monitor the automated release workflow which builds and uploads binary artifacts for all platforms
 
 ## Version Numbering
 
@@ -130,12 +132,13 @@ gopca-cli version    # Shows detailed version information
 Example output:
 ```
 $ gopca-cli version
-GoPCA 0.9.0 (abc123) built on 2025-01-01T00:00:00Z with go1.21.0 for darwin/arm64
+GoPCA 0.9.0 (abc123) built on 2025-01-01T00:00:00Z with go1.24.5 for darwin/arm64
 ```
 
-### Desktop Application
+### Desktop Applications
 
-The version is displayed discretely next to the logo in the application header (e.g., "v0.9.0").
+- **GoPCA Desktop**: Version displayed next to the logo in the application header (e.g., "v0.9.0")
+- **GoCSV**: Version displayed in the application header
 
 ## Troubleshooting
 

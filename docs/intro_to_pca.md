@@ -62,7 +62,7 @@ If variables are measured in different units or have very different variances, i
 
 > **Tip:** Centering is *essential* for PCA; scaling is *strongly recommended* when variables are on different scales.
 
-**In GoPCA:** Both the CLI and GUI provide simple options for centering and scaling your data. The GUI offers checkboxes for these preprocessing steps, while the CLI uses flags like `--center` and `--scale`.
+**In GoPCA:** Both the CLI and GUI provide simple options for centering and scaling your data. The GUI offers checkboxes for these preprocessing steps, while the CLI uses flags like `--no-mean-centering` (to disable centering) and `--scale` (with options: none, standard, or robust).
 
 > **Important:** These mathematical preprocessing steps (centering and scaling) are handled by GoPCA during the analysis. Data cleaning tasks like handling missing values, removing outliers, and selecting variables should be done beforehand using appropriate data preparation tools like GoCSV.
 
@@ -214,8 +214,12 @@ The second PC is the direction (unit vector) orthogonal to the first, maximizing
 
 **GoPCA Visualization Features:**
 - **Interactive Score Plots:** The GUI provides interactive 2D score plots with zoom, pan, and export capabilities
-- **Loadings Visualization:** Bar charts and plots showing variable contributions to each PC
+- **Loadings Visualization:** Bar charts and heatmaps showing variable contributions to each PC
 - **Scree Plots:** Visual representation of explained variance to help determine component selection
+- **Biplots:** Combined visualization of scores and loadings in a single plot
+- **Circle of Correlations:** Shows variable relationships on the unit circle
+- **Diagnostic Plots:** T² vs Q residuals for outlier detection
+- **Eigencorrelation Plots:** Visualize correlations between PCs and metadata/target variables
 - **Confidence Ellipses:** Optional 95% confidence ellipses for grouped data
 - **Export Options:** All plots can be exported as PNG images for reports and publications
 
@@ -304,7 +308,7 @@ gopca-cli analyze --method kernel --kernel-type rbf \
   --kernel-gamma 0.333 swiss_roll.csv
 
 # Compare with standard PCA
-gopca-cli analyze --method svd swiss_roll.csv
+gopca-cli analyze swiss_roll.csv  # SVD is the default method
 ```
 
 In the GUI:

@@ -1,51 +1,58 @@
 # GoPCA Desktop
 
-Cross-platform desktop application for PCA (Principal Component Analysis) built with Wails.
-
-## Features
-
-- Load CSV data files or use built-in iris dataset
-- Configure PCA parameters (components, scaling options, method)
-- View input data and PCA results in interactive tables
-- Display explained variance for each component
-- Simple workflow UI guiding through the analysis process
-
-## Technology Stack
-
-- **Backend**: Go with Wails v2
-- **Frontend**: React 19 + TypeScript + Vite
-- **UI**: Tailwind CSS v3
-- **Data Tables**: TanStack Table v8
-
-## Development
-
-### Prerequisites
-
-- Go 1.24.5+
-- Node.js 18+
-- Wails CLI: `go install github.com/wailsapp/wails/v2/cmd/wails@latest`
-
-### Running in Development
-
-```bash
-wails dev
-```
-
-### Building
-
-```bash
-wails build
-```
-
-The built application will be in `build/bin/`.
-
-## Usage
-
-1. **Load Data**: Upload a CSV file or click "Load Iris Dataset"
-2. **Configure PCA**: Set number of components and preprocessing options
-3. **Run Analysis**: Click "Run PCA Analysis" to compute results
-4. **View Results**: Examine the scores matrix and explained variance
+Professional PCA analysis application with interactive visualizations.
 
 ## Architecture
 
-The desktop app is part of the main GoPCA module and reuses the core PCA implementation from `internal/core`.
+- **Backend**: Go with Wails v2 bindings (`app.go`)
+- **Frontend**: React + TypeScript + Vite
+- **Visualizations**: Recharts for all plots (scores, loadings, biplot, scree)
+- **Shared**: Uses `@gopca/ui-components` via npm workspace
+- **Core**: Reuses PCA engine from `internal/core`
+
+## Development
+
+```bash
+# From repository root
+make pca-dev          # Run in development mode (hot reload)
+make pca-build        # Build for current platform  
+make pca-build-all    # Build for all platforms
+
+# Or directly with Wails
+cd cmd/gopca-desktop
+wails dev            # Development mode
+wails build          # Production build
+```
+
+## Key Files
+
+- `app.go` - Wails bindings, PCA execution, data I/O
+- `frontend/src/App.tsx` - Main React component with 3-step workflow
+- `frontend/src/components/ScoresPlot.tsx` - Interactive 2D/3D scores visualization
+- `frontend/src/components/BiplotDisplay.tsx` - Combined scores/loadings plot
+- `frontend/src/contexts/HelpContext.tsx` - Contextual help system
+
+## Features
+
+- SVD, NIPALS, and Kernel PCA methods
+- Multiple preprocessing options (SNV, scaling, centering)
+- Interactive 2D/3D visualizations with confidence ellipses
+- Biplot with variable contributions
+- Eigencorrelation analysis
+- Export to multiple formats (PNG, SVG, CSV, JSON)
+
+## Testing
+
+```bash
+cd cmd/gopca-desktop
+go test -v           # Backend tests
+npm test --prefix frontend  # Frontend tests
+```
+
+## Build Output
+
+```
+cmd/gopca-desktop/build/bin/
+├── gopca-desktop.app/       # macOS application
+└── gopca-desktop-amd64.exe  # Windows executable
+```
