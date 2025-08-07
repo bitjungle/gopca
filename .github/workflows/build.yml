@@ -212,6 +212,16 @@ jobs:
         ./scripts/ci/sign-macos-ci.sh cmd/gopca-desktop/build/bin/gopca-desktop.app
       shell: bash
     
+    - name: Notarize desktop app (macOS)
+      if: matrix.os == 'macos-latest'
+      env:
+        APPLE_ID: ${{ secrets.APPLE_ID }}
+        APPLE_APP_SPECIFIC_PASSWORD: ${{ secrets.APPLE_APP_SPECIFIC_PASSWORD }}
+        APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
+      run: |
+        ./scripts/ci/notarize-macos-ci.sh cmd/gopca-desktop/build/bin/gopca-desktop.app
+      shell: bash
+    
     - name: Upload desktop artifacts
       uses: actions/upload-artifact@v4
       with:
@@ -288,6 +298,16 @@ jobs:
         APPLE_IDENTITY: ${{ secrets.APPLE_IDENTITY }}
       run: |
         ./scripts/ci/sign-macos-ci.sh cmd/gocsv/build/bin/gocsv.app
+      shell: bash
+    
+    - name: Notarize GoCSV app (macOS)
+      if: matrix.os == 'macos-latest'
+      env:
+        APPLE_ID: ${{ secrets.APPLE_ID }}
+        APPLE_APP_SPECIFIC_PASSWORD: ${{ secrets.APPLE_APP_SPECIFIC_PASSWORD }}
+        APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
+      run: |
+        ./scripts/ci/notarize-macos-ci.sh cmd/gocsv/build/bin/gocsv.app
       shell: bash
     
     - name: Upload GoCSV artifacts
