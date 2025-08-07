@@ -31,7 +31,7 @@ func NewCSVParseOptions() CSVParseOptions {
 		DecimalSeparator: '.',
 		HasHeaders:       true,
 		HasIndex:         true,
-		NullValues:       []string{"", "NA", "N/A", "nan", "NaN", "null", "NULL", "m"},
+		NullValues:       []string{"", "NA", "N/A", "nan", "NaN", "null", "NULL"},
 	}
 }
 

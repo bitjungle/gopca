@@ -16,8 +16,8 @@ GoCSV addresses immediate user pain points in data preparation while maintaining
 
 ### File Format Support
 - CSV (comma and semicolon variants)
-- Excel files (.xlsx, .xls) - planned
-- TSV (Tab-separated values) - planned
+- Excel files (.xlsx, .xls)
+- TSV (Tab-separated values)
 - JSON (tabular format) - planned
 
 ### GoPCA Integration

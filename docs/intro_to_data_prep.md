@@ -60,13 +60,13 @@ GoCSV provides several approaches for handling missing values:
   - ✅ Useful when certain measurements consistently fail
   - ❌ May lose important information
 
-- **Mean/Median Imputation**: Replace missing values with column statistics
+- **Mean/Median/Mode Imputation**: Replace missing values with column statistics
   - ✅ Preserves sample size
   - ❌ Reduces variability and can distort relationships
   
-- **Forward/Backward Fill**: Use adjacent values (for time series)
-  - ✅ Maintains temporal continuity
-  - ❌ Only appropriate for ordered data
+- **Forward/Backward Fill**: Use adjacent values (for sequential data)
+  - ✅ Maintains continuity in ordered datasets
+  - ❌ Only appropriate for data with meaningful order
 
 - **Custom Value**: Replace with a specific value (e.g., zero, detection limit)
   - ✅ Appropriate when you know what missing represents
@@ -132,14 +132,20 @@ GoCSV's transformation dialog organizes options by purpose:
   - Gentler than log transformation
   - Stabilizes variance in Poisson-like data
 
+- **Square**: For left-skewed data
+  - Expands larger values
+  - Useful for certain distribution corrections
+
 **Scaling Transformations:**
-- **Min-Max Scaling**: Scales to [0, 1] range
+- **Standardization (Z-score)**: Scales to mean=0, std=1
+  - Centers and scales data
+  - Makes variables comparable regardless of units
+  - Note: For PCA, let GoPCA handle this during analysis
+  
+- **Min-Max Scaling**: Scales to a specified range
+  - Default range [0, 1], but customizable
   - Preserves zero values and relationships
   - Sensitive to outliers
-  
-- **Range Scaling**: Scales to custom range
-  - Useful for specific analytical requirements
-  - Maintains relative distances
 
 **Binning (Discretization):**
 - Convert continuous data to categories
@@ -152,7 +158,7 @@ GoCSV's transformation dialog organizes options by purpose:
   - Expands dataset width significantly
 
 > **Important Note:**  
-> Mean centering and standardization (z-score scaling) are intentionally NOT included in GoCSV. These preprocessing steps are specific to the analytical method and are handled by GoPCA during PCA analysis. This ensures that centering and scaling are applied correctly based on your chosen PCA options.
+> While GoCSV includes standardization (z-score scaling) for general data transformation, mean centering is intentionally NOT included. For PCA analysis specifically, it's recommended to let GoPCA handle both centering and scaling during the analysis phase. This ensures that preprocessing is applied correctly based on your chosen PCA method and options.
 
 ---
 
@@ -186,16 +192,16 @@ Not all variables contribute meaningful information to analysis. Including irrel
 ### Variable Selection in GoCSV
 
 **Column Operations:**
-- Hide columns temporarily without deleting
 - Remove columns permanently
-- Reorder columns for logical grouping
-- Rename for clarity and consistency
+- Insert new columns
+- Toggle columns as target variables (#target)
+- Rename columns for clarity and consistency
 
-**Smart Selection Tools:**
-- Filter columns by data type (numeric/categorical)
-- Sort by quality score or missing percentage
-- Search columns by name pattern
-- Select multiple columns for batch operations
+**Column Analysis Tools:**
+- Automatic data type detection (numeric/categorical/target)
+- Quality scoring for each column
+- Missing value percentage tracking
+- Outlier detection and reporting
 
 > **Best Practice:**  
 > Document your selection rationale. GoCSV can export a column summary report showing which variables were retained and why.
@@ -275,7 +281,7 @@ GoCSV includes direct integration with GoPCA Desktop:
 
 1. **Validation**: Click "Open in GoPCA" to automatically validate your data
 2. **Compatibility Check**: GoCSV ensures data meets GoPCA requirements
-3. **Seamless Transfer**: Data is passed directly without intermediate files
+3. **Seamless Transfer**: Data is automatically exported and opened in GoPCA Desktop
 4. **Preprocessing Note**: GoPCA will handle mean centering, scaling, and other PCA-specific preprocessing based on your analysis choices
 
 ### Export Options
@@ -286,7 +292,8 @@ GoCSV includes direct integration with GoPCA Desktop:
 
 **For Other Tools:**
 - CSV format (most compatible)
-- Excel format (preserves formatting)
+- Excel format (.xlsx) for spreadsheet applications
+- TSV format for tab-delimited requirements
 - Include row names in first column if needed
 
 ---

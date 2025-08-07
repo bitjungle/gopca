@@ -24,17 +24,21 @@ Sample3,3.45,6.78,9.01,TypeA
 
 ### CSV Separators
 
-GoPCA automatically detects and supports multiple CSV formats:
+GoPCA supports multiple CSV formats that can be specified:
 
-- **Comma-separated (`,`)**: Standard CSV format
-  - Uses period (`.`) as decimal separator
+- **Comma-separated (`,`)**: Standard CSV format (default)
+  - Uses period (`.`) as decimal separator by default
   - Example: `1.23,4.56,7.89`
 
 - **Semicolon-separated (`;`)**: European CSV format
-  - Uses comma (`,`) as decimal separator
+  - Often paired with comma (`,`) as decimal separator
   - Example: `1,23;4,56;7,89`
 
-The parser automatically detects the format by analyzing the first few lines of your file.
+- **Tab-separated**: TSV format
+  - Uses tab character as delimiter
+  - Useful for data containing commas
+
+When using the CLI, specify the delimiter with `--delimiter` and decimal separator with `--decimal-separator`.
 
 ### Row Names (Sample Identifiers)
 
@@ -114,9 +118,11 @@ Common use cases for target variables:
 
 GoPCA recognizes several representations of missing data:
 - Empty cells
-- `NA` or `na`
-- `NaN` or `nan`
+- `NA` or `N/A`
+- `NaN` or `nan`  
 - `NULL` or `null`
+
+Note: The CLI allows customization of null value strings with the `--na-values` flag.
 
 Missing value handling strategies:
 1. **Error** (default): Report an error if missing values are found
@@ -140,6 +146,7 @@ Consider your data scale:
 - Variables with vastly different scales may dominate the PCA
 - GoPCA offers preprocessing options (standardization, robust scaling)
 - For spectroscopic data, consider SNV or vector normalization
+- Use GoCSV for general data preparation, then let GoPCA handle PCA-specific preprocessing
 
 ### 2. Sample Size
 
@@ -158,10 +165,10 @@ Use descriptive, valid column names:
 ### 4. Data Quality
 
 Before analysis:
-- Check for and handle outliers appropriately
+- Check for and handle outliers appropriately (GoCSV provides outlier detection)
 - Verify measurement units are consistent
-- Ensure proper decimal separator usage
-- Remove or impute missing values as needed
+- Ensure proper decimal separator usage (specify with CLI flags if needed)
+- Remove or impute missing values as needed (GoCSV offers multiple imputation strategies)
 
 ## Example Files
 
@@ -219,3 +226,12 @@ For successful PCA analysis with GoPCA:
 8. ✅ Validate your data before analysis
 
 Following these guidelines will ensure smooth data import and meaningful PCA results with full visualization capabilities in GoPCA.
+
+## Working with GoCSV
+
+GoCSV is the companion application for preparing data in this format:
+- Automatically detects and preserves column types
+- Handles the #target suffix for target columns
+- Provides data quality assessment and cleaning tools
+- Exports clean CSV files ready for GoPCA analysis
+- Use "Open in GoPCA" for seamless transfer between applications
