@@ -197,4 +197,4 @@ We welcome contributions! Whether it's bug reports, feature suggestions, documen
 
 ## License
 
-GoPCA is open-source software licensed under the MIT License. However, the author ask that it **not be used for military, warfare, or surveillance applications**.
+GoPCA is open-source software licensed under the MIT License. However, the author espectfully requests that it **not be used for military, warfare, or surveillance applications**.

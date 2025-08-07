@@ -1,3 +1,9 @@
+// Copyright 2025 bitjungle - Rune Mathisen. All rights reserved.
+// Use of this source code is governed by the MIT license
+// that can be found in the LICENSE file.
+// The author respectfully requests that it not be used for
+// military, warfare, or surveillance applications.
+
 import React, { useState, useEffect } from 'react';
 import { SelectFileForImport, GetFileInfo, PreviewFile, ImportFile } from '../../wailsjs/go/main/App';
 import { main } from '../../wailsjs/go/models';
