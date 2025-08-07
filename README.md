@@ -2,11 +2,11 @@
 
 Professional-grade PCA analysis made simple. Available as both a powerful command-line tool and an intuitive desktop application.
 
-![GoPCA Overview](docs/images/gopca-overview.jpg)
-
 ## What is GoPCA?
 
 GoPCA is **the** go-to application for Principal Component Analysis - a fundamental technique for understanding complex, multivariate data. Whether you're analyzing spectroscopic data, exploring gene expression patterns, or reducing dimensionality in machine learning pipelines, GoPCA provides the tools you need.
+
+![GoPCA Overview](docs/images/gopca-overview.jpg)
 
 ### Includes GoCSV Data Preparation Tool
 
@@ -16,7 +16,8 @@ GoPCA comes with **GoCSV**, a companion application for preparing your data. Wit
 
 ## Three Powerful Tools
 
-### Desktop Application
+### The GoPCA Desktop Application
+
 Perfect for interactive data exploration, method development, and teaching.
 
 ![GoPCA Scoreplot Example](docs/images/gopca-scoreplot-example.png)
@@ -28,7 +29,8 @@ Perfect for interactive data exploration, method development, and teaching.
 - Customizable color palettes for different data types
 - Light and dark themes for comfortable viewing
 
-### Command-Line Interface
+### The GoPCA Command-Line Interface
+
 Ideal for automation, batch processing, and integration into data pipelines.
 
 ```bash
@@ -42,8 +44,11 @@ gopca-cli validate spectra.csv
 gopca-cli transform model.json new_data.csv
 ```
 
-### GoCSV Data Editor
+### TheGoCSV Data Editor
+
 Clean and prepare your data with an intuitive spreadsheet-like interface.
+
+![GoCSV Quality Report Example](docs/images/gocsv-qr-example.png)
 
 **GoCSV Features:**
 - Edit cells directly like in Excel
@@ -177,13 +182,21 @@ The included wine dataset demonstrates PCA's power in distinguishing wine types 
 
 ## System Requirements
 
-- **Operating Systems**: 
-  - Windows 10 or later
-  - macOS 10.15 (Catalina) or later
-  - Linux: Ubuntu 20.04+, Fedora 34+, or equivalent
-- **Memory**: 2GB RAM minimum, 8GB+ recommended for large datasets
-- **Disk Space**: 100MB for application, additional space for your data
-- **Display**: 1280×720 minimum resolution
+### Supported Platforms
+- **Windows**: 64-bit Windows (where Go and Wails are supported)
+- **macOS**: Intel and Apple Silicon Macs (where Go and Wails are supported)  
+- **Linux**: 64-bit distributions (where Go and Wails are supported)
+
+### Desktop Applications (GoPCA Desktop & GoCSV)
+- Require a graphical environment
+- Modern web browser engine (uses system WebView)
+- Screen resolution that can display the application window
+
+### Command-Line Interface
+- Works on any platform where Go binaries can run
+- No graphical environment required
+
+*Note: Memory and disk requirements depend on your dataset size. The applications themselves are lightweight (~50-100MB), but processing large datasets will require corresponding RAM.*
 
 ## Support & Community
 
