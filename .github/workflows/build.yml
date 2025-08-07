@@ -109,7 +109,8 @@ jobs:
     name: Build CLI
     needs: test
     if: github.ref == 'refs/heads/main' && github.event_name == 'push' || github.ref == 'refs/heads/160-macos-signing'
-    runs-on: ubuntu-latest
+    runs-on: self-hosted
+    # Fallback: runs-on: ubuntu-latest  # Use if self-hosted runner unavailable
     
     steps:
     - name: Checkout code
