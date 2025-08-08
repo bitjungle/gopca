@@ -57,15 +57,15 @@ sign_binary() {
 
 # Sign CLI binary
 echo "📦 Signing CLI binary..."
-sign_binary "build/gopca-cli" "GoPCA CLI"
+sign_binary "build/pca" "GoPCA CLI"
 
 # Sign GoPCA Desktop app
 echo "📦 Signing GoPCA Desktop app..."
-sign_binary "cmd/gopca-desktop/build/bin/gopca-desktop.app" "GoPCA Desktop"
+sign_binary "cmd/gopca-desktop/build/bin/GoPCA.app" "GoPCA Desktop"
 
 # Sign GoCSV app
 echo "📦 Signing GoCSV app..."
-sign_binary "cmd/gocsv/build/bin/gocsv.app" "GoCSV"
+sign_binary "cmd/gocsv/build/bin/GoCSV.app" "GoCSV"
 
 echo -e "${GREEN}✨ All binaries signed successfully!${NC}"
 echo ""

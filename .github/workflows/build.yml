@@ -209,7 +209,7 @@ jobs:
         APPLE_CERTIFICATE_PASSWORD: ${{ secrets.APPLE_CERTIFICATE_PASSWORD }}
         APPLE_IDENTITY: ${{ secrets.APPLE_IDENTITY }}
       run: |
-        ./scripts/ci/sign-macos-ci.sh cmd/gopca-desktop/build/bin/gopca-desktop.app
+        ./scripts/ci/sign-macos-ci.sh cmd/gopca-desktop/build/bin/GoPCA.app
       shell: bash
     
     - name: Notarize desktop app (macOS)
@@ -219,7 +219,7 @@ jobs:
         APPLE_APP_SPECIFIC_PASSWORD: ${{ secrets.APPLE_APP_SPECIFIC_PASSWORD }}
         APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
       run: |
-        ./scripts/ci/notarize-macos-ci.sh cmd/gopca-desktop/build/bin/gopca-desktop.app
+        ./scripts/ci/notarize-macos-ci.sh cmd/gopca-desktop/build/bin/GoPCA.app
       shell: bash
     
     - name: Upload desktop artifacts
@@ -297,7 +297,7 @@ jobs:
         APPLE_CERTIFICATE_PASSWORD: ${{ secrets.APPLE_CERTIFICATE_PASSWORD }}
         APPLE_IDENTITY: ${{ secrets.APPLE_IDENTITY }}
       run: |
-        ./scripts/ci/sign-macos-ci.sh cmd/gocsv/build/bin/gocsv.app
+        ./scripts/ci/sign-macos-ci.sh cmd/gocsv/build/bin/GoCSV.app
       shell: bash
     
     - name: Notarize GoCSV app (macOS)
@@ -307,7 +307,7 @@ jobs:
         APPLE_APP_SPECIFIC_PASSWORD: ${{ secrets.APPLE_APP_SPECIFIC_PASSWORD }}
         APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
       run: |
-        ./scripts/ci/notarize-macos-ci.sh cmd/gocsv/build/bin/gocsv.app
+        ./scripts/ci/notarize-macos-ci.sh cmd/gocsv/build/bin/GoCSV.app
       shell: bash
     
     - name: Upload GoCSV artifacts

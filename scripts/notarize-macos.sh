@@ -143,15 +143,15 @@ notarize_binary() {
 
 # Notarize CLI binary
 echo "🔧 Processing CLI binary..."
-notarize_binary "build/gopca-cli" "GoPCA CLI" false
+notarize_binary "build/pca" "GoPCA CLI" false
 
 # Notarize GoPCA Desktop app
 echo "🖥️  Processing GoPCA Desktop app..."
-notarize_binary "cmd/gopca-desktop/build/bin/gopca-desktop.app" "GoPCA Desktop" true
+notarize_binary "cmd/gopca-desktop/build/bin/GoPCA.app" "GoPCA Desktop" true
 
 # Notarize GoCSV app
 echo "📊 Processing GoCSV app..."
-notarize_binary "cmd/gocsv/build/bin/gocsv.app" "GoCSV" true
+notarize_binary "cmd/gocsv/build/bin/GoCSV.app" "GoCSV" true
 
 echo -e "${GREEN}✨ Notarization complete!${NC}"
 echo ""
