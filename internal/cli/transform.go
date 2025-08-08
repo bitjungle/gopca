@@ -26,23 +26,23 @@ func transformCommand() *cli.Command {
 		Description: `The transform command applies a trained PCA model to new data.
 
 USAGE:
-  gopca-cli transform [OPTIONS] <model.json> <input.csv>
+  pca transform [OPTIONS] <model.json> <input.csv>
 
   The model JSON file and input CSV file must be specified as the last two arguments.
   All options must come BEFORE the filenames.
 
 EXAMPLES:
   # Basic transformation
-  gopca-cli transform model.json new_data.csv
+  pca transform model.json new_data.csv
 
   # Save results to specific file
-  gopca-cli transform -o transformed_scores.csv model.json new_data.csv
+  pca transform -o transformed_scores.csv model.json new_data.csv
 
   # JSON output format
-  gopca-cli transform -f json -o results/ model.json new_data.csv
+  pca transform -f json -o results/ model.json new_data.csv
 
   # Exclude specific rows from new data
-  gopca-cli transform --exclude-rows 1,5-10 model.json new_data.csv
+  pca transform --exclude-rows 1,5-10 model.json new_data.csv
 
 NOTES:
   - The new data must have the same number of features as the training data

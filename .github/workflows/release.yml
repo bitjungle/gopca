@@ -53,7 +53,7 @@ jobs:
         GOARCH: ${{ matrix.goarch }}
         VERSION: ${{ steps.get_version.outputs.version }}
       run: |
-        BINARY_NAME="gopca-cli-${GOOS}-${GOARCH}"
+        BINARY_NAME="pca-${GOOS}-${GOARCH}"
         if [ "$GOOS" = "windows" ]; then
           BINARY_NAME="${BINARY_NAME}.exe"
         fi
@@ -90,7 +90,7 @@ jobs:
     - name: Upload artifact
       uses: actions/upload-artifact@v4
       with:
-        name: gopca-cli-${{ matrix.goos }}-${{ matrix.goarch }}
+        name: pca-${{ matrix.goos }}-${{ matrix.goarch }}
         path: build/${{ env.BINARY_NAME }}
         retention-days: 1
 
@@ -161,7 +161,7 @@ jobs:
         APPLE_CERTIFICATE_PASSWORD: ${{ secrets.APPLE_CERTIFICATE_PASSWORD }}
         APPLE_IDENTITY: ${{ secrets.APPLE_IDENTITY }}
       run: |
-        ./scripts/ci/sign-macos-ci.sh cmd/gopca-desktop/build/bin/gopca-desktop.app
+        ./scripts/ci/sign-macos-ci.sh cmd/gopca-desktop/build/bin/GoPCA.app
     
     - name: Notarize Desktop app (macOS)
       if: matrix.os == 'macos-latest'
@@ -170,16 +170,16 @@ jobs:
         APPLE_APP_SPECIFIC_PASSWORD: ${{ secrets.APPLE_APP_SPECIFIC_PASSWORD }}
         APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
       run: |
-        ./scripts/ci/notarize-macos-ci.sh cmd/gopca-desktop/build/bin/gopca-desktop.app
+        ./scripts/ci/notarize-macos-ci.sh cmd/gopca-desktop/build/bin/GoPCA.app
     
     - name: Upload artifact
       uses: actions/upload-artifact@v4
       with:
         name: gopca-desktop-${{ matrix.os }}
         path: |
-          cmd/gopca-desktop/build/bin/gopca-desktop.app
-          cmd/gopca-desktop/build/bin/gopca-desktop.exe
-          cmd/gopca-desktop/build/bin/gopca-desktop
+          cmd/gopca-desktop/build/bin/GoPCA.app
+          cmd/gopca-desktop/build/bin/GoPCA.exe
+          cmd/gopca-desktop/build/bin/GoPCA
         retention-days: 1
 
   build-gocsv:
@@ -249,7 +249,7 @@ jobs:
         APPLE_CERTIFICATE_PASSWORD: ${{ secrets.APPLE_CERTIFICATE_PASSWORD }}
         APPLE_IDENTITY: ${{ secrets.APPLE_IDENTITY }}
       run: |
-        ./scripts/ci/sign-macos-ci.sh cmd/gocsv/build/bin/gocsv.app
+        ./scripts/ci/sign-macos-ci.sh cmd/gocsv/build/bin/GoCSV.app
     
     - name: Notarize GoCSV app (macOS)
       if: matrix.os == 'macos-latest'
@@ -258,16 +258,16 @@ jobs:
         APPLE_APP_SPECIFIC_PASSWORD: ${{ secrets.APPLE_APP_SPECIFIC_PASSWORD }}
         APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
       run: |
-        ./scripts/ci/notarize-macos-ci.sh cmd/gocsv/build/bin/gocsv.app
+        ./scripts/ci/notarize-macos-ci.sh cmd/gocsv/build/bin/GoCSV.app
     
     - name: Upload artifact
       uses: actions/upload-artifact@v4
       with:
         name: gocsv-${{ matrix.os }}
         path: |
-          cmd/gocsv/build/bin/gocsv.app
-          cmd/gocsv/build/bin/gocsv.exe
-          cmd/gocsv/build/bin/gocsv
+          cmd/gocsv/build/bin/GoCSV.app
+          cmd/gocsv/build/bin/GoCSV.exe
+          cmd/gocsv/build/bin/GoCSV
         retention-days: 1
 
   create-release:
@@ -289,43 +289,43 @@ jobs:
         cd artifacts
         
         # CLI binaries - just move them to the root
-        mv gopca-cli-*/* .
+        mv pca-*/* .
         
         # Desktop apps - create proper packages
         if [ -d "gopca-desktop-macos-latest" ]; then
           cd gopca-desktop-macos-latest
-          zip -r ../gopca-desktop-macos.zip gopca-desktop.app
+          zip -r ../GoPCA-macos.zip GoPCA.app
           cd ..
         fi
         
-        if [ -f "gopca-desktop-windows-latest/gopca-desktop.exe" ]; then
-          mv gopca-desktop-windows-latest/gopca-desktop.exe gopca-desktop-windows.exe
+        if [ -f "gopca-desktop-windows-latest/GoPCA.exe" ]; then
+          mv gopca-desktop-windows-latest/GoPCA.exe GoPCA-windows.exe
         fi
         
-        if [ -f "gopca-desktop-ubuntu-latest/gopca-desktop" ]; then
-          mv gopca-desktop-ubuntu-latest/gopca-desktop gopca-desktop-linux
+        if [ -f "gopca-desktop-ubuntu-latest/GoPCA" ]; then
+          mv gopca-desktop-ubuntu-latest/GoPCA GoPCA-linux
         fi
         
         # GoCSV apps - create proper packages
         if [ -d "gocsv-macos-latest" ]; then
           cd gocsv-macos-latest
-          zip -r ../gocsv-macos.zip gocsv.app
+          zip -r ../GoCSV-macos.zip GoCSV.app
           cd ..
         fi
         
-        if [ -f "gocsv-windows-latest/gocsv.exe" ]; then
-          mv gocsv-windows-latest/gocsv.exe gocsv-windows.exe
+        if [ -f "gocsv-windows-latest/GoCSV.exe" ]; then
+          mv gocsv-windows-latest/GoCSV.exe GoCSV-windows.exe
         fi
         
-        if [ -f "gocsv-ubuntu-latest/gocsv" ]; then
-          mv gocsv-ubuntu-latest/gocsv gocsv-linux
+        if [ -f "gocsv-ubuntu-latest/GoCSV" ]; then
+          mv gocsv-ubuntu-latest/GoCSV GoCSV-linux
         fi
         
         # Remove empty directories
-        rm -rf gopca-cli-* gopca-desktop-* gocsv-*
+        rm -rf pca-* gopca-desktop-* gocsv-*
         
         # Generate checksums
-        shasum -a 256 gopca-cli-* gopca-desktop* gocsv* > checksums.txt
+        shasum -a 256 pca-* GoPCA* GoCSV* > checksums.txt
         
         # List all artifacts for debugging
         echo "Final artifacts:"
@@ -335,13 +335,13 @@ jobs:
       uses: softprops/action-gh-release@v2
       with:
         files: |
-          artifacts/gopca-cli-*
-          artifacts/gopca-desktop-*.zip
-          artifacts/gopca-desktop-*.exe
-          artifacts/gopca-desktop-linux
-          artifacts/gocsv-*.zip
-          artifacts/gocsv-*.exe
-          artifacts/gocsv-linux
+          artifacts/pca-*
+          artifacts/GoPCA-*.zip
+          artifacts/GoPCA-*.exe
+          artifacts/GoPCA-linux
+          artifacts/GoCSV-*.zip
+          artifacts/GoCSV-*.exe
+          artifacts/GoCSV-linux
           artifacts/checksums.txt
         generate_release_notes: true
         fail_on_unmatched_files: false
@@ -349,21 +349,21 @@ jobs:
           ## Downloads
           
           ### CLI Binaries
-          - **macOS Intel**: `gopca-cli-darwin-amd64`
-          - **macOS Apple Silicon**: `gopca-cli-darwin-arm64`
-          - **Linux x64**: `gopca-cli-linux-amd64`
-          - **Linux ARM64**: `gopca-cli-linux-arm64`
-          - **Windows x64**: `gopca-cli-windows-amd64.exe`
+          - **macOS Intel**: `pca-darwin-amd64`
+          - **macOS Apple Silicon**: `pca-darwin-arm64`
+          - **Linux x64**: `pca-linux-amd64`
+          - **Linux ARM64**: `pca-linux-arm64`
+          - **Windows x64**: `pca-windows-amd64.exe`
           
           ### Desktop Applications
-          - **macOS**: `gopca-desktop-macos.zip` (signed & notarized)
-          - **Windows**: `gopca-desktop-windows.exe`
-          - **Linux**: `gopca-desktop-linux`
+          - **macOS**: `GoPCA-macos.zip` (signed & notarized)
+          - **Windows**: `GoPCA-windows.exe`
+          - **Linux**: `GoPCA-linux`
           
           ### GoCSV Editor
-          - **macOS**: `gocsv-macos.zip` (signed & notarized)
-          - **Windows**: `gocsv-windows.exe`
-          - **Linux**: `gocsv-linux`
+          - **macOS**: `GoCSV-macos.zip` (signed & notarized)
+          - **Windows**: `GoCSV-windows.exe`
+          - **Linux**: `GoCSV-linux`
           
           ### Verification
           SHA-256 checksums for all artifacts: `checksums.txt`

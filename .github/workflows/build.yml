@@ -140,8 +140,8 @@ jobs:
     - name: Upload CLI artifacts
       uses: actions/upload-artifact@v4
       with:
-        name: gopca-cli-binaries
-        path: build/gopca-cli-*
+        name: pca-binaries
+        path: build/pca-*
         retention-days: 7
 
   build-desktop:

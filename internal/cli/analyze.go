@@ -25,50 +25,50 @@ func analyzeCommand() *cli.Command {
 		Description: `The analyze command performs Principal Component Analysis on the input CSV file.
 
 USAGE:
-  gopca-cli analyze [OPTIONS] <input.csv>
+  pca analyze [OPTIONS] <input.csv>
 
   The input CSV file should be specified as the last argument.
   All options must come BEFORE the filename.
 
 EXAMPLES:
   # Basic analysis with default settings (2 components, table output)
-  gopca-cli analyze data/iris_data.csv
+  pca analyze data/iris_data.csv
 
   # Standard scaling with 3 components
-  gopca-cli analyze --scale standard -c 3 data/iris_data.csv
+  pca analyze --scale standard -c 3 data/iris_data.csv
 
   # JSON output with all results
-  gopca-cli analyze -f json --output-all data/iris_data.csv
+  pca analyze -f json --output-all data/iris_data.csv
 
   # JSON output to specific directory
-  gopca-cli analyze -f json -o results/ data/iris_data.csv
+  pca analyze -f json -o results/ data/iris_data.csv
 
   # Exclude specific rows and columns
-  gopca-cli analyze --exclude-rows 1,5-10 --exclude-cols 3,4 data/iris_data.csv
+  pca analyze --exclude-rows 1,5-10 --exclude-cols 3,4 data/iris_data.csv
 
   # Kernel PCA with RBF kernel
-  gopca-cli analyze --method kernel --kernel-type rbf --kernel-gamma 0.5 data/iris_data.csv
+  pca analyze --method kernel --kernel-type rbf --kernel-gamma 0.5 data/iris_data.csv
 
   # Kernel PCA with polynomial kernel
-  gopca-cli analyze --method kernel --kernel-type poly --kernel-degree 3 data/iris_data.csv
+  pca analyze --method kernel --kernel-type poly --kernel-degree 3 data/iris_data.csv
 
   # Apply SNV preprocessing (useful for spectral data)
-  gopca-cli analyze --snv --scale standard data/spectral_data.csv
+  pca analyze --snv --scale standard data/spectral_data.csv
 
   # Apply L2 vector normalization
-  gopca-cli analyze --vector-norm data/data.csv
+  pca analyze --vector-norm data/data.csv
 
   # Kernel PCA with variance scaling (divide by std dev, no mean centering)
-  gopca-cli analyze --method kernel --kernel-type rbf --scale-only data/data.csv
+  pca analyze --method kernel --kernel-type rbf --scale-only data/data.csv
 
   # Specify group column and calculate eigencorrelations
-  gopca-cli analyze --group-column sample_type --eigencorrelations -f json data/data.csv
+  pca analyze --group-column sample_type --eigencorrelations -f json data/data.csv
 
   # Include metadata columns for correlation analysis
-  gopca-cli analyze --metadata-cols age,weight --eigencorrelations -f json data/data.csv
+  pca analyze --metadata-cols age,weight --eigencorrelations -f json data/data.csv
 
   # Explicitly specify target columns (in addition to auto-detection)
-  gopca-cli analyze --target-columns concentration,pH --eigencorrelations -f json data/data.csv
+  pca analyze --target-columns concentration,pH --eigencorrelations -f json data/data.csv
 
 The analysis includes:
   - Data preprocessing (SNV, vector normalization, mean centering, scaling)

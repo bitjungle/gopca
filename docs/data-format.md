@@ -201,7 +201,7 @@ S003,180.2,85.1,45,26.2,M,Treatment,3.8
 Use the GoPCA CLI to validate your data format:
 
 ```bash
-gopca-cli validate yourdata.csv
+pca validate yourdata.csv
 ```
 
 This will report:

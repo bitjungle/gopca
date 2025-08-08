@@ -36,7 +36,7 @@ B3,2.1,3.4,4.5,treatment,16.0`
 	// Run analyze command with eigencorrelations
 	app := NewApp()
 	err := app.Run([]string{
-		"gopca-cli",
+		"pca",
 		"analyze",
 		"-c", "2",
 		"--eigencorrelations",
@@ -141,7 +141,7 @@ S3,1.1,2.4,3.5,7.8`
 	// Run analyze command without specifying target columns
 	app := NewApp()
 	err := app.Run([]string{
-		"gopca-cli",
+		"pca",
 		"analyze",
 		"-c", "2",
 		"-f", "json",

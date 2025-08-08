@@ -2,9 +2,9 @@
 # This Makefile provides common development tasks for building, testing, and running the PCA toolkit
 
 # Variables
-BINARY_NAME := gopca-cli
-DESKTOP_NAME := gopca-desktop
-CSV_NAME := gocsv
+BINARY_NAME := pca
+DESKTOP_NAME := GoPCA
+CSV_NAME := GoCSV
 BUILD_DIR := build
 CLI_PATH := cmd/gopca-cli/main.go
 DESKTOP_PATH := cmd/gopca-desktop
