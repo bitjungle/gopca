@@ -1,123 +1,216 @@
 # GoPCA Release Guide
 
-This guide describes how to create a new release of GoPCA.
+This guide provides detailed instructions for creating consistent, automated releases of the GoPCA toolkit.
+
+## Overview
+
+The release process is fully automated via GitHub Actions. Once you push a version tag, the workflow:
+1. Builds all binaries for all platforms
+2. Signs and notarizes macOS applications
+3. Creates the GitHub release with all artifacts attached
+4. Generates release notes automatically
 
 ## Prerequisites
 
-- You must have push access to the repository
-- GitHub CLI (`gh`) must be installed and authenticated
-- You must be on the `main` branch with all changes synced
+- Push access to the repository
+- GitHub CLI (`gh`) installed and authenticated
+- Be on the `main` branch with all changes synced
+- All tests passing
 
 ## Release Process
 
-### 1. Prepare the Release
+### Step 1: Prepare the Release
 
-From the repository root, run the release preparation script:
+Run the release preparation script with your desired version:
 
 ```bash
-./scripts/prepare-release.sh v0.9.0
+./scripts/prepare-release.sh v0.9.1
 ```
 
-Replace `v0.9.0` with your desired version number. The version must follow semantic versioning format: `vMAJOR.MINOR.PATCH`.
+**Version format:** `vMAJOR.MINOR.PATCH` (e.g., v0.9.0, v1.0.0, v2.1.3)
 
 This script will:
-- Verify you're on the main branch with no uncommitted changes
+- Verify you're on main with no uncommitted changes
 - Run all tests and linters
-- Create a new release branch (e.g., `release-v0.9.0`)
-- Update the version in `cmd/gopca-desktop/wails.json`
-- Commit the version change
+- Create a release branch (e.g., `release-v0.9.1`)
+- Update version in both `cmd/gopca-desktop/wails.json` and `cmd/gocsv/wails.json`
+- Commit the version changes
 
-**Note:** GoCSV version in `cmd/gocsv/wails.json` should be updated manually if needed before the release.
+### Step 2: Create and Merge Pull Request
 
-### 2. Create Pull Request
-
-Push the release branch to GitHub:
-
+Push the release branch:
 ```bash
-git push -u origin release-v0.9.0
+git push -u origin release-v0.9.1
 ```
 
-Create a pull request using GitHub CLI:
-
+Create the PR:
 ```bash
 gh pr create \
-  --title "Release v0.9.0" \
-  --body "Preparing release v0.9.0"
+  --title "Release v0.9.1" \
+  --body "Preparing release v0.9.1"
 ```
 
-Or create the PR manually through the GitHub web interface.
+Then:
+1. Wait for CI checks to pass
+2. Get PR reviewed if needed
+3. Merge the PR
 
-### 3. Review and Merge
+### Step 3: Create the Release
 
-- Have the PR reviewed by another team member
-- Ensure all CI checks pass
-- Merge the PR into main
-
-### 4. Create the Release
-
-After the PR is merged, switch back to main and pull the latest changes:
+After the PR is merged:
 
 ```bash
+# Switch to main and pull latest
 git checkout main
 git pull origin main
-```
 
-Run the release script:
-
-```bash
-./scripts/release.sh v0.9.0
+# Create and push the release tag
+./scripts/release.sh v0.9.1
 ```
 
 This script will:
-- Verify you're on the main branch
-- Check that the version was properly updated in `wails.json`
-- Create and push a git tag
-- Create a GitHub release with auto-generated release notes
+- Verify you're on main
+- Check versions match in all wails.json files
+- Create an annotated git tag
+- Push the tag to GitHub
 
-### 5. Post-Release
+**That's it!** The tag push triggers the automated release workflow.
 
-After the release is created:
-1. Review the auto-generated release notes on GitHub
-2. Edit the release notes if needed to highlight important changes
-3. Monitor the automated release workflow which builds and uploads binary artifacts for all platforms
+### Step 4: Monitor the Release
+
+Watch the automated process:
+```bash
+gh run watch
+```
+
+Or view in browser:
+```bash
+open https://github.com/bitjungle/gopca/actions
+```
+
+The workflow will:
+1. Build CLI binaries (using self-hosted runner for Linux/Windows)
+2. Build Desktop apps for all platforms
+3. Build GoCSV apps for all platforms
+4. Sign and notarize macOS applications
+5. Generate SHA-256 checksums
+6. Create GitHub release with all artifacts
+7. Generate release notes from merged PRs
+
+**Expected duration:** 15-25 minutes
+
+### Step 5: Verify the Release
+
+Once complete, verify at:
+```bash
+open https://github.com/bitjungle/gopca/releases/tag/v0.9.1
+```
+
+Check that:
+- [ ] All binaries are attached (11 files + checksums)
+- [ ] Release notes are accurate
+- [ ] Download links work
+- [ ] Checksums file is present
+
+## Artifacts Produced
+
+Each release includes:
+
+### CLI Binaries (5 files)
+- `gopca-cli-darwin-amd64` - macOS Intel
+- `gopca-cli-darwin-arm64` - macOS Apple Silicon
+- `gopca-cli-linux-amd64` - Linux x64
+- `gopca-cli-linux-arm64` - Linux ARM64
+- `gopca-cli-windows-amd64.exe` - Windows x64
+
+### Desktop Applications (3 files)
+- `gopca-desktop-macos.zip` - macOS app (signed & notarized)
+- `gopca-desktop-windows.exe` - Windows executable
+- `gopca-desktop-linux` - Linux executable
+
+### GoCSV Editor (3 files)
+- `gocsv-macos.zip` - macOS app (signed & notarized)
+- `gocsv-windows.exe` - Windows executable
+- `gocsv-linux` - Linux executable
+
+### Verification
+- `checksums.txt` - SHA-256 checksums for all artifacts
 
 ## Version Numbering
 
-GoPCA follows [Semantic Versioning](https://semver.org/):
+Follow [Semantic Versioning](https://semver.org/):
 
-- **MAJOR** version (1.x.x): Incompatible API changes
-- **MINOR** version (x.1.x): New functionality, backwards compatible
-- **PATCH** version (x.x.1): Bug fixes, backwards compatible
+- **MAJOR** (1.0.0): Breaking changes
+- **MINOR** (0.1.0): New features, backwards compatible
+- **PATCH** (0.0.1): Bug fixes, backwards compatible
 
-### Pre-release Versions
-
-For pre-release versions, append a suffix:
-- Release candidates: `v0.9.0-rc.1`, `v0.9.0-rc.2`
-- Beta releases: `v0.9.0-beta.1`
-- Alpha releases: `v0.9.0-alpha.1`
+### Pre-releases
+- Release candidates: `v1.0.0-rc.1`
+- Beta releases: `v1.0.0-beta.1`
+- Alpha releases: `v1.0.0-alpha.1`
 
 ## Hotfix Releases
 
-For critical fixes that need to be released immediately:
+For urgent fixes to the current release:
 
-1. Check out the tag of the current release:
+```bash
+# 1. Create hotfix branch from tag
+git checkout v0.9.0
+git checkout -b hotfix-v0.9.1
+
+# 2. Make fixes and commit
+# ... make changes ...
+git commit -m "fix: critical bug in ..."
+
+# 3. Prepare release (creates release branch)
+./scripts/prepare-release.sh v0.9.1
+
+# 4. Continue normal release process from Step 2
+```
+
+## Troubleshooting
+
+### Release Workflow Fails
+
+If the workflow fails:
+1. Check the error in GitHub Actions logs
+2. Fix the issue in a new PR
+3. After merging, delete the failed release and tag:
    ```bash
-   git checkout v0.9.0
+   gh release delete v0.9.1 --yes
+   git push origin :refs/tags/v0.9.1
+   git tag -d v0.9.1
    ```
+4. Start over with `./scripts/release.sh v0.9.1`
 
-2. Create a hotfix branch:
-   ```bash
-   git checkout -b hotfix-v0.9.1
-   ```
+### Version Mismatch
 
-3. Make your fixes and commit them
+If release.sh reports version mismatch:
+- Ensure the release PR was merged
+- Check both wails.json files have correct version
+- Pull latest changes: `git pull origin main`
 
-4. Run the prepare-release script:
-   ```bash
-   ./scripts/prepare-release.sh v0.9.1
-   ```
+### Tag Already Exists
 
-5. Continue with the normal release process from step 2
+If tag exists locally but not remotely:
+```bash
+git tag -d v0.9.1
+./scripts/release.sh v0.9.1
+```
+
+If tag exists remotely (be careful!):
+```bash
+git push origin :refs/tags/v0.9.1
+git tag -d v0.9.1
+./scripts/release.sh v0.9.1
+```
+
+### Self-Hosted Runner Issues
+
+If self-hosted runner is offline:
+- CLI builds for Linux/Windows will fail
+- Check runner status: Settings → Actions → Runners
+- The workflow will wait for runner to come online
 
 ## Version Information
 
@@ -140,28 +233,60 @@ GoPCA 0.9.0 (abc123) built on 2025-01-01T00:00:00Z with go1.24.5 for darwin/arm6
 - **GoPCA Desktop**: Version displayed next to the logo in the application header (e.g., "v0.9.0")
 - **GoCSV**: Version displayed in the application header
 
-## Troubleshooting
+## Best Practices
 
-### Script Errors
+1. **Always test locally first**: Run `make test` and `make lint`
+2. **Use descriptive PR titles**: They become release notes
+3. **Don't skip CI checks**: Let them complete before merging
+4. **One release at a time**: Don't start a new release until previous completes
+5. **Document breaking changes**: Clearly mark in PR descriptions
 
-If the prepare-release script fails:
-- Ensure you have no uncommitted changes: `git status`
-- Make sure all tests pass: `make test`
-- Check that the linter passes: `make lint`
+## How It Works (Technical Details)
 
-### Permission Issues
+### Release Scripts
 
-If you get permission errors:
-- Ensure the scripts are executable: `chmod +x scripts/*.sh`
-- Check your GitHub permissions for creating releases
+1. **`scripts/prepare-release.sh`**:
+   - Creates release branch
+   - Updates versions in wails.json files
+   - Commits changes
+   - Ready for PR
 
-### Version Conflicts
+2. **`scripts/release.sh`**:
+   - Verifies main branch
+   - Checks version consistency
+   - Creates and pushes tag
+   - Tag push triggers workflow
 
-If a tag already exists:
-- Check existing tags: `git tag -l`
-- Delete local tag if needed: `git tag -d v0.9.0`
-- Delete remote tag if needed: `git push origin :refs/tags/v0.9.0` (use with caution)
+### GitHub Actions Workflow
+
+The `.github/workflows/release.yml` workflow:
+
+1. **Triggered by**: Push of tags matching `v*`
+
+2. **Build Jobs** (run in parallel):
+   - `build-cli-binaries`: Builds CLI for 5 platforms
+     - Uses self-hosted runner for Linux/Windows
+     - Uses GitHub runners for macOS
+   - `build-desktop`: Builds Desktop app for 3 platforms
+   - `build-gocsv`: Builds GoCSV for 3 platforms
+
+3. **Release Job**:
+   - Downloads all artifacts
+   - Organizes and packages them
+   - Generates checksums
+   - Creates GitHub release using `softprops/action-gh-release`
+   - Attaches all artifacts
+   - Generates release notes
+
+### Infrastructure
+
+- **Self-hosted runner**: Used for Linux/Windows CLI builds to save costs
+- **GitHub-hosted runners**: Used for macOS builds and Wails applications
+- **Apple signing/notarization**: Automated for all macOS binaries
 
 ## Questions?
 
-For questions about the release process, please open an issue on GitHub or contact the maintainers.
+For issues with the release process:
+- Check GitHub Actions logs for errors
+- Open an issue with the error details
+- Contact maintainers if urgent

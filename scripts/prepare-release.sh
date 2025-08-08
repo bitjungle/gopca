@@ -74,21 +74,25 @@ RELEASE_BRANCH="release-${VERSION}"
 echo -e "${YELLOW}Creating release branch: ${RELEASE_BRANCH}${NC}"
 git checkout -b "$RELEASE_BRANCH"
 
-# 6. Update version in wails.json
-echo -e "${YELLOW}Updating version in wails.json to ${VERSION_NO_V}${NC}"
+# 6. Update version in wails.json files
+echo -e "${YELLOW}Updating version to ${VERSION_NO_V} in wails.json files${NC}"
 if [[ "$OSTYPE" == "darwin"* ]]; then
     # macOS
     sed -i '' "s/\"productVersion\": \".*\"/\"productVersion\": \"${VERSION_NO_V}\"/" cmd/gopca-desktop/wails.json
+    sed -i '' "s/\"productVersion\": \".*\"/\"productVersion\": \"${VERSION_NO_V}\"/" cmd/gocsv/wails.json
 else
     # Linux
     sed -i "s/\"productVersion\": \".*\"/\"productVersion\": \"${VERSION_NO_V}\"/" cmd/gopca-desktop/wails.json
+    sed -i "s/\"productVersion\": \".*\"/\"productVersion\": \"${VERSION_NO_V}\"/" cmd/gocsv/wails.json
 fi
 
-# 7. Commit version change
-git add cmd/gopca-desktop/wails.json
+# 7. Commit version changes
+git add cmd/gopca-desktop/wails.json cmd/gocsv/wails.json
 git commit -m "chore: bump version to ${VERSION}
 
-Preparing for release ${VERSION}"
+Preparing for release ${VERSION}
+- Update GoPCA Desktop version
+- Update GoCSV version"
 
 echo -e "${GREEN}✓ Release preparation complete!${NC}"
 echo ""

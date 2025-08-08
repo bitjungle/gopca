@@ -1,6 +1,7 @@
 #!/bin/bash
 
 # Script to create a release after the release PR has been merged
+# This only creates and pushes the tag - GitHub Actions handles the rest
 # Usage: ./scripts/release.sh <version>
 # Example: ./scripts/release.sh v0.9.0
 
@@ -44,17 +45,20 @@ echo "✓ On main branch"
 echo -e "${YELLOW}Pulling latest changes...${NC}"
 git pull origin main
 
-# 3. Check that the version in wails.json matches
+# 3. Check that the version in wails.json files matches
 VERSION_NO_V=${VERSION:1}
 WAILS_VERSION=$(grep '"productVersion"' cmd/gopca-desktop/wails.json | sed 's/.*"productVersion": "\(.*\)".*/\1/')
-if [ "$WAILS_VERSION" != "$VERSION_NO_V" ]; then
+GOCSV_VERSION=$(grep '"productVersion"' cmd/gocsv/wails.json | sed 's/.*"productVersion": "\(.*\)".*/\1/')
+
+if [ "$WAILS_VERSION" != "$VERSION_NO_V" ] || [ "$GOCSV_VERSION" != "$VERSION_NO_V" ]; then
     echo -e "${RED}Error: Version mismatch${NC}"
-    echo "Expected version in wails.json: $VERSION_NO_V"
-    echo "Found version in wails.json: $WAILS_VERSION"
+    echo "Expected version: $VERSION_NO_V"
+    echo "GoPCA Desktop version: $WAILS_VERSION"
+    echo "GoCSV version: $GOCSV_VERSION"
     echo "Did you forget to merge the release PR?"
     exit 1
 fi
-echo "✓ Version in wails.json matches"
+echo "✓ Version in wails.json files matches"
 
 # 4. Check if tag already exists
 if git rev-parse "$VERSION" >/dev/null 2>&1; then
@@ -68,39 +72,16 @@ git tag -a "$VERSION" -m "Release $VERSION"
 git push origin "$VERSION"
 echo -e "${GREEN}✓ Tag created and pushed${NC}"
 
-# 6. Build release artifacts
-echo -e "${YELLOW}Building release artifacts...${NC}"
-echo "This is where we would build all platform binaries"
-echo "For now, we'll create the release without artifacts"
-
-# 7. Create GitHub release
-echo -e "${YELLOW}Creating GitHub release...${NC}"
-
-# Determine if this is a pre-release
-if [[ "$VERSION" =~ -rc\.|alpha|beta ]]; then
-    PRERELEASE_FLAG="--prerelease"
-    echo "Marking as pre-release"
-else
-    PRERELEASE_FLAG=""
-fi
-
-# Create the release using gh CLI
-gh release create "$VERSION" \
-    --title "GoPCA ${VERSION}" \
-    --generate-notes \
-    $PRERELEASE_FLAG
-
-echo -e "${GREEN}✓ Release ${VERSION} created successfully!${NC}"
 echo ""
-echo "Next steps:"
-echo "1. Review the release at: https://github.com/bitjungle/gopca/releases/tag/${VERSION}"
-echo "2. Edit the release notes if needed"
-echo "3. Upload release artifacts when ready"
-
-# Optional: Open the release page
+echo -e "${GREEN}✓ Release tag ${VERSION} pushed successfully!${NC}"
 echo ""
-read -p "Would you like to open the release page in your browser? (y/n) " -n 1 -r
-echo
-if [[ $REPLY =~ ^[Yy]$ ]]; then
-    gh release view "$VERSION" --web
-fi
+echo "The automated release workflow will now:"
+echo "1. Build all binaries for all platforms"
+echo "2. Sign and notarize macOS applications"
+echo "3. Create the GitHub release with all artifacts"
+echo "4. Generate release notes automatically"
+echo ""
+echo "Monitor progress at: https://github.com/bitjungle/gopca/actions"
+echo "Or run: gh run watch"
+echo ""
+echo "The release will be available at: https://github.com/bitjungle/gopca/releases/tag/${VERSION}"
