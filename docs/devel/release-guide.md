@@ -89,13 +89,14 @@ open https://github.com/bitjungle/gopca/actions
 ```
 
 The workflow will:
-1. Build CLI binaries (using self-hosted runner for Linux/Windows)
-2. Build Desktop apps for all platforms
-3. Build GoCSV apps for all platforms
+1. Build CLI binaries (5 platforms)
+2. Build Desktop apps (3 platforms)
+3. Build GoCSV apps (3 platforms)
 4. Sign and notarize macOS applications
-5. Generate SHA-256 checksums
-6. Create GitHub release with all artifacts
-7. Generate release notes from merged PRs
+5. Sign Windows binaries (if SignPath configured)
+6. Generate SHA-256 checksums
+7. Create GitHub release with all artifacts
+8. Generate release notes from merged PRs
 
 **Expected duration:** 15-25 minutes
 
@@ -265,10 +266,12 @@ The `.github/workflows/release.yml` workflow:
 
 2. **Build Jobs** (run in parallel):
    - `build-cli-binaries`: Builds CLI for 5 platforms
-     - Uses self-hosted runner for Linux/Windows
-     - Uses GitHub runners for macOS
+     - Self-hosted runner: Linux x64, Linux ARM64, Windows x64
+     - GitHub runner: macOS Intel, macOS ARM
    - `build-desktop`: Builds Desktop app for 3 platforms
+     - GitHub runners: ubuntu-latest, windows-latest, macos-latest
    - `build-gocsv`: Builds GoCSV for 3 platforms
+     - GitHub runners: ubuntu-latest, windows-latest, macos-latest
 
 3. **Release Job**:
    - Downloads all artifacts
@@ -280,9 +283,11 @@ The `.github/workflows/release.yml` workflow:
 
 ### Infrastructure
 
-- **Self-hosted runner**: Used for Linux/Windows CLI builds to save costs
-- **GitHub-hosted runners**: Used for macOS builds and Wails applications
-- **Apple signing/notarization**: Automated for all macOS binaries
+- **Self-hosted runner**: Used for binary builds to reduce costs
+- **GitHub-hosted runners**: Used for all testing
+- **Code signing**:
+  - **macOS**: Automated signing and notarization for all binaries
+  - **Windows**: Optional SignPath.io integration for digital signatures (when configured)
 
 ## Questions?
 

@@ -270,10 +270,148 @@ jobs:
           cmd/gocsv/build/bin/GoCSV
         retention-days: 1
 
+  sign-windows-binaries:
+    name: Sign Windows Binaries
+    runs-on: ubuntu-latest
+    needs: [build-cli-binaries, build-desktop, build-gocsv]
+    # Only run if SignPath secrets are configured
+    if: |
+      github.event_name == 'push' && 
+      contains(github.ref, 'refs/tags/')
+    
+    steps:
+    - name: Check SignPath Configuration
+      id: check_signpath
+      run: |
+        if [ -n "${{ secrets.SIGNPATH_API_TOKEN }}" ] && [ -n "${{ secrets.SIGNPATH_ORG_ID }}" ]; then
+          echo "configured=true" >> $GITHUB_OUTPUT
+          echo "SignPath is configured, will sign Windows binaries"
+        else
+          echo "configured=false" >> $GITHUB_OUTPUT
+          echo "SignPath not configured, skipping Windows signing"
+        fi
+    
+    - name: Download Windows CLI artifact
+      if: steps.check_signpath.outputs.configured == 'true'
+      uses: actions/download-artifact@v4
+      with:
+        name: pca-windows-amd64
+        path: windows-cli
+    
+    - name: Download Windows Desktop artifact
+      if: steps.check_signpath.outputs.configured == 'true'
+      uses: actions/download-artifact@v4
+      with:
+        name: gopca-desktop-windows-latest
+        path: windows-desktop
+    
+    - name: Download Windows GoCSV artifact
+      if: steps.check_signpath.outputs.configured == 'true'
+      uses: actions/download-artifact@v4
+      with:
+        name: gocsv-windows-latest
+        path: windows-gocsv
+    
+    # Sign CLI binary
+    - name: Upload CLI for signing
+      if: steps.check_signpath.outputs.configured == 'true'
+      id: upload-cli
+      uses: actions/upload-artifact@v4
+      with:
+        name: unsigned-cli
+        path: windows-cli/pca-windows-amd64.exe
+    
+    - name: Sign CLI binary
+      if: steps.check_signpath.outputs.configured == 'true'
+      id: sign-cli
+      uses: SignPath/github-action-submit-signing-request@v1
+      with:
+        api-token: ${{ secrets.SIGNPATH_API_TOKEN }}
+        organization-id: ${{ secrets.SIGNPATH_ORG_ID }}
+        project-slug: gopca
+        signing-policy-slug: test-signing
+        github-artifact-id: ${{ steps.upload-cli.outputs.artifact-id }}
+        wait-for-completion: true
+        output-artifact-directory: signed-cli
+    
+    # Sign Desktop app
+    - name: Upload Desktop for signing
+      if: steps.check_signpath.outputs.configured == 'true'
+      id: upload-desktop
+      uses: actions/upload-artifact@v4
+      with:
+        name: unsigned-desktop
+        path: windows-desktop/GoPCA.exe
+    
+    - name: Sign Desktop app
+      if: steps.check_signpath.outputs.configured == 'true'
+      id: sign-desktop
+      uses: SignPath/github-action-submit-signing-request@v1
+      with:
+        api-token: ${{ secrets.SIGNPATH_API_TOKEN }}
+        organization-id: ${{ secrets.SIGNPATH_ORG_ID }}
+        project-slug: gopca
+        signing-policy-slug: test-signing
+        github-artifact-id: ${{ steps.upload-desktop.outputs.artifact-id }}
+        wait-for-completion: true
+        output-artifact-directory: signed-desktop
+    
+    # Sign GoCSV app
+    - name: Upload GoCSV for signing
+      if: steps.check_signpath.outputs.configured == 'true'
+      id: upload-gocsv
+      uses: actions/upload-artifact@v4
+      with:
+        name: unsigned-gocsv
+        path: windows-gocsv/GoCSV.exe
+    
+    - name: Sign GoCSV app
+      if: steps.check_signpath.outputs.configured == 'true'
+      id: sign-gocsv
+      uses: SignPath/github-action-submit-signing-request@v1
+      with:
+        api-token: ${{ secrets.SIGNPATH_API_TOKEN }}
+        organization-id: ${{ secrets.SIGNPATH_ORG_ID }}
+        project-slug: gopca
+        signing-policy-slug: test-signing
+        github-artifact-id: ${{ steps.upload-gocsv.outputs.artifact-id }}
+        wait-for-completion: true
+        output-artifact-directory: signed-gocsv
+    
+    # Upload signed artifacts
+    - name: Upload signed Windows artifacts
+      if: steps.check_signpath.outputs.configured == 'true'
+      uses: actions/upload-artifact@v4
+      with:
+        name: windows-signed
+        path: |
+          signed-cli/pca-windows-amd64.exe
+          signed-desktop/GoPCA.exe
+          signed-gocsv/GoCSV.exe
+        retention-days: 1
+    
+    - name: Create signing status artifact
+      if: always()
+      run: |
+        if [ "${{ steps.check_signpath.outputs.configured }}" = "true" ]; then
+          echo "signed" > signing-status.txt
+        else
+          echo "unsigned" > signing-status.txt
+        fi
+    
+    - name: Upload signing status
+      if: always()
+      uses: actions/upload-artifact@v4
+      with:
+        name: signing-status
+        path: signing-status.txt
+        retention-days: 1
+
   create-release:
     name: Create Release with Artifacts
     runs-on: ubuntu-latest
-    needs: [build-cli-binaries, build-desktop, build-gocsv]
+    needs: [build-cli-binaries, build-desktop, build-gocsv, sign-windows-binaries]
+    if: always() && !cancelled()
     
     steps:
     - name: Checkout code
@@ -284,12 +422,37 @@ jobs:
       with:
         path: artifacts
     
+    - name: Check signing status
+      id: check_signed
+      run: |
+        if [ -f "artifacts/signing-status/signing-status.txt" ]; then
+          STATUS=$(cat artifacts/signing-status/signing-status.txt)
+          echo "windows_signed=${STATUS}" >> $GITHUB_OUTPUT
+          echo "Windows binaries are: ${STATUS}"
+        else
+          echo "windows_signed=unsigned" >> $GITHUB_OUTPUT
+          echo "Windows binaries are: unsigned (SignPath not configured)"
+        fi
+    
     - name: Organize and package artifacts
       run: |
         cd artifacts
         
-        # CLI binaries - just move them to the root
-        mv pca-*/* .
+        # CLI binaries - move non-Windows to root
+        for dir in pca-*; do
+          if [[ "$dir" != "pca-windows-amd64" ]]; then
+            mv "$dir"/* . 2>/dev/null || true
+          fi
+        done
+        
+        # Handle Windows CLI binary (prefer signed version)
+        if [ "${{ steps.check_signed.outputs.windows_signed }}" = "signed" ] && [ -f "windows-signed/pca-windows-amd64.exe" ]; then
+          echo "Using signed Windows CLI binary"
+          cp windows-signed/pca-windows-amd64.exe .
+        elif [ -f "pca-windows-amd64/pca-windows-amd64.exe" ]; then
+          echo "Using unsigned Windows CLI binary"
+          mv pca-windows-amd64/pca-windows-amd64.exe .
+        fi
         
         # Desktop apps - create proper packages
         if [ -d "gopca-desktop-macos-latest" ]; then
@@ -298,7 +461,12 @@ jobs:
           cd ..
         fi
         
-        if [ -f "gopca-desktop-windows-latest/GoPCA.exe" ]; then
+        # Handle Windows Desktop (prefer signed version)
+        if [ "${{ steps.check_signed.outputs.windows_signed }}" = "signed" ] && [ -f "windows-signed/GoPCA.exe" ]; then
+          echo "Using signed Windows Desktop binary"
+          cp windows-signed/GoPCA.exe GoPCA-windows.exe
+        elif [ -f "gopca-desktop-windows-latest/GoPCA.exe" ]; then
+          echo "Using unsigned Windows Desktop binary"
           mv gopca-desktop-windows-latest/GoPCA.exe GoPCA-windows.exe
         fi
         
@@ -313,7 +481,12 @@ jobs:
           cd ..
         fi
         
-        if [ -f "gocsv-windows-latest/GoCSV.exe" ]; then
+        # Handle Windows GoCSV (prefer signed version)
+        if [ "${{ steps.check_signed.outputs.windows_signed }}" = "signed" ] && [ -f "windows-signed/GoCSV.exe" ]; then
+          echo "Using signed Windows GoCSV binary"
+          cp windows-signed/GoCSV.exe GoCSV-windows.exe
+        elif [ -f "gocsv-windows-latest/GoCSV.exe" ]; then
+          echo "Using unsigned Windows GoCSV binary"
           mv gocsv-windows-latest/GoCSV.exe GoCSV-windows.exe
         fi
         
@@ -321,8 +494,8 @@ jobs:
           mv gocsv-ubuntu-latest/GoCSV GoCSV-linux
         fi
         
-        # Remove empty directories
-        rm -rf pca-* gopca-desktop-* gocsv-*
+        # Remove temporary directories
+        rm -rf pca-* gopca-desktop-* gocsv-* windows-signed signing-status unsigned-*
         
         # Generate checksums
         shasum -a 256 pca-* GoPCA* GoCSV* > checksums.txt
@@ -349,23 +522,25 @@ jobs:
           ## Downloads
           
           ### CLI Binaries
-          - **macOS Intel**: `pca-darwin-amd64`
-          - **macOS Apple Silicon**: `pca-darwin-arm64`
+          - **macOS Intel**: `pca-darwin-amd64` (signed & notarized)
+          - **macOS Apple Silicon**: `pca-darwin-arm64` (signed & notarized)
           - **Linux x64**: `pca-linux-amd64`
           - **Linux ARM64**: `pca-linux-arm64`
-          - **Windows x64**: `pca-windows-amd64.exe`
+          - **Windows x64**: `pca-windows-amd64.exe`${{ steps.check_signed.outputs.windows_signed == 'signed' && ' (digitally signed)' || '' }}
           
           ### Desktop Applications
           - **macOS**: `GoPCA-macos.zip` (signed & notarized)
-          - **Windows**: `GoPCA-windows.exe`
+          - **Windows**: `GoPCA-windows.exe`${{ steps.check_signed.outputs.windows_signed == 'signed' && ' (digitally signed)' || '' }}
           - **Linux**: `GoPCA-linux`
           
           ### GoCSV Editor
           - **macOS**: `GoCSV-macos.zip` (signed & notarized)
-          - **Windows**: `GoCSV-windows.exe`
+          - **Windows**: `GoCSV-windows.exe`${{ steps.check_signed.outputs.windows_signed == 'signed' && ' (digitally signed)' || '' }}
           - **Linux**: `GoCSV-linux`
           
           ### Verification
           SHA-256 checksums for all artifacts: `checksums.txt`
+          
+          ${{ steps.check_signed.outputs.windows_signed == 'signed' && '✅ **Windows binaries are digitally signed** - No security warnings on Windows 10/11' || '⚠️ Windows binaries are not digitally signed - You may see security warnings' }}
           
           ---
