@@ -1,10 +1,24 @@
 name: Build and Test
 
+# Workflow triggers are optimized to prevent duplicate runs:
+# - Push events: Only on direct pushes to main (not feature branches)
+# - Pull requests: Run for all PRs targeting main
+# - This prevents double runs when pushing to a feature branch with an open PR
 on:
   push:
-    branches: [ '**' ]  # Run tests on all branches
+    branches: [ main ]  # Only run on direct pushes to main
+    paths-ignore:
+      - '**.md'
+      - 'docs/**'
+      - '.gitignore'
+      - 'LICENSE'
   pull_request:
     branches: [ main ]
+    paths-ignore:
+      - '**.md'
+      - 'docs/**'
+      - '.gitignore'
+      - 'LICENSE'
   workflow_dispatch:  # Allow manual triggering
 
 env:

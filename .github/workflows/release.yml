@@ -393,7 +393,10 @@ jobs:
     - name: Create signing status artifact
       if: always()
       run: |
-        if [ "${{ steps.check_signpath.outputs.configured }}" = "true" ] && [ "${{ steps.sign-cli.outcome }}" = "success" ]; then
+        if [ "${{ steps.check_signpath.outputs.configured }}" = "true" ] && \
+           [ "${{ steps.sign-cli.outcome }}" = "success" ] && \
+           [ "${{ steps.sign-desktop.outcome }}" = "success" ] && \
+           [ "${{ steps.sign-gocsv.outcome }}" = "success" ]; then
           echo "signed" > signing-status.txt
         else
           echo "unsigned" > signing-status.txt
@@ -438,112 +441,145 @@ jobs:
       run: |
         cd artifacts
         
-        # CLI binaries - move non-Windows to root
-        for dir in pca-*; do
-          if [[ "$dir" != "pca-windows-amd64" ]]; then
-            mv "$dir"/* . 2>/dev/null || true
-          fi
-        done
+        # Create directories for platform bundles
+        mkdir -p macos windows linux
         
-        # Handle Windows CLI binary (prefer signed version)
+        # === macOS Bundle (Intel and ARM) ===
+        echo "Creating macOS bundle..."
+        
+        # CLI binaries - both architectures
+        if [ -f "pca-darwin-amd64/pca-darwin-amd64" ]; then
+          cp "pca-darwin-amd64/pca-darwin-amd64" "macos/pca-intel"
+        fi
+        if [ -f "pca-darwin-arm64/pca-darwin-arm64" ]; then
+          cp "pca-darwin-arm64/pca-darwin-arm64" "macos/pca-arm64"
+        fi
+        
+        # Desktop app
+        if [ -d "gopca-desktop-macos-latest/GoPCA.app" ]; then
+          cp -r "gopca-desktop-macos-latest/GoPCA.app" "macos/"
+        fi
+        
+        # GoCSV app
+        if [ -d "gocsv-macos-latest/GoCSV.app" ]; then
+          cp -r "gocsv-macos-latest/GoCSV.app" "macos/"
+        fi
+        
+        # Create macOS bundle zip
+        cd macos
+        zip -r ../gopca-macos-universal.zip .
+        cd ..
+        
+        # === Windows Bundle ===
+        echo "Creating Windows bundle..."
+        
+        # CLI binary (prefer signed)
         if [ "${{ steps.check_signed.outputs.windows_signed }}" = "signed" ] && [ -f "windows-signed/pca-windows-amd64.exe" ]; then
           echo "Using signed Windows CLI binary"
-          cp windows-signed/pca-windows-amd64.exe .
+          cp "windows-signed/pca-windows-amd64.exe" "windows/pca.exe"
         elif [ -f "pca-windows-amd64/pca-windows-amd64.exe" ]; then
           echo "Using unsigned Windows CLI binary"
-          mv pca-windows-amd64/pca-windows-amd64.exe .
+          cp "pca-windows-amd64/pca-windows-amd64.exe" "windows/pca.exe"
         fi
         
-        # Desktop apps - create proper packages
-        if [ -d "gopca-desktop-macos-latest" ]; then
-          cd gopca-desktop-macos-latest
-          zip -r ../GoPCA-macos.zip GoPCA.app
-          cd ..
-        fi
-        
-        # Handle Windows Desktop (prefer signed version)
+        # Desktop app (prefer signed)
         if [ "${{ steps.check_signed.outputs.windows_signed }}" = "signed" ] && [ -f "windows-signed/GoPCA.exe" ]; then
           echo "Using signed Windows Desktop binary"
-          cp windows-signed/GoPCA.exe GoPCA-windows.exe
+          cp "windows-signed/GoPCA.exe" "windows/GoPCA.exe"
         elif [ -f "gopca-desktop-windows-latest/GoPCA.exe" ]; then
           echo "Using unsigned Windows Desktop binary"
-          mv gopca-desktop-windows-latest/GoPCA.exe GoPCA-windows.exe
+          cp "gopca-desktop-windows-latest/GoPCA.exe" "windows/GoPCA.exe"
         fi
         
-        if [ -f "gopca-desktop-ubuntu-latest/GoPCA" ]; then
-          mv gopca-desktop-ubuntu-latest/GoPCA GoPCA-linux
-        fi
-        
-        # GoCSV apps - create proper packages
-        if [ -d "gocsv-macos-latest" ]; then
-          cd gocsv-macos-latest
-          zip -r ../GoCSV-macos.zip GoCSV.app
-          cd ..
-        fi
-        
-        # Handle Windows GoCSV (prefer signed version)
+        # GoCSV app (prefer signed)
         if [ "${{ steps.check_signed.outputs.windows_signed }}" = "signed" ] && [ -f "windows-signed/GoCSV.exe" ]; then
           echo "Using signed Windows GoCSV binary"
-          cp windows-signed/GoCSV.exe GoCSV-windows.exe
+          cp "windows-signed/GoCSV.exe" "windows/GoCSV.exe"
         elif [ -f "gocsv-windows-latest/GoCSV.exe" ]; then
           echo "Using unsigned Windows GoCSV binary"
-          mv gocsv-windows-latest/GoCSV.exe GoCSV-windows.exe
+          cp "gocsv-windows-latest/GoCSV.exe" "windows/GoCSV.exe"
         fi
         
+        # Create Windows bundle zip
+        cd windows
+        zip -r ../gopca-windows-x64.zip .
+        cd ..
+        
+        # === Linux Bundle (x64 and ARM64) ===
+        echo "Creating Linux bundle..."
+        
+        # CLI binaries - both architectures
+        if [ -f "pca-linux-amd64/pca-linux-amd64" ]; then
+          cp "pca-linux-amd64/pca-linux-amd64" "linux/pca-x64"
+        fi
+        if [ -f "pca-linux-arm64/pca-linux-arm64" ]; then
+          cp "pca-linux-arm64/pca-linux-arm64" "linux/pca-arm64"
+        fi
+        
+        # Desktop app
+        if [ -f "gopca-desktop-ubuntu-latest/GoPCA" ]; then
+          cp "gopca-desktop-ubuntu-latest/GoPCA" "linux/GoPCA"
+        fi
+        
+        # GoCSV app
         if [ -f "gocsv-ubuntu-latest/GoCSV" ]; then
-          mv gocsv-ubuntu-latest/GoCSV GoCSV-linux
+          cp "gocsv-ubuntu-latest/GoCSV" "linux/GoCSV"
         fi
         
-        # Clean up - remove directories but keep files
-        find . -maxdepth 1 -type d -name "pca-*" -exec rm -rf {} \;
-        find . -maxdepth 1 -type d -name "gopca-desktop-*" -exec rm -rf {} \;
-        find . -maxdepth 1 -type d -name "gocsv-*" -exec rm -rf {} \;
-        rm -rf windows-signed signing-status unsigned-*
+        # Create Linux bundle tar.gz
+        cd linux
+        tar -czf ../gopca-linux-x64.tar.gz .
+        cd ..
         
-        # Generate checksums (only for files that exist)
-        ls pca-* GoPCA* GoCSV* 2>/dev/null | xargs shasum -a 256 > checksums.txt
+        # Clean up temporary directories
+        rm -rf macos windows linux
+        rm -rf pca-* gopca-desktop-* gocsv-* windows-signed signing-status unsigned-*
         
-        # List all artifacts for debugging
-        echo "Final artifacts:"
-        ls -la
+        # Generate checksums for the bundles
+        shasum -a 256 gopca-*.zip gopca-*.tar.gz > checksums.txt
+        
+        # List final artifacts
+        echo "=== Final release artifacts ==="
+        ls -lh gopca-*.zip gopca-*.tar.gz checksums.txt
+        echo "==============================="
     
     - name: Create Release
       uses: softprops/action-gh-release@v2
       with:
         files: |
-          artifacts/pca-*
-          artifacts/GoPCA-*.zip
-          artifacts/GoPCA-*.exe
-          artifacts/GoPCA-linux
-          artifacts/GoCSV-*.zip
-          artifacts/GoCSV-*.exe
-          artifacts/GoCSV-linux
+          artifacts/gopca-macos-universal.zip
+          artifacts/gopca-windows-x64.zip
+          artifacts/gopca-linux-x64.tar.gz
           artifacts/checksums.txt
         generate_release_notes: true
         fail_on_unmatched_files: false
         body: |
           ## Downloads
           
-          ### CLI Binaries
-          - **macOS Intel**: `pca-darwin-amd64` (signed & notarized)
-          - **macOS Apple Silicon**: `pca-darwin-arm64` (signed & notarized)
-          - **Linux x64**: `pca-linux-amd64`
-          - **Linux ARM64**: `pca-linux-arm64`
-          - **Windows x64**: `pca-windows-amd64.exe`${{ steps.check_signed.outputs.windows_signed == 'signed' && ' (digitally signed)' || '' }}
+          Download the complete bundle for your platform. Each bundle contains:
+          - **PCA CLI**: Command-line tool for scripting and automation
+          - **GoPCA Desktop**: GUI application for interactive PCA analysis
+          - **GoCSV**: Data preparation and CSV editing tool
           
-          ### Desktop Applications
-          - **macOS**: `GoPCA-macos.zip` (signed & notarized)
-          - **Windows**: `GoPCA-windows.exe`${{ steps.check_signed.outputs.windows_signed == 'signed' && ' (digitally signed)' || '' }}
-          - **Linux**: `GoPCA-linux`
+          ### Platform Bundles
           
-          ### GoCSV Editor
-          - **macOS**: `GoCSV-macos.zip` (signed & notarized)
-          - **Windows**: `GoCSV-windows.exe`${{ steps.check_signed.outputs.windows_signed == 'signed' && ' (digitally signed)' || '' }}
-          - **Linux**: `GoCSV-linux`
+          | Platform | Download | Contents |
+          |----------|----------|----------|
+          | **macOS** | [`gopca-macos-universal.zip`](../../releases/download/${{ github.ref_name }}/gopca-macos-universal.zip) | • `pca-intel` and `pca-arm64` CLI tools<br>• `GoPCA.app` (signed & notarized)<br>• `GoCSV.app` (signed & notarized) |
+          | **Windows** | [`gopca-windows-x64.zip`](../../releases/download/${{ github.ref_name }}/gopca-windows-x64.zip) | • `pca.exe` CLI tool${{ steps.check_signed.outputs.windows_signed == 'signed' && ' (digitally signed)' || '' }}<br>• `GoPCA.exe`${{ steps.check_signed.outputs.windows_signed == 'signed' && ' (digitally signed)' || '' }}<br>• `GoCSV.exe`${{ steps.check_signed.outputs.windows_signed == 'signed' && ' (digitally signed)' || '' }} |
+          | **Linux** | [`gopca-linux-x64.tar.gz`](../../releases/download/${{ github.ref_name }}/gopca-linux-x64.tar.gz) | • `pca-x64` and `pca-arm64` CLI tools<br>• `GoPCA` desktop app<br>• `GoCSV` editor |
+          
+          ### Installation
+          
+          1. Download the bundle for your platform
+          2. Extract the archive to your preferred location
+          3. Add the directory to your PATH for CLI access (optional)
+          4. On macOS: Right-click and select "Open" on first launch to bypass Gatekeeper
           
           ### Verification
-          SHA-256 checksums for all artifacts: `checksums.txt`
           
-          ${{ steps.check_signed.outputs.windows_signed == 'signed' && '✅ **Windows binaries are digitally signed** - No security warnings on Windows 10/11' || '⚠️ Windows binaries are not digitally signed - You may see security warnings' }}
+          SHA-256 checksums: [`checksums.txt`](../../releases/download/${{ github.ref_name }}/checksums.txt)
+          
+          ${{ steps.check_signed.outputs.windows_signed == 'signed' && '✅ **Windows binaries are digitally signed** - No security warnings on Windows 10/11' || '⚠️ **Windows binaries are not digitally signed** - You may see security warnings when running' }}
           
           ---
