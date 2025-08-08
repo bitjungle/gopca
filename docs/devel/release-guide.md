@@ -283,8 +283,8 @@ The `.github/workflows/release.yml` workflow:
 
 ### Infrastructure
 
-- **Self-hosted runner**: Used for Linux and Windows CLI builds to reduce costs
-- **GitHub-hosted runners**: Used for all macOS builds and desktop/GoCSV applications (all platforms)
+- **Self-hosted runner**: Used for binary builds to reduce costs
+- **GitHub-hosted runners**: Used for all testing
 - **Code signing**:
   - **macOS**: Automated signing and notarization for all binaries
   - **Windows**: Optional SignPath.io integration for digital signatures (when configured)
