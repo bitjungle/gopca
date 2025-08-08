@@ -393,7 +393,7 @@ jobs:
     - name: Create signing status artifact
       if: always()
       run: |
-        if [ "${{ steps.check_signpath.outputs.configured }}" = "true" ]; then
+        if [ "${{ steps.check_signpath.outputs.configured }}" = "true" ] && [ "${{ steps.sign-cli.outcome }}" = "success" ]; then
           echo "signed" > signing-status.txt
         else
           echo "unsigned" > signing-status.txt
@@ -494,11 +494,14 @@ jobs:
           mv gocsv-ubuntu-latest/GoCSV GoCSV-linux
         fi
         
-        # Remove temporary directories
-        rm -rf pca-* gopca-desktop-* gocsv-* windows-signed signing-status unsigned-*
+        # Clean up - remove directories but keep files
+        find . -maxdepth 1 -type d -name "pca-*" -exec rm -rf {} \;
+        find . -maxdepth 1 -type d -name "gopca-desktop-*" -exec rm -rf {} \;
+        find . -maxdepth 1 -type d -name "gocsv-*" -exec rm -rf {} \;
+        rm -rf windows-signed signing-status unsigned-*
         
-        # Generate checksums
-        shasum -a 256 pca-* GoPCA* GoCSV* > checksums.txt
+        # Generate checksums (only for files that exist)
+        ls pca-* GoPCA* GoCSV* 2>/dev/null | xargs shasum -a 256 > checksums.txt
         
         # List all artifacts for debugging
         echo "Final artifacts:"
