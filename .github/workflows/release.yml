@@ -455,14 +455,14 @@ jobs:
           cp "pca-darwin-arm64/pca-darwin-arm64" "macos/pca-arm64"
         fi
         
-        # Desktop app
+        # Desktop app (use cp -a to preserve permissions and symlinks)
         if [ -d "gopca-desktop-macos-latest/GoPCA.app" ]; then
-          cp -r "gopca-desktop-macos-latest/GoPCA.app" "macos/"
+          cp -a "gopca-desktop-macos-latest/GoPCA.app" "macos/"
         fi
         
-        # GoCSV app
+        # GoCSV app (use cp -a to preserve permissions and symlinks)
         if [ -d "gocsv-macos-latest/GoCSV.app" ]; then
-          cp -r "gocsv-macos-latest/GoCSV.app" "macos/"
+          cp -a "gocsv-macos-latest/GoCSV.app" "macos/"
         fi
         
         # Create macOS bundle zip
