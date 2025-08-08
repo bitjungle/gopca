@@ -117,21 +117,21 @@ Check that:
 Each release includes:
 
 ### CLI Binaries (5 files)
-- `gopca-cli-darwin-amd64` - macOS Intel
-- `gopca-cli-darwin-arm64` - macOS Apple Silicon
-- `gopca-cli-linux-amd64` - Linux x64
-- `gopca-cli-linux-arm64` - Linux ARM64
-- `gopca-cli-windows-amd64.exe` - Windows x64
+- `pca-darwin-amd64` - macOS Intel
+- `pca-darwin-arm64` - macOS Apple Silicon
+- `pca-linux-amd64` - Linux x64
+- `pca-linux-arm64` - Linux ARM64
+- `pca-windows-amd64.exe` - Windows x64
 
 ### Desktop Applications (3 files)
-- `gopca-desktop-macos.zip` - macOS app (signed & notarized)
-- `gopca-desktop-windows.exe` - Windows executable
-- `gopca-desktop-linux` - Linux executable
+- `GoPCA-macos.zip` - macOS app (signed & notarized)
+- `GoPCA-windows.exe` - Windows executable
+- `GoPCA-linux` - Linux executable
 
 ### GoCSV Editor (3 files)
-- `gocsv-macos.zip` - macOS app (signed & notarized)
-- `gocsv-windows.exe` - Windows executable
-- `gocsv-linux` - Linux executable
+- `GoCSV-macos.zip` - macOS app (signed & notarized)
+- `GoCSV-windows.exe` - Windows executable
+- `GoCSV-linux` - Linux executable
 
 ### Verification
 - `checksums.txt` - SHA-256 checksums for all artifacts
@@ -218,13 +218,13 @@ If self-hosted runner is offline:
 
 Check the version using:
 ```bash
-gopca-cli --version  # Shows version number only (e.g., "0.9.0")
-gopca-cli version    # Shows detailed version information
+pca --version  # Shows version number only (e.g., "0.9.0")
+pca version    # Shows detailed version information
 ```
 
 Example output:
 ```
-$ gopca-cli version
+$ pca version
 GoPCA 0.9.0 (abc123) built on 2025-01-01T00:00:00Z with go1.24.5 for darwin/arm64
 ```
 

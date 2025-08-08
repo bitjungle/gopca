@@ -1,10 +1,10 @@
 # GoPCA CLI Reference
 
-Complete command-line interface documentation for gopca-cli.
+Complete command-line interface documentation for pca.
 
 ## Overview
 
-The GoPCA command-line interface (`gopca-cli`) provides powerful PCA analysis capabilities for automation, batch processing, and integration into data pipelines. It supports multiple PCA algorithms, comprehensive preprocessing options, and flexible output formats.
+The GoPCA command-line interface (`pca`) provides powerful PCA analysis capabilities for automation, batch processing, and integration into data pipelines. It supports multiple PCA algorithms, comprehensive preprocessing options, and flexible output formats.
 
 ## Installation
 
@@ -12,11 +12,11 @@ Download the latest binary for your platform from the [GitHub Releases](https://
 
 ```bash
 # Linux/macOS
-wget https://github.com/bitjungle/gopca/releases/latest/download/gopca-cli
-chmod +x gopca-cli
+wget https://github.com/bitjungle/gopca/releases/latest/download/pca
+chmod +x pca
 
 # Add to PATH (optional)
-sudo mv gopca-cli /usr/local/bin/
+sudo mv pca /usr/local/bin/
 ```
 
 ## Global Options
@@ -35,7 +35,7 @@ The main command for running PCA analysis on your data.
 #### Basic Usage
 
 ```bash
-gopca-cli analyze [OPTIONS] <input.csv>
+pca analyze [OPTIONS] <input.csv>
 ```
 
 **Important:** The input CSV file must be specified as the last argument. All options must come before the filename.
@@ -109,73 +109,73 @@ gopca-cli analyze [OPTIONS] <input.csv>
 ##### Basic Analysis
 ```bash
 # Simple 2-component PCA with default settings
-gopca-cli analyze data.csv
+pca analyze data.csv
 
 # 3 components with standard scaling
-gopca-cli analyze --components 3 --scale standard data.csv
+pca analyze --components 3 --scale standard data.csv
 
 # Save results to specific directory
-gopca-cli analyze -o results/ data.csv
+pca analyze -o results/ data.csv
 ```
 
 ##### Advanced Preprocessing
 ```bash
 # SNV preprocessing for spectroscopic data
-gopca-cli analyze --snv --scale standard spectral_data.csv
+pca analyze --snv --scale standard spectral_data.csv
 
 # Robust scaling for data with outliers
-gopca-cli analyze --scale robust --components 4 data.csv
+pca analyze --scale robust --components 4 data.csv
 
 # Vector normalization
-gopca-cli analyze --vector-norm data.csv
+pca analyze --vector-norm data.csv
 ```
 
 ##### Kernel PCA
 ```bash
 # RBF kernel with custom gamma
-gopca-cli analyze --method kernel --kernel-type rbf --kernel-gamma 0.5 data.csv
+pca analyze --method kernel --kernel-type rbf --kernel-gamma 0.5 data.csv
 
 # Polynomial kernel of degree 3
-gopca-cli analyze --method kernel --kernel-type poly --kernel-degree 3 data.csv
+pca analyze --method kernel --kernel-type poly --kernel-degree 3 data.csv
 
 # Linear kernel PCA
-gopca-cli analyze --method kernel --kernel-type linear data.csv
+pca analyze --method kernel --kernel-type linear data.csv
 ```
 
 ##### Missing Data
 ```bash
 # Drop rows with missing values
-gopca-cli analyze --missing-strategy drop data.csv
+pca analyze --missing-strategy drop data.csv
 
 # Use NIPALS with native missing data handling
-gopca-cli analyze --method nipals --missing-strategy native data.csv
+pca analyze --method nipals --missing-strategy native data.csv
 
 # Replace missing with mean
-gopca-cli analyze --missing-strategy mean data.csv
+pca analyze --missing-strategy mean data.csv
 ```
 
 ##### Group Analysis
 ```bash
 # Specify grouping column
-gopca-cli analyze --group-column sample_type data.csv
+pca analyze --group-column sample_type data.csv
 
 # Calculate eigencorrelations with metadata
-gopca-cli analyze --metadata-cols age,weight --eigencorrelations -f json data.csv
+pca analyze --metadata-cols age,weight --eigencorrelations -f json data.csv
 
 # Include target columns
-gopca-cli analyze --target-columns concentration,pH --eigencorrelations data.csv
+pca analyze --target-columns concentration,pH --eigencorrelations data.csv
 ```
 
 ##### Output Formats
 ```bash
 # JSON output with all results
-gopca-cli analyze -f json --output-all data.csv
+pca analyze -f json --output-all data.csv
 
 # Table format with scores and variance
-gopca-cli analyze --output-scores --output-variance data.csv
+pca analyze --output-scores --output-variance data.csv
 
 # Include diagnostic metrics
-gopca-cli analyze --include-metrics -f json data.csv
+pca analyze --include-metrics -f json data.csv
 ```
 
 ### `validate` - Validate Input Data
@@ -185,7 +185,7 @@ Check your data for issues before running PCA analysis.
 #### Basic Usage
 
 ```bash
-gopca-cli validate [OPTIONS] <input.csv>
+pca validate [OPTIONS] <input.csv>
 ```
 
 #### Options
@@ -211,16 +211,16 @@ The validate command performs these checks:
 
 ```bash
 # Basic validation
-gopca-cli validate data.csv
+pca validate data.csv
 
 # Show detailed summary statistics
-gopca-cli validate --summary data.csv
+pca validate --summary data.csv
 
 # Strict mode - fail on any warnings
-gopca-cli validate --strict data.csv
+pca validate --strict data.csv
 
 # Custom delimiter and missing values
-gopca-cli validate --delimiter semicolon --na-values "?,unknown" data.csv
+pca validate --delimiter semicolon --na-values "?,unknown" data.csv
 ```
 
 ### `transform` - Apply PCA Model to New Data
@@ -230,7 +230,7 @@ Apply a previously trained PCA model to transform new data.
 #### Basic Usage
 
 ```bash
-gopca-cli transform [OPTIONS] <model.json> <input.csv>
+pca transform [OPTIONS] <model.json> <input.csv>
 ```
 
 **Note:** Both the model file and input CSV must be specified as the last two arguments.
@@ -260,16 +260,16 @@ gopca-cli transform [OPTIONS] <model.json> <input.csv>
 
 ```bash
 # Basic transformation
-gopca-cli transform model.json new_data.csv
+pca transform model.json new_data.csv
 
 # Save to specific file with JSON format
-gopca-cli transform -f json -o results/ model.json new_data.csv
+pca transform -f json -o results/ model.json new_data.csv
 
 # Exclude specific rows
-gopca-cli transform --exclude-rows 1,5-10 model.json new_data.csv
+pca transform --exclude-rows 1,5-10 model.json new_data.csv
 
 # Include diagnostic metrics
-gopca-cli transform --include-metrics model.json new_data.csv
+pca transform --include-metrics model.json new_data.csv
 ```
 
 ## Output Formats
@@ -360,7 +360,7 @@ The preprocessing steps are applied in this order:
 ## Best Practices
 
 ### Data Preparation
-1. Validate your data first: `gopca-cli validate data.csv`
+1. Validate your data first: `pca validate data.csv`
 2. Handle missing values appropriately for your domain
 3. Consider scaling for mixed-unit variables
 4. Use SNV for spectroscopic data
@@ -413,7 +413,7 @@ The preprocessing steps are applied in this order:
 #!/bin/bash
 # Batch process multiple files
 for file in data/*.csv; do
-    gopca-cli analyze -f json -o results/ "$file"
+    pca analyze -f json -o results/ "$file"
 done
 ```
 
@@ -424,7 +424,7 @@ import json
 
 # Run PCA analysis
 result = subprocess.run(
-    ['gopca-cli', 'analyze', '-f', 'json', '--output-all', 'data.csv'],
+    ['pca', 'analyze', '-f', 'json', '--output-all', 'data.csv'],
     capture_output=True, text=True
 )
 
@@ -436,11 +436,11 @@ variance = pca_results['explainedVariance']
 
 ### R Integration
 ```r
-# Run gopca-cli from R
+# Run pca from R
 library(jsonlite)
 
 output <- system2(
-  "gopca-cli",
+  "pca",
   args = c("analyze", "-f", "json", "--output-all", "data.csv"),
   stdout = TRUE
 )
@@ -460,12 +460,12 @@ scores <- results$scores
 
 ```bash
 # General help
-gopca-cli --help
+pca --help
 
 # Command-specific help
-gopca-cli analyze --help
-gopca-cli validate --help
-gopca-cli transform --help
+pca analyze --help
+pca validate --help
+pca transform --help
 ```
 
 For issues or questions, visit the [GitHub repository](https://github.com/bitjungle/gopca).

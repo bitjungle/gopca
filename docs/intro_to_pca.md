@@ -304,11 +304,11 @@ The Swiss Roll dataset, included with GoPCA, perfectly demonstrates Kernel PCA's
 
 ```bash
 # Using CLI with RBF kernel
-gopca-cli analyze --method kernel --kernel-type rbf \
+pca analyze --method kernel --kernel-type rbf \
   --kernel-gamma 0.333 swiss_roll.csv
 
 # Compare with standard PCA
-gopca-cli analyze swiss_roll.csv  # SVD is the default method
+pca analyze swiss_roll.csv  # SVD is the default method
 ```
 
 In the GUI:

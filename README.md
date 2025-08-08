@@ -35,13 +35,13 @@ Ideal for automation, batch processing, and integration into data pipelines.
 
 ```bash
 # Analyze your data with a single command
-gopca-cli analyze data.csv --components 3 --scale standard --output results/
+pca analyze data.csv --components 3 --scale standard --output results/
 
 # Validate data before analysis
-gopca-cli validate spectra.csv
+pca validate spectra.csv
 
 # Apply a saved PCA model to new data
-gopca-cli transform model.json new_data.csv
+pca transform model.json new_data.csv
 ```
 
 ### TheGoCSV Data Editor
@@ -131,14 +131,14 @@ All visualizations feature:
 
 ```bash
 # Download the latest release
-wget https://github.com/bitjungle/gopca/releases/latest/download/gopca-cli
-chmod +x gopca-cli
+wget https://github.com/bitjungle/gopca/releases/latest/download/pca
+chmod +x pca
 
 # Basic analysis with automatic settings
-./gopca-cli analyze mydata.csv
+./pca analyze mydata.csv
 
 # Advanced analysis with custom parameters
-./gopca-cli analyze mydata.csv \
+./pca analyze mydata.csv \
   --components 4 \
   --scale standard \
   --preprocessing snv \
@@ -146,7 +146,7 @@ chmod +x gopca-cli
   --output results/
 
 # Validate your data first
-./gopca-cli validate mydata.csv
+./pca validate mydata.csv
 ```
 
 ## Use Cases

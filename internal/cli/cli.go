@@ -15,7 +15,7 @@ import (
 )
 
 const (
-	AppName = "gopca-cli"
+	AppName = "pca"
 )
 
 // NewApp creates and configures the CLI application
@@ -36,13 +36,13 @@ A focused, professional-grade tool that excels at one thing: PCA analysis.
 This CLI tool provides fast, scriptable PCA for power users and automation.
 
 QUICK START:
-  Analyze a CSV file:     gopca-cli analyze data.csv
-  With options:           gopca-cli analyze --scale standard -c 3 data.csv
-  Save results:           gopca-cli analyze -f json -o results/ data.csv
-  Validate data first:    gopca-cli validate data.csv
-  Apply saved model:      gopca-cli transform model.json new_data.csv
+  Analyze a CSV file:     pca analyze data.csv
+  With options:           pca analyze --scale standard -c 3 data.csv
+  Save results:           pca analyze -f json -o results/ data.csv
+  Validate data first:    pca validate data.csv
+  Apply saved model:      pca transform model.json new_data.csv
 
-For detailed help on any command, use: gopca-cli <command> --help`,
+For detailed help on any command, use: pca <command> --help`,
 		Commands: []*cli.Command{
 			analyzeCommand(),
 			validateCommand(),

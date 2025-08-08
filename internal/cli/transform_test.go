@@ -28,7 +28,7 @@ func TestTransformCommand(t *testing.T) {
 	// Run analyze to create model
 	app := NewApp()
 	err := app.Run([]string{
-		"gopca-cli", "analyze",
+		"pca", "analyze",
 		"-f", "json",
 		"-o", tempDir,
 		"../datasets/iris.csv",
@@ -53,7 +53,7 @@ func TestTransformCommand(t *testing.T) {
 		{
 			name: "basic transform table output",
 			args: []string{
-				"gopca-cli", "transform",
+				"pca", "transform",
 				modelFile,
 				"../datasets/iris.csv",
 			},
@@ -62,7 +62,7 @@ func TestTransformCommand(t *testing.T) {
 		{
 			name: "transform with JSON output",
 			args: []string{
-				"gopca-cli", "transform",
+				"pca", "transform",
 				"-f", "json",
 				"-o", tempDir,
 				modelFile,
@@ -105,7 +105,7 @@ func TestTransformCommand(t *testing.T) {
 		{
 			name: "transform with excluded rows",
 			args: []string{
-				"gopca-cli", "transform",
+				"pca", "transform",
 				"--exclude-rows", "1-10",
 				modelFile,
 				"../datasets/iris.csv",
@@ -115,7 +115,7 @@ func TestTransformCommand(t *testing.T) {
 		{
 			name: "missing model file",
 			args: []string{
-				"gopca-cli", "transform",
+				"pca", "transform",
 				"nonexistent.json",
 				"../datasets/iris.csv",
 			},
@@ -125,7 +125,7 @@ func TestTransformCommand(t *testing.T) {
 		{
 			name: "missing data file",
 			args: []string{
-				"gopca-cli", "transform",
+				"pca", "transform",
 				modelFile,
 				"nonexistent.csv",
 			},
@@ -162,7 +162,7 @@ func TestTransformScoresMatchOriginal(t *testing.T) {
 	// Create model
 	app := NewApp()
 	err := app.Run([]string{
-		"gopca-cli", "analyze",
+		"pca", "analyze",
 		"-f", "json",
 		"-o", tempDir,
 		"../datasets/iris.csv",
@@ -179,7 +179,7 @@ func TestTransformScoresMatchOriginal(t *testing.T) {
 
 	// Transform the same data
 	err = app.Run([]string{
-		"gopca-cli", "transform",
+		"pca", "transform",
 		"-f", "json",
 		"-o", tempDir,
 		filepath.Join(tempDir, "iris_pca.json"),
@@ -223,7 +223,7 @@ func TestTransformWithPreprocessing(t *testing.T) {
 	// Create model with standard scaling
 	app := NewApp()
 	err := app.Run([]string{
-		"gopca-cli", "analyze",
+		"pca", "analyze",
 		"--scale", "standard",
 		"-f", "json",
 		"-o", tempDir,
@@ -233,7 +233,7 @@ func TestTransformWithPreprocessing(t *testing.T) {
 
 	// Transform should apply the same preprocessing
 	err = app.Run([]string{
-		"gopca-cli", "transform",
+		"pca", "transform",
 		"-f", "json",
 		"-o", tempDir,
 		filepath.Join(tempDir, "iris_pca.json"),
