@@ -20,6 +20,7 @@ import (
 	"strings"
 	"time"
 	
+	"github.com/bitjungle/gopca/internal/version"
 	"github.com/bitjungle/gopca/pkg/types"
 	wailsruntime "github.com/wailsapp/wails/v2/pkg/runtime"
 	"github.com/xuri/excelize/v2"
@@ -1104,7 +1105,7 @@ func fillWithCustomValue(data *FileData, colIdx int, customValue string) {
 
 // GetVersion returns the application version
 func (a *App) GetVersion() string {
-	return "1.0.0"
+	return version.Get().Short()
 }
 
 // DataQualityReport represents a comprehensive data quality analysis

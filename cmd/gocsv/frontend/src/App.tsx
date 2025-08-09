@@ -9,7 +9,7 @@ import './App.css';
 import { CSVGrid, ValidationResults, MissingValueSummary, MissingValueDialog, DataQualityDashboard, UndoRedoControls, ImportWizard, DataTransformDialog, DocumentationViewer, ConfirmDialog } from './components';
 import { ThemeProvider, ThemeToggle } from '@gopca/ui-components';
 import logo from './assets/images/GoCSV-logo-1024-transp.png';
-import { LoadCSV, SaveCSV, SaveExcel, ValidateForGoPCA, AnalyzeMissingValues, FillMissingValues, AnalyzeDataQuality, CheckGoPCAStatus, OpenInGoPCA, DownloadGoPCA, ExecuteCellEdit, ExecuteHeaderEdit, ExecuteFillMissingValues, ClearHistory } from '../wailsjs/go/main/App';
+import { LoadCSV, SaveCSV, SaveExcel, ValidateForGoPCA, AnalyzeMissingValues, FillMissingValues, AnalyzeDataQuality, CheckGoPCAStatus, OpenInGoPCA, DownloadGoPCA, ExecuteCellEdit, ExecuteHeaderEdit, ExecuteFillMissingValues, ClearHistory, GetVersion } from '../wailsjs/go/main/App';
 import { EventsOn, OnFileDrop, OnFileDropOff } from '../wailsjs/runtime/runtime';
 import { main } from '../wailsjs/go/models';
 
@@ -34,6 +34,7 @@ function AppContent() {
     const [showTransformDialog, setShowTransformDialog] = useState(false);
     const [showDocumentation, setShowDocumentation] = useState(false);
     const [showDownloadConfirm, setShowDownloadConfirm] = useState(false);
+    const [version, setVersion] = useState<string>('');
     
     // Ref for scrolling to Step 2
     const step2Ref = useRef<HTMLDivElement>(null);
@@ -48,6 +49,13 @@ function AppContent() {
         
         // Check GoPCA status on startup
         checkGoPCAInstallation();
+        
+        // Fetch version on startup
+        GetVersion().then((v) => {
+            setVersion(v);
+        }).catch((err) => {
+            console.error('Failed to get version:', err);
+        });
         
         // Set up drag and drop listener
         OnFileDrop(async (x: number, y: number, paths: string[]) => {
@@ -285,6 +293,11 @@ function AppContent() {
                             className="h-12 cursor-pointer hover:opacity-90 transition-opacity flex-shrink-0"
                             onClick={scrollToTop}
                         />
+                        {version && (
+                            <span className="text-xs text-gray-500 dark:text-gray-400">
+                                {version}
+                            </span>
+                        )}
                         <div>
                             <p className="text-sm text-gray-600 dark:text-gray-400">Data Editor for GoPCA</p>
                         </div>
