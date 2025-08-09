@@ -47,7 +47,12 @@ Windows signing uses SignPath.io and is optional - the workflow functions withou
 2. Create certificate (test or production)
 3. Create project with slug `gopca`
 4. Add signing policy with slug `test-signing` (or `release-signing` for production)
-5. Generate API token and add to GitHub secrets
+5. **Configure GitHub as Trusted Build System**:
+   - Navigate to Organization Settings → Trusted Build Systems
+   - Click "Add predefined" and select "GitHub.com"
+   - Link the trusted build system to your `gopca` project
+   - This is required for GitHub Actions to authenticate with SignPath
+6. Generate API token and add to GitHub secrets
 
 ### Process
 The `sign-windows-binaries` job in the release workflow:
