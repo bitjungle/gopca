@@ -9,11 +9,14 @@ import { ComposedChart, Scatter, Line, XAxis, YAxis, CartesianGrid, Tooltip, Res
 import { PCAResult, EllipseParams } from '../../types';
 import { ExportButton } from '../ExportButton';
 import { PlotControls } from '../PlotControls';
+import { CustomPointWithLabel } from '../CustomPointWithLabel';
+import { calculateTopPoints } from '../../utils/labelUtils';
 import { useZoomPan } from '../../hooks/useZoomPan';
 import { useChartTheme } from '../../hooks/useChartTheme';
 import { usePalette } from '../../contexts/PaletteContext';
 import { getQualitativeColor, getSequentialColor, createQualitativeColorMap, getSequentialColorScale } from '../../utils/colorPalettes';
 import { useEllipses } from '../../hooks/useEllipses';
+import { EllipseOverlay } from '../EllipseOverlay';
 
 interface ScoresPlotProps {
   pcaResult: PCAResult;
@@ -27,6 +30,8 @@ interface ScoresPlotProps {
   groupEllipses?: Record<string, EllipseParams>;
   showEllipses?: boolean;
   confidenceLevel?: 0.90 | 0.95 | 0.99;
+  showRowLabels?: boolean;
+  maxLabelsToShow?: number;
 }
 
 export const ScoresPlot: React.FC<ScoresPlotProps> = ({ 
@@ -40,13 +45,16 @@ export const ScoresPlot: React.FC<ScoresPlotProps> = ({
   groupType = 'categorical',
   groupEllipses,
   showEllipses = false,
-  confidenceLevel = 0.95
+  confidenceLevel = 0.95,
+  showRowLabels = false,
+  maxLabelsToShow = 10
 }) => {
   const containerRef = useRef<HTMLDivElement>(null);
   const fullscreenRef = useRef<HTMLDivElement>(null);
   
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [containerSize, setContainerSize] = useState({ width: 0, height: 0 });
+  const [hoveredPoint, setHoveredPoint] = useState<number | null>(null);
   const chartTheme = useChartTheme();
   const { mode, qualitativePalette, sequentialPalette } = usePalette();
   
@@ -147,35 +155,17 @@ export const ScoresPlot: React.FC<ScoresPlotProps> = ({
       name: rowNames[index] || `Sample ${index + 1}`,
       group: group,
       color: color,
-      value: value
+      value: value,
+      index: index
     };
   }).filter(point => point !== null);
   
-  // Generate ellipse path points for Line rendering
-  const generateEllipsePoints = useCallback((ellipse: EllipseParams) => {
-    const { centerX, centerY, majorAxis, minorAxis, angle } = ellipse;
-    const points = [];
-    const steps = 50;
-    
-    for (let i = 0; i <= steps; i++) {
-      const t = (i / steps) * 2 * Math.PI;
-      // Ellipse in local coordinates
-      const x = majorAxis * Math.cos(t);
-      const y = minorAxis * Math.sin(t);
-      
-      // Apply rotation
-      const rotatedX = x * Math.cos(angle) - y * Math.sin(angle);
-      const rotatedY = x * Math.sin(angle) + y * Math.cos(angle);
-      
-      // Translate to center
-      points.push({
-        x: centerX + rotatedX,
-        y: centerY + rotatedY
-      });
-    }
-    
-    return points;
-  }, []);
+  // Calculate top points for labeling using shared utility
+  const topPoints = useMemo(() => 
+    calculateTopPoints(data as Array<{ x: number; y: number; index: number }>, showRowLabels, maxLabelsToShow),
+    [data, showRowLabels, maxLabelsToShow]
+  );
+  
 
   // Get variance percentages for axis labels
   const xVariance = pcaResult.explained_variance_ratio[xComponent]?.toFixed(1) || '0';
@@ -278,6 +268,19 @@ export const ScoresPlot: React.FC<ScoresPlotProps> = ({
     };
   }, []);
 
+  // Create custom dot using shared component
+  const CustomDot = useCallback((props: any) => (
+    <CustomPointWithLabel
+      {...props}
+      topPoints={topPoints}
+      hoveredPoint={hoveredPoint}
+      showLabels={showRowLabels}
+      onMouseEnter={setHoveredPoint}
+      onMouseLeave={() => setHoveredPoint(null)}
+      chartTheme={chartTheme}
+    />
+  ), [topPoints, hoveredPoint, showRowLabels, chartTheme]);
+
   // Handle case where there's no data
   if (data.length === 0) {
     return (
@@ -367,59 +370,13 @@ export const ScoresPlot: React.FC<ScoresPlotProps> = ({
         
         {/* SVG Overlay for confidence ellipses */}
         {showEllipses && effectiveGroupEllipses && groupColorMap && !ellipsesError && (
-          <svg 
-            className="absolute inset-0 pointer-events-none" 
-            style={{ width: '100%', height: '100%' }}
-          >
-            {Object.entries(effectiveGroupEllipses).map(([group, ellipse]) => {
-              const color = groupColorMap.get(group) || '#888888';
-              const points = generateEllipsePoints(ellipse);
-              
-              // Calculate scale based on current domain and chart dimensions
-              const chartMargins = { top: 20, right: 20, bottom: 60, left: 80 };
-              const currentXDomain = zoomDomain.x || defaultXDomain;
-              const currentYDomain = zoomDomain.y || defaultYDomain;
-              
-              // Convert data coordinates to pixel coordinates
-              const xScale = (value: number) => {
-                const range = currentXDomain[1] - currentXDomain[0];
-                const ratio = (value - currentXDomain[0]) / range;
-                // Account for margins
-                const plotWidth = containerSize.width - chartMargins.left - chartMargins.right;
-                return chartMargins.left + ratio * plotWidth;
-              };
-              
-              const yScale = (value: number) => {
-                const range = currentYDomain[1] - currentYDomain[0];
-                const ratio = (value - currentYDomain[0]) / range;
-                // Y is inverted in SVG, account for margins
-                const plotHeight = containerSize.height - chartMargins.top - chartMargins.bottom;
-                return chartMargins.top + plotHeight - ratio * plotHeight;
-              };
-              
-              // Convert points to SVG path
-              const pathData = points
-                .map((point, index) => {
-                  const x = xScale(point.x);
-                  const y = yScale(point.y);
-                  return index === 0 ? `M ${x} ${y}` : `L ${x} ${y}`;
-                })
-                .join(' ') + ' Z';
-              
-              return (
-                <path
-                  key={`ellipse-${group}`}
-                  d={pathData}
-                  fill={color}
-                  fillOpacity={0.1}
-                  stroke={color}
-                  strokeWidth={2}
-                  strokeOpacity={0.8}
-                  strokeDasharray="5,5"
-                />
-              );
-            })}
-          </svg>
+          <EllipseOverlay
+            groupEllipses={effectiveGroupEllipses}
+            groupColorMap={groupColorMap}
+            xDomain={zoomDomain.x || defaultXDomain}
+            yDomain={zoomDomain.y || defaultYDomain}
+            containerSize={containerSize}
+          />
         )}
         <ResponsiveContainer width="100%" height="100%">
         <ComposedChart
@@ -483,8 +440,9 @@ export const ScoresPlot: React.FC<ScoresPlotProps> = ({
             fillOpacity={0.8}
             strokeWidth={1}
             stroke="#1E40AF"
+            shape={showRowLabels ? <CustomDot /> : 'circle'}
           >
-            {groupColumn ? (
+            {!showRowLabels && groupColumn ? (
               data.map((entry, index) => {
                 const fillColor = entry?.color || '#3B82F6';
                 return (

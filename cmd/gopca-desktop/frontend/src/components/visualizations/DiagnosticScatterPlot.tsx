@@ -4,7 +4,7 @@
 // The author respectfully requests that it not be used for
 // military, warfare, or surveillance applications.
 
-import React, { useRef, useState } from 'react';
+import React, { useRef, useState, useMemo, useCallback } from 'react';
 import { 
   ScatterChart, 
   Scatter, 
@@ -21,23 +21,30 @@ import { PCAResult } from '../../types';
 import { TooltipProps } from '../../types/recharts';
 import { ExportButton } from '../ExportButton';
 import { PlotControls } from '../PlotControls';
+import { CustomPointWithLabel } from '../CustomPointWithLabel';
+import { calculateTopPoints } from '../../utils/labelUtils';
 import { useZoomPan } from '../../hooks/useZoomPan';
 import { useChartTheme } from '../../hooks/useChartTheme';
 
 interface DiagnosticScatterPlotProps {
   pcaResult: PCAResult;
   rowNames?: string[];
+  showRowLabels?: boolean;
+  maxRowLabelsToShow?: number;
   confidenceLevel?: '95' | '99';
 }
 
 export const DiagnosticScatterPlot: React.FC<DiagnosticScatterPlotProps> = ({ 
   pcaResult,
   rowNames = [],
+  showRowLabels = false,
+  maxRowLabelsToShow = 10,
   confidenceLevel: initialConfidenceLevel = '95'
 }) => {
   const chartRef = useRef<HTMLDivElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
   const [isFullscreen, setIsFullscreen] = useState(false);
+  const [hoveredPoint, setHoveredPoint] = useState<number | null>(null);
   const [confidenceLevel, setConfidenceLevel] = useState<'95' | '99'>(initialConfidenceLevel);
   const chartTheme = useChartTheme();
   
@@ -58,8 +65,24 @@ export const DiagnosticScatterPlot: React.FC<DiagnosticScatterPlotProps> = ({
   const rssThreshold = confidenceLevel === '95'
     ? (pcaResult.q_limit_95 || 0.03)
     : (pcaResult.q_limit_99 || 0.03);
+  
+  // Color mapping for outlier types
+  const getColor = (outlierType: string) => {
+    switch (outlierType) {
+      case 'normal':
+        return '#10B981'; // Green
+      case 'leverage':
+        return '#F59E0B'; // Amber
+      case 'poor-fit':
+        return '#3B82F6'; // Blue
+      case 'strong-outlier':
+        return '#EF4444'; // Red
+      default:
+        return '#6B7280'; // Gray
+    }
+  };
 
-  // Prepare data for scatter plot
+  // Prepare data for scatter plot with x and y fields for shared utilities
   const data = pcaResult.metrics.map((metric, index) => {
     const mahalanobis = metric.mahalanobis || 0;
     const rss = metric.rss || 0;
@@ -79,7 +102,10 @@ export const DiagnosticScatterPlot: React.FC<DiagnosticScatterPlotProps> = ({
       name: rowNames[index] || `Sample ${index + 1}`,
       mahalanobis,
       rss,
-      outlierType
+      x: rss,  // X-axis is RSS
+      y: mahalanobis,  // Y-axis is Mahalanobis
+      outlierType,
+      color: getColor(outlierType)  // Pre-calculate color for consistency
     };
   });
 
@@ -108,23 +134,28 @@ export const DiagnosticScatterPlot: React.FC<DiagnosticScatterPlotProps> = ({
 
   const xDomain = zoomDomain.x || [0, maxRSS];
   const yDomain = zoomDomain.y || [0, maxMahalanobis];
+  
+  // Calculate top points for labeling using shared utility
+  const topPoints = useMemo(() => 
+    calculateTopPoints(data as Array<{ x: number; y: number; index: number }>, showRowLabels, maxRowLabelsToShow),
+    [data, showRowLabels, maxRowLabelsToShow]
+  );
 
-  // Color mapping for outlier types
-  const getColor = (outlierType: string) => {
-    switch (outlierType) {
-      case 'normal':
-        return '#10B981'; // Green
-      case 'leverage':
-        return '#F59E0B'; // Amber
-      case 'poor-fit':
-        return '#3B82F6'; // Blue
-      case 'strong-outlier':
-        return '#EF4444'; // Red
-      default:
-        return '#6B7280'; // Gray
-    }
-  };
 
+  // Create custom dot using shared component
+  const CustomDot = useCallback((props: any) => (
+    <CustomPointWithLabel
+      {...props}
+      topPoints={topPoints}
+      hoveredPoint={hoveredPoint}
+      showLabels={showRowLabels}
+      onMouseEnter={setHoveredPoint}
+      onMouseLeave={() => setHoveredPoint(null)}
+      chartTheme={chartTheme}
+      fontSize={10}
+    />
+  ), [topPoints, hoveredPoint, showRowLabels, chartTheme]);
+  
   // Custom tooltip
   const CustomTooltip = ({ active, payload }: TooltipProps) => {
     if (active && payload && payload.length) {
@@ -259,10 +290,13 @@ export const DiagnosticScatterPlot: React.FC<DiagnosticScatterPlotProps> = ({
               <Scatter 
                 data={data} 
                 fill="#8884d8"
+                shape={showRowLabels ? <CustomDot /> : 'circle'}
               >
-                {data.map((entry, index) => (
-                  <Cell key={`cell-${index}`} fill={getColor(entry.outlierType)} />
-                ))}
+                {!showRowLabels ? (
+                  data.map((entry, index) => (
+                    <Cell key={`cell-${index}`} fill={entry.color} />
+                  ))
+                ) : null}
               </Scatter>
             </ScatterChart>
           </ResponsiveContainer>
