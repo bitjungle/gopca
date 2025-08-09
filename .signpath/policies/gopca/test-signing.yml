@@ -1,0 +1,9 @@
+# SignPath policy configuration for test-signing
+# This file enables GitHub Actions to submit signing requests to SignPath
+# Documentation: https://docs.signpath.io/trusted-build-systems/github
+
+version: 1
+configuration:
+  # The artifact configuration slug must match what's configured in SignPath
+  # Check your project's artifact configurations for the correct value
+  artifactConfiguration: Initial version
