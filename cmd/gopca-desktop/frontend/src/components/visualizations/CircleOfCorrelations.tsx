@@ -4,7 +4,7 @@
 // The author respectfully requests that it not be used for
 // military, warfare, or surveillance applications.
 
-import React, { useRef, useState, useCallback, useEffect } from 'react';
+import React, { useRef, useState, useCallback } from 'react';
 import ReactDOM from 'react-dom';
 import { PCAResult } from '../../types';
 import { ExportButton } from '../ExportButton';
@@ -268,8 +268,8 @@ export const CircleOfCorrelations: React.FC<CircleOfCorrelationsProps> = ({
                   </marker>
                 </defs>
                 
-                {/* Variable label (only for significant loadings) */}
-                {loading.magnitude > threshold && (
+                {/* Variable label - show all for small datasets, filter by threshold for large ones */}
+                {(loadings.length <= 20 || loading.magnitude > threshold) && (
                   <text
                     x={endX}
                     y={endY}

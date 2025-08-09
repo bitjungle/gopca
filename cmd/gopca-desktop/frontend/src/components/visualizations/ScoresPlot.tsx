@@ -95,16 +95,13 @@ export const ScoresPlot: React.FC<ScoresPlotProps> = ({
   const continuousRange = useMemo(() => {
     if (groupType === 'continuous' && groupValues) {
       const validValues = groupValues.filter(v => v !== null && v !== undefined && !isNaN(v) && isFinite(v));
-      console.log(`Continuous values - Total: ${groupValues.length}, Valid: ${validValues.length}`);
       if (validValues.length > 0) {
         const range = {
           min: Math.min(...validValues),
           max: Math.max(...validValues)
         };
-        console.log(`Range: min=${range.min}, max=${range.max}`);
         return range;
       }
-      console.log('No valid values found for continuous range');
     }
     return null;
   }, [groupValues, groupType]);

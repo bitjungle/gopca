@@ -1097,6 +1097,7 @@ function AppContent() {
                                             pcaResult={pcaResponse.result}
                                             xComponent={selectedXComponent}
                                             yComponent={selectedYComponent}
+                                            threshold={guiConfig?.visualization?.correlation_threshold || 0.3}
                                             maxVariables={guiConfig?.visualization?.circle_max_variables || 100}
                                         />
                                     ) : selectedPlot === 'diagnostics' ? (

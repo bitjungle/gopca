@@ -246,9 +246,10 @@ export const Biplot: React.FC<BiplotProps> = ({
     : allLoadingsData;
 
   // Sort loadings by magnitude and get top N for labeling
+  // Show all labels for small datasets, otherwise show top 15
   const topLoadings = [...loadingsData]
     .sort((a, b) => b.magnitude - a.magnitude)
-    .slice(0, 8); // Show labels for top 8 variables
+    .slice(0, loadingsData.length <= 20 ? loadingsData.length : 15);
 
   // Set symmetric axis ranges based on plot bounds
   const axisRange = plotMax;
@@ -389,45 +390,6 @@ export const Biplot: React.FC<BiplotProps> = ({
       fontSize={10}
     />
   ), [topPoints, hoveredPoint, showRowLabels, chartTheme]);
-
-  // Custom shape to draw loading arrows from origin
-  const LoadingArrows = () => {
-    return (
-      <g>
-        {loadingsData.map(loading => {
-          const isHovered = hoveredVariable === loading.index;
-          const angle = Math.atan2(loading.y, loading.x);
-          const arrowLength = 0.3;
-          const arrowAngle = 0.4;
-          
-          // Calculate arrow head points
-          const headX1 = loading.x - arrowLength * Math.cos(angle - arrowAngle);
-          const headY1 = loading.y - arrowLength * Math.sin(angle - arrowAngle);
-          const headX2 = loading.x - arrowLength * Math.cos(angle + arrowAngle);
-          const headY2 = loading.y - arrowLength * Math.sin(angle + arrowAngle);
-          
-          return (
-            <g key={`arrow-${loading.index}`}>
-              <line
-                x1={0}
-                y1={0}
-                x2={loading.x}
-                y2={loading.y}
-                stroke={isHovered ? "#EF4444" : "#10B981"}
-                strokeWidth={isHovered ? 3 : 2}
-                onMouseEnter={() => setHoveredVariable(loading.index)}
-                onMouseLeave={() => setHoveredVariable(null)}
-              />
-              <path
-                d={`M ${loading.x} ${loading.y} L ${headX1} ${headY1} L ${headX2} ${headY2} Z`}
-                fill={isHovered ? "#EF4444" : "#10B981"}
-              />
-            </g>
-          );
-        })}
-      </g>
-    );
-  };
 
   // Custom tooltip
   const CustomTooltip = ({ active, payload }: TooltipProps) => {
