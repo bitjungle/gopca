@@ -285,10 +285,15 @@ jobs:
       run: |
         if [ -n "${{ secrets.SIGNPATH_API_TOKEN }}" ] && [ -n "${{ secrets.SIGNPATH_ORG_ID }}" ]; then
           echo "configured=true" >> $GITHUB_OUTPUT
-          echo "SignPath is configured, will sign Windows binaries"
+          echo "✓ SignPath secrets are configured"
+          echo "Note: If signing fails with 'Trusted build system' error:"
+          echo "  1. Go to SignPath.io organization settings"
+          echo "  2. Add GitHub as a trusted build system"
+          echo "  3. Link it to the 'gopca' project"
         else
           echo "configured=false" >> $GITHUB_OUTPUT
-          echo "SignPath not configured, skipping Windows signing"
+          echo "⚠️ SignPath not configured, Windows binaries will be unsigned"
+          echo "To enable: Set SIGNPATH_API_TOKEN and SIGNPATH_ORG_ID secrets"
         fi
     
     - name: Download Windows CLI artifact
