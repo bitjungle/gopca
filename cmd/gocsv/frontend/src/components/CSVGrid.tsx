@@ -4,9 +4,9 @@
 // The author respectfully requests that it not be used for
 // military, warfare, or surveillance applications.
 
-import React, { useCallback, useMemo, useRef, useState, useEffect } from 'react';
+import React, { useCallback, useMemo, useRef, useState, useEffect, forwardRef, useImperativeHandle } from 'react';
 import { AgGridReact } from 'ag-grid-react';
-import { ColDef, GridReadyEvent, CellValueChangedEvent, GridApi, ColumnApi, CellClickedEvent, RowClickedEvent } from 'ag-grid-community';
+import { ColDef, GridReadyEvent, CellValueChangedEvent, GridApi, ColumnApi, CellClickedEvent, RowClickedEvent, ColumnResizedEvent } from 'ag-grid-community';
 import 'ag-grid-community/styles/ag-grid.css';
 import 'ag-grid-community/styles/ag-theme-quartz.css';
 import { useTheme } from '@gopca/ui-components';
@@ -82,7 +82,7 @@ const ContextMenu: React.FC<ContextMenuProps> = ({ x, y, items, onClose }) => {
     );
 };
 
-export const CSVGrid: React.FC<CSVGridProps> = ({ 
+export const CSVGrid = forwardRef<any, CSVGridProps>(({ 
     data, 
     headers,
     rowNames,
@@ -91,7 +91,7 @@ export const CSVGrid: React.FC<CSVGridProps> = ({
     onHeaderChange,
     onRowNameChange,
     onRefresh
-}) => {
+}, ref) => {
     // Validate inputs
     if (!data || !headers || data.length === 0 || headers.length === 0) {
         return <div className="w-full h-full flex items-center justify-center text-gray-500">No data to display</div>;
@@ -100,6 +100,7 @@ export const CSVGrid: React.FC<CSVGridProps> = ({
     const [gridApi, setGridApi] = useState<GridApi | null>(null);
     const [columnApi, setColumnApi] = useState<ColumnApi | null>(null);
     const { theme } = useTheme();
+    const [hasUserResized, setHasUserResized] = useState(false);
     
     // Context menu state
     const [contextMenu, setContextMenu] = useState<{
@@ -314,6 +315,7 @@ export const CSVGrid: React.FC<CSVGridProps> = ({
                 filter: true,
                 resizable: true,
                 minWidth: 100,
+                maxWidth: 300,
                 cellClass: 'row-name-cell',
                 headerClass: 'row-name-header',
                 pinned: 'left',
@@ -338,7 +340,8 @@ export const CSVGrid: React.FC<CSVGridProps> = ({
                 sortable: true,
                 filter: true,
                 resizable: true,
-                minWidth: 100,
+                minWidth: 80,
+                maxWidth: 400,
                 cellClass: (params) => {
                     const classes = [];
                     if (colType === 'numeric') classes.push('numeric-cell');
@@ -407,8 +410,10 @@ export const CSVGrid: React.FC<CSVGridProps> = ({
         setGridApi(params.api);
         setColumnApi(params.columnApi);
         
-        // Size columns to fit available space
-        params.api.sizeColumnsToFit();
+        // Auto-size columns based on content with a small delay to ensure data is loaded
+        setTimeout(() => {
+            params.columnApi.autoSizeAllColumns(false);
+        }, 100);
     }, []);
     
     // Handle cell right-click
@@ -432,8 +437,8 @@ export const CSVGrid: React.FC<CSVGridProps> = ({
     
     // Default column definition
     const defaultColDef = useMemo<ColDef>(() => ({
-        flex: 1,
-        minWidth: 100,
+        minWidth: 80,
+        maxWidth: 400,
         editable: true,
         sortable: true,
         filter: true,
@@ -525,17 +530,28 @@ export const CSVGrid: React.FC<CSVGridProps> = ({
         ensureDomOrder: true,
     }), [data.length]);
     
-    // Auto-size columns on window resize
+    // Auto-size columns on window resize only if user hasn't manually resized
     useEffect(() => {
         const handleResize = () => {
-            if (gridApi) {
-                gridApi.sizeColumnsToFit();
+            if (gridApi && columnApi && !hasUserResized) {
+                // Maintain content-based sizing on window resize
+                columnApi.autoSizeAllColumns(false);
             }
         };
         
         window.addEventListener('resize', handleResize);
         return () => window.removeEventListener('resize', handleResize);
-    }, [gridApi]);
+    }, [gridApi, columnApi, hasUserResized]);
+    
+    // Expose auto-size function for external use
+    useImperativeHandle(ref, () => ({
+        autoSizeColumns: () => {
+            if (columnApi) {
+                columnApi.autoSizeAllColumns(false);
+                setHasUserResized(false);
+            }
+        }
+    }), [columnApi]);
     
     // Add header right-click handling after grid is ready
     useEffect(() => {
@@ -613,6 +629,11 @@ export const CSVGrid: React.FC<CSVGridProps> = ({
                     onGridReady={onGridReady}
                     onCellValueChanged={onCellValueChanged}
                     onCellContextMenu={onCellContextMenu}
+                    onColumnResized={(event: ColumnResizedEvent) => {
+                        if (event.finished) {
+                            setHasUserResized(true);
+                        }
+                    }}
                     {...gridOptions}
                 />
             </div>
@@ -656,4 +677,6 @@ export const CSVGrid: React.FC<CSVGridProps> = ({
             />
         </div>
     );
-};
+});
+
+CSVGrid.displayName = 'CSVGrid';
