@@ -168,6 +168,119 @@ if (!data || data.length === 0) {
 }
 ```
 
+## Row Labels Pattern
+
+For plots that display individual data points (Scores, Biplot, Diagnostic), implement optional row labels using shared components:
+
+### Using Row Labels in Your Plot
+
+```tsx
+import { CustomPointWithLabel } from '../CustomPointWithLabel';
+import { calculateTopPoints } from '../../utils/labelUtils';
+
+interface YourPlotProps {
+  // ... other props
+  showRowLabels?: boolean;
+  maxRowLabelsToShow?: number;
+}
+
+// In your component:
+const [hoveredPoint, setHoveredPoint] = useState<number | null>(null);
+
+// Calculate which points should have labels (furthest from origin)
+const topPoints = useMemo(() => 
+  calculateTopPoints(data, showRowLabels, maxRowLabelsToShow),
+  [data, showRowLabels, maxRowLabelsToShow]
+);
+
+// Create custom dot component
+const CustomDot = useCallback((props: any) => (
+  <CustomPointWithLabel
+    {...props}
+    topPoints={topPoints}
+    hoveredPoint={hoveredPoint}
+    showLabels={showRowLabels}
+    onMouseEnter={setHoveredPoint}
+    onMouseLeave={() => setHoveredPoint(null)}
+    chartTheme={chartTheme}
+    fontSize={11}  // Optional, defaults to 11
+  />
+), [topPoints, hoveredPoint, showRowLabels, chartTheme]);
+
+// Use in your Scatter component
+<Scatter 
+  data={data}
+  shape={showRowLabels ? <CustomDot /> : 'circle'}
+/>
+```
+
+### Key Features
+- Labels are positioned based on quadrant to avoid overlaps
+- Only the N furthest points from origin are labeled (configurable)
+- Hovered points always show labels regardless of distance
+- Shared utility functions ensure consistent behavior across plots
+
+## Confidence Ellipses Pattern
+
+For plots showing grouped data (Scores, Biplot), use the shared ellipse components:
+
+### Using Ellipses in Your Plot
+
+```tsx
+import { useEllipses } from '../../hooks/useEllipses';
+import { EllipseOverlay } from '../EllipseOverlay';
+
+// Track container size for scaling
+const [containerSize, setContainerSize] = useState({ width: 0, height: 0 });
+
+// Use ResizeObserver to track container dimensions
+React.useEffect(() => {
+  if (!containerRef.current) return;
+  
+  const resizeObserver = new ResizeObserver((entries) => {
+    for (const entry of entries) {
+      setContainerSize({
+        width: entry.contentRect.width,
+        height: entry.contentRect.height
+      });
+    }
+  });
+  
+  resizeObserver.observe(containerRef.current);
+  return () => resizeObserver.disconnect();
+}, []);
+
+// Calculate ellipses if not provided
+const { 
+  ellipses90, ellipses95, ellipses99,
+  isLoading: ellipsesLoading,
+  error: ellipsesError
+} = useEllipses({
+  scores: pcaResult.scores,
+  groupLabels: groupLabels || [],
+  xComponent,
+  yComponent,
+  enabled: shouldCalculateEllipses
+});
+
+// In your render, add the overlay
+<div ref={containerRef} className="w-full relative">
+  {showEllipses && effectiveGroupEllipses && groupColorMap && (
+    <EllipseOverlay
+      groupEllipses={effectiveGroupEllipses}
+      groupColorMap={groupColorMap}
+      xDomain={zoomDomain.x || defaultXDomain}
+      yDomain={zoomDomain.y || defaultYDomain}
+      containerSize={containerSize}
+      margins={{ top: 20, right: 20, bottom: 60, left: 80 }}  // Optional
+    />
+  )}
+  <ResponsiveContainer>
+    {/* Your chart */}
+  </ResponsiveContainer>
+</div>
+```
+
 ## Additional Guidelines
 
 - **Zoom/Pan Support**: Use the `useZoomPan` hook if applicable
@@ -175,6 +288,8 @@ if (!data || data.length === 0) {
 - **Responsive Design**: Use `ResponsiveContainer` from Recharts
 - **TypeScript Types**: Define clear prop interfaces
 - **Tooltips**: Use React Portals for consistent tooltips (never use native `title` attribute)
+- **Shared Components**: Prefer shared utilities (`labelUtils`, `ellipseUtils`) over duplicated code
+- **Container Tracking**: Use ResizeObserver when you need pixel-perfect overlays
 
 ### Tooltip Implementation Pattern
 
@@ -217,10 +332,16 @@ const handleMouseEnter = (e: React.MouseEvent, text: string) => {
 ## Examples
 
 For real-world examples, see the following components in `cmd/gopca-desktop/frontend/src/components/visualizations/`:
-- `ScoresPlot.tsx` - Scatter plot with group coloring and confidence ellipses
-- `Biplot.tsx` - Complex plot combining scores and loadings
+- `ScoresPlot.tsx` - Scatter plot with group coloring, confidence ellipses, and row labels
+- `Biplot.tsx` - Complex plot combining scores and loadings with row labels and ellipses
 - `ScreePlot.tsx` - Bar chart showing explained variance
 - `LoadingsPlot.tsx` - Heatmap visualization of component loadings
 - `CircleOfCorrelations.tsx` - Unit circle plot for variable correlations
-- `DiagnosticScatterPlot.tsx` - Diagnostic plots for outlier detection
+- `DiagnosticScatterPlot.tsx` - Diagnostic plots for outlier detection with row labels
 - `EigencorrelationPlot.tsx` - Correlation plots for eigenvectors
+
+### Shared Utilities and Components
+- `utils/labelUtils.ts` - Functions for calculating top points and label positioning
+- `utils/ellipseUtils.ts` - Ellipse path generation and coordinate scaling
+- `components/CustomPointWithLabel.tsx` - Reusable point component with smart labeling
+- `components/EllipseOverlay.tsx` - Reusable SVG overlay for confidence ellipses

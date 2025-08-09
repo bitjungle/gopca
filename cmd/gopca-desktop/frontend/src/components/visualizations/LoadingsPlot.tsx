@@ -189,7 +189,7 @@ export const LoadingsPlot: React.FC<LoadingsPlotProps> = ({
               angle={-45}
               textAnchor="end"
               height={60}
-              interval={numVariables <= 20 ? 0 : 'preserveStartEnd'}
+              interval={numVariables <= 30 ? 0 : Math.ceil(numVariables / 20)}
             />
             
             <YAxis 

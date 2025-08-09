@@ -16,13 +16,17 @@ import {
   ReferenceLine,
   Cell
 } from 'recharts';
-import { PCAResult } from '../../types';
+import { PCAResult, EllipseParams } from '../../types';
 import { TooltipProps, LoadingEndpointProps } from '../../types/recharts';
 import { ExportButton } from '../ExportButton';
 import { PlotControls } from '../PlotControls';
+import { CustomPointWithLabel } from '../CustomPointWithLabel';
+import { calculateTopPoints } from '../../utils/labelUtils';
 import { useZoomPan } from '../../hooks/useZoomPan';
 import { useChartTheme } from '../../hooks/useChartTheme';
 import { usePalette } from '../../contexts/PaletteContext';
+import { useEllipses } from '../../hooks/useEllipses';
+import { EllipseOverlay } from '../EllipseOverlay';
 import { getQualitativeColor, getSequentialColor, createQualitativeColorMap, getSequentialColorScale } from '../../utils/colorPalettes';
 
 interface BiplotProps {
@@ -31,10 +35,15 @@ interface BiplotProps {
   xComponent?: number; // 0-based index
   yComponent?: number; // 0-based index
   showLoadingLabels?: boolean;
+  showRowLabels?: boolean;
+  maxRowLabelsToShow?: number;
   groupColumn?: string | null;
   groupLabels?: string[];
   groupValues?: number[]; // For continuous columns
   groupType?: 'categorical' | 'continuous';
+  groupEllipses?: Record<string, EllipseParams>;
+  showEllipses?: boolean;
+  confidenceLevel?: 0.90 | 0.95 | 0.99;
   maxVariables?: number; // Maximum number of variables to display
 }
 
@@ -44,18 +53,25 @@ export const Biplot: React.FC<BiplotProps> = ({
   xComponent = 0, 
   yComponent = 1,
   showLoadingLabels = true,
+  showRowLabels = false,
+  maxRowLabelsToShow = 10,
   groupColumn,
   groupLabels,
   groupValues,
   groupType = 'categorical',
+  groupEllipses,
+  showEllipses = false,
+  confidenceLevel = 0.95,
   maxVariables = 100
 }) => {
   const [hoveredVariable, setHoveredVariable] = useState<number | null>(null);
+  const [hoveredPoint, setHoveredPoint] = useState<number | null>(null);
   const chartRef = useRef<HTMLDivElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
   const fullscreenRef = useRef<HTMLDivElement>(null);
   
   const [isFullscreen, setIsFullscreen] = useState(false);
+  const [containerSize, setContainerSize] = useState({ width: 0, height: 0 });
   const chartTheme = useChartTheme();
   const { mode, qualitativePalette, sequentialPalette } = usePalette();
   
@@ -75,6 +91,31 @@ export const Biplot: React.FC<BiplotProps> = ({
     }
     return null;
   }, [groupLabels, groupColumn, qualitativePalette, groupType]);
+  
+  // Calculate ellipses dynamically if not provided
+  const shouldCalculateEllipses = !!(showEllipses && groupType === 'categorical' && groupLabels && !groupEllipses);
+  const { 
+    ellipses90: dynamicEllipses90,
+    ellipses95: dynamicEllipses95,
+    ellipses99: dynamicEllipses99,
+    isLoading: ellipsesLoading,
+    error: ellipsesError
+  } = useEllipses({
+    scores: pcaResult.scores,
+    groupLabels: groupLabels || [],
+    xComponent,
+    yComponent,
+    enabled: shouldCalculateEllipses
+  });
+  
+  // Use provided ellipses or dynamically calculated ones based on confidence level
+  const effectiveGroupEllipses = groupEllipses || 
+    (showEllipses && (
+      confidenceLevel === 0.90 ? dynamicEllipses90 :
+      confidenceLevel === 0.95 ? dynamicEllipses95 :
+      dynamicEllipses99
+    )) || 
+    undefined;
   
   // Calculate min/max for continuous values
   const continuousRange = useMemo(() => {
@@ -128,9 +169,16 @@ export const Biplot: React.FC<BiplotProps> = ({
       type: 'score',
       group: group,
       color: color,
-      value: value
+      value: value,
+      index: index
     };
   });
+
+  // Calculate top points for labeling using shared utility
+  const topPoints = useMemo(() => 
+    calculateTopPoints(scoresData as Array<{ x: number; y: number; index: number }>, showRowLabels, maxRowLabelsToShow),
+    [scoresData, showRowLabels, maxRowLabelsToShow]
+  );
 
   // Calculate scores range for plot bounds
   const scoreXValues = scoresData.map(d => d.x);
@@ -198,9 +246,10 @@ export const Biplot: React.FC<BiplotProps> = ({
     : allLoadingsData;
 
   // Sort loadings by magnitude and get top N for labeling
+  // Show all labels for small datasets, otherwise show top 15
   const topLoadings = [...loadingsData]
     .sort((a, b) => b.magnitude - a.magnitude)
-    .slice(0, 8); // Show labels for top 8 variables
+    .slice(0, loadingsData.length <= 20 ? loadingsData.length : 15);
 
   // Set symmetric axis ranges based on plot bounds
   const axisRange = plotMax;
@@ -258,6 +307,26 @@ export const Biplot: React.FC<BiplotProps> = ({
       document.removeEventListener('webkitfullscreenchange', handleFullscreenChange);
     };
   }, []);
+  
+  // Update container size on resize
+  React.useEffect(() => {
+    if (!containerRef.current) return;
+    
+    const resizeObserver = new ResizeObserver((entries) => {
+      for (const entry of entries) {
+        setContainerSize({
+          width: entry.contentRect.width,
+          height: entry.contentRect.height
+        });
+      }
+    });
+    
+    resizeObserver.observe(containerRef.current);
+    
+    return () => {
+      resizeObserver.disconnect();
+    };
+  }, []);
 
   // Get variance percentages for axis labels
   const xVariance = pcaResult.explained_variance_ratio[xComponent]?.toFixed(1) || '0';
@@ -308,44 +377,19 @@ export const Biplot: React.FC<BiplotProps> = ({
     isLoadingEnd: true
   }));
 
-  // Custom shape to draw loading arrows from origin
-  const LoadingArrows = () => {
-    return (
-      <g>
-        {loadingsData.map(loading => {
-          const isHovered = hoveredVariable === loading.index;
-          const angle = Math.atan2(loading.y, loading.x);
-          const arrowLength = 0.3;
-          const arrowAngle = 0.4;
-          
-          // Calculate arrow head points
-          const headX1 = loading.x - arrowLength * Math.cos(angle - arrowAngle);
-          const headY1 = loading.y - arrowLength * Math.sin(angle - arrowAngle);
-          const headX2 = loading.x - arrowLength * Math.cos(angle + arrowAngle);
-          const headY2 = loading.y - arrowLength * Math.sin(angle + arrowAngle);
-          
-          return (
-            <g key={`arrow-${loading.index}`}>
-              <line
-                x1={0}
-                y1={0}
-                x2={loading.x}
-                y2={loading.y}
-                stroke={isHovered ? "#EF4444" : "#10B981"}
-                strokeWidth={isHovered ? 3 : 2}
-                onMouseEnter={() => setHoveredVariable(loading.index)}
-                onMouseLeave={() => setHoveredVariable(null)}
-              />
-              <path
-                d={`M ${loading.x} ${loading.y} L ${headX1} ${headY1} L ${headX2} ${headY2} Z`}
-                fill={isHovered ? "#EF4444" : "#10B981"}
-              />
-            </g>
-          );
-        })}
-      </g>
-    );
-  };
+  // Create custom dot using shared component
+  const CustomScoreDot = useCallback((props: any) => (
+    <CustomPointWithLabel
+      {...props}
+      topPoints={topPoints}
+      hoveredPoint={hoveredPoint}
+      showLabels={showRowLabels}
+      onMouseEnter={setHoveredPoint}
+      onMouseLeave={() => setHoveredPoint(null)}
+      chartTheme={chartTheme}
+      fontSize={10}
+    />
+  ), [topPoints, hoveredPoint, showRowLabels, chartTheme]);
 
   // Custom tooltip
   const CustomTooltip = ({ active, payload }: TooltipProps) => {
@@ -463,13 +507,37 @@ export const Biplot: React.FC<BiplotProps> = ({
       
       <div 
         ref={containerRef} 
-        className={`w-full ${isZoomed ? (isPanning ? 'cursor-grabbing' : 'cursor-grab') : ''}`}
+        className={`w-full relative ${isZoomed ? (isPanning ? 'cursor-grabbing' : 'cursor-grab') : ''}`}
         style={{ height: isFullscreen ? 'calc(100vh - 80px)' : 'calc(100% - 40px)' }}
         onMouseDown={handlePanStart}
         onMouseMove={handlePanMove}
         onMouseUp={handlePanEnd}
         onMouseLeave={handlePanEnd}
       >
+        {/* Show ellipse error if any */}
+        {showEllipses && ellipsesError && (
+          <div className="absolute top-2 left-2 bg-red-100 dark:bg-red-900 text-red-700 dark:text-red-200 px-3 py-1 rounded text-sm z-10">
+            {ellipsesError}
+          </div>
+        )}
+        
+        {/* Show loading indicator for ellipses */}
+        {showEllipses && ellipsesLoading && (
+          <div className="absolute top-2 left-2 bg-blue-100 dark:bg-blue-900 text-blue-700 dark:text-blue-200 px-3 py-1 rounded text-sm z-10">
+            Calculating ellipses...
+          </div>
+        )}
+        
+        {/* SVG Overlay for confidence ellipses */}
+        {showEllipses && effectiveGroupEllipses && groupColorMap && !ellipsesError && (
+          <EllipseOverlay
+            groupEllipses={effectiveGroupEllipses}
+            groupColorMap={groupColorMap}
+            xDomain={zoomDomain.x || defaultDomain}
+            yDomain={zoomDomain.y || defaultDomain}
+            containerSize={containerSize}
+          />
+        )}
         <ResponsiveContainer width="100%" height="100%">
         <ScatterChart
           margin={{ top: 20, right: 20, bottom: 60, left: 80 }}
@@ -539,8 +607,9 @@ export const Biplot: React.FC<BiplotProps> = ({
             fillOpacity={0.8}
             strokeWidth={1}
             stroke="#1E40AF"
+            shape={showRowLabels ? <CustomScoreDot /> : 'circle'}
           >
-            {groupColumn ? (
+            {!showRowLabels && groupColumn ? (
               scoresData.map((entry, index) => {
                 const fillColor = entry?.color || '#3B82F6';
                 return (

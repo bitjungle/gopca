@@ -40,6 +40,8 @@ function AppContent() {
     const [selectedGroupColumn, setSelectedGroupColumn] = useState<string | null>(null);
     const [showEllipses, setShowEllipses] = useState(false);
     const [confidenceLevel, setConfidenceLevel] = useState<0.90 | 0.95 | 0.99>(0.95);
+    const [showRowLabels, setShowRowLabels] = useState(false);
+    const [maxLabelsToShow, setMaxLabelsToShow] = useState(10);
     const [showDocumentation, setShowDocumentation] = useState(false);
     const [datasetId, setDatasetId] = useState(0); // Force DataTable re-render on dataset change
     
@@ -834,14 +836,45 @@ function AppContent() {
                             
                             {/* Plot Selector and Visualization */}
                             <div className="mt-6">
-                                <div className="flex items-center justify-between mb-4">
-                                    <h3 className="text-lg font-semibold">Visualizations</h3>
+                                {/* Tier 1: Primary Controls */}
+                                <div className="flex items-center justify-between mb-3 pb-3 border-b border-gray-200 dark:border-gray-600">
                                     <div className="flex items-center gap-4">
-                                        {/* Group selection for color coding */}
+                                        <h3 className="text-lg font-semibold">Visualizations</h3>
+                                        <HelpWrapper helpKey={`${selectedPlot}-plot`}>
+                                            <select
+                                                value={selectedPlot}
+                                                onChange={(e) => setSelectedPlot(e.target.value as 'scores' | 'scree' | 'loadings' | 'biplot' | 'correlations' | 'diagnostics' | 'eigencorrelation')}
+                                                className="px-3 py-1.5 bg-gray-100 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg text-gray-900 dark:text-white font-medium"
+                                            >
+                                                <option value="scores">Scores Plot</option>
+                                                <option value="scree">Scree Plot</option>
+                                                <option value="loadings">Loadings Plot</option>
+                                                {pcaResponse.result.preprocessing_applied && (
+                                                    <option value="biplot">Biplot</option>
+                                                )}
+                                                {pcaResponse.result.preprocessing_applied && (
+                                                    <option value="correlations">Circle of Correlations</option>
+                                                )}
+                                                <option value="diagnostics">Diagnostic Plot</option>
+                                                {pcaResponse.result.eigencorrelations && (
+                                                    <option value="eigencorrelation">Eigencorrelation Plot</option>
+                                                )}
+                                            </select>
+                                        </HelpWrapper>
+                                    </div>
+                                    {selectedGroupColumn && (
+                                        <PaletteSelector />
+                                    )}
+                                </div>
+                                
+                                {/* Tier 2: Context-Sensitive Controls */}
+                                <div className="mb-4">
+                                    <div className="flex flex-wrap items-center gap-4">
+                                        {/* Data Display Group */}
                                         {(selectedPlot === 'scores' || selectedPlot === 'biplot') && fileData && 
                                          ((fileData.categoricalColumns && Object.keys(fileData.categoricalColumns).length > 0) ||
                                           (fileData.numericTargetColumns && Object.keys(fileData.numericTargetColumns).length > 0)) && (
-                                            <>
+                                            <div className="flex items-center gap-3 px-3 py-2 bg-gray-50 dark:bg-gray-800 rounded-lg">
                                                 <HelpWrapper helpKey="group-coloring" className="flex items-center gap-2">
                                                     <label className="text-sm text-gray-600 dark:text-gray-400">Color by:</label>
                                                     <select
@@ -887,15 +920,43 @@ function AppContent() {
                                                         )}
                                                     </select>
                                                 </HelpWrapper>
-                                                {selectedGroupColumn && (
-                                                    <PaletteSelector />
+                                            </div>
+                                        )}
+                                        
+                                        {/* Plot Options Group - For Scores Plot, Biplot, and Diagnostic Plot */}
+                                        {(selectedPlot === 'scores' || selectedPlot === 'biplot' || selectedPlot === 'diagnostics') && (
+                                            <div className="flex items-center gap-3 px-3 py-2 bg-gray-50 dark:bg-gray-800 rounded-lg">
+                                                <HelpWrapper helpKey="row-labels" className="flex items-center gap-2">
+                                                    <label className="text-sm text-gray-600 dark:text-gray-400">
+                                                        <input
+                                                            type="checkbox"
+                                                            checked={showRowLabels}
+                                                            onChange={(e) => setShowRowLabels(e.target.checked)}
+                                                            className="mr-1"
+                                                        />
+                                                        Show labels
+                                                    </label>
+                                                </HelpWrapper>
+                                                {showRowLabels && (
+                                                    <div className="flex items-center gap-2">
+                                                        <label className="text-sm text-gray-600 dark:text-gray-400">Max:</label>
+                                                        <input
+                                                            type="number"
+                                                            min="5"
+                                                            max="50"
+                                                            value={maxLabelsToShow}
+                                                            onChange={(e) => setMaxLabelsToShow(parseInt(e.target.value) || 10)}
+                                                            className="w-12 px-1 py-0.5 bg-gray-100 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded text-sm text-gray-900 dark:text-white"
+                                                        />
+                                                    </div>
                                                 )}
-                                                {selectedPlot === 'scores' && 
-                                                 fileData.categoricalColumns && 
+                                                {fileData?.categoricalColumns && 
                                                  Object.keys(fileData.categoricalColumns).length > 0 && 
                                                  selectedGroupColumn && 
-                                                 getColumnData(selectedGroupColumn).type === 'categorical' && (
+                                                 getColumnData(selectedGroupColumn).type === 'categorical' && 
+                                                 (selectedPlot === 'scores' || selectedPlot === 'biplot') && (
                                                     <>
+                                                        <div className="w-px h-5 bg-gray-300 dark:bg-gray-600 mx-1" />
                                                         <HelpWrapper helpKey="confidence-ellipses" className="flex items-center gap-2">
                                                             <label className="text-sm text-gray-600 dark:text-gray-400">
                                                                 <input
@@ -904,35 +965,34 @@ function AppContent() {
                                                                     onChange={(e) => setShowEllipses(e.target.checked)}
                                                                     className="mr-1"
                                                                 />
-                                                                Confidence ellipses
+                                                                Ellipses
                                                             </label>
                                                         </HelpWrapper>
                                                         {showEllipses && (
-                                                            <div className="flex items-center gap-2">
-                                                                <label className="text-sm text-gray-600 dark:text-gray-400">Level:</label>
-                                                                <select
-                                                                    value={confidenceLevel}
-                                                                    onChange={(e) => setConfidenceLevel(parseFloat(e.target.value) as 0.90 | 0.95 | 0.99)}
-                                                                    className="px-2 py-1 bg-gray-100 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded text-sm text-gray-900 dark:text-white"
-                                                                >
-                                                                    <option value="0.90">90%</option>
-                                                                    <option value="0.95">95%</option>
-                                                                    <option value="0.99">99%</option>
-                                                                </select>
-                                                            </div>
+                                                            <select
+                                                                value={confidenceLevel}
+                                                                onChange={(e) => setConfidenceLevel(parseFloat(e.target.value) as 0.90 | 0.95 | 0.99)}
+                                                                className="px-2 py-0.5 bg-gray-100 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded text-sm text-gray-900 dark:text-white"
+                                                            >
+                                                                <option value="0.90">90%</option>
+                                                                <option value="0.95">95%</option>
+                                                                <option value="0.99">99%</option>
+                                                            </select>
                                                         )}
                                                     </>
                                                 )}
-                                            </>
+                                            </div>
                                         )}
+                                        
+                                        {/* Component Selectors Group */}
                                         {(selectedPlot === 'scores' || selectedPlot === 'biplot' || selectedPlot === 'correlations') && pcaResponse.result.scores[0]?.length > 2 && (
-                                            <>
-                                                <HelpWrapper helpKey="component-selector" className="flex items-center gap-2">
-                                                    <label className="text-sm text-gray-600 dark:text-gray-400">X-axis:</label>
+                                            <div className="flex items-center gap-3 px-3 py-2 bg-gray-50 dark:bg-gray-800 rounded-lg">
+                                                <div className="flex items-center gap-2">
+                                                    <label className="text-sm text-gray-600 dark:text-gray-400">X:</label>
                                                     <select
                                                         value={selectedXComponent}
                                                         onChange={(e) => setSelectedXComponent(parseInt(e.target.value))}
-                                                        className="px-2 py-1 bg-gray-100 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded text-sm text-gray-900 dark:text-white"
+                                                        className="px-2 py-0.5 bg-gray-100 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded text-sm text-gray-900 dark:text-white"
                                                     >
                                                         {pcaResponse.result.component_labels?.map((label, i) => (
                                                             <option key={i} value={i}>
@@ -940,13 +1000,13 @@ function AppContent() {
                                                             </option>
                                                         ))}
                                                     </select>
-                                                </HelpWrapper>
-                                                <HelpWrapper helpKey="component-selector" className="flex items-center gap-2">
-                                                    <label className="text-sm text-gray-600 dark:text-gray-400">Y-axis:</label>
+                                                </div>
+                                                <div className="flex items-center gap-2">
+                                                    <label className="text-sm text-gray-600 dark:text-gray-400">Y:</label>
                                                     <select
                                                         value={selectedYComponent}
                                                         onChange={(e) => setSelectedYComponent(parseInt(e.target.value))}
-                                                        className="px-2 py-1 bg-gray-100 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded text-sm text-gray-900 dark:text-white"
+                                                        className="px-2 py-0.5 bg-gray-100 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded text-sm text-gray-900 dark:text-white"
                                                     >
                                                         {pcaResponse.result.component_labels?.map((label, i) => (
                                                             <option key={i} value={i}>
@@ -954,11 +1014,13 @@ function AppContent() {
                                                             </option>
                                                         ))}
                                                     </select>
-                                                </HelpWrapper>
-                                            </>
+                                                </div>
+                                            </div>
                                         )}
+                                        
+                                        {/* Loadings Plot Component Selector */}
                                         {selectedPlot === 'loadings' && (
-                                            <div className="flex items-center gap-2">
+                                            <div className="flex items-center gap-3 px-3 py-2 bg-gray-50 dark:bg-gray-800 rounded-lg">
                                                 <label className="text-sm text-gray-600 dark:text-gray-400">Component:</label>
                                                 <select
                                                     value={selectedLoadingComponent}
@@ -973,21 +1035,6 @@ function AppContent() {
                                                 </select>
                                             </div>
                                         )}
-                                        <HelpWrapper helpKey={`${selectedPlot}-plot`}>
-                                            <select
-                                                value={selectedPlot}
-                                                onChange={(e) => setSelectedPlot(e.target.value as 'scores' | 'scree' | 'loadings' | 'biplot' | 'correlations' | 'diagnostics' | 'eigencorrelation')}
-                                                className="px-3 py-2 bg-gray-100 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg text-gray-900 dark:text-white"
-                                            >
-                                                <option value="scores">Scores Plot</option>
-                                                <option value="scree">Scree Plot</option>
-                                                <option value="loadings">Loadings Plot</option>
-                                                <option value="biplot">Biplot</option>
-                                                <option value="correlations">Circle of Correlations</option>
-                                                <option value="diagnostics">Diagnostics (Mahalanobis vs RSS)</option>
-                                                <option value="eigencorrelation">Eigencorrelation Plot</option>
-                                            </select>
-                                        </HelpWrapper>
                                     </div>
                                 </div>
                                 
@@ -1009,6 +1056,8 @@ function AppContent() {
                                             }
                                             showEllipses={showEllipses && !!selectedGroupColumn && getColumnData(selectedGroupColumn).type === 'categorical'}
                                             confidenceLevel={confidenceLevel}
+                                            showRowLabels={showRowLabels}
+                                            maxLabelsToShow={maxLabelsToShow}
                                         />
                                     ) : selectedPlot === 'scree' ? (
                                         <ScreePlot
@@ -1028,10 +1077,19 @@ function AppContent() {
                                             rowNames={fileData?.rowNames || []}
                                             xComponent={selectedXComponent}
                                             yComponent={selectedYComponent}
+                                            showRowLabels={showRowLabels}
+                                            maxRowLabelsToShow={maxLabelsToShow}
                                             groupColumn={selectedGroupColumn}
                                             groupLabels={getColumnData(selectedGroupColumn).type === 'categorical' ? getColumnData(selectedGroupColumn).values as string[] : undefined}
                                             groupValues={getColumnData(selectedGroupColumn).type === 'continuous' ? getColumnData(selectedGroupColumn).values as number[] : undefined}
                                             groupType={getColumnData(selectedGroupColumn).type}
+                                            groupEllipses={
+                                                confidenceLevel === 0.90 ? pcaResponse.groupEllipses90 :
+                                                confidenceLevel === 0.95 ? pcaResponse.groupEllipses95 :
+                                                pcaResponse.groupEllipses99
+                                            }
+                                            showEllipses={showEllipses && !!selectedGroupColumn && getColumnData(selectedGroupColumn).type === 'categorical'}
+                                            confidenceLevel={confidenceLevel}
                                             maxVariables={guiConfig?.visualization?.biplot_max_variables || 100}
                                         />
                                     ) : selectedPlot === 'correlations' ? (
@@ -1039,12 +1097,15 @@ function AppContent() {
                                             pcaResult={pcaResponse.result}
                                             xComponent={selectedXComponent}
                                             yComponent={selectedYComponent}
+                                            threshold={guiConfig?.visualization?.correlation_threshold || 0.3}
                                             maxVariables={guiConfig?.visualization?.circle_max_variables || 100}
                                         />
                                     ) : selectedPlot === 'diagnostics' ? (
                                         <DiagnosticScatterPlot
                                             pcaResult={pcaResponse.result}
                                             rowNames={fileData?.rowNames || []}
+                                            showRowLabels={showRowLabels}
+                                            maxRowLabelsToShow={maxLabelsToShow}
                                         />
                                     ) : selectedPlot === 'eigencorrelation' ? (
                                         <EigencorrelationPlot
