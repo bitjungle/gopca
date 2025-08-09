@@ -2,6 +2,34 @@
 
 This document provides detailed guidelines for creating consistent visualization plots in the GoPCA Desktop application.
 
+## Design System and Icons
+
+### Icon Library
+Both GoPCA Desktop and GoCSV applications use **[Heroicons](https://heroicons.com/)** for all UI icons to maintain visual consistency. 
+
+**Icon Guidelines:**
+- Use outline style icons (not solid/filled)
+- Standard stroke width: `strokeWidth={1.5}`
+- Header icons: `className="w-5 h-5"`
+- Inline icons: `className="w-4 h-4"`
+- Icons automatically adapt to theme colors using `currentColor`
+- Always include appropriate ARIA labels for accessibility
+
+**Example Icon Usage:**
+```tsx
+<svg
+  xmlns="http://www.w3.org/2000/svg"
+  fill="none"
+  viewBox="0 0 24 24"
+  strokeWidth={1.5}
+  stroke="currentColor"
+  className="w-5 h-5"
+  aria-label="Icon description"
+>
+  <path strokeLinecap="round" strokeLinejoin="round" d="..." />
+</svg>
+```
+
 ## Required Imports and Structure
 
 ```tsx

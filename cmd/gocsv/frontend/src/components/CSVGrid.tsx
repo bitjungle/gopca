@@ -13,6 +13,7 @@ import { useTheme } from '@gopca/ui-components';
 import { ExecuteDeleteRows, ExecuteDeleteColumns, ExecuteInsertRow, ExecuteInsertColumn, ExecuteToggleTargetColumn, ExecuteHeaderEdit, ExecuteDuplicateRows } from '../../wailsjs/go/main/App';
 import { RenameDialog } from './RenameDialog';
 import { ConfirmDialog } from './ConfirmDialog';
+import { TargetColumnIcon, CategoryColumnIcon, TargetColumnMenuIcon } from './ColumnIcons';
 
 interface CSVGridProps {
     data: string[][];
@@ -29,7 +30,7 @@ interface CSVGridProps {
 interface ContextMenuItem {
     label?: string;
     action?: () => void;
-    icon?: string;
+    icon?: string | React.ReactNode;
     separator?: boolean;
 }
 
@@ -73,11 +74,28 @@ const ContextMenu: React.FC<ContextMenuProps> = ({ x, y, items, onClose }) => {
                         }}
                         className="w-full px-4 py-2 text-left text-sm hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center gap-2"
                     >
-                        {item.icon && <span dangerouslySetInnerHTML={{ __html: item.icon }} />}
+                        {item.icon && (
+                            typeof item.icon === 'string' ? 
+                                <span dangerouslySetInnerHTML={{ __html: item.icon }} /> : 
+                                item.icon
+                        )}
                         <span>{item.label}</span>
                     </button>
                 );
             })}
+        </div>
+    );
+};
+
+// Custom header component for AG-Grid to display icons
+const CustomHeader = (props: any) => {
+    const { displayName, isTargetColumn, isCategoricalColumn } = props;
+    
+    return (
+        <div className="ag-header-cell-label" style={{ display: 'flex', alignItems: 'center' }}>
+            <span className="ag-header-cell-text">{displayName}</span>
+            {isTargetColumn && <TargetColumnIcon />}
+            {isCategoricalColumn && <CategoryColumnIcon />}
         </div>
     );
 };
@@ -166,7 +184,7 @@ export const CSVGrid = forwardRef<any, CSVGridProps>(({
                         }
                     }
                 },
-                icon: '🎯'
+                icon: <TargetColumnMenuIcon />
             },
             {
                 label: 'Rename Column',
@@ -333,9 +351,21 @@ export const CSVGrid = forwardRef<any, CSVGridProps>(({
             const isTargetColumn = header.toLowerCase().endsWith('#target') || 
                                  header.toLowerCase().endsWith('# target');
             
+            // Check if column is categorical (if fileData has categoricalColumns info)
+            const isCategoricalColumn = fileData?.categoricalColumns && 
+                                      Object.keys(fileData.categoricalColumns).includes(header);
+            
             cols.push({
                 field: `col${index}`,
-                headerName: isTargetColumn ? `${header} 🎯` : header,
+                headerName: header,
+                headerComponent: CustomHeader,
+                headerComponentParams: {
+                    displayName: header,
+                    isTargetColumn,
+                    isCategoricalColumn,
+                    colIndex: index,
+                    onContextMenu: handleHeaderContextMenu
+                },
                 editable: true,
                 sortable: true,
                 filter: true,
@@ -364,14 +394,10 @@ export const CSVGrid = forwardRef<any, CSVGridProps>(({
                     if (isTargetColumn) classes.push('target-header');
                     return classes.join(' ');
                 },
-                headerTooltip: isTargetColumn ? 'Target column - excluded from PCA (right-click to toggle)' : 
+                headerTooltip: isTargetColumn ? 'Target column - excluded from PCA (right-click to toggle)' :
+                              isCategoricalColumn ? 'Categorical/grouping column' :
                               colType === 'numeric' ? 'Numeric column' : 
                               colType === 'mixed' ? 'Mixed column' : 'Text column',
-                headerComponentParams: {
-                    isTargetColumn,
-                    colIndex: index,
-                    onContextMenu: handleHeaderContextMenu
-                },
                 valueFormatter: (params: any) => {
                     if (colType === 'numeric' && params.value) {
                         const num = Number(params.value);
