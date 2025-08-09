@@ -13,7 +13,18 @@ import { useTheme } from '@gopca/ui-components';
 import { ExecuteDeleteRows, ExecuteDeleteColumns, ExecuteInsertRow, ExecuteInsertColumn, ExecuteToggleTargetColumn, ExecuteHeaderEdit, ExecuteDuplicateRows } from '../../wailsjs/go/main/App';
 import { RenameDialog } from './RenameDialog';
 import { ConfirmDialog } from './ConfirmDialog';
-import { TargetColumnIcon, CategoryColumnIcon, TargetColumnMenuIcon } from './ColumnIcons';
+import { 
+    TargetColumnIcon, 
+    CategoryColumnIcon, 
+    TargetColumnMenuIcon,
+    PencilIcon,
+    ArrowLeftIcon,
+    ArrowRightIcon,
+    ArrowUpIcon,
+    ArrowDownIcon,
+    TrashIcon,
+    DocumentDuplicateIcon
+} from './ColumnIcons';
 
 interface CSVGridProps {
     data: string[][];
@@ -195,7 +206,7 @@ export const CSVGrid = forwardRef<any, CSVGridProps>(({
                         currentName: header
                     });
                 },
-                icon: '✏️'
+                icon: <PencilIcon />
             },
             {
                 label: 'Insert Column Before',
@@ -205,7 +216,7 @@ export const CSVGrid = forwardRef<any, CSVGridProps>(({
                         onRefresh?.(updatedData);
                     }
                 },
-                icon: '⬅️'
+                icon: <ArrowLeftIcon />
             },
             {
                 label: 'Insert Column After',
@@ -215,7 +226,7 @@ export const CSVGrid = forwardRef<any, CSVGridProps>(({
                         onRefresh?.(updatedData);
                     }
                 },
-                icon: '➡️'
+                icon: <ArrowRightIcon />
             },
             { separator: true },
             {
@@ -237,7 +248,7 @@ export const CSVGrid = forwardRef<any, CSVGridProps>(({
                         });
                     }
                 },
-                icon: '🗑️'
+                icon: <TrashIcon />
             }
         ];
         
@@ -256,7 +267,7 @@ export const CSVGrid = forwardRef<any, CSVGridProps>(({
                         onRefresh?.(updatedData);
                     }
                 },
-                icon: '⬆️'
+                icon: <ArrowUpIcon />
             },
             {
                 label: 'Insert Row Below',
@@ -266,7 +277,7 @@ export const CSVGrid = forwardRef<any, CSVGridProps>(({
                         onRefresh?.(updatedData);
                     }
                 },
-                icon: '⬇️'
+                icon: <ArrowDownIcon />
             },
             { separator: true },
             {
@@ -282,7 +293,7 @@ export const CSVGrid = forwardRef<any, CSVGridProps>(({
                         onRefresh?.(updatedData);
                     }
                 },
-                icon: '📋'
+                icon: <DocumentDuplicateIcon />
             },
             {
                 label: 'Delete Row',
@@ -312,7 +323,7 @@ export const CSVGrid = forwardRef<any, CSVGridProps>(({
                         });
                     }
                 },
-                icon: '🗑️'
+                icon: <TrashIcon />
             }
         ];
         
