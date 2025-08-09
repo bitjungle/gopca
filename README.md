@@ -35,13 +35,16 @@ Ideal for automation, batch processing, and integration into data pipelines.
 
 ```bash
 # Analyze your data with a single command
-pca analyze data.csv --components 3 --scale standard --output results/
+pca analyze --components 3 --scale standard --output-dir results/ data.csv
 
 # Validate data before analysis
 pca validate spectra.csv
 
 # Apply a saved PCA model to new data
 pca transform model.json new_data.csv
+
+# Transform with output options
+pca transform -f json -o results/ model.json new_samples.csv
 ```
 
 ### TheGoCSV Data Editor
@@ -139,15 +142,26 @@ chmod +x pca
 ./pca analyze mydata.csv
 
 # Advanced analysis with custom parameters
-./pca analyze mydata.csv \
+./pca analyze \
   --components 4 \
   --scale standard \
   --preprocessing snv \
   --format json \
-  --output results/
+  --output-dir results/ \
+  mydata.csv
 
 # Validate your data first
 ./pca validate mydata.csv
+
+# Apply a trained model to new samples
+./pca transform trained_model.json new_samples.csv
+
+# Transform with custom output and metrics
+./pca transform \
+  --format json \
+  --output-dir predictions/ \
+  --include-metrics \
+  model.json test_data.csv
 ```
 
 ## Use Cases
