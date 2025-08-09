@@ -425,6 +425,29 @@ jobs:
       with:
         path: artifacts
     
+    - name: Restore macOS executable permissions
+      run: |
+        # GitHub Actions upload/download artifacts don't preserve Unix permissions
+        # Restore executable permissions for macOS app bundles
+        if [ -f "artifacts/gopca-desktop-macos-latest/GoPCA.app/Contents/MacOS/GoPCA" ]; then
+          chmod +x "artifacts/gopca-desktop-macos-latest/GoPCA.app/Contents/MacOS/GoPCA"
+          echo "✓ Restored executable permissions for GoPCA.app"
+        fi
+        
+        if [ -f "artifacts/gocsv-macos-latest/GoCSV.app/Contents/MacOS/GoCSV" ]; then
+          chmod +x "artifacts/gocsv-macos-latest/GoCSV.app/Contents/MacOS/GoCSV"
+          echo "✓ Restored executable permissions for GoCSV.app"
+        fi
+        
+        # Also restore permissions for CLI binaries
+        if [ -f "artifacts/pca-darwin-amd64/pca-darwin-amd64" ]; then
+          chmod +x "artifacts/pca-darwin-amd64/pca-darwin-amd64"
+        fi
+        
+        if [ -f "artifacts/pca-darwin-arm64/pca-darwin-arm64" ]; then
+          chmod +x "artifacts/pca-darwin-arm64/pca-darwin-arm64"
+        fi
+    
     - name: Check signing status
       id: check_signed
       run: |
