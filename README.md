@@ -82,7 +82,7 @@ Clean and prepare your data with an intuitive spreadsheet-like interface.
 - **Scores plots** - View samples in PC space with group coloring and confidence ellipses
 - **Loadings plots** - Understand variable contributions to each component
 - **Scree plots** - Determine optimal number of components
-- **Biplots** - See samples and variables together
+- **Biplots** - See samples and variables together with confidence ellipses
 - **Circle of Correlations** - Visualize variable relationships on unit circle
 - **Diagnostic plots** - Detect outliers with T² vs Q residuals
 - **Eigencorrelation plots** - Explore correlations between PCs and original variables
@@ -92,6 +92,7 @@ All visualizations feature:
 - Interactive tooltips with detailed information
 - Customizable color palettes (qualitative and sequential)
 - Full-screen mode for presentations
+- Optional row labels for identifying specific data points
 
 ### Built for Real Work
 - **Example datasets included**: Wine and Iris datasets for immediate exploration
@@ -203,10 +204,6 @@ The included wine dataset demonstrates PCA's power in distinguishing wine types 
 - **Report Issues**: [GitHub Issues](https://github.com/bitjungle/gopca/issues)
 - **Ask Questions**: [GitHub Discussions](https://github.com/bitjungle/gopca/discussions)
 - **Documentation**: See the docs folder for detailed guides
-
-## Contributing
-
-We welcome contributions! Whether it's bug reports, feature suggestions, documentation improvements, or code contributions, please see our [Contributing Guide](CONTRIBUTING.md) to get started.
 
 ## License
 

@@ -26,10 +26,21 @@ wails build          # Production build
 
 ## Key Files
 
+### Backend
 - `app.go` - Wails bindings, PCA execution, data I/O
+
+### Frontend Components
 - `frontend/src/App.tsx` - Main React component with 3-step workflow
 - `frontend/src/components/ScoresPlot.tsx` - Interactive 2D/3D scores visualization
-- `frontend/src/components/BiplotDisplay.tsx` - Combined scores/loadings plot
+- `frontend/src/components/BiplotDisplay.tsx` - Combined scores/loadings plot with ellipses
+- `frontend/src/components/CustomPointWithLabel.tsx` - Reusable component for points with labels
+- `frontend/src/components/EllipseOverlay.tsx` - SVG overlay for confidence ellipses
+
+### Frontend Utilities
+- `frontend/src/utils/labelUtils.ts` - Functions for label positioning and top point selection
+- `frontend/src/utils/ellipseUtils.ts` - Ellipse path generation and coordinate scaling
+
+### Contexts
 - `frontend/src/contexts/HelpContext.tsx` - Contextual help system
 
 ## Features
@@ -37,9 +48,11 @@ wails build          # Production build
 - SVD, NIPALS, and Kernel PCA methods
 - Multiple preprocessing options (SNV, scaling, centering)
 - Interactive 2D/3D visualizations with confidence ellipses
-- Biplot with variable contributions
+- Row labels for identifying specific data points
+- Biplot with variable contributions and ellipse support
 - Eigencorrelation analysis
 - Export to multiple formats (PNG, SVG, CSV, JSON)
+- Two-tier control layout for better UI organization
 
 ## Testing
 
