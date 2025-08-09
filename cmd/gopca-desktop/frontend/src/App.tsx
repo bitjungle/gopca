@@ -336,7 +336,7 @@ function AppContent() {
                         />
                         {version && (
                             <span className="text-xs text-gray-500 dark:text-gray-400">
-                                v{version}
+                                {version}
                             </span>
                         )}
                     </div>
