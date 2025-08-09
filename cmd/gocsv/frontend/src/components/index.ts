@@ -22,3 +22,17 @@ export { DataTransformDialog } from './DataTransformDialog';
 export { DocumentationViewer } from './DocumentationViewer';
 export { RenameDialog } from './RenameDialog';
 export { ConfirmDialog } from './ConfirmDialog';
+export { 
+    TargetColumnIcon, 
+    CategoryColumnIcon, 
+    TargetColumnMenuIcon, 
+    CategoryColumnMenuIcon,
+    PencilIcon,
+    PlusCircleIcon,
+    ArrowLeftIcon,
+    ArrowRightIcon,
+    ArrowUpIcon,
+    ArrowDownIcon,
+    TrashIcon,
+    DocumentDuplicateIcon
+} from './ColumnIcons';
