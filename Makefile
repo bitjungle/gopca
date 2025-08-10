@@ -208,11 +208,11 @@ sign-cli:
 ## sign-pca: Sign only the GoPCA Desktop app
 sign-pca:
 	@echo "Signing GoPCA Desktop app..."
-	@if [ -f "$(PCA_PATH)/build/bin/gopca-desktop.app" ]; then \
+	@if [ -d "$(DESKTOP_PATH)/build/bin/GoPCA.app" ]; then \
 		codesign --force --deep --sign "$${APPLE_DEVELOPER_ID:-Developer ID Application: Rune Mathisen (LV599Q54BU)}" \
 			--options runtime --timestamp \
-			"$(PCA_PATH)/build/bin/gopca-desktop.app" && \
-		codesign --verify --verbose "$(PCA_PATH)/build/bin/gopca-desktop.app"; \
+			"$(DESKTOP_PATH)/build/bin/GoPCA.app" && \
+		codesign --verify --verbose "$(DESKTOP_PATH)/build/bin/GoPCA.app"; \
 	else \
 		echo "GoPCA Desktop app not found. Build it first with 'make pca-build'"; \
 		exit 1; \
@@ -221,13 +221,48 @@ sign-pca:
 ## sign-csv: Sign only the GoCSV app
 sign-csv:
 	@echo "Signing GoCSV app..."
-	@if [ -f "$(CSV_PATH)/build/bin/gocsv.app" ]; then \
+	@if [ -d "$(CSV_PATH)/build/bin/GoCSV.app" ]; then \
 		codesign --force --deep --sign "$${APPLE_DEVELOPER_ID:-Developer ID Application: Rune Mathisen (LV599Q54BU)}" \
 			--options runtime --timestamp \
-			"$(CSV_PATH)/build/bin/gocsv.app" && \
-		codesign --verify --verbose "$(CSV_PATH)/build/bin/gocsv.app"; \
+			"$(CSV_PATH)/build/bin/GoCSV.app" && \
+		codesign --verify --verbose "$(CSV_PATH)/build/bin/GoCSV.app"; \
 	else \
 		echo "GoCSV app not found. Build it first with 'make csv-build'"; \
+		exit 1; \
+	fi
+
+## sign-windows: Sign Windows binaries locally (requires signtool or osslsigncode)
+sign-windows:
+	@echo "Signing Windows binaries..."
+	@if command -v signtool >/dev/null 2>&1 && signtool sign /? >/dev/null 2>&1; then \
+		echo "Found signtool, signing binaries..."; \
+		if [ -f "$(BUILD_DIR)/pca-windows-amd64.exe" ]; then \
+			signtool sign /a /t http://timestamp.digicert.com "$(BUILD_DIR)/pca-windows-amd64.exe"; \
+		fi; \
+		if [ -f "$(DESKTOP_PATH)/build/bin/GoPCA.exe" ]; then \
+			signtool sign /a /t http://timestamp.digicert.com "$(DESKTOP_PATH)/build/bin/GoPCA.exe"; \
+		fi; \
+		if [ -f "$(CSV_PATH)/build/bin/GoCSV.exe" ]; then \
+			signtool sign /a /t http://timestamp.digicert.com "$(CSV_PATH)/build/bin/GoCSV.exe"; \
+		fi; \
+	elif command -v osslsigncode >/dev/null 2>&1; then \
+		echo "Found osslsigncode, signing binaries..."; \
+		if [ -f "$(BUILD_DIR)/pca-windows-amd64.exe" ]; then \
+			osslsigncode sign -t http://timestamp.digicert.com -in "$(BUILD_DIR)/pca-windows-amd64.exe" -out "$(BUILD_DIR)/pca-windows-amd64-signed.exe" && \
+			mv "$(BUILD_DIR)/pca-windows-amd64-signed.exe" "$(BUILD_DIR)/pca-windows-amd64.exe"; \
+		fi; \
+		if [ -f "$(DESKTOP_PATH)/build/bin/GoPCA.exe" ]; then \
+			osslsigncode sign -t http://timestamp.digicert.com -in "$(DESKTOP_PATH)/build/bin/GoPCA.exe" -out "$(DESKTOP_PATH)/build/bin/GoPCA-signed.exe" && \
+			mv "$(DESKTOP_PATH)/build/bin/GoPCA-signed.exe" "$(DESKTOP_PATH)/build/bin/GoPCA.exe"; \
+		fi; \
+		if [ -f "$(CSV_PATH)/build/bin/GoCSV.exe" ]; then \
+			osslsigncode sign -t http://timestamp.digicert.com -in "$(CSV_PATH)/build/bin/GoCSV.exe" -out "$(CSV_PATH)/build/bin/GoCSV-signed.exe" && \
+			mv "$(CSV_PATH)/build/bin/GoCSV-signed.exe" "$(CSV_PATH)/build/bin/GoCSV.exe"; \
+		fi; \
+	else \
+		echo "signtool or osslsigncode not found."; \
+		echo "On Windows, install Windows SDK for signtool."; \
+		echo "On macOS/Linux, install osslsigncode via package manager."; \
 		exit 1; \
 	fi
 
@@ -466,8 +501,9 @@ help:
 	@echo "Code Signing (macOS):"
 	@echo "  make sign             # Sign all macOS binaries"
 	@echo "  make sign-cli         # Sign CLI binary only"
-	@echo "  make sign-pca     # Sign GoPCA Desktop app only"
+	@echo "  make sign-pca         # Sign GoPCA Desktop app only"
 	@echo "  make sign-csv         # Sign GoCSV app only"
+	@echo "  make sign-windows     # Sign Windows binaries (requires signtool/osslsigncode)"
 	@echo ""
 	@echo "Notarization (macOS):"
 	@echo "  make notarize         # Notarize all signed binaries"
