@@ -6,6 +6,16 @@
 
 // Components
 export { ThemeToggle } from './components/ThemeToggle';
+export { ExportButton } from './components/ExportButton';
+export { FileSelector } from './components/FileSelector';
+export { ConfirmDialog } from './components/ConfirmDialog';
+export { ProgressIndicator } from './components/ProgressIndicator';
+
+// Component Types
+export type { ExportButtonProps, ExportConfig, ExportFormat } from './components/ExportButton';
+export type { FileSelectorProps } from './components/FileSelector';
+export type { ConfirmDialogProps } from './components/ConfirmDialog';
+export type { ProgressIndicatorProps } from './components/ProgressIndicator';
 
 // Contexts
 export { ThemeProvider, useTheme } from './contexts/ThemeContext';

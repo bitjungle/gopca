@@ -12,7 +12,7 @@ import 'ag-grid-community/styles/ag-theme-quartz.css';
 import { useTheme } from '@gopca/ui-components';
 import { ExecuteDeleteRows, ExecuteDeleteColumns, ExecuteInsertRow, ExecuteInsertColumn, ExecuteToggleTargetColumn, ExecuteHeaderEdit, ExecuteDuplicateRows } from '../../wailsjs/go/main/App';
 import { RenameDialog } from './RenameDialog';
-import { ConfirmDialog } from './ConfirmDialog';
+import { ConfirmDialog } from '@gopca/ui-components';
 import { 
     TargetColumnIcon, 
     CategoryColumnIcon, 
