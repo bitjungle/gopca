@@ -287,13 +287,31 @@ func LaunchWithFile(appPath, filePath string) error {
 	case "darwin":
 		// On macOS, check if this is an app bundle
 		if strings.Contains(appPath, ".app/Contents/MacOS/") {
-			// Extract the .app bundle path properly
-			// Find where ".app" ends in the path
+			// Extract the .app bundle path and app name
 			appIndex := strings.Index(appPath, ".app")
 			if appIndex != -1 {
 				appBundlePath := appPath[:appIndex+4] // Include ".app"
-				// Use 'open' command with the app bundle
-				cmd = exec.Command("open", "-a", appBundlePath, "--args", "--open", filePath)
+				appName := filepath.Base(appBundlePath)
+				appName = strings.TrimSuffix(appName, ".app")
+
+				// Check if the app is already running
+				if IsAppRunning(appName) {
+					// App is running, use 'open -n' to force a new instance
+					// This ensures the file argument is properly passed
+					// Wails apps don't handle AppleScript open events, so we need a new instance
+					cmd = exec.Command("open", "-n", "-a", appBundlePath, "--args", "--open", filePath)
+
+					if os.Getenv("GOPCA_DEBUG") == "1" {
+						fmt.Printf("[DEBUG] App %s is running, forcing new instance with file\n", appName)
+					}
+				} else {
+					// App not running, use the standard open command
+					cmd = exec.Command("open", "-a", appBundlePath, "--args", "--open", filePath)
+
+					if os.Getenv("GOPCA_DEBUG") == "1" {
+						fmt.Printf("[DEBUG] App %s not running, using open command\n", appName)
+					}
+				}
 			} else {
 				// Fallback to direct execution
 				cmd = exec.Command(appPath, "--open", filePath)
@@ -322,6 +340,44 @@ func LaunchWithFile(appPath, filePath string) error {
 	}
 
 	return nil
+}
+
+// IsAppRunning checks if an application is currently running
+func IsAppRunning(appName string) bool {
+	switch runtime.GOOS {
+	case "darwin":
+		// On macOS, use pgrep to check if the app is running
+		// Extract just the app name from paths like "GoPCA.app"
+		baseName := appName
+		if strings.Contains(appName, ".app") {
+			baseName = strings.TrimSuffix(filepath.Base(appName), ".app")
+		}
+
+		cmd := exec.Command("pgrep", "-x", baseName)
+		err := cmd.Run()
+		return err == nil // pgrep returns 0 if process found
+
+	case "windows":
+		// On Windows, use tasklist to check for running processes
+		baseName := filepath.Base(appName)
+		if !strings.HasSuffix(baseName, ".exe") {
+			baseName += ".exe"
+		}
+
+		cmd := exec.Command("tasklist", "/FI", fmt.Sprintf("IMAGENAME eq %s", baseName))
+		output, err := cmd.Output()
+		if err != nil {
+			return false
+		}
+		return strings.Contains(string(output), baseName)
+
+	default: // Linux
+		// On Linux, use pgrep similar to macOS
+		baseName := filepath.Base(appName)
+		cmd := exec.Command("pgrep", "-x", baseName)
+		err := cmd.Run()
+		return err == nil
+	}
 }
 
 // OpenURL opens a URL in the default browser (platform-independent)
