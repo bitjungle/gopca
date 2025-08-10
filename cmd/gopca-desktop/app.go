@@ -14,6 +14,7 @@ import (
 	"math"
 	"net/url"
 	"os"
+	"os/exec"
 	"path/filepath"
 	"strings"
 	"time"
@@ -24,6 +25,7 @@ import (
 	"github.com/bitjungle/gopca/internal/datasets"
 	"github.com/bitjungle/gopca/internal/utils"
 	"github.com/bitjungle/gopca/internal/version"
+	"github.com/bitjungle/gopca/pkg/integration"
 	"github.com/bitjungle/gopca/pkg/types"
 	"github.com/wailsapp/wails/v2/pkg/runtime"
 	"gonum.org/v1/gonum/mat"
@@ -1049,4 +1051,155 @@ func (a *App) ExportPCAModel(request ExportPCAModelRequest) error {
 // GetGUIConfig returns the GUI configuration
 func (a *App) GetGUIConfig() *config.GUIConfig {
 	return config.DefaultGUIConfig()
+}
+
+// GoCSVStatus represents the installation status of GoCSV
+type GoCSVStatus struct {
+	Installed bool   `json:"installed"`
+	Path      string `json:"path,omitempty"`
+	Error     string `json:"error,omitempty"`
+}
+
+// CheckGoCSVStatus checks if GoCSV is installed and available
+func (a *App) CheckGoCSVStatus() *GoCSVStatus {
+	integrationConfig := integration.AppConfig{
+		Name:        "gocsv",
+		CommonPaths: integration.GetCommonPaths("gocsv"),
+		DisplayName: "GoCSV",
+	}
+
+	status := integration.CheckApp(integrationConfig)
+
+	return &GoCSVStatus{
+		Installed: status.Installed,
+		Path:      status.Path,
+		Error:     status.Error,
+	}
+}
+
+// OpenInGoCSV saves the current data to a temporary file and opens it in GoCSV
+func (a *App) OpenInGoCSV(data *FileData) error {
+	if data == nil || len(data.Data) == 0 {
+		return fmt.Errorf("no data to export")
+	}
+
+	// Check if GoCSV is installed
+	status := a.CheckGoCSVStatus()
+	if !status.Installed {
+		return fmt.Errorf("GoCSV not found: %s", status.Error)
+	}
+
+	// Create a temporary file
+	tempDir := os.TempDir()
+	timestamp := time.Now().Format("20060102_150405")
+	tempFile := filepath.Join(tempDir, fmt.Sprintf("gopca_export_%s.csv", timestamp))
+
+	// Write data to temp file
+	if err := a.exportDataToCSV(data, tempFile); err != nil {
+		return fmt.Errorf("failed to export data: %w", err)
+	}
+
+	// Launch GoCSV with the file
+	if err := integration.LaunchWithFile(status.Path, tempFile); err != nil {
+		return fmt.Errorf("failed to launch GoCSV: %w", err)
+	}
+
+	runtime.LogInfo(a.ctx, fmt.Sprintf("Opened data in GoCSV: %s", tempFile))
+	return nil
+}
+
+// exportDataToCSV exports FileData to a CSV file
+func (a *App) exportDataToCSV(data *FileData, filePath string) error {
+	var lines []string
+
+	// Add headers (with row name header if row names exist)
+	headers := data.Headers
+	if len(data.RowNames) > 0 {
+		headers = append([]string{"Row"}, headers...)
+	}
+	lines = append(lines, strings.Join(headers, ","))
+
+	// Add data rows
+	for i, row := range data.Data {
+		// Convert float64 values to strings
+		rowStrings := make([]string, 0, len(row)+1)
+
+		// Add row name if present
+		if len(data.RowNames) > 0 && i < len(data.RowNames) {
+			rowStrings = append(rowStrings, data.RowNames[i])
+		}
+
+		// Convert numeric values to strings
+		for _, value := range row {
+			// Handle missing values
+			if data.MissingMask != nil && i < len(data.MissingMask) {
+				colIdx := len(rowStrings) - len(data.RowNames)
+				if colIdx >= 0 && colIdx < len(data.MissingMask[i]) && data.MissingMask[i][colIdx] {
+					rowStrings = append(rowStrings, "")
+					continue
+				}
+			}
+
+			// Format float value
+			str := fmt.Sprintf("%g", value)
+			// Quote if contains special characters
+			if strings.Contains(str, ",") || strings.Contains(str, "\"") || strings.Contains(str, "\n") {
+				str = fmt.Sprintf("\"%s\"", strings.ReplaceAll(str, "\"", "\"\""))
+			}
+			rowStrings = append(rowStrings, str)
+		}
+
+		lines = append(lines, strings.Join(rowStrings, ","))
+	}
+
+	// Write to file
+	content := strings.Join(lines, "\n")
+	return os.WriteFile(filePath, []byte(content), 0644)
+}
+
+// LaunchGoCSV launches GoCSV without a file
+func (a *App) LaunchGoCSV() error {
+	// Check if GoCSV is installed
+	status := a.CheckGoCSVStatus()
+	if !status.Installed {
+		return fmt.Errorf("GoCSV not found: %s", status.Error)
+	}
+
+	var cmd *exec.Cmd
+
+	// On macOS, if it's an app bundle, use 'open' command
+	if strings.Contains(status.Path, ".app/Contents/MacOS/") {
+		// Extract the .app bundle path
+		appIndex := strings.Index(status.Path, ".app")
+		if appIndex != -1 {
+			appBundlePath := status.Path[:appIndex+4] // Include ".app"
+			cmd = exec.Command("open", "-a", appBundlePath)
+		} else {
+			// Fallback to direct execution
+			cmd = exec.Command(status.Path)
+		}
+	} else {
+		// Regular binary or non-macOS
+		cmd = exec.Command(status.Path)
+	}
+
+	// Launch the application
+	if err := cmd.Start(); err != nil {
+		return fmt.Errorf("failed to launch GoCSV: %w", err)
+	}
+
+	// Detach from the process
+	if err := cmd.Process.Release(); err != nil {
+		// Not critical, just log it
+		runtime.LogInfo(a.ctx, fmt.Sprintf("Process release warning: %v", err))
+	}
+
+	runtime.LogInfo(a.ctx, "Launched GoCSV")
+	return nil
+}
+
+// DownloadGoCSV opens the GoCSV download page in the default browser
+func (a *App) DownloadGoCSV() error {
+	runtime.BrowserOpenURL(a.ctx, "https://github.com/bitjungle/gopca/releases")
+	return nil
 }

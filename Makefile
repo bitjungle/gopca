@@ -69,7 +69,7 @@ WAILS := $(shell which wails 2> /dev/null || echo "$${HOME}/go/bin/wails")
 .DEFAULT_GOAL := all
 
 # Phony targets
-.PHONY: all build cli cli-all build-cross build-darwin-amd64 build-darwin-arm64 build-linux-amd64 build-linux-arm64 build-windows-amd64 build-all pca-dev pca-build pca-build-all pca-run pca-deps csv-dev csv-build csv-build-all csv-run csv-deps build-everything test test-verbose test-coverage fmt lint run-pca-iris clean clean-cross install deps deps-all install-hooks sign sign-cli sign-desktop sign-csv notarize notarize-cli notarize-desktop notarize-csv sign-and-notarize help
+.PHONY: all build cli cli-all build-cross build-darwin-amd64 build-darwin-arm64 build-linux-amd64 build-linux-arm64 build-windows-amd64 build-all pca-dev pca-build pca-build-all pca-run pca-deps csv-dev csv-build csv-build-all csv-run csv-deps build-everything test test-verbose test-coverage fmt lint run-pca-iris clean clean-cross install deps deps-all install-hooks sign sign-cli sign-pca sign-csv notarize notarize-cli notarize-pca notarize-csv sign-and-notarize help
 
 ## all: Build all applications for current platform and run tests
 all: build pca-build csv-build test
@@ -142,9 +142,9 @@ pca-build:
 
 ## pca-run: Run the built PCA Desktop application
 pca-run:
-	@if [ -f "$(DESKTOP_PATH)/build/bin/gopca-desktop.app/Contents/MacOS/gopca-desktop" ]; then \
+	@if [ -f "$(DESKTOP_PATH)/build/bin/GoPCA.app/Contents/MacOS/GoPCA" ]; then \
 		echo "Running PCA Desktop application..."; \
-		open $(DESKTOP_PATH)/build/bin/gopca-desktop.app; \
+		open $(DESKTOP_PATH)/build/bin/GoPCA.app; \
 	elif [ -f "$(DESKTOP_PATH)/build/bin/gopca-desktop" ]; then \
 		echo "Running PCA Desktop application..."; \
 		$(DESKTOP_PATH)/build/bin/gopca-desktop; \
@@ -205,8 +205,8 @@ sign-cli:
 	@echo "Signing CLI binary..."
 	@./scripts/sign-macos.sh | grep -A 3 "CLI"
 
-## sign-desktop: Sign only the GoPCA Desktop app
-sign-desktop:
+## sign-pca: Sign only the GoPCA Desktop app
+sign-pca:
 	@echo "Signing GoPCA Desktop app..."
 	@if [ -f "$(PCA_PATH)/build/bin/gopca-desktop.app" ]; then \
 		codesign --force --deep --sign "$${APPLE_DEVELOPER_ID:-Developer ID Application: Rune Mathisen (LV599Q54BU)}" \
@@ -254,8 +254,8 @@ notarize-cli:
 	APPLE_TEAM_ID="$${APPLE_TEAM_ID:-LV599Q54BU}" \
 	./scripts/notarize-macos.sh cli-only
 
-## notarize-desktop: Notarize only the GoPCA Desktop app
-notarize-desktop:
+## notarize-pca: Notarize only the GoPCA Desktop app
+notarize-pca:
 	@echo "Notarizing GoPCA Desktop app..."
 	@if [ ! -d "$(DESKTOP_PATH)/build/bin/gopca-desktop.app" ]; then \
 		echo "GoPCA Desktop app not found. Build it first with 'make pca-build'"; \
@@ -466,13 +466,13 @@ help:
 	@echo "Code Signing (macOS):"
 	@echo "  make sign             # Sign all macOS binaries"
 	@echo "  make sign-cli         # Sign CLI binary only"
-	@echo "  make sign-desktop     # Sign GoPCA Desktop app only"
+	@echo "  make sign-pca     # Sign GoPCA Desktop app only"
 	@echo "  make sign-csv         # Sign GoCSV app only"
 	@echo ""
 	@echo "Notarization (macOS):"
 	@echo "  make notarize         # Notarize all signed binaries"
 	@echo "  make notarize-cli     # Notarize CLI only"
-	@echo "  make notarize-desktop # Notarize GoPCA Desktop only"
+	@echo "  make notarize-pca # Notarize GoPCA Desktop only"
 	@echo "  make notarize-csv     # Notarize GoCSV only"
 	@echo "  make sign-and-notarize # Sign and notarize everything"
 	@echo "  make build-windows-amd64 # Build for Windows x64"
