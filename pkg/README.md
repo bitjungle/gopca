@@ -1,6 +1,8 @@
 # GoPCA Shared Packages
 
-This directory contains shared packages used by both GoPCA and GoCSV applications. These packages implement common functionality to ensure consistency and reduce code duplication.
+This directory contains shared backend packages used by both GoPCA and GoCSV applications. These packages implement common functionality to ensure consistency and reduce code duplication.
+
+> **Note**: For shared frontend components (React/TypeScript), see [`packages/ui-components/`](../packages/ui-components/README.md)
 
 ## Package Structure
 

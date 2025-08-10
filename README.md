@@ -47,7 +47,7 @@ pca transform model.json new_data.csv
 pca transform -f json -o results/ model.json new_samples.csv
 ```
 
-### TheGoCSV Data Editor
+### The GoCSV Data Editor
 
 Clean and prepare your data with an intuitive spreadsheet-like interface.
 
