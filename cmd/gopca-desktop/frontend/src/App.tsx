@@ -6,12 +6,12 @@
 
 import React, { useState, useRef, useEffect } from 'react';
 import './App.css';
-import { ParseCSV, RunPCA, LoadIrisDataset, LoadDatasetFile, GetVersion, CalculateEllipses, GetGUIConfig, LoadCSVFile } from "../wailsjs/go/main/App";
+import { ParseCSV, RunPCA, LoadIrisDataset, LoadDatasetFile, GetVersion, CalculateEllipses, GetGUIConfig, LoadCSVFile, CheckGoCSVStatus, OpenInGoCSV, LaunchGoCSV, DownloadGoCSV } from "../wailsjs/go/main/App";
 import { EventsOn } from '../wailsjs/runtime/runtime';
 import { DataTable, SelectionTable, MatrixIllustration, HelpWrapper, DocumentationViewer } from './components';
 import { ScoresPlot, ScreePlot, LoadingsPlot, Biplot, CircleOfCorrelations, DiagnosticScatterPlot, EigencorrelationPlot } from './components/visualizations';
 import { FileData, PCARequest, PCAResponse } from './types';
-import { ThemeProvider, ThemeToggle } from '@gopca/ui-components';
+import { ThemeProvider, ThemeToggle, ConfirmDialog } from '@gopca/ui-components';
 import { HelpProvider, useHelp } from './contexts/HelpContext';
 import { PaletteProvider, usePalette } from './contexts/PaletteContext';
 import { HelpDisplay } from './components/HelpDisplay';
@@ -69,6 +69,11 @@ function AppContent() {
         // Confidence ellipse parameters
     });
     
+    // GoCSV integration state
+    const [goCSVStatus, setGoCSVStatus] = useState<{installed: boolean, path?: string, error?: string} | null>(null);
+    const [isCheckingGoCSV, setIsCheckingGoCSV] = useState(false);
+    const [showGoCSVDownloadDialog, setShowGoCSVDownloadDialog] = useState(false);
+    
     const updateGammaForData = (data: FileData) => {
         if (data && data.data && data.data[0]) {
             const numFeatures = data.data[0].length;
@@ -91,6 +96,13 @@ function AppContent() {
             setGuiConfig(config);
         }).catch((err) => {
             console.error('Failed to get GUI config:', err);
+        });
+        
+        // Check GoCSV installation status on startup
+        CheckGoCSVStatus().then((status) => {
+            setGoCSVStatus(status);
+        }).catch((err) => {
+            console.error('Failed to check GoCSV status:', err);
         });
         
         // Listen for file to load on startup
@@ -200,6 +212,34 @@ function AppContent() {
             setFileError(`Failed to parse CSV: ${err}`);
         } finally {
             setLoading(false);
+        }
+    };
+    
+    const handleGoCSVAction = async () => {
+        setIsCheckingGoCSV(true);
+        
+        try {
+            // Check if GoCSV is installed
+            const status = await CheckGoCSVStatus();
+            setGoCSVStatus(status);
+            
+            if (status.installed) {
+                // If installed and we have data, open it in GoCSV
+                if (fileData) {
+                    await OpenInGoCSV(fileData);
+                } else {
+                    // If no data, just launch GoCSV without a file
+                    await LaunchGoCSV();
+                }
+            } else {
+                // If not installed, show download dialog
+                setShowGoCSVDownloadDialog(true);
+            }
+        } catch (err) {
+            console.error('GoCSV action failed:', err);
+            alert(`Failed to perform GoCSV action: ${err}`);
+        } finally {
+            setIsCheckingGoCSV(false);
         }
     };
     
@@ -400,6 +440,24 @@ function AppContent() {
                                 <p className="mt-2 text-xs text-gray-500 dark:text-gray-400">
                                     Accepts CSV files with headers
                                 </p>
+                                
+                                {/* GoCSV Integration Button */}
+                                <div className="mt-4">
+                                    <p className="text-sm text-gray-600 dark:text-gray-400 mb-2">
+                                        Or Use the Data Editor
+                                    </p>
+                                    <HelpWrapper helpKey="gocsv-integration">
+                                        <button
+                                            onClick={handleGoCSVAction}
+                                            disabled={isCheckingGoCSV}
+                                            className="w-full px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                                        >
+                                            {isCheckingGoCSV ? 'Checking...' :
+                                             !goCSVStatus?.installed ? 'Install GoCSV' :
+                                             'Open GoCSV'}
+                                        </button>
+                                    </HelpWrapper>
+                                </div>
                             </HelpWrapper>
 
                             {/* Column 2: Matrix Illustration */}
@@ -1129,6 +1187,25 @@ function AppContent() {
             <DocumentationViewer 
                 isOpen={showDocumentation}
                 onClose={() => setShowDocumentation(false)}
+            />
+            
+            {/* GoCSV Download Confirmation Dialog */}
+            <ConfirmDialog
+                isOpen={showGoCSVDownloadDialog}
+                onClose={() => setShowGoCSVDownloadDialog(false)}
+                onConfirm={async () => {
+                    setShowGoCSVDownloadDialog(false);
+                    try {
+                        await DownloadGoCSV();
+                    } catch (error) {
+                        console.error('Error downloading GoCSV:', error);
+                        alert('Failed to open download page: ' + error);
+                    }
+                }}
+                title="GoCSV Not Installed"
+                message="GoCSV is not installed. Would you like to download it?"
+                confirmText="Download"
+                cancelText="Cancel"
             />
         </div>
     );

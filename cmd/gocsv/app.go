@@ -14,13 +14,13 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
-	"runtime"
 	"sort"
 	"strconv"
 	"strings"
 	"time"
 	
 	"github.com/bitjungle/gopca/internal/version"
+	"github.com/bitjungle/gopca/pkg/integration"
 	"github.com/bitjungle/gopca/pkg/types"
 	wailsruntime "github.com/wailsapp/wails/v2/pkg/runtime"
 	"github.com/xuri/excelize/v2"
@@ -2019,33 +2019,43 @@ type GoPCAStatus struct {
 
 // CheckGoPCAStatus checks if GoPCA Desktop is installed and available
 func (a *App) CheckGoPCAStatus() *GoPCAStatus {
-	status := &GoPCAStatus{
-		Installed: false,
+	// Use shared integration package to detect GoPCA
+	integrationConfig := integration.AppConfig{
+		Name:        "gopca-desktop",
+		CommonPaths: getGoPCAPathsWithDev(),
+		DisplayName: "GoPCA Desktop",
 	}
-
-	// Check for gopca-desktop in PATH
-	path, err := exec.LookPath("gopca-desktop")
-	if err == nil {
-		status.Installed = true
-		status.Path = path
-		
-		// Try to get version
-		cmd := exec.Command(path, "--version")
+	
+	appStatus := integration.CheckApp(integrationConfig)
+	
+	status := &GoPCAStatus{
+		Installed: appStatus.Installed,
+		Path:      appStatus.Path,
+		Error:     appStatus.Error,
+	}
+	
+	// If found, try to get version
+	if status.Installed && status.Path != "" {
+		cmd := exec.Command(status.Path, "--version")
 		output, err := cmd.Output()
 		if err == nil {
 			status.Version = strings.TrimSpace(string(output))
 		}
-		return status
 	}
+	
+	return status
+}
 
-	// Check for development binary relative to current executable
+// getGoPCAPathsWithDev returns common paths plus development paths for GoPCA
+func getGoPCAPathsWithDev() []string {
+	// Start with common installation paths
+	paths := integration.GetCommonPaths("gopca-desktop")
+	
+	// Add development-specific paths
 	execPath, _ := os.Executable()
 	execDir := filepath.Dir(execPath)
-	
-	// Also check relative to current working directory (for wails dev)
 	cwd, _ := os.Getwd()
 	
-	// Development binary paths to check
 	devPaths := []string{
 		// When running from cmd/gocsv with make csv-dev
 		filepath.Join(execDir, "../../build/bin/gopca-desktop"),
@@ -2063,60 +2073,8 @@ func (a *App) CheckGoPCAStatus() *GoPCAStatus {
 		filepath.Join(cwd, "../../cmd/gopca-desktop/build/bin/gopca-desktop.app/Contents/MacOS/gopca-desktop"),
 	}
 	
-	// Check development paths first
-	for _, p := range devPaths {
-		if _, err := os.Stat(p); err == nil {
-			status.Installed = true
-			status.Path = p
-			status.Version = "dev"
-			return status
-		}
-	}
-
-	// Check common installation locations based on OS
-	var possiblePaths []string
-	switch runtime.GOOS {
-	case "darwin":
-		possiblePaths = []string{
-			"/Applications/GoPCA Desktop.app/Contents/MacOS/gopca-desktop",
-			filepath.Join(os.Getenv("HOME"), "Applications/GoPCA Desktop.app/Contents/MacOS/gopca-desktop"),
-			"/usr/local/bin/gopca-desktop",
-			filepath.Join(os.Getenv("HOME"), "go/bin/gopca-desktop"),
-		}
-	case "windows":
-		possiblePaths = []string{
-			"C:\\Program Files\\GoPCA Desktop\\gopca-desktop.exe",
-			filepath.Join(os.Getenv("APPDATA"), "GoPCA Desktop\\gopca-desktop.exe"),
-			filepath.Join(os.Getenv("LOCALAPPDATA"), "GoPCA Desktop\\gopca-desktop.exe"),
-			filepath.Join(os.Getenv("USERPROFILE"), "go\\bin\\gopca-desktop.exe"),
-		}
-	default: // Linux and others
-		possiblePaths = []string{
-			"/usr/local/bin/gopca-desktop",
-			"/usr/bin/gopca-desktop",
-			filepath.Join(os.Getenv("HOME"), ".local/bin/gopca-desktop"),
-			filepath.Join(os.Getenv("HOME"), "go/bin/gopca-desktop"),
-		}
-	}
-
-	// Check each possible path
-	for _, p := range possiblePaths {
-		if _, err := os.Stat(p); err == nil {
-			status.Installed = true
-			status.Path = p
-			
-			// Try to get version
-			cmd := exec.Command(p, "--version")
-			output, err := cmd.Output()
-			if err == nil {
-				status.Version = strings.TrimSpace(string(output))
-			}
-			return status
-		}
-	}
-
-	status.Error = "GoPCA Desktop not found. Please ensure it is installed and in your PATH."
-	return status
+	paths = append(paths, devPaths...)
+	return paths
 }
 
 // OpenInGoPCA saves the current data to a temporary file and opens it in GoPCA Desktop
@@ -2171,26 +2129,8 @@ func (a *App) OpenInGoPCA(data *FileData) error {
 		return fmt.Errorf("failed to flush CSV writer: %w", err)
 	}
 
-	// Launch GoPCA with the file
-	var cmd *exec.Cmd
-	
-	// Use different launch methods based on OS
-	switch runtime.GOOS {
-	case "darwin":
-		if strings.Contains(status.Path, ".app") {
-			// Launch macOS app bundle with open command
-			cmd = exec.Command("open", "-a", filepath.Dir(filepath.Dir(status.Path)), "--args", "--open", tempFile)
-		} else {
-			// Direct binary execution
-			cmd = exec.Command(status.Path, "--open", tempFile)
-		}
-	default:
-		// Windows and Linux
-		cmd = exec.Command(status.Path, "--open", tempFile)
-	}
-
-	// Start the process without waiting
-	if err := cmd.Start(); err != nil {
+	// Launch GoPCA with the file using the shared integration package
+	if err := integration.LaunchWithFile(status.Path, tempFile); err != nil {
 		return fmt.Errorf("failed to launch GoPCA Desktop: %w", err)
 	}
 
