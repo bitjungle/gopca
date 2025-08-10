@@ -592,40 +592,6 @@ function AppContent() {
                                     />
                                 )}
                                 
-                                {/* GoPCA Status */}
-                                {gopcaStatus && (
-                                    <div className={`p-3 rounded-lg text-sm ${
-                                        gopcaStatus.installed 
-                                            ? 'bg-green-50 dark:bg-green-900/20 text-green-700 dark:text-green-300' 
-                                            : 'bg-yellow-50 dark:bg-yellow-900/20 text-yellow-700 dark:text-yellow-300'
-                                    }`}>
-                                        <div className="flex items-center justify-between">
-                                            <div className="flex items-center gap-2">
-                                                <svg className={`w-4 h-4 ${gopcaStatus.installed ? 'text-green-600' : 'text-yellow-600'}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                    {gopcaStatus.installed ? (
-                                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
-                                                    ) : (
-                                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
-                                                    )}
-                                                </svg>
-                                                <span>
-                                                    {gopcaStatus.installed 
-                                                        ? `GoPCA Desktop ${gopcaStatus.version || 'detected'}` 
-                                                        : 'GoPCA Desktop not found'}
-                                                </span>
-                                            </div>
-                                            {!gopcaStatus.installed && (
-                                                <button
-                                                    onClick={() => checkGoPCAInstallation()}
-                                                    className="text-xs text-yellow-600 hover:text-yellow-700 dark:text-yellow-400 dark:hover:text-yellow-300"
-                                                >
-                                                    Refresh
-                                                </button>
-                                            )}
-                                        </div>
-                                    </div>
-                                )}
-                                
                                 <div className="border-t border-gray-200 dark:border-gray-700 pt-4">
                                     <h3 className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                                         Export Options
