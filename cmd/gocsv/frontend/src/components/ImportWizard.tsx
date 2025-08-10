@@ -7,10 +7,9 @@
 import React, { useState, useEffect } from 'react';
 import { SelectFileForImport, GetFileInfo, PreviewFile, ImportFile } from '../../wailsjs/go/main/App';
 import { main } from '../../wailsjs/go/models';
-import { FileSelector } from './FileSelector';
+import { FileSelector, ProgressIndicator } from '@gopca/ui-components';
 import { FormatOptions } from './FormatOptions';
 import { DataPreview } from './DataPreview';
-import { ImportProgress } from './ImportProgress';
 
 type ImportFileInfo = main.ImportFileInfo;
 type ImportOptions = main.ImportOptions;
@@ -235,6 +234,15 @@ export const ImportWizard: React.FC<ImportWizardProps> = ({ isOpen, onClose, onI
                             <FileSelector 
                                 onFileSelect={handleFileSelect}
                                 isLoading={isLoading}
+                                onBrowseClick={async () => {
+                                    try {
+                                        const filePath = await SelectFileForImport();
+                                        return filePath || null;
+                                    } catch (err) {
+                                        console.error('Error selecting file:', err);
+                                        return null;
+                                    }
+                                }}
                             />
                         )}
 
@@ -255,7 +263,20 @@ export const ImportWizard: React.FC<ImportWizardProps> = ({ isOpen, onClose, onI
                         )}
 
                         {currentStep === 'importing' && (
-                            <ImportProgress progress={importProgress} />
+                            <ProgressIndicator 
+                                progress={importProgress}
+                                title="Importing Data..."
+                                subtitle="Please wait while we import your file"
+                                showPercentage={true}
+                                getStatusMessage={(progress) => {
+                                    if (progress < 20) return "Reading file...";
+                                    if (progress < 40) return "Parsing data...";
+                                    if (progress < 60) return "Validating columns...";
+                                    if (progress < 80) return "Processing rows...";
+                                    if (progress < 100) return "Finalizing import...";
+                                    return "Import complete!";
+                                }}
+                            />
                         )}
                     </div>
 

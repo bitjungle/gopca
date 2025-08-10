@@ -7,12 +7,14 @@
 import React, { useRef, useState, useCallback, useMemo } from 'react';
 import { ComposedChart, Scatter, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, ReferenceLine, Cell } from 'recharts';
 import { PCAResult, EllipseParams } from '../../types';
-import { ExportButton } from '../ExportButton';
+import { ExportButton, type ExportConfig } from '@gopca/ui-components';
 import { PlotControls } from '../PlotControls';
 import { CustomPointWithLabel } from '../CustomPointWithLabel';
 import { calculateTopPoints } from '../../utils/labelUtils';
 import { useZoomPan } from '../../hooks/useZoomPan';
 import { useChartTheme } from '../../hooks/useChartTheme';
+import { createChartExportHandler } from '../../utils/exportHelpers';
+import { useTheme } from '@gopca/ui-components';
 import { usePalette } from '../../contexts/PaletteContext';
 import { getQualitativeColor, getSequentialColor, createQualitativeColorMap, getSequentialColorScale } from '../../utils/colorPalettes';
 import { useEllipses } from '../../hooks/useEllipses';
@@ -56,6 +58,7 @@ export const ScoresPlot: React.FC<ScoresPlotProps> = ({
   const [containerSize, setContainerSize] = useState({ width: 0, height: 0 });
   const [hoveredPoint, setHoveredPoint] = useState<number | null>(null);
   const chartTheme = useChartTheme();
+  const { theme } = useTheme();
   const { mode, qualitativePalette, sequentialPalette } = usePalette();
   
   // Create color map for groups based on selected palette
@@ -337,8 +340,24 @@ export const ScoresPlot: React.FC<ScoresPlotProps> = ({
             isFullscreen={isFullscreen}
           />
           <ExportButton 
-            chartRef={containerRef} 
-            fileName={`scores-plot-PC${xComponent + 1}-vs-PC${yComponent + 1}`}
+            formats={[
+              {
+                format: 'png' as const,
+                handler: createChartExportHandler(
+                  containerRef,
+                  `scores-plot-PC${xComponent + 1}-vs-PC${yComponent + 1}`,
+                  theme
+                )
+              },
+              {
+                format: 'svg' as const,
+                handler: createChartExportHandler(
+                  containerRef,
+                  `scores-plot-PC${xComponent + 1}-vs-PC${yComponent + 1}`,
+                  theme
+                )
+              }
+            ]}
           />
         </div>
       </div>

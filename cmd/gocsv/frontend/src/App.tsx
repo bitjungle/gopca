@@ -6,7 +6,8 @@
 
 import React, { useState, useRef, useEffect } from 'react';
 import './App.css';
-import { CSVGrid, ValidationResults, MissingValueSummary, MissingValueDialog, DataQualityDashboard, UndoRedoControls, ImportWizard, DataTransformDialog, DocumentationViewer, ConfirmDialog } from './components';
+import { CSVGrid, ValidationResults, MissingValueSummary, MissingValueDialog, DataQualityDashboard, UndoRedoControls, ImportWizard, DataTransformDialog, DocumentationViewer } from './components';
+import { ConfirmDialog } from '@gopca/ui-components';
 import { ThemeProvider, ThemeToggle } from '@gopca/ui-components';
 import logo from './assets/images/GoCSV-logo-1024-transp.png';
 import { LoadCSV, SaveCSV, SaveExcel, ValidateForGoPCA, AnalyzeMissingValues, FillMissingValues, AnalyzeDataQuality, CheckGoPCAStatus, OpenInGoPCA, DownloadGoPCA, ExecuteCellEdit, ExecuteHeaderEdit, ExecuteFillMissingValues, ClearHistory, GetVersion } from '../wailsjs/go/main/App';

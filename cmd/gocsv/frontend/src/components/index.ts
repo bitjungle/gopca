@@ -14,14 +14,11 @@ export { DistributionChart } from './DistributionChart';
 export { CorrelationMatrix } from './CorrelationMatrix';
 export { UndoRedoControls } from './UndoRedoControls';
 export { ImportWizard } from './ImportWizard';
-export { FileSelector } from './FileSelector';
 export { FormatOptions } from './FormatOptions';
 export { DataPreview } from './DataPreview';
-export { ImportProgress } from './ImportProgress';
 export { DataTransformDialog } from './DataTransformDialog';
 export { DocumentationViewer } from './DocumentationViewer';
 export { RenameDialog } from './RenameDialog';
-export { ConfirmDialog } from './ConfirmDialog';
 export { 
     TargetColumnIcon, 
     CategoryColumnIcon, 
