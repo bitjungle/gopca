@@ -454,7 +454,7 @@ function AppContent() {
                                         >
                                             {isCheckingGoCSV ? 'Checking...' :
                                              !goCSVStatus?.installed ? 'Install GoCSV' :
-                                             'Open in GoCSV'}
+                                             'Open GoCSV'}
                                         </button>
                                     </HelpWrapper>
                                 </div>
