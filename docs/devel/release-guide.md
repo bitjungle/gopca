@@ -134,6 +134,14 @@ Each release includes:
 - `GoCSV-windows.exe` - Windows executable
 - `GoCSV-linux` - Linux executable
 
+### Windows Installer
+- `GoPCA-Setup-vX.X.X.exe` - Windows installer containing all components
+  - Includes GoPCA Desktop, GoCSV, and PCA CLI  
+  - Automated installation to Program Files
+  - Start Menu shortcuts and PATH configuration
+  - Built automatically in CI/CD when NSIS is available
+  - Uses signed binaries when SignPath is configured
+
 ### Verification
 - `checksums.txt` - SHA-256 checksums for all artifacts
 
@@ -284,10 +292,12 @@ The `.github/workflows/release.yml` workflow:
 ### Infrastructure
 
 - **Self-hosted runner**: Used for binary builds to reduce costs
+  - Linux runner with NSIS installed for Windows installer creation
 - **GitHub-hosted runners**: Used for all testing
 - **Code signing**:
   - **macOS**: Automated signing and notarization for all binaries
   - **Windows**: Optional SignPath.io integration for digital signatures (when configured)
+- **Windows Installer**: Built on self-hosted Linux runner using NSIS
 
 ## Questions?
 

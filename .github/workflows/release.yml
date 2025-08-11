@@ -415,10 +415,154 @@ jobs:
         path: signing-status.txt
         retention-days: 1
 
+  build-windows-installer:
+    name: Build Windows Installer
+    runs-on: self-hosted
+    needs: [sign-windows-binaries]
+    if: always() && !cancelled()
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+    
+    - name: Get version from tag
+      id: get_version
+      run: echo "version=${GITHUB_REF#refs/tags/}" >> $GITHUB_OUTPUT
+    
+    - name: Check signing status
+      id: check_signed
+      run: |
+        # Check if we have signed binaries available
+        echo "Checking for signed Windows binaries..."
+        SIGNED="false"
+        
+        # The signing-status artifact tells us if signing succeeded
+        if [ -f "signing-status.txt" ]; then
+          STATUS=$(cat signing-status.txt)
+          if [ "$STATUS" = "signed" ]; then
+            SIGNED="true"
+            echo "✓ Using signed Windows binaries"
+          else
+            echo "⚠️ Using unsigned Windows binaries"
+          fi
+        else
+          echo "⚠️ No signing status found, using unsigned binaries"
+        fi
+        
+        echo "use_signed=${SIGNED}" >> $GITHUB_OUTPUT
+    
+    - name: Download signing status
+      uses: actions/download-artifact@v4
+      with:
+        name: signing-status
+        path: .
+      continue-on-error: true
+    
+    - name: Download Windows CLI artifact
+      uses: actions/download-artifact@v4
+      with:
+        name: pca-windows-amd64
+        path: windows-cli
+    
+    - name: Download signed Windows artifacts
+      if: steps.check_signed.outputs.use_signed == 'true'
+      uses: actions/download-artifact@v4
+      with:
+        name: windows-signed
+        path: windows-signed
+      continue-on-error: true
+    
+    - name: Download Windows Desktop artifact
+      uses: actions/download-artifact@v4
+      with:
+        name: gopca-desktop-windows-latest
+        path: windows-desktop
+    
+    - name: Download Windows GoCSV artifact
+      uses: actions/download-artifact@v4
+      with:
+        name: gocsv-windows-latest
+        path: windows-gocsv
+    
+    - name: Prepare binaries for installer
+      run: |
+        # Create directory for installer binaries
+        mkdir -p build/windows-installer
+        
+        # Copy CLI binary (prefer signed)
+        if [ "${{ steps.check_signed.outputs.use_signed }}" = "true" ] && [ -f "windows-signed/pca-windows-amd64.exe" ]; then
+          echo "Using signed CLI binary"
+          cp windows-signed/pca-windows-amd64.exe build/windows-installer/pca-windows-amd64.exe
+        else
+          echo "Using unsigned CLI binary"
+          cp windows-cli/pca-windows-amd64.exe build/windows-installer/pca-windows-amd64.exe
+        fi
+        
+        # Copy Desktop app (prefer signed, handle both naming conventions)
+        if [ "${{ steps.check_signed.outputs.use_signed }}" = "true" ] && [ -f "windows-signed/GoPCA.exe" ]; then
+          echo "Using signed Desktop binary"
+          cp windows-signed/GoPCA.exe build/windows-installer/GoPCA.exe
+        elif [ -f "windows-desktop/GoPCA-amd64.exe" ]; then
+          echo "Using unsigned Desktop binary (cross-compiled)"
+          cp windows-desktop/GoPCA-amd64.exe build/windows-installer/GoPCA.exe
+        elif [ -f "windows-desktop/GoPCA.exe" ]; then
+          echo "Using unsigned Desktop binary"
+          cp windows-desktop/GoPCA.exe build/windows-installer/GoPCA.exe
+        else
+          echo "ERROR: No GoPCA.exe found!"
+          ls -la windows-desktop/
+          exit 1
+        fi
+        
+        # Copy GoCSV app (prefer signed, handle both naming conventions)
+        if [ "${{ steps.check_signed.outputs.use_signed }}" = "true" ] && [ -f "windows-signed/GoCSV.exe" ]; then
+          echo "Using signed GoCSV binary"
+          cp windows-signed/GoCSV.exe build/windows-installer/GoCSV.exe
+        elif [ -f "windows-gocsv/GoCSV-amd64.exe" ]; then
+          echo "Using unsigned GoCSV binary (cross-compiled)"
+          cp windows-gocsv/GoCSV-amd64.exe build/windows-installer/GoCSV.exe
+        elif [ -f "windows-gocsv/GoCSV.exe" ]; then
+          echo "Using unsigned GoCSV binary"
+          cp windows-gocsv/GoCSV.exe build/windows-installer/GoCSV.exe
+        else
+          echo "ERROR: No GoCSV.exe found!"
+          ls -la windows-gocsv/
+          exit 1
+        fi
+        
+        echo "=== Installer binaries prepared ==="
+        ls -lh build/windows-installer/
+    
+    - name: Build Windows installer
+      run: |
+        VERSION="${{ steps.get_version.outputs.version }}"
+        echo "Building Windows installer for version ${VERSION}..."
+        
+        # Build the installer using NSIS
+        cd scripts/windows
+        makensis -V2 -DVERSION=${VERSION} installer.nsi
+        
+        # Check if installer was created
+        INSTALLER_PATH="../../build/windows-installer/GoPCA-Setup-${VERSION}.exe"
+        if [ -f "${INSTALLER_PATH}" ]; then
+          echo "✓ Installer created successfully: ${INSTALLER_PATH}"
+          ls -lh "${INSTALLER_PATH}"
+        else
+          echo "ERROR: Installer was not created!"
+          exit 1
+        fi
+    
+    - name: Upload installer artifact
+      uses: actions/upload-artifact@v4
+      with:
+        name: windows-installer
+        path: build/windows-installer/GoPCA-Setup-*.exe
+        retention-days: 1
+
   create-release:
     name: Create Release with Artifacts
     runs-on: ubuntu-latest
-    needs: [build-cli-binaries, build-desktop, build-gocsv, sign-windows-binaries]
+    needs: [build-cli-binaries, build-desktop, build-gocsv, sign-windows-binaries, build-windows-installer]
     if: always() && !cancelled()
     
     steps:
@@ -468,6 +612,17 @@ jobs:
     - name: Organize and package artifacts
       run: |
         cd artifacts
+        
+        # Check for Windows installer
+        INSTALLER_AVAILABLE="false"
+        if [ -d "windows-installer" ] && ls windows-installer/GoPCA-Setup-*.exe 1> /dev/null 2>&1; then
+          INSTALLER_AVAILABLE="true"
+          echo "✓ Windows installer found"
+          ls -lh windows-installer/GoPCA-Setup-*.exe
+        else
+          echo "⚠️ Windows installer not found (NSIS not available on runner)"
+        fi
+        echo "INSTALLER_AVAILABLE=${INSTALLER_AVAILABLE}" >> $GITHUB_ENV
         
         # Create directories for platform bundles
         mkdir -p macos windows linux
@@ -559,16 +714,25 @@ jobs:
         tar -czf ../gopca-linux-x64.tar.gz .
         cd ..
         
+        # Move Windows installer to artifacts root if available
+        if [ "${INSTALLER_AVAILABLE}" = "true" ]; then
+          mv windows-installer/GoPCA-Setup-*.exe .
+        fi
+        
         # Clean up temporary directories
         rm -rf macos windows linux
-        rm -rf pca-* gopca-desktop-* gocsv-* windows-signed signing-status unsigned-*
+        rm -rf pca-* gopca-desktop-* gocsv-* windows-signed signing-status unsigned-* windows-installer
         
-        # Generate checksums for the bundles
-        shasum -a 256 gopca-*.zip gopca-*.tar.gz > checksums.txt
+        # Generate checksums for all artifacts
+        if [ "${INSTALLER_AVAILABLE}" = "true" ]; then
+          shasum -a 256 gopca-*.zip gopca-*.tar.gz GoPCA-Setup-*.exe > checksums.txt
+        else
+          shasum -a 256 gopca-*.zip gopca-*.tar.gz > checksums.txt
+        fi
         
         # List final artifacts
         echo "=== Final release artifacts ==="
-        ls -lh gopca-*.zip gopca-*.tar.gz checksums.txt
+        ls -lh gopca-*.zip gopca-*.tar.gz GoPCA-Setup-*.exe checksums.txt 2>/dev/null || ls -lh gopca-*.zip gopca-*.tar.gz checksums.txt
         echo "==============================="
     
     - name: Create Release
@@ -578,6 +742,7 @@ jobs:
           artifacts/gopca-macos-universal.zip
           artifacts/gopca-windows-x64.zip
           artifacts/gopca-linux-x64.tar.gz
+          artifacts/GoPCA-Setup-*.exe
           artifacts/checksums.txt
         generate_release_notes: true
         fail_on_unmatched_files: false
@@ -596,6 +761,12 @@ jobs:
           | **macOS** | [`gopca-macos-universal.zip`](../../releases/download/${{ github.ref_name }}/gopca-macos-universal.zip) | • `pca-intel` and `pca-arm64` CLI tools<br>• `GoPCA.app` (signed & notarized)<br>• `GoCSV.app` (signed & notarized) |
           | **Windows** | [`gopca-windows-x64.zip`](../../releases/download/${{ github.ref_name }}/gopca-windows-x64.zip) | • `pca.exe` CLI tool${{ steps.check_signed.outputs.windows_signed == 'signed' && ' (digitally signed)' || '' }}<br>• `GoPCA.exe`${{ steps.check_signed.outputs.windows_signed == 'signed' && ' (digitally signed)' || '' }}<br>• `GoCSV.exe`${{ steps.check_signed.outputs.windows_signed == 'signed' && ' (digitally signed)' || '' }} |
           | **Linux** | [`gopca-linux-x64.tar.gz`](../../releases/download/${{ github.ref_name }}/gopca-linux-x64.tar.gz) | • `pca-x64` and `pca-arm64` CLI tools<br>• `GoPCA` desktop app<br>• `GoCSV` editor |
+          
+          ### Windows Installer (Recommended for Windows users)
+          
+          | Installer | Download | Description |
+          |-----------|----------|-------------|
+          | **Windows Setup** | [`GoPCA-Setup-${{ github.ref_name }}.exe`](../../releases/download/${{ github.ref_name }}/GoPCA-Setup-${{ github.ref_name }}.exe) | Complete installer with all GoPCA components${{ steps.check_signed.outputs.windows_signed == 'signed' && ' (digitally signed)' || '' }}<br>• Automated installation to Program Files<br>• Start Menu shortcuts<br>• Optional PATH configuration for CLI<br>• Uninstaller included |
           
           ### Installation
           
