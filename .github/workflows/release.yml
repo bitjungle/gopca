@@ -4,6 +4,13 @@ on:
   push:
     tags:
       - 'v*'
+  workflow_dispatch:  # Allow manual testing
+    inputs:
+      test_version:
+        description: 'Test version for installer (e.g., v0.9.5-test)'
+        required: false
+        default: 'v0.9.5-test'
+        type: string
 
 env:
   GO_VERSION: '1.24'
@@ -43,9 +50,17 @@ jobs:
       with:
         go-version: ${{ env.GO_VERSION }}
     
-    - name: Get version from tag
+    - name: Get version from tag or input
       id: get_version
-      run: echo "version=${GITHUB_REF#refs/tags/}" >> $GITHUB_OUTPUT
+      run: |
+        if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+          VERSION="${{ github.event.inputs.test_version }}"
+          echo "Using test version: $VERSION"
+        else
+          VERSION="${GITHUB_REF#refs/tags/}"
+          echo "Using tag version: $VERSION"
+        fi
+        echo "version=$VERSION" >> $GITHUB_OUTPUT
     
     - name: Build binary
       env:
@@ -138,9 +153,17 @@ jobs:
       run: |
         npm run build-ui
     
-    - name: Get version from tag
+    - name: Get version from tag or input
       id: get_version
-      run: echo "version=${GITHUB_REF#refs/tags/}" >> $GITHUB_OUTPUT
+      run: |
+        if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+          VERSION="${{ github.event.inputs.test_version }}"
+          echo "Using test version: $VERSION"
+        else
+          VERSION="${GITHUB_REF#refs/tags/}"
+          echo "Using tag version: $VERSION"
+        fi
+        echo "version=$VERSION" >> $GITHUB_OUTPUT
     
     - name: Build desktop app
       working-directory: cmd/gopca-desktop
@@ -226,9 +249,17 @@ jobs:
       run: |
         npm run build-ui
     
-    - name: Get version from tag
+    - name: Get version from tag or input
       id: get_version
-      run: echo "version=${GITHUB_REF#refs/tags/}" >> $GITHUB_OUTPUT
+      run: |
+        if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+          VERSION="${{ github.event.inputs.test_version }}"
+          echo "Using test version: $VERSION"
+        else
+          VERSION="${GITHUB_REF#refs/tags/}"
+          echo "Using tag version: $VERSION"
+        fi
+        echo "version=$VERSION" >> $GITHUB_OUTPUT
     
     - name: Build GoCSV app
       working-directory: cmd/gocsv
@@ -425,9 +456,17 @@ jobs:
     - name: Checkout code
       uses: actions/checkout@v4
     
-    - name: Get version from tag
+    - name: Get version from tag or input
       id: get_version
-      run: echo "version=${GITHUB_REF#refs/tags/}" >> $GITHUB_OUTPUT
+      run: |
+        if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+          VERSION="${{ github.event.inputs.test_version }}"
+          echo "Using test version: $VERSION"
+        else
+          VERSION="${GITHUB_REF#refs/tags/}"
+          echo "Using tag version: $VERSION"
+        fi
+        echo "version=$VERSION" >> $GITHUB_OUTPUT
     
     - name: Check signing status
       id: check_signed
@@ -735,7 +774,23 @@ jobs:
         ls -lh gopca-*.zip gopca-*.tar.gz GoPCA-Setup-*.exe checksums.txt 2>/dev/null || ls -lh gopca-*.zip gopca-*.tar.gz checksums.txt
         echo "==============================="
     
+    - name: Test Mode Notification
+      if: github.event_name == 'workflow_dispatch'
+      run: |
+        echo "=========================================="
+        echo "🧪 TEST MODE - No release will be created"
+        echo "=========================================="
+        echo "This workflow run was triggered manually for testing."
+        echo "Version used: ${{ github.event.inputs.test_version }}"
+        echo ""
+        echo "Artifacts have been built and can be downloaded from:"
+        echo "https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}"
+        echo ""
+        echo "To create an actual release, push a version tag (e.g., v0.9.5)"
+        echo "=========================================="
+    
     - name: Create Release
+      if: github.event_name == 'push' && contains(github.ref, 'refs/tags/')
       uses: softprops/action-gh-release@v2
       with:
         files: |
