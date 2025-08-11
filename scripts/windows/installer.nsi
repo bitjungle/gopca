@@ -72,9 +72,19 @@ ShowUnInstDetails show
 ;--------------------------------
 ; Version Information
 
-; Use a fixed version format for VIProductVersion
-; This requires X.X.X.X format
-VIProductVersion "0.9.5.0"
+; VIProductVersion requires X.X.X.X format
+; Extract numeric part for VIProductVersion, keep full version for display
+!searchparse "${VERSION}" "" VersionMajor "." VersionMinor "." VersionPatch "-" VersionSuffix
+!searchparse "${VERSION}" "" NumericVersion "-"
+
+; Always provide VIProductVersion (required by NSIS when using other VI functions)
+!ifdef VersionSuffix
+  ; Test version (e.g., 0.9.5-test) - use numeric part for VIProductVersion
+  VIProductVersion "${VersionMajor}.${VersionMinor}.${VersionPatch}.0"
+!else
+  ; Regular version (e.g., 0.9.5) - append .0 for Windows format
+  VIProductVersion "${VERSION}.0"
+!endif
 VIAddVersionKey "ProductName" "${PRODUCT_NAME}"
 VIAddVersionKey "ProductVersion" "${VERSION}"
 VIAddVersionKey "CompanyName" "${PRODUCT_PUBLISHER}"

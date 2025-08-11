@@ -192,6 +192,32 @@ For automated builds in CI/CD:
     path: build/windows-installer/GoPCA-Setup-*.exe
 ```
 
+## Testing the Installer Build
+
+You can test the Windows installer build without creating a release:
+
+1. **Via GitHub Actions UI** (workflow_dispatch):
+   - Go to Actions → Release workflow
+   - Click "Run workflow"
+   - Select branch and test version (e.g., v0.9.5-test)
+   - Download the installer artifact after completion
+
+2. **Locally** (requires NSIS):
+   ```bash
+   make windows-installer
+   # or for signed version (requires certificates):
+   make windows-installer-signed
+   ```
+
+The installer build is automatically tested in CI/CD when:
+- Pushing version tags (production releases)
+- Using workflow_dispatch trigger (test builds)
+
+### Version Handling
+- Production versions: `v0.9.5` → creates `GoPCA-Setup-v0.9.5.exe`
+- Test versions: `v0.9.5-test` → creates `GoPCA-Setup-v0.9.5-test.exe`
+- The 'v' prefix is stripped internally for NSIS processing
+
 ## Security Considerations
 
 - The installer requires administrator privileges to install to Program Files
