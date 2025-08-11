@@ -69,7 +69,7 @@ WAILS := $(shell which wails 2> /dev/null || echo "$${HOME}/go/bin/wails")
 .DEFAULT_GOAL := all
 
 # Phony targets
-.PHONY: all build cli cli-all build-cross build-darwin-amd64 build-darwin-arm64 build-linux-amd64 build-linux-arm64 build-windows-amd64 build-all pca-dev pca-build pca-build-all pca-run pca-deps csv-dev csv-build csv-build-all csv-run csv-deps build-everything test test-verbose test-coverage fmt lint run-pca-iris clean clean-cross install deps deps-all install-hooks sign sign-cli sign-pca sign-csv notarize notarize-cli notarize-pca notarize-csv sign-and-notarize help
+.PHONY: all build cli cli-all build-cross build-darwin-amd64 build-darwin-arm64 build-linux-amd64 build-linux-arm64 build-windows-amd64 build-all pca-dev pca-build pca-build-all pca-run pca-deps csv-dev csv-build csv-build-all csv-run csv-deps build-everything test test-verbose test-coverage fmt lint run-pca-iris clean clean-cross install deps deps-all install-hooks sign sign-cli sign-pca sign-csv sign-windows windows-installer windows-installer-signed windows-installer-all notarize notarize-cli notarize-pca notarize-csv sign-and-notarize help
 
 ## all: Build all applications for current platform and run tests
 all: build pca-build csv-build test
@@ -301,6 +301,52 @@ sign-windows:
 		echo "On macOS/Linux, install osslsigncode via package manager."; \
 		exit 1; \
 	fi
+
+## windows-installer: Build Windows installer with current binaries
+windows-installer:
+	@echo "Building Windows installer..."
+	@# Check if makensis is available
+	@if ! command -v makensis >/dev/null 2>&1; then \
+		echo "Error: makensis not found. Please install NSIS:"; \
+		echo "  macOS: brew install nsis"; \
+		echo "  Ubuntu/Debian: sudo apt-get install nsis"; \
+		echo "  Windows: Download from https://nsis.sourceforge.io"; \
+		exit 1; \
+	fi
+	@# Create installer build directory
+	@mkdir -p build/windows-installer
+	@# Check for required executables
+	@if [ ! -f "$(BUILD_DIR)/pca-windows-amd64.exe" ]; then \
+		echo "CLI binary not found. Build it first with 'make build-windows-amd64'"; \
+		exit 1; \
+	fi
+	@if [ ! -f "$(DESKTOP_PATH)/build/bin/GoPCA.exe" ]; then \
+		echo "GoPCA Desktop not found. Build it first with 'make pca-build' on Windows"; \
+		echo "Note: Cross-platform desktop builds require Windows for .exe generation"; \
+	fi
+	@if [ ! -f "$(CSV_PATH)/build/bin/GoCSV.exe" ]; then \
+		echo "GoCSV not found. Build it first with 'make csv-build' on Windows"; \
+		echo "Note: Cross-platform desktop builds require Windows for .exe generation"; \
+	fi
+	@# Copy executables to installer directory
+	@echo "Copying executables..."
+	@cp -f "$(BUILD_DIR)/pca-windows-amd64.exe" build/windows-installer/ 2>/dev/null || true
+	@[ -f "$(DESKTOP_PATH)/build/bin/GoPCA.exe" ] && cp -f "$(DESKTOP_PATH)/build/bin/GoPCA.exe" build/windows-installer/ || echo "Warning: GoPCA.exe not found, skipping"
+	@[ -f "$(CSV_PATH)/build/bin/GoCSV.exe" ] && cp -f "$(CSV_PATH)/build/bin/GoCSV.exe" build/windows-installer/ || echo "Warning: GoCSV.exe not found, skipping"
+	@# Build installer
+	@echo "Creating installer package..."
+	@cd scripts/windows && makensis -V2 -DVERSION=$(VERSION) installer.nsi
+	@echo "✅ Windows installer created: build/windows-installer/GoPCA-Setup-v$(VERSION).exe"
+
+## windows-installer-signed: Build Windows installer with signed binaries
+windows-installer-signed: sign-windows windows-installer
+	@echo "✅ Windows installer with signed binaries created"
+
+## windows-installer-all: Build all Windows binaries and create installer
+windows-installer-all: build-windows-amd64
+	@echo "Note: Desktop applications (GoPCA.exe, GoCSV.exe) must be built on Windows"
+	@echo "Building available components..."
+	@$(MAKE) windows-installer
 
 ## notarize: Notarize all macOS binaries (requires .env with APPLE_APP_SPECIFIC_PASSWORD)
 notarize:
@@ -540,6 +586,11 @@ help:
 	@echo "  make sign-pca         # Sign GoPCA Desktop app only"
 	@echo "  make sign-csv         # Sign GoCSV app only"
 	@echo "  make sign-windows     # Sign Windows binaries (requires signtool/osslsigncode)"
+	@echo ""
+	@echo "Windows Installer:"
+	@echo "  make windows-installer        # Build installer with current binaries"
+	@echo "  make windows-installer-signed # Build installer with signed binaries"
+	@echo "  make windows-installer-all    # Build all binaries and create installer"
 	@echo ""
 	@echo "Notarization (macOS):"
 	@echo "  make notarize         # Notarize all signed binaries"

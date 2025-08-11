@@ -134,6 +134,13 @@ Each release includes:
 - `GoCSV-windows.exe` - Windows executable
 - `GoCSV-linux` - Linux executable
 
+### Windows Installer (optional)
+- `GoPCA-Setup-vX.X.X.exe` - Windows installer containing all components
+  - Includes GoPCA Desktop, GoCSV, and PCA CLI
+  - Optional component selection during install
+  - Start Menu shortcuts and PATH configuration
+  - Build with `make windows-installer` (requires NSIS)
+
 ### Verification
 - `checksums.txt` - SHA-256 checksums for all artifacts
 
