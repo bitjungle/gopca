@@ -158,6 +158,31 @@ Follow [Semantic Versioning](https://semver.org/):
 - Beta releases: `v1.0.0-beta.1`
 - Alpha releases: `v1.0.0-alpha.1`
 
+## Testing the Release Workflow
+
+You can test the release workflow without creating actual releases using the workflow_dispatch trigger:
+
+### Manual Testing Steps
+1. Go to [GitHub Actions](https://github.com/bitjungle/gopca/actions)
+2. Select "Release" workflow from the left sidebar
+3. Click "Run workflow" button
+4. Configure the test run:
+   - **Branch**: Select branch to test from (e.g., main or feature branch)
+   - **Test version**: Use default `v0.9.5-test` or enter custom version
+5. Click the green "Run workflow" button
+
+### What Happens in Test Mode
+- ✅ All binaries and installers are built
+- ✅ Artifacts are uploaded and downloadable from the workflow run
+- ✅ Clear "TEST MODE" notification appears in logs
+- ❌ No GitHub release is created (intentional)
+- ❌ No tag is created or pushed
+
+This is useful for:
+- Testing workflow changes before merging
+- Verifying Windows installer builds correctly
+- Checking cross-platform builds without creating releases
+
 ## Hotfix Releases
 
 For urgent fixes to the current release:
