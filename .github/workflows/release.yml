@@ -693,9 +693,9 @@ jobs:
           cp -a "gocsv-macos-latest/GoCSV.app" "macos/"
         fi
         
-        # Create macOS bundle zip
+        # Create macOS bundle zip (preserve symlinks with -y flag)
         cd macos
-        zip -r ../gopca-macos-universal.zip .
+        zip -r -y ../gopca-macos-universal.zip .
         cd ..
         
         # === Windows Bundle ===
