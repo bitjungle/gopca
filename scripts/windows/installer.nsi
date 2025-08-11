@@ -72,9 +72,17 @@ ShowUnInstDetails show
 ;--------------------------------
 ; Version Information
 
-; Use a fixed version format for VIProductVersion
-; This requires X.X.X.X format
-VIProductVersion "0.9.5.0"
+; VIProductVersion requires X.X.X.X format
+; For test versions (containing -test), we skip this to avoid errors
+!searchparse "${VERSION}" "" VersionMajor "." VersionMinor "." VersionPatch "-" VersionRest
+!ifdef VersionRest
+  ; This is a test version (e.g., 0.9.5-test), skip VIProductVersion
+  !warning "Test version detected (${VERSION}), skipping VIProductVersion"
+!else
+  ; Regular version, use it with .0 appended for Windows format
+  VIProductVersion "${VERSION}.0"
+!endif
+
 VIAddVersionKey "ProductName" "${PRODUCT_NAME}"
 VIAddVersionKey "ProductVersion" "${VERSION}"
 VIAddVersionKey "CompanyName" "${PRODUCT_PUBLISHER}"

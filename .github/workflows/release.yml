@@ -579,9 +579,13 @@ jobs:
         VERSION="${{ steps.get_version.outputs.version }}"
         echo "Building Windows installer for version ${VERSION}..."
         
+        # Strip the 'v' prefix for NSIS (installer.nsi adds it back)
+        VERSION_NO_V="${VERSION#v}"
+        echo "Version for NSIS: ${VERSION_NO_V}"
+        
         # Build the installer using NSIS
         cd scripts/windows
-        makensis -V2 -DVERSION=${VERSION} installer.nsi
+        makensis -V2 -DVERSION=${VERSION_NO_V} installer.nsi
         
         # Check if installer was created
         INSTALLER_PATH="../../build/windows-installer/GoPCA-Setup-${VERSION}.exe"
