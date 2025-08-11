@@ -253,22 +253,12 @@ FunctionEnd
 ; Installer Sections
 
 Section "GoPCA Desktop Application" SEC_GOPCA_DESKTOP
-  ; Optional section if file doesn't exist
+  SectionIn RO ; Required section
   
   SetOutPath "$INSTDIR"
   
-  ; Copy GoPCA Desktop executable if it exists
-  File /nonfatal "..\..\build\windows-installer\GoPCA.exe"
-  
-  ; Check if file was actually installed
-  IfFileExists "$INSTDIR\GoPCA.exe" 0 +2
-  Goto gopca_installed
-  
-  ; File not found, skip this section
-  MessageBox MB_OK "GoPCA Desktop not included in this installer (not built)"
-  Goto gopca_skip
-  
-  gopca_installed:
+  ; Copy GoPCA Desktop executable (required)
+  File "..\..\build\windows-installer\GoPCA.exe"
   
   ; Create Start Menu shortcut
   CreateDirectory "$SMPROGRAMS\${PRODUCT_NAME}"
@@ -294,23 +284,18 @@ Section "GoPCA Desktop Application" SEC_GOPCA_DESKTOP
   
   ; Create uninstaller
   WriteUninstaller "$INSTDIR\uninstall.exe"
-  
-  gopca_skip:
 SectionEnd
 
 Section "GoCSV Editor" SEC_GOCSV
+  SectionIn RO ; Required section
+  
   SetOutPath "$INSTDIR"
   
-  ; Copy GoCSV executable if it exists
-  File /nonfatal "..\..\build\windows-installer\GoCSV.exe"
-  
-  ; Check if file was actually installed
-  IfFileExists "$INSTDIR\GoCSV.exe" 0 gocsv_skip
+  ; Copy GoCSV executable (required)
+  File "..\..\build\windows-installer\GoCSV.exe"
   
   ; Create Start Menu shortcut
   CreateShortCut "$SMPROGRAMS\${PRODUCT_NAME}\GoCSV Editor.lnk" "$INSTDIR\GoCSV.exe"
-  
-  gocsv_skip:
   
   ; Optional: Register CSV file association
   ; WriteRegStr HKCR ".csv" "" "GoCSV.Document"
@@ -320,18 +305,15 @@ Section "GoCSV Editor" SEC_GOCSV
 SectionEnd
 
 Section "PCA Command Line Tool" SEC_PCA_CLI
+  SectionIn RO ; Required section
+  
   SetOutPath "$INSTDIR\bin"
   
-  ; Copy PCA CLI executable if it exists
-  File /nonfatal /oname=pca.exe "..\..\build\windows-installer\pca-windows-amd64.exe"
-  
-  ; Check if file was actually installed
-  IfFileExists "$INSTDIR\bin\pca.exe" 0 pcacli_skip
+  ; Copy PCA CLI executable (required)
+  File /oname=pca.exe "..\..\build\windows-installer\pca-windows-amd64.exe"
   
   ; Set flag to add to PATH
   StrCpy $AddToPath "1"
-  
-  pcacli_skip:
 SectionEnd
 
 Section "Add CLI to System PATH" SEC_ADD_PATH
@@ -355,9 +337,9 @@ SectionEnd
 ; Section Descriptions
 
 !insertmacro MUI_FUNCTION_DESCRIPTION_BEGIN
-  !insertmacro MUI_DESCRIPTION_TEXT ${SEC_GOPCA_DESKTOP} "The main GoPCA Desktop application for PCA analysis with GUI"
-  !insertmacro MUI_DESCRIPTION_TEXT ${SEC_GOCSV} "GoCSV Editor for CSV file manipulation and data preparation"
-  !insertmacro MUI_DESCRIPTION_TEXT ${SEC_PCA_CLI} "Command-line interface for PCA analysis and automation"
+  !insertmacro MUI_DESCRIPTION_TEXT ${SEC_GOPCA_DESKTOP} "The main GoPCA Desktop application for PCA analysis with GUI (Required)"
+  !insertmacro MUI_DESCRIPTION_TEXT ${SEC_GOCSV} "GoCSV Editor for CSV file manipulation and data preparation (Required)"
+  !insertmacro MUI_DESCRIPTION_TEXT ${SEC_PCA_CLI} "Command-line interface for PCA analysis and automation (Required)"
   !insertmacro MUI_DESCRIPTION_TEXT ${SEC_ADD_PATH} "Add the CLI tool to your system PATH for easy command-line access"
   !insertmacro MUI_DESCRIPTION_TEXT ${SEC_SHORTCUTS} "Create shortcuts in the Start Menu"
 !insertmacro MUI_FUNCTION_DESCRIPTION_END

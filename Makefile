@@ -234,6 +234,34 @@ sign-csv:
 ## sign-windows: Sign Windows binaries locally (requires signtool or osslsigncode)
 sign-windows:
 	@echo "Signing Windows binaries..."
+	@echo "=========================================="
+	@# Check for ALL required binaries first
+	@echo "Checking for required binaries..."
+	@if [ ! -f "$(BUILD_DIR)/pca-windows-amd64.exe" ]; then \
+		echo "❌ ERROR: CLI binary not found at $(BUILD_DIR)/pca-windows-amd64.exe"; \
+		echo ""; \
+		echo "To fix: Run 'make build-windows-amd64'"; \
+		echo ""; \
+		exit 1; \
+	fi
+	@echo "✅ Found: pca-windows-amd64.exe"
+	@if [ ! -f "$(DESKTOP_PATH)/build/bin/GoPCA.exe" ]; then \
+		echo "❌ ERROR: GoPCA Desktop not found at $(DESKTOP_PATH)/build/bin/GoPCA.exe"; \
+		echo ""; \
+		echo "To fix: Build on Windows with 'make pca-build'"; \
+		echo ""; \
+		exit 1; \
+	fi
+	@echo "✅ Found: GoPCA.exe"
+	@if [ ! -f "$(CSV_PATH)/build/bin/GoCSV.exe" ]; then \
+		echo "❌ ERROR: GoCSV not found at $(CSV_PATH)/build/bin/GoCSV.exe"; \
+		echo ""; \
+		echo "To fix: Build on Windows with 'make csv-build'"; \
+		echo ""; \
+		exit 1; \
+	fi
+	@echo "✅ Found: GoCSV.exe"
+	@echo ""
 	@# Load environment variables from .env if it exists
 	@if [ -f .env ]; then \
 		export $$(grep -v '^#' .env | xargs); \
@@ -244,15 +272,11 @@ sign-windows:
 	\
 	if command -v signtool >/dev/null 2>&1 && signtool sign /? >/dev/null 2>&1; then \
 		echo "Found signtool, signing binaries..."; \
-		if [ -f "$(BUILD_DIR)/pca-windows-amd64.exe" ]; then \
-			signtool sign /a /t http://timestamp.digicert.com "$(BUILD_DIR)/pca-windows-amd64.exe"; \
-		fi; \
-		if [ -f "$(DESKTOP_PATH)/build/bin/GoPCA.exe" ]; then \
-			signtool sign /a /t http://timestamp.digicert.com "$(DESKTOP_PATH)/build/bin/GoPCA.exe"; \
-		fi; \
-		if [ -f "$(CSV_PATH)/build/bin/GoCSV.exe" ]; then \
-			signtool sign /a /t http://timestamp.digicert.com "$(CSV_PATH)/build/bin/GoCSV.exe"; \
-		fi; \
+		# Sign all three binaries
+		signtool sign /a /t http://timestamp.digicert.com "$(BUILD_DIR)/pca-windows-amd64.exe"; \
+		signtool sign /a /t http://timestamp.digicert.com "$(DESKTOP_PATH)/build/bin/GoPCA.exe"; \
+		signtool sign /a /t http://timestamp.digicert.com "$(CSV_PATH)/build/bin/GoCSV.exe"; \
+		echo "✅ All binaries signed with signtool"; \
 	elif command -v osslsigncode >/dev/null 2>&1; then \
 		echo "Found osslsigncode"; \
 		if [ ! -f "$${WINDOWS_CERT_FILE}" ]; then \
@@ -270,31 +294,28 @@ sign-windows:
 			exit 1; \
 		fi; \
 		echo "Using certificate: $${WINDOWS_CERT_FILE}"; \
-		echo "Signing binaries..."; \
-		if [ -f "$(BUILD_DIR)/pca-windows-amd64.exe" ]; then \
-			osslsigncode sign -pkcs12 "$${WINDOWS_CERT_FILE}" -pass "$${WINDOWS_CERT_PASSWORD}" \
-				-t http://timestamp.digicert.com -in "$(BUILD_DIR)/pca-windows-amd64.exe" \
-				-out "$(BUILD_DIR)/pca-windows-amd64-signed.exe" && \
-			mv "$(BUILD_DIR)/pca-windows-amd64-signed.exe" "$(BUILD_DIR)/pca-windows-amd64.exe" && \
-			echo "✅ Signed: pca-windows-amd64.exe"; \
-		fi; \
-		if [ -f "$(DESKTOP_PATH)/build/bin/GoPCA.exe" ]; then \
-			osslsigncode sign -pkcs12 "$${WINDOWS_CERT_FILE}" -pass "$${WINDOWS_CERT_PASSWORD}" \
-				-t http://timestamp.digicert.com -in "$(DESKTOP_PATH)/build/bin/GoPCA.exe" \
-				-out "$(DESKTOP_PATH)/build/bin/GoPCA-signed.exe" && \
-			mv "$(DESKTOP_PATH)/build/bin/GoPCA-signed.exe" "$(DESKTOP_PATH)/build/bin/GoPCA.exe" && \
-			echo "✅ Signed: GoPCA.exe"; \
-		fi; \
-		if [ -f "$(CSV_PATH)/build/bin/GoCSV.exe" ]; then \
-			osslsigncode sign -pkcs12 "$${WINDOWS_CERT_FILE}" -pass "$${WINDOWS_CERT_PASSWORD}" \
-				-t http://timestamp.digicert.com -in "$(CSV_PATH)/build/bin/GoCSV.exe" \
-				-out "$(CSV_PATH)/build/bin/GoCSV-signed.exe" && \
-			mv "$(CSV_PATH)/build/bin/GoCSV-signed.exe" "$(CSV_PATH)/build/bin/GoCSV.exe" && \
-			echo "✅ Signed: GoCSV.exe"; \
-		fi; \
 		echo ""; \
-		echo "✅ Windows binaries signed successfully!"; \
+		echo "Signing binaries..."; \
+		# Sign all three binaries
+		osslsigncode sign -pkcs12 "$${WINDOWS_CERT_FILE}" -pass "$${WINDOWS_CERT_PASSWORD}" \
+			-t http://timestamp.digicert.com -in "$(BUILD_DIR)/pca-windows-amd64.exe" \
+			-out "$(BUILD_DIR)/pca-windows-amd64-signed.exe" && \
+		mv "$(BUILD_DIR)/pca-windows-amd64-signed.exe" "$(BUILD_DIR)/pca-windows-amd64.exe" && \
+		echo "  ✅ Signed: pca-windows-amd64.exe"; \
+		osslsigncode sign -pkcs12 "$${WINDOWS_CERT_FILE}" -pass "$${WINDOWS_CERT_PASSWORD}" \
+			-t http://timestamp.digicert.com -in "$(DESKTOP_PATH)/build/bin/GoPCA.exe" \
+			-out "$(DESKTOP_PATH)/build/bin/GoPCA-signed.exe" && \
+		mv "$(DESKTOP_PATH)/build/bin/GoPCA-signed.exe" "$(DESKTOP_PATH)/build/bin/GoPCA.exe" && \
+		echo "  ✅ Signed: GoPCA.exe"; \
+		osslsigncode sign -pkcs12 "$${WINDOWS_CERT_FILE}" -pass "$${WINDOWS_CERT_PASSWORD}" \
+			-t http://timestamp.digicert.com -in "$(CSV_PATH)/build/bin/GoCSV.exe" \
+			-out "$(CSV_PATH)/build/bin/GoCSV-signed.exe" && \
+		mv "$(CSV_PATH)/build/bin/GoCSV-signed.exe" "$(CSV_PATH)/build/bin/GoCSV.exe" && \
+		echo "  ✅ Signed: GoCSV.exe"; \
+		echo ""; \
+		echo "✅ All Windows binaries signed successfully!"; \
 		echo "⚠️  Note: Self-signed certificates will trigger Windows security warnings"; \
+		echo "=========================================="; \
 	else \
 		echo "signtool or osslsigncode not found."; \
 		echo "On Windows, install Windows SDK for signtool."; \
@@ -305,9 +326,10 @@ sign-windows:
 ## windows-installer: Build Windows installer with current binaries
 windows-installer:
 	@echo "Building Windows installer..."
+	@echo "=========================================="
 	@# Check if makensis is available
 	@if ! command -v makensis >/dev/null 2>&1; then \
-		echo "Error: makensis not found. Please install NSIS:"; \
+		echo "❌ ERROR: makensis not found. Please install NSIS:"; \
 		echo "  macOS: brew install nsis"; \
 		echo "  Ubuntu/Debian: sudo apt-get install nsis"; \
 		echo "  Windows: Download from https://nsis.sourceforge.io"; \
@@ -315,28 +337,48 @@ windows-installer:
 	fi
 	@# Create installer build directory
 	@mkdir -p build/windows-installer
-	@# Check for required executables
+	@# Check for ALL required executables - fail if any are missing
+	@echo "Checking for required components..."
 	@if [ ! -f "$(BUILD_DIR)/pca-windows-amd64.exe" ]; then \
-		echo "CLI binary not found. Build it first with 'make build-windows-amd64'"; \
+		echo "❌ ERROR: CLI binary not found at $(BUILD_DIR)/pca-windows-amd64.exe"; \
+		echo ""; \
+		echo "To fix: Run 'make build-windows-amd64'"; \
+		echo ""; \
 		exit 1; \
 	fi
+	@echo "✅ Found: pca-windows-amd64.exe"
 	@if [ ! -f "$(DESKTOP_PATH)/build/bin/GoPCA.exe" ]; then \
-		echo "GoPCA Desktop not found. Build it first with 'make pca-build' on Windows"; \
-		echo "Note: Cross-platform desktop builds require Windows for .exe generation"; \
+		echo "❌ ERROR: GoPCA Desktop not found at $(DESKTOP_PATH)/build/bin/GoPCA.exe"; \
+		echo ""; \
+		echo "To fix: Build on Windows with 'make pca-build'"; \
+		echo "Note: Wails desktop apps must be built on Windows"; \
+		echo ""; \
+		exit 1; \
 	fi
+	@echo "✅ Found: GoPCA.exe"
 	@if [ ! -f "$(CSV_PATH)/build/bin/GoCSV.exe" ]; then \
-		echo "GoCSV not found. Build it first with 'make csv-build' on Windows"; \
-		echo "Note: Cross-platform desktop builds require Windows for .exe generation"; \
+		echo "❌ ERROR: GoCSV not found at $(CSV_PATH)/build/bin/GoCSV.exe"; \
+		echo ""; \
+		echo "To fix: Build on Windows with 'make csv-build'"; \
+		echo "Note: Wails desktop apps must be built on Windows"; \
+		echo ""; \
+		exit 1; \
 	fi
-	@# Copy executables to installer directory
-	@echo "Copying executables..."
-	@cp -f "$(BUILD_DIR)/pca-windows-amd64.exe" build/windows-installer/ 2>/dev/null || true
-	@[ -f "$(DESKTOP_PATH)/build/bin/GoPCA.exe" ] && cp -f "$(DESKTOP_PATH)/build/bin/GoPCA.exe" build/windows-installer/ || echo "Warning: GoPCA.exe not found, skipping"
-	@[ -f "$(CSV_PATH)/build/bin/GoCSV.exe" ] && cp -f "$(CSV_PATH)/build/bin/GoCSV.exe" build/windows-installer/ || echo "Warning: GoCSV.exe not found, skipping"
+	@echo "✅ Found: GoCSV.exe"
+	@# Copy all executables to installer directory
+	@echo ""
+	@echo "Copying executables to installer directory..."
+	@cp -f "$(BUILD_DIR)/pca-windows-amd64.exe" build/windows-installer/
+	@cp -f "$(DESKTOP_PATH)/build/bin/GoPCA.exe" build/windows-installer/
+	@cp -f "$(CSV_PATH)/build/bin/GoCSV.exe" build/windows-installer/
+	@echo "✅ All components copied"
 	@# Build installer
+	@echo ""
 	@echo "Creating installer package..."
 	@cd scripts/windows && makensis -V2 -DVERSION=$(VERSION) installer.nsi
+	@echo ""
 	@echo "✅ Windows installer created: build/windows-installer/GoPCA-Setup-v$(VERSION).exe"
+	@echo "=========================================="
 
 ## windows-installer-signed: Build Windows installer with signed binaries
 windows-installer-signed: sign-windows windows-installer

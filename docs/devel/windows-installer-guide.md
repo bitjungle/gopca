@@ -18,12 +18,15 @@ The Windows installer packages all three GoPCA components into a single installe
   - Windows: Download from [nsis.sourceforge.io](https://nsis.sourceforge.io)
 
 ### Required Binaries
-Before building the installer, you need the Windows executables:
+The installer requires ALL three Windows executables to be present:
 - `build/pca-windows-amd64.exe` - Build with `make build-windows-amd64`
 - `cmd/gopca-desktop/build/bin/GoPCA.exe` - Build with `make pca-build` on Windows
 - `cmd/gocsv/build/bin/GoCSV.exe` - Build with `make csv-build` on Windows
 
-**Note**: Desktop applications (GoPCA.exe and GoCSV.exe) must be built on Windows as Wails requires the target platform for GUI apps.
+**IMPORTANT**: 
+- All three components are REQUIRED - the installer will fail if any are missing
+- Desktop applications (GoPCA.exe and GoCSV.exe) must be built on Windows as Wails requires the target platform for GUI apps
+- The installer enforces complete packages to ensure users always get all components
 
 ## Building the Installer
 
@@ -62,12 +65,14 @@ make windows-installer-all
 ## Installer Features
 
 ### Components
-The installer allows users to select which components to install:
+The installer includes all components (no selection required):
 - **GoPCA Desktop** (required) - Main application
-- **GoCSV Editor** (optional) - CSV manipulation tool
-- **PCA CLI Tool** (optional) - Command-line interface
+- **GoCSV Editor** (required) - CSV manipulation tool
+- **PCA CLI Tool** (required) - Command-line interface
 - **Add to PATH** (optional) - System PATH configuration for CLI
 - **Start Menu Shortcuts** (optional) - Program shortcuts
+
+All three main components are always installed to ensure users have the complete GoPCA suite.
 
 ### Installation Locations
 ```
@@ -146,15 +151,16 @@ Install NSIS for your platform:
 - Linux: `sudo apt-get install nsis`
 - Windows: Download installer from official site
 
-### "GoPCA.exe not found"
+### "GoPCA.exe not found" or "GoCSV.exe not found"
 Desktop applications must be built on Windows:
 1. Switch to a Windows machine
 2. Run `make pca-build` and `make csv-build`
-3. Copy the .exe files to the build machine
+3. Copy the .exe files to the correct locations on your build machine:
+   - `cmd/gopca-desktop/build/bin/GoPCA.exe`
+   - `cmd/gocsv/build/bin/GoCSV.exe`
 4. Run `make windows-installer`
 
-### "File not found" warnings
-The installer uses `/nonfatal` flags to handle missing components gracefully. Warnings about missing files can be ignored if you're only including the CLI tool.
+The installer will fail if any component is missing - this is intentional to ensure complete packages.
 
 ### Version Format Error
 The NSIS script requires version in X.X.X.X format. The script automatically converts semantic versions (X.X.X) by appending .0.
