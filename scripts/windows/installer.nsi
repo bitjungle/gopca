@@ -73,13 +73,16 @@ ShowUnInstDetails show
 ; Version Information
 
 ; VIProductVersion requires X.X.X.X format
-; For test versions (containing -test), we skip this to avoid errors
-!searchparse "${VERSION}" "" VersionMajor "." VersionMinor "." VersionPatch "-" VersionRest
-!ifdef VersionRest
-  ; This is a test version (e.g., 0.9.5-test), skip VIProductVersion
-  !warning "Test version detected (${VERSION}), skipping VIProductVersion"
+; Extract numeric part for VIProductVersion, keep full version for display
+!searchparse "${VERSION}" "" VersionMajor "." VersionMinor "." VersionPatch "-" VersionSuffix
+!searchparse "${VERSION}" "" NumericVersion "-"
+
+; Always provide VIProductVersion (required by NSIS when using other VI functions)
+!ifdef VersionSuffix
+  ; Test version (e.g., 0.9.5-test) - use numeric part for VIProductVersion
+  VIProductVersion "${VersionMajor}.${VersionMinor}.${VersionPatch}.0"
 !else
-  ; Regular version, use it with .0 appended for Windows format
+  ; Regular version (e.g., 0.9.5) - append .0 for Windows format
   VIProductVersion "${VERSION}.0"
 !endif
 
