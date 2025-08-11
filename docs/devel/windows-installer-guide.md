@@ -20,12 +20,12 @@ The Windows installer packages all three GoPCA components into a single installe
 ### Required Binaries
 The installer requires ALL three Windows executables to be present:
 - `build/pca-windows-amd64.exe` - Build with `make build-windows-amd64`
-- `cmd/gopca-desktop/build/bin/GoPCA.exe` - Build with `make pca-build` on Windows
-- `cmd/gocsv/build/bin/GoCSV.exe` - Build with `make csv-build` on Windows
+- `cmd/gopca-desktop/build/bin/GoPCA-amd64.exe` or `GoPCA.exe` - Build with `make pca-build`
+- `cmd/gocsv/build/bin/GoCSV-amd64.exe` or `GoCSV.exe` - Build with `make csv-build`
 
 **IMPORTANT**: 
 - All three components are REQUIRED - the installer will fail if any are missing
-- Desktop applications (GoPCA.exe and GoCSV.exe) must be built on Windows as Wails requires the target platform for GUI apps
+- Desktop applications can be cross-compiled using Wails (the filename will include `-amd64` suffix when cross-compiled)
 - The installer enforces complete packages to ensure users always get all components
 
 ## Building the Installer
@@ -103,6 +103,10 @@ sudo apt-get install nsis  # Ubuntu/Debian
 # Build Windows CLI
 make build-windows-amd64
 
+# Build Windows Desktop apps (cross-compilation with Wails)
+cd cmd/gopca-desktop && wails build -platform windows/amd64
+cd cmd/gocsv && wails build -platform windows/amd64
+
 # Create installer
 make windows-installer
 ```
@@ -152,13 +156,14 @@ Install NSIS for your platform:
 - Windows: Download installer from official site
 
 ### "GoPCA.exe not found" or "GoCSV.exe not found"
-Desktop applications must be built on Windows:
-1. Switch to a Windows machine
-2. Run `make pca-build` and `make csv-build`
-3. Copy the .exe files to the correct locations on your build machine:
-   - `cmd/gopca-desktop/build/bin/GoPCA.exe`
-   - `cmd/gocsv/build/bin/GoCSV.exe`
-4. Run `make windows-installer`
+Desktop applications can be built using Wails:
+1. Run `make pca-build` and `make csv-build` (works on any platform with Wails)
+2. The executables will be created at:
+   - `cmd/gopca-desktop/build/bin/GoPCA-amd64.exe` (when cross-compiled)
+   - `cmd/gopca-desktop/build/bin/GoPCA.exe` (when built on Windows)
+   - `cmd/gocsv/build/bin/GoCSV-amd64.exe` (when cross-compiled)
+   - `cmd/gocsv/build/bin/GoCSV.exe` (when built on Windows)
+3. Run `make windows-installer`
 
 The installer will fail if any component is missing - this is intentional to ensure complete packages.
 
