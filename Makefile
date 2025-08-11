@@ -234,7 +234,15 @@ sign-csv:
 ## sign-windows: Sign Windows binaries locally (requires signtool or osslsigncode)
 sign-windows:
 	@echo "Signing Windows binaries..."
-	@if command -v signtool >/dev/null 2>&1 && signtool sign /? >/dev/null 2>&1; then \
+	@# Load environment variables from .env if it exists
+	@if [ -f .env ]; then \
+		export $$(grep -v '^#' .env | xargs); \
+	fi; \
+	# Set default certificate location if not specified
+	WINDOWS_CERT_FILE="$${WINDOWS_CERT_FILE:-.certs/test-cert.p12}"; \
+	WINDOWS_CERT_PASSWORD="$${WINDOWS_CERT_PASSWORD:-test-password}"; \
+	\
+	if command -v signtool >/dev/null 2>&1 && signtool sign /? >/dev/null 2>&1; then \
 		echo "Found signtool, signing binaries..."; \
 		if [ -f "$(BUILD_DIR)/pca-windows-amd64.exe" ]; then \
 			signtool sign /a /t http://timestamp.digicert.com "$(BUILD_DIR)/pca-windows-amd64.exe"; \
@@ -246,19 +254,47 @@ sign-windows:
 			signtool sign /a /t http://timestamp.digicert.com "$(CSV_PATH)/build/bin/GoCSV.exe"; \
 		fi; \
 	elif command -v osslsigncode >/dev/null 2>&1; then \
-		echo "Found osslsigncode, signing binaries..."; \
+		echo "Found osslsigncode"; \
+		if [ ! -f "$${WINDOWS_CERT_FILE}" ]; then \
+			echo ""; \
+			echo "❌ Certificate file not found: $${WINDOWS_CERT_FILE}"; \
+			echo ""; \
+			echo "To generate a test certificate, run:"; \
+			echo "  ./scripts/generate-test-cert.sh"; \
+			echo ""; \
+			echo "Or configure your own certificate in .env:"; \
+			echo "  WINDOWS_CERT_FILE=path/to/your/cert.p12"; \
+			echo "  WINDOWS_CERT_PASSWORD=your-password"; \
+			echo ""; \
+			echo "⚠️  Note: Self-signed certificates are for testing only!"; \
+			exit 1; \
+		fi; \
+		echo "Using certificate: $${WINDOWS_CERT_FILE}"; \
+		echo "Signing binaries..."; \
 		if [ -f "$(BUILD_DIR)/pca-windows-amd64.exe" ]; then \
-			osslsigncode sign -t http://timestamp.digicert.com -in "$(BUILD_DIR)/pca-windows-amd64.exe" -out "$(BUILD_DIR)/pca-windows-amd64-signed.exe" && \
-			mv "$(BUILD_DIR)/pca-windows-amd64-signed.exe" "$(BUILD_DIR)/pca-windows-amd64.exe"; \
+			osslsigncode sign -pkcs12 "$${WINDOWS_CERT_FILE}" -pass "$${WINDOWS_CERT_PASSWORD}" \
+				-t http://timestamp.digicert.com -in "$(BUILD_DIR)/pca-windows-amd64.exe" \
+				-out "$(BUILD_DIR)/pca-windows-amd64-signed.exe" && \
+			mv "$(BUILD_DIR)/pca-windows-amd64-signed.exe" "$(BUILD_DIR)/pca-windows-amd64.exe" && \
+			echo "✅ Signed: pca-windows-amd64.exe"; \
 		fi; \
 		if [ -f "$(DESKTOP_PATH)/build/bin/GoPCA.exe" ]; then \
-			osslsigncode sign -t http://timestamp.digicert.com -in "$(DESKTOP_PATH)/build/bin/GoPCA.exe" -out "$(DESKTOP_PATH)/build/bin/GoPCA-signed.exe" && \
-			mv "$(DESKTOP_PATH)/build/bin/GoPCA-signed.exe" "$(DESKTOP_PATH)/build/bin/GoPCA.exe"; \
+			osslsigncode sign -pkcs12 "$${WINDOWS_CERT_FILE}" -pass "$${WINDOWS_CERT_PASSWORD}" \
+				-t http://timestamp.digicert.com -in "$(DESKTOP_PATH)/build/bin/GoPCA.exe" \
+				-out "$(DESKTOP_PATH)/build/bin/GoPCA-signed.exe" && \
+			mv "$(DESKTOP_PATH)/build/bin/GoPCA-signed.exe" "$(DESKTOP_PATH)/build/bin/GoPCA.exe" && \
+			echo "✅ Signed: GoPCA.exe"; \
 		fi; \
 		if [ -f "$(CSV_PATH)/build/bin/GoCSV.exe" ]; then \
-			osslsigncode sign -t http://timestamp.digicert.com -in "$(CSV_PATH)/build/bin/GoCSV.exe" -out "$(CSV_PATH)/build/bin/GoCSV-signed.exe" && \
-			mv "$(CSV_PATH)/build/bin/GoCSV-signed.exe" "$(CSV_PATH)/build/bin/GoCSV.exe"; \
+			osslsigncode sign -pkcs12 "$${WINDOWS_CERT_FILE}" -pass "$${WINDOWS_CERT_PASSWORD}" \
+				-t http://timestamp.digicert.com -in "$(CSV_PATH)/build/bin/GoCSV.exe" \
+				-out "$(CSV_PATH)/build/bin/GoCSV-signed.exe" && \
+			mv "$(CSV_PATH)/build/bin/GoCSV-signed.exe" "$(CSV_PATH)/build/bin/GoCSV.exe" && \
+			echo "✅ Signed: GoCSV.exe"; \
 		fi; \
+		echo ""; \
+		echo "✅ Windows binaries signed successfully!"; \
+		echo "⚠️  Note: Self-signed certificates will trigger Windows security warnings"; \
 	else \
 		echo "signtool or osslsigncode not found."; \
 		echo "On Windows, install Windows SDK for signtool."; \

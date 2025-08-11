@@ -59,3 +59,8 @@ __pycache__/
 Skjermbilde*.png
 Screenshot*.png
 *.tmp.png
+
+# Certificate files (never commit!)
+.certs/
+*.p12
+*.pfx

@@ -65,6 +65,102 @@ The `sign-windows-binaries` job in the release workflow:
 - **Test Certificate**: Self-signed, for workflow testing
 - **Production Certificate**: Apply for free open source certificate from SignPath
 
+## Local Windows Testing with Self-Signed Certificates
+
+For local development and testing, you can use self-signed certificates to test the Windows signing process.
+
+⚠️ **WARNING**: Self-signed certificates are for TESTING ONLY. They will trigger Windows security warnings and should never be used for distribution.
+
+### Generating Test Certificates
+
+1. **Run the certificate generation script:**
+   ```bash
+   ./scripts/generate-test-cert.sh
+   ```
+   
+   This creates:
+   - `.certs/test-cert.p12` - PKCS#12 certificate file
+   - `.certs/test-cert.key` - Private key (intermediate file)
+   - `.certs/test-cert.crt` - Certificate (intermediate file)
+
+2. **Configure environment variables:**
+   
+   Copy `.env.example` to `.env`:
+   ```bash
+   cp .env.example .env
+   ```
+   
+   The default configuration is:
+   ```bash
+   WINDOWS_CERT_FILE=.certs/test-cert.p12
+   WINDOWS_CERT_PASSWORD=test-password
+   ```
+
+### Signing Binaries Locally
+
+1. **Build Windows binaries:**
+   ```bash
+   make build-windows-amd64    # CLI
+   make pca-build              # Desktop (on Windows)
+   make csv-build              # GoCSV (on Windows)
+   ```
+
+2. **Sign the binaries:**
+   ```bash
+   make sign-windows
+   ```
+   
+   The Makefile will:
+   - Load certificate configuration from `.env`
+   - Check if certificate files exist
+   - Sign all Windows .exe files using osslsigncode
+   - Display success messages for each signed binary
+
+### Verifying Signatures
+
+To verify that binaries were signed:
+
+```bash
+# Using osslsigncode
+osslsigncode verify build/pca-windows-amd64.exe
+
+# Output for self-signed certificate:
+# Signature verification: ok
+# Number of signers: 1
+# Signer #0:
+#   Subject: /C=US/ST=Test/L=Test/O=GoPCA Test/CN=GoPCA Test Certificate
+#   Issuer: /C=US/ST=Test/L=Test/O=GoPCA Test/CN=GoPCA Test Certificate
+```
+
+On Windows, right-click the .exe file → Properties → Digital Signatures tab to view certificate details.
+
+### Security Considerations
+
+- **Never commit certificates**: The `.certs/` directory is gitignored
+- **Use unique passwords**: Don't use the default "test-password" for real certificates
+- **Test certificates only**: These are only for local testing, not distribution
+- **Windows warnings**: Self-signed certificates will show "Unknown Publisher" warnings
+
+### Troubleshooting
+
+**"Certificate file not found"**
+- Run `./scripts/generate-test-cert.sh` to generate certificates
+- Check that `.env` file exists and has correct paths
+
+**"osslsigncode: error: PKCS#12 parse error"**
+- Verify the certificate password in `.env` matches the one used during generation
+- Regenerate certificate if password is unknown
+
+**"osslsigncode not found"**
+- Install osslsigncode:
+  - macOS: `brew install osslsigncode`
+  - Ubuntu/Debian: `sudo apt-get install osslsigncode`
+  - Windows: Use signtool from Windows SDK instead
+
+### Production Signing
+
+For production releases, use SignPath.io (configured in CI/CD) or obtain a proper code signing certificate from a Certificate Authority. Never use self-signed certificates for distribution.
+
 ## Linux Code Signing
 
 Currently not implemented. Future options include:
