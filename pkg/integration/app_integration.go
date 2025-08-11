@@ -210,9 +210,10 @@ func CheckApp(config AppConfig) *AppStatus {
 	possibleNames := []string{config.Name}
 
 	// Add alternative names based on app
-	if config.Name == "gocsv" {
+	switch config.Name {
+	case "gocsv":
 		possibleNames = append(possibleNames, "GoCSV")
-	} else if config.Name == "gopca-desktop" {
+	case "gopca-desktop":
 		possibleNames = append(possibleNames, "GoPCA")
 	}
 
@@ -334,10 +335,8 @@ func LaunchWithFile(appPath, filePath string) error {
 	}
 
 	// Detach from the process so it continues running after our app exits
-	if err := cmd.Process.Release(); err != nil {
-		// This is not critical, just log it
-		// The app will still run
-	}
+	// Ignore the error as it's not critical - the app will still run
+	_ = cmd.Process.Release()
 
 	return nil
 }
