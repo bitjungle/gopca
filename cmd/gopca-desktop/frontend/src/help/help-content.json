@@ -200,6 +200,11 @@
       "text": "Choose between Categorical (distinct colors for groups/categories) or Sequential (gradient for continuous values).",
       "category": "interface"
     },
+    "cli-command-preview": {
+      "title": "CLI Command Preview",
+      "text": "How to run the same analysis using the pca command-line tool. Copy command to use it in your terminal or scripts.",
+      "category": "interface"
+    },
     "preprocessing-order": {
       "title": "Preprocessing Order",
       "text": "Row-wise (SNV/L2) applied first, then column-wise (centering/scaling). Order matters!",
