@@ -196,12 +196,20 @@ jobs:
       run: |
         ./scripts/ci/notarize-macos-ci.sh cmd/gopca-desktop/build/bin/GoPCA.app
     
+    - name: Package macOS app for artifact upload
+      if: matrix.os == 'macos-latest'
+      run: |
+        cd cmd/gopca-desktop/build/bin
+        # Use tar to preserve symlinks and attributes
+        tar -czf GoPCA.app.tar.gz GoPCA.app
+        cd -
+    
     - name: Upload artifact
       uses: actions/upload-artifact@v4
       with:
         name: gopca-desktop-${{ matrix.os }}
         path: |
-          cmd/gopca-desktop/build/bin/GoPCA.app
+          cmd/gopca-desktop/build/bin/GoPCA.app.tar.gz
           cmd/gopca-desktop/build/bin/GoPCA.exe
           cmd/gopca-desktop/build/bin/GoPCA
         retention-days: 1
@@ -293,12 +301,20 @@ jobs:
       run: |
         ./scripts/ci/notarize-macos-ci.sh cmd/gocsv/build/bin/GoCSV.app
     
+    - name: Package macOS GoCSV app for artifact upload
+      if: matrix.os == 'macos-latest'
+      run: |
+        cd cmd/gocsv/build/bin
+        # Use tar to preserve symlinks and attributes
+        tar -czf GoCSV.app.tar.gz GoCSV.app
+        cd -
+    
     - name: Upload artifact
       uses: actions/upload-artifact@v4
       with:
         name: gocsv-${{ matrix.os }}
         path: |
-          cmd/gocsv/build/bin/GoCSV.app
+          cmd/gocsv/build/bin/GoCSV.app.tar.gz
           cmd/gocsv/build/bin/GoCSV.exe
           cmd/gocsv/build/bin/GoCSV
         retention-days: 1
@@ -619,21 +635,28 @@ jobs:
       with:
         path: artifacts
     
-    - name: Restore macOS executable permissions
+    - name: Extract and restore macOS apps
       run: |
-        # GitHub Actions upload/download artifacts don't preserve Unix permissions
-        # Restore executable permissions for macOS app bundles
-        if [ -f "artifacts/gopca-desktop-macos-latest/GoPCA.app/Contents/MacOS/GoPCA" ]; then
-          chmod +x "artifacts/gopca-desktop-macos-latest/GoPCA.app/Contents/MacOS/GoPCA"
-          echo "✓ Restored executable permissions for GoPCA.app"
+        # Extract macOS apps from tarballs (preserves symlinks and attributes)
+        if [ -f "artifacts/gopca-desktop-macos-latest/GoPCA.app.tar.gz" ]; then
+          echo "Extracting GoPCA.app from tarball..."
+          cd artifacts/gopca-desktop-macos-latest
+          tar -xzf GoPCA.app.tar.gz
+          rm GoPCA.app.tar.gz
+          cd ../..
+          echo "✓ Extracted GoPCA.app with preserved symlinks"
         fi
         
-        if [ -f "artifacts/gocsv-macos-latest/GoCSV.app/Contents/MacOS/GoCSV" ]; then
-          chmod +x "artifacts/gocsv-macos-latest/GoCSV.app/Contents/MacOS/GoCSV"
-          echo "✓ Restored executable permissions for GoCSV.app"
+        if [ -f "artifacts/gocsv-macos-latest/GoCSV.app.tar.gz" ]; then
+          echo "Extracting GoCSV.app from tarball..."
+          cd artifacts/gocsv-macos-latest
+          tar -xzf GoCSV.app.tar.gz
+          rm GoCSV.app.tar.gz
+          cd ../..
+          echo "✓ Extracted GoCSV.app with preserved symlinks"
         fi
         
-        # Also restore permissions for CLI binaries
+        # Restore permissions for CLI binaries
         if [ -f "artifacts/pca-darwin-amd64/pca-darwin-amd64" ]; then
           chmod +x "artifacts/pca-darwin-amd64/pca-darwin-amd64"
         fi
@@ -780,6 +803,18 @@ jobs:
         ls -lh gopca-*.zip gopca-*.tar.gz GoPCA-Setup-*.exe checksums.txt 2>/dev/null || ls -lh gopca-*.zip gopca-*.tar.gz checksums.txt
         echo "==============================="
     
+    - name: Upload test artifacts for workflow_dispatch
+      if: github.event_name == 'workflow_dispatch'
+      uses: actions/upload-artifact@v4
+      with:
+        name: release-bundles
+        path: |
+          artifacts/gopca-macos-universal.zip
+          artifacts/gopca-windows-x64.zip
+          artifacts/gopca-linux-x64.tar.gz
+          artifacts/checksums.txt
+        retention-days: 7
+    
     - name: Test Mode Notification
       if: github.event_name == 'workflow_dispatch'
       run: |
@@ -791,6 +826,9 @@ jobs:
         echo ""
         echo "Artifacts have been built and can be downloaded from:"
         echo "https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}"
+        echo ""
+        echo "Download the 'release-bundles' artifact to test the macOS bundle."
+        echo "The gopca-macos-universal.zip contains both apps with preserved symlinks."
         echo ""
         echo "To create an actual release, push a version tag (e.g., v0.9.5)"
         echo "=========================================="
