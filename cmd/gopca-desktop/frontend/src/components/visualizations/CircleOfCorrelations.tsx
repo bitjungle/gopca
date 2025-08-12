@@ -10,6 +10,8 @@ import { PCAResult } from '../../types';
 import { ExportButton } from '../ExportButton';
 import { PlotControls } from '../PlotControls';
 import { useChartTheme } from '../../hooks/useChartTheme';
+import { usePalette } from '../../contexts/PaletteContext';
+import { getSequentialColorScale } from '../../utils/colorPalettes';
 
 interface CircleOfCorrelationsProps {
   pcaResult: PCAResult;
@@ -33,6 +35,7 @@ export const CircleOfCorrelations: React.FC<CircleOfCorrelationsProps> = ({
   const [hoveredVariable, setHoveredVariable] = useState<number | null>(null);
   const [tooltipPosition, setTooltipPosition] = useState({ x: 0, y: 0 });
   const chartTheme = useChartTheme();
+  const { sequentialPalette } = usePalette();
   
   // Check if loadings are available (not available for Kernel PCA)
   if (!pcaResult.loadings || pcaResult.loadings.length === 0) {
@@ -99,13 +102,12 @@ export const CircleOfCorrelations: React.FC<CircleOfCorrelationsProps> = ({
   const centerX = width / 2;
   const centerY = height / 2;
 
-  // Color scale based on magnitude (use scaled magnitude for consistent coloring)
+  // Color scale based on magnitude using sequential palette
   const getColor = (scaledMagnitude: number) => {
-    // Use a gradient from blue (low) to red (high)
+    // Use sequential palette for correlation intensity (0 to 1)
     // Clamp to [0, 1] range for safety
     const normalizedMag = Math.min(1, Math.max(0, scaledMagnitude));
-    const hue = (1 - normalizedMag) * 240; // 240 is blue, 0 is red
-    return `hsl(${hue}, 70%, 50%)`;
+    return getSequentialColorScale(normalizedMag, 0, 1, sequentialPalette);
   };
 
   const handleToggleFullscreen = useCallback(() => {
@@ -428,9 +430,7 @@ export const CircleOfCorrelations: React.FC<CircleOfCorrelationsProps> = ({
             </span>
           )}
         </p>
-        <p>Color: <span style={{ color: 'hsl(240, 70%, 50%)' }}>■</span> Low correlation → 
-           <span style={{ color: 'hsl(120, 70%, 50%)' }}> ■</span> Medium → 
-           <span style={{ color: 'hsl(0, 70%, 50%)' }}> ■</span> High correlation</p>
+        <p>Color gradient indicates correlation strength (low to high)</p>
       </div>
     </div>
     </div>

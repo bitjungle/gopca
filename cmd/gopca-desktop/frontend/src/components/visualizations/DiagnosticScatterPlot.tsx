@@ -25,6 +25,8 @@ import { CustomPointWithLabel } from '../CustomPointWithLabel';
 import { calculateTopPoints } from '../../utils/labelUtils';
 import { useZoomPan } from '../../hooks/useZoomPan';
 import { useChartTheme } from '../../hooks/useChartTheme';
+import { usePalette } from '../../contexts/PaletteContext';
+import { getQualitativeColor } from '../../utils/colorPalettes';
 
 interface DiagnosticScatterPlotProps {
   pcaResult: PCAResult;
@@ -47,6 +49,7 @@ export const DiagnosticScatterPlot: React.FC<DiagnosticScatterPlotProps> = ({
   const [hoveredPoint, setHoveredPoint] = useState<number | null>(null);
   const [confidenceLevel, setConfidenceLevel] = useState<'95' | '99'>(initialConfidenceLevel);
   const chartTheme = useChartTheme();
+  const { qualitativePalette } = usePalette();
   
   // Check if metrics are available
   if (!pcaResult.metrics || pcaResult.metrics.length === 0) {
@@ -68,17 +71,18 @@ export const DiagnosticScatterPlot: React.FC<DiagnosticScatterPlotProps> = ({
   
   // Color mapping for outlier types
   const getColor = (outlierType: string) => {
+    // Map outlier types to palette colors for consistency
     switch (outlierType) {
       case 'normal':
-        return '#10B981'; // Green
+        return getQualitativeColor(2, qualitativePalette); // Third color (typically green)
       case 'leverage':
-        return '#F59E0B'; // Amber
+        return getQualitativeColor(1, qualitativePalette); // Second color (typically orange)
       case 'poor-fit':
-        return '#3B82F6'; // Blue
+        return getQualitativeColor(0, qualitativePalette); // First color (typically blue)
       case 'strong-outlier':
-        return '#EF4444'; // Red
+        return getQualitativeColor(3, qualitativePalette); // Fourth color (typically red)
       default:
-        return '#6B7280'; // Gray
+        return getQualitativeColor(7, qualitativePalette); // Eighth color (typically gray)
     }
   };
 

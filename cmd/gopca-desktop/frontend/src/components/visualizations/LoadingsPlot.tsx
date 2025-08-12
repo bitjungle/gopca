@@ -23,6 +23,8 @@ import { TooltipProps } from '../../types/recharts';
 import { ExportButton } from '../ExportButton';
 import { PlotControls } from '../PlotControls';
 import { useChartTheme } from '../../hooks/useChartTheme';
+import { usePalette } from '../../contexts/PaletteContext';
+import { getQualitativeColor } from '../../utils/colorPalettes';
 
 interface LoadingsPlotProps {
   pcaResult: PCAResult;
@@ -39,6 +41,7 @@ export const LoadingsPlot: React.FC<LoadingsPlotProps> = ({
   const fullscreenRef = useRef<HTMLDivElement>(null);
   const [isFullscreen, setIsFullscreen] = useState(false);
   const chartTheme = useChartTheme();
+  const { qualitativePalette } = usePalette();
   
   // Check if loadings are available (not available for Kernel PCA)
   if (!pcaResult.loadings || pcaResult.loadings.length === 0) {
@@ -206,9 +209,13 @@ export const LoadingsPlot: React.FC<LoadingsPlotProps> = ({
               dataKey="loading" 
               radius={[4, 4, 0, 0]}
             >
-              {sortedData.map((entry, index) => (
-                <Cell key={`cell-${index}`} fill={entry.loading >= 0 ? '#3B82F6' : '#EF4444'} />
-              ))}
+              {sortedData.map((entry, index) => {
+                // Use different colors from palette for positive/negative loadings
+                const color = entry.loading >= 0 
+                  ? getQualitativeColor(0, qualitativePalette)  // First color for positive
+                  : getQualitativeColor(3, qualitativePalette); // Fourth color for negative
+                return <Cell key={`cell-${index}`} fill={color} />;
+              })}
             </Bar>
           </BarChart>
         ) : (
@@ -249,7 +256,7 @@ export const LoadingsPlot: React.FC<LoadingsPlotProps> = ({
             <Line 
               type="monotone" 
               dataKey="loading" 
-              stroke="#3B82F6" 
+              stroke={getQualitativeColor(0, qualitativePalette)} 
               strokeWidth={2}
               dot={numVariables <= 50}
               activeDot={{ r: 6 }}

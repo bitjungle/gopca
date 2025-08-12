@@ -10,6 +10,8 @@ import { PCAResult, FileData } from '../../types';
 import { ExportButton } from '../ExportButton';
 import { PlotControls } from '../PlotControls';
 import { useChartTheme } from '../../hooks/useChartTheme';
+import { usePalette } from '../../contexts/PaletteContext';
+import { getSequentialColorScale } from '../../utils/colorPalettes';
 
 interface EigencorrelationPlotProps {
   pcaResult: PCAResult;
@@ -30,6 +32,7 @@ export const EigencorrelationPlot: React.FC<EigencorrelationPlotProps> = ({
   const fullscreenRef = useRef<HTMLDivElement>(null);
   const [isFullscreen, setIsFullscreen] = useState(false);
   const chartTheme = useChartTheme();
+  const { sequentialPalette } = usePalette();
   
   // Tooltip state
   const [tooltip, setTooltip] = useState<{ show: boolean; text: string; x: number; y: number }>({
@@ -67,18 +70,17 @@ export const EigencorrelationPlot: React.FC<EigencorrelationPlotProps> = ({
 
   // Color scale function for correlation values
   const getColor = useCallback((value: number): string => {
-    // Diverging color scale: blue (-1) -> white (0) -> red (+1)
+    // Map correlation values (-1 to +1) to sequential palette (0 to 1)
+    // We'll use the absolute value for intensity and keep track of sign separately
     const absValue = Math.abs(value);
-    const intensity = Math.floor(absValue * 255);
     
-    if (value < 0) {
-      // Blue for negative correlations
-      return `rgb(${255 - intensity}, ${255 - intensity}, 255)`;
-    } else {
-      // Red for positive correlations
-      return `rgb(255, ${255 - intensity}, ${255 - intensity})`;
-    }
-  }, []);
+    // For diverging effect: map -1→0, 0→0.5, +1→1 to use full palette range
+    const normalizedValue = value < 0 
+      ? (1 + value) * 0.5  // Map [-1, 0] to [0, 0.5]
+      : 0.5 + value * 0.5; // Map [0, 1] to [0.5, 1]
+    
+    return getSequentialColorScale(normalizedValue, 0, 1, sequentialPalette);
+  }, [sequentialPalette]);
 
   // Format correlation value for display
   const formatCorrelation = (value: number): string => {
@@ -259,12 +261,15 @@ export const EigencorrelationPlot: React.FC<EigencorrelationPlotProps> = ({
                 Correlation
               </text>
               
-              {/* Gradient */}
+              {/* Gradient using sequential palette */}
               <defs>
                 <linearGradient id="correlationGradient" x1="0%" y1="0%" x2="0%" y2="100%">
-                  <stop offset="0%" stopColor="rgb(255, 0, 0)" />
-                  <stop offset="50%" stopColor="rgb(255, 255, 255)" />
-                  <stop offset="100%" stopColor="rgb(0, 0, 255)" />
+                  {/* Create gradient stops from the palette */}
+                  <stop offset="0%" stopColor={getSequentialColorScale(1, 0, 1, sequentialPalette)} />
+                  <stop offset="25%" stopColor={getSequentialColorScale(0.75, 0, 1, sequentialPalette)} />
+                  <stop offset="50%" stopColor={getSequentialColorScale(0.5, 0, 1, sequentialPalette)} />
+                  <stop offset="75%" stopColor={getSequentialColorScale(0.25, 0, 1, sequentialPalette)} />
+                  <stop offset="100%" stopColor={getSequentialColorScale(0, 0, 1, sequentialPalette)} />
                 </linearGradient>
               </defs>
               
