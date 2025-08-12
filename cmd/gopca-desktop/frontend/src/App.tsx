@@ -122,6 +122,7 @@ function AppContent() {
                 setExcludedRows([]);
                 setExcludedColumns([]);
                 setSelectedGroupColumn(null);
+                setMode('none'); // Reset palette mode
                 setDatasetId(prev => prev + 1); // Force DataTable re-render
                 updateGammaForData(result);
             } catch (err) {
@@ -169,18 +170,26 @@ function AppContent() {
             
             // Validate group column exists before setting
             if (defaultGroupColumn && result) {
-                const isValid = 
-                    (result.categoricalColumns && defaultGroupColumn in result.categoricalColumns) ||
-                    (result.numericTargetColumns && defaultGroupColumn in result.numericTargetColumns);
+                const isCategorical = result.categoricalColumns && defaultGroupColumn in result.categoricalColumns;
+                const isContinuous = result.numericTargetColumns && defaultGroupColumn in result.numericTargetColumns;
+                const isValid = isCategorical || isContinuous;
                 
                 if (isValid) {
                     setSelectedGroupColumn(defaultGroupColumn);
+                    // Set the appropriate palette mode based on column type
+                    if (isCategorical) {
+                        setMode('categorical');
+                    } else if (isContinuous) {
+                        setMode('continuous');
+                    }
                 } else {
                     console.warn(`Column "${defaultGroupColumn}" not found in ${filename}, setting group column to null`);
                     setSelectedGroupColumn(null);
+                    setMode('none');
                 }
             } else {
                 setSelectedGroupColumn(null);
+                setMode('none');
             }
             
             updateGammaForData(result);
@@ -209,6 +218,7 @@ function AppContent() {
             setExcludedRows([]);
             setExcludedColumns([]);
             setSelectedGroupColumn(null);
+            setMode('none'); // Reset palette mode
             setDatasetId(prev => prev + 1); // Force DataTable re-render
             
             // Calculate and set default gamma for kernel PCA
@@ -1027,7 +1037,9 @@ function AppContent() {
                                         </HelpWrapper>
                                     </div>
                                     {selectedGroupColumn && (
-                                        <PaletteSelector />
+                                        <div className="flex-shrink-0">
+                                            <PaletteSelector />
+                                        </div>
                                     )}
                                 </div>
                                 
