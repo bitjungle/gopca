@@ -324,6 +324,15 @@ jobs:
         ./scripts/ci/notarize-macos-ci.sh cmd/gocsv/build/bin/GoCSV.app
       shell: bash
     
+    - name: Package macOS GoCSV app for artifact upload
+      if: matrix.os == 'macos-latest'
+      run: |
+        cd cmd/gocsv/build/bin
+        # Use tar to preserve symlinks and attributes
+        tar -czf GoCSV.app.tar.gz GoCSV.app
+        cd -
+      shell: bash
+    
     - name: Upload GoCSV artifacts
       uses: actions/upload-artifact@v4
       with:
@@ -332,4 +341,13 @@ jobs:
           cmd/gocsv/build/bin/*
           !cmd/gocsv/build/bin/*.pdb
           !cmd/gocsv/build/bin/*.ilk
+          !cmd/gocsv/build/bin/GoCSV.app
+        retention-days: 7
+    
+    - name: Upload macOS GoCSV app bundle
+      if: matrix.os == 'macos-latest'
+      uses: actions/upload-artifact@v4
+      with:
+        name: gocsv-${{ matrix.platform }}-app
+        path: cmd/gocsv/build/bin/GoCSV.app.tar.gz
         retention-days: 7
