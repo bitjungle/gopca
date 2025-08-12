@@ -4,7 +4,7 @@ Professional-grade PCA analysis made simple. Available as both a powerful comman
 
 ## What is GoPCA?
 
-GoPCA is **the** go-to application for Principal Component Analysis - a fundamental technique for understanding complex, multivariate data. Whether you're analyzing spectroscopic data, exploring gene expression patterns, or reducing dimensionality in machine learning pipelines, GoPCA provides the tools you need.
+GoPCA is **the** go-to application for Principal Component Analysis - a fundamental machine learning technique for understanding complex, multivariate data. Whether you're analyzing spectroscopic data, exploring gene expression patterns, or reducing dimensionality in machine learning pipelines, GoPCA provides the tools you need.
 
 ![GoPCA Overview](docs/images/gopca-overview.jpg)
 
@@ -78,8 +78,7 @@ Clean and prepare your data with an intuitive spreadsheet-like interface.
 
 ### Professional Visualizations
 
-<!-- ![GoPCA Visualization Gallery](docs/images/viz-gallery.png) -->
-*[Screenshot placeholder: Grid showing different plot types available in GoPCA]*
+![GoPCA plot types](docs/images/GoPCA-plots.jpg)
 
 **Available Visualizations:**
 - **Scores plots** - View samples in PC space with group coloring and confidence ellipses
@@ -98,7 +97,7 @@ All visualizations feature:
 - Optional row labels for identifying specific data points
 
 ### Built for Real Work
-- **Example datasets included**: Wine and Iris datasets for immediate exploration
+- **Example datasets included**: Four interesting datasets for immediate exploration
 - **Handles real-world data**: Robust to missing values, mixed scales, and outliers
 - **Smart defaults**: Automatic parameter selection based on your data
 - **Cross-platform**: Native performance on Windows, macOS, and Linux
@@ -111,7 +110,7 @@ All visualizations feature:
 
 1. **Download** the latest release for your platform from [GitHub Releases](https://github.com/bitjungle/gopca/releases)
 2. **Launch** GoPCA Desktop
-3. **Try an example** - Select "Wine" or "Iris" from the example datasets
+3. **Try an example** - Select one of the example datasets (NIR, Iris, Wine, or Swiss roll)
 4. **Or load your data** - Click "Open CSV" to load your own file
 5. **Configure preprocessing** - Choose centering, scaling, and other options
 6. **Click "Go PCA!"** - Explore results interactively
@@ -128,6 +127,7 @@ All visualizations feature:
    - Fix inconsistent headers
    - Handle missing values
    - Validate column types
+   - Transform features (e.g., log, sqrt)
 4. **Save** the cleaned file
 5. **Open in GoPCA** with one click
 
@@ -189,13 +189,6 @@ Reduce dimensionality before classification or regression, explore feature relat
 
 ### Education & Research
 Teach multivariate statistics with interactive visualizations, explore research data with publication-ready plots, or demonstrate the power of dimensionality reduction with real examples.
-
-## Example: Analyzing Wine Data
-
-<!-- ![GoPCA Results Example](docs/images/results-example.png) -->
-*[Screenshot placeholder: Split view showing CLI output and GUI visualization of wine dataset analysis]*
-
-The included wine dataset demonstrates PCA's power in distinguishing wine types based on chemical composition. With just two principal components, you can clearly separate three wine varieties - showing how PCA reveals hidden patterns in complex data.
 
 ## Documentation
 

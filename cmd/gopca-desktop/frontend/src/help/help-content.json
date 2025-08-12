@@ -202,7 +202,7 @@
     },
     "cli-command-preview": {
       "title": "CLI Command Preview",
-      "text": "How to run the same analysis using the pca command-line tool. Copy command to use it in your terminal or scripts.",
+      "text": "Shows you how to run the same analysis using the pca command-line tool. Copy the command to use it in your terminal or scripts.",
       "category": "interface"
     },
     "preprocessing-order": {
