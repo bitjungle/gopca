@@ -7,6 +7,7 @@
 import React, { useState, useRef, useEffect } from 'react';
 import './App.css';
 import { ParseCSV, RunPCA, LoadIrisDataset, LoadDatasetFile, GetVersion, CalculateEllipses, GetGUIConfig, LoadCSVFile, CheckGoCSVStatus, OpenInGoCSV, LaunchGoCSV, DownloadGoCSV } from "../wailsjs/go/main/App";
+import { Copy, Check } from 'lucide-react';
 import { EventsOn } from '../wailsjs/runtime/runtime';
 import { DataTable, SelectionTable, MatrixIllustration, HelpWrapper, DocumentationViewer } from './components';
 import { ScoresPlot, ScreePlot, LoadingsPlot, Biplot, CircleOfCorrelations, DiagnosticScatterPlot, EigencorrelationPlot } from './components/visualizations';
@@ -23,6 +24,7 @@ function AppContent() {
     const { currentHelp, currentHelpKey } = useHelp();
     const { setMode } = usePalette();
     const [fileData, setFileData] = useState<FileData | null>(null);
+    const [fileName, setFileName] = useState<string>('');
     const [pcaResponse, setPcaResponse] = useState<PCAResponse | null>(null);
     const [loading, setLoading] = useState(false);
     const [fileError, setFileError] = useState<string | null>(null);
@@ -44,6 +46,7 @@ function AppContent() {
     const [maxLabelsToShow, setMaxLabelsToShow] = useState(10);
     const [showDocumentation, setShowDocumentation] = useState(false);
     const [datasetId, setDatasetId] = useState(0); // Force DataTable re-render on dataset change
+    const [showCopied, setShowCopied] = useState(false);
     
     // Refs for smooth scrolling
     const pcaErrorRef = useRef<HTMLDivElement>(null);
@@ -158,6 +161,7 @@ function AppContent() {
         try {
             const result = await LoadDatasetFile(filename);
             setFileData(result);
+            setFileName(filename); // Store the sample dataset filename
             setPcaResponse(null);
             setExcludedRows([]);
             setExcludedColumns([]);
@@ -194,6 +198,7 @@ function AppContent() {
         setLoading(true);
         setFileError(null);
         setPcaError(null); // Clear any previous PCA errors
+        setFileName(file.name); // Store the file name
         
         try {
             const content = await file.text();
@@ -267,6 +272,86 @@ function AppContent() {
                 top: 0,
                 behavior: 'smooth'
             });
+        }
+    };
+
+    const generateCLICommand = (): string => {
+        let cmd = 'pca analyze';
+        
+        // Add file path (with quotes if it contains spaces)
+        if (fileName) {
+            if (fileName.includes(' ')) {
+                cmd += ` "${fileName}"`;
+            } else {
+                cmd += ` ${fileName}`;
+            }
+        }
+        
+        // Add number of components
+        cmd += ` --components ${config.components}`;
+        
+        // Add method
+        cmd += ` --method ${config.method.toLowerCase()}`;
+        
+        // Add kernel parameters if using kernel PCA
+        if (config.method === 'Kernel') {
+            cmd += ` --kernel-type ${config.kernelType}`;
+            if (config.kernelType === 'rbf' || config.kernelType === 'laplacian' || config.kernelType === 'sigmoid') {
+                cmd += ` --kernel-gamma ${config.kernelGamma}`;
+            }
+            if (config.kernelType === 'polynomial' || config.kernelType === 'sigmoid') {
+                cmd += ` --kernel-degree ${config.kernelDegree}`;
+                cmd += ` --kernel-coef0 ${config.kernelCoef0}`;
+            }
+        }
+        
+        // Add row preprocessing (Step 1)
+        if (config.snv) {
+            cmd += ` --row-preprocessing snv`;
+        } else if (config.vectorNorm) {
+            cmd += ` --row-preprocessing vector-norm`;
+        }
+        
+        // Add column preprocessing (Step 2)
+        if (config.standardScale) {
+            cmd += ` --col-preprocessing standard`;
+        } else if (config.robustScale) {
+            cmd += ` --col-preprocessing robust`;
+        } else if (config.meanCenter) {
+            cmd += ` --col-preprocessing mean-center`;
+        } else if (config.scaleOnly) {
+            cmd += ` --col-preprocessing scale-only`;
+        }
+        
+        // Add missing data strategy
+        if (config.missingStrategy && config.missingStrategy !== 'error') {
+            cmd += ` --missing-strategy ${config.missingStrategy}`;
+        }
+        
+        // Add excluded columns if any
+        if (excludedColumns.length > 0) {
+            // Convert 0-indexed to 1-indexed for CLI
+            const columnIndices = excludedColumns.map(c => c + 1).join(',');
+            cmd += ` --exclude-cols ${columnIndices}`;
+        }
+        
+        // Add excluded rows if any
+        if (excludedRows.length > 0) {
+            // Convert 0-indexed to 1-indexed for CLI
+            const rowIndices = excludedRows.map(r => r + 1).join(',');
+            cmd += ` --exclude-rows ${rowIndices}`;
+        }
+        
+        return cmd;
+    };
+    
+    const copyToClipboard = async (text: string) => {
+        try {
+            await navigator.clipboard.writeText(text);
+            setShowCopied(true);
+            setTimeout(() => setShowCopied(false), 2000);
+        } catch (err) {
+            console.error('Failed to copy to clipboard:', err);
         }
     };
 
@@ -837,6 +922,27 @@ function AppContent() {
                                     {loading ? 'Running...' : 'Go PCA!'}
                                 </button>
                             </div>
+                            
+                            {/* CLI Command Preview */}
+                            {fileData && fileName && (
+                                <div className="mt-4 bg-gray-900 dark:bg-gray-950 rounded-lg p-4 border border-gray-700">
+                                    <div className="flex items-center space-x-3">
+                                        <span className="text-sm font-medium text-gray-300">Command line:</span>
+                                        <HelpWrapper helpKey="cli-command-preview">
+                                            <div className="flex-1 flex items-center bg-black rounded px-3 py-2 font-mono text-sm text-green-400 overflow-x-auto">
+                                                {generateCLICommand()}
+                                            </div>
+                                        </HelpWrapper>
+                                        <button
+                                            onClick={() => copyToClipboard(generateCLICommand())}
+                                            className="px-3 py-2 bg-gray-700 hover:bg-gray-600 rounded text-white transition-colors"
+                                            title="Copy command"
+                                        >
+                                            {showCopied ? <Check className="w-4 h-4" /> : <Copy className="w-4 h-4" />}
+                                        </button>
+                                    </div>
+                                </div>
+                            )}
                         </div>
                     )}
                     
