@@ -122,6 +122,57 @@ func getCompanionAppPaths(currentExePath string, targetApp string) []string {
 	paths := []string{}
 	execDir := filepath.Dir(currentExePath)
 
+	// Special handling for macOS App Translocation
+	// When an app is translocated, it runs from /private/var/folders/.../AppTranslocation/
+	// but the companion app is in the original location
+	if runtime.GOOS == "darwin" && strings.Contains(currentExePath, "/AppTranslocation/") {
+		if os.Getenv("GOPCA_DEBUG") == "1" {
+			fmt.Printf("[DEBUG] App is translocated, searching common locations for companion apps\n")
+		}
+
+		home, _ := os.UserHomeDir()
+		commonLocations := []string{
+			"/Applications",
+			filepath.Join(home, "Applications"),
+			filepath.Join(home, "Downloads"),
+			filepath.Join(home, "Desktop"),
+			// Common extracted paths
+			filepath.Join(home, "Downloads", "gopca-macos-universal"),
+			filepath.Join(home, "Downloads", "release-bundles", "gopca-macos-universal"),
+		}
+
+		// Search each location for both apps together
+		for _, dir := range commonLocations {
+			var targetPath string
+			var companionPath string
+
+			switch targetApp {
+			case "gocsv":
+				targetPath = filepath.Join(dir, "GoCSV.app", "Contents", "MacOS", "GoCSV")
+				companionPath = filepath.Join(dir, "GoPCA.app", "Contents", "MacOS", "GoPCA")
+			case "gopca-desktop":
+				targetPath = filepath.Join(dir, "GoPCA.app", "Contents", "MacOS", "GoPCA")
+				companionPath = filepath.Join(dir, "GoCSV.app", "Contents", "MacOS", "GoCSV")
+			}
+
+			if os.Getenv("GOPCA_DEBUG") == "1" {
+				fmt.Printf("[DEBUG] Checking translocation fallback: %s\n", targetPath)
+			}
+
+			// Check if both apps exist in this location
+			if _, err := os.Stat(targetPath); err == nil {
+				if _, err := os.Stat(companionPath); err == nil {
+					// Both apps found in same location
+					if os.Getenv("GOPCA_DEBUG") == "1" {
+						fmt.Printf("[DEBUG] Found both apps in: %s\n", dir)
+					}
+					// Prepend to paths so it's checked first
+					paths = append([]string{targetPath}, paths...)
+				}
+			}
+		}
+	}
+
 	switch targetApp {
 	case "gocsv":
 		// Check for GoCSV variants
