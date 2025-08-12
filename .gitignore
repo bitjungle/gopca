@@ -64,3 +64,6 @@ Screenshot*.png
 .certs/
 *.p12
 *.pfx
+
+# Misc. temp files
+_tmp/

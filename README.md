@@ -131,6 +131,15 @@ All visualizations feature:
 4. **Save** the cleaned file
 5. **Open in GoPCA** with one click
 
+### macOS Security Note
+
+When downloading GoPCA and GoCSV from GitHub releases, macOS may apply security measures that prevent the apps from detecting each other. This happens because macOS runs downloaded apps from a temporary, randomized location (App Translocation) for security.
+
+**Solutions:**
+1. **Move both apps to Applications**: Drag both GoPCA.app and GoCSV.app to your Applications folder before launching
+2. **Keep apps together**: Always keep both apps in the same folder (Applications, Downloads, or Desktop)
+3. **Alternative launch method**: Right-click the app and choose "Open" instead of double-clicking
+
 ### Command-Line Interface
 
 ```bash
