@@ -10,7 +10,7 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/bitjungle/gopca/pkg/types"
+	pkgcsv "github.com/bitjungle/gopca/pkg/csv"
 )
 
 // ParseCSV parses CSV content and returns data matrix and headers
@@ -28,41 +28,24 @@ func (a *App) ParseCSV(content string) (result *FileDataJSON, err error) {
 		return nil, fmt.Errorf("empty file content")
 	}
 
-	// Try to detect CSV format by attempting different formats
-
 	// Try multiple formats
-	defaultFormat := types.DefaultCSVFormat()
-	formats := []types.CSVFormat{
-		defaultFormat, // Comma with dot decimal
-		{
-			FieldDelimiter:   ';',
-			DecimalSeparator: ',',
-			HasHeaders:       true,
-			HasRowNames:      true,
-			NullValues:       defaultFormat.NullValues,
-		},
-		{
-			FieldDelimiter:   '\t',
-			DecimalSeparator: '.',
-			HasHeaders:       true,
-			HasRowNames:      true,
-			NullValues:       defaultFormat.NullValues,
-		},
+	formats := []pkgcsv.Options{
+		pkgcsv.DefaultOptions(),      // Comma with dot decimal
+		pkgcsv.EuropeanOptions(),     // Semicolon with comma decimal
+		pkgcsv.TabDelimitedOptions(), // Tab delimited
 	}
 
-	var csvData *types.CSVData
-	var categoricalData map[string][]string
-	var numericTargetData map[string][]float64
+	var csvData *pkgcsv.Data
 	var lastErr error
 
-	for _, format := range formats {
-		// Use the enhanced parser that can handle numeric, categorical, and target columns
-		// Columns ending with "#target" (with or without space) are automatically detected as target columns
-		data, catData, targetData, err := types.ParseCSVMixedWithTargets(strings.NewReader(content), format, nil)
+	for _, opts := range formats {
+		// Use ParseMixedWithTargets mode to detect all column types
+		opts.ParseMode = pkgcsv.ParseMixedWithTargets
+
+		reader := pkgcsv.NewReader(opts)
+		data, err := reader.Read(strings.NewReader(content))
 		if err == nil && data != nil && data.Columns > 0 {
 			csvData = data
-			categoricalData = catData
-			numericTargetData = targetData
 			break
 		}
 		if err != nil {
@@ -85,13 +68,13 @@ func (a *App) ParseCSV(content string) (result *FileDataJSON, err error) {
 	}
 
 	// Add categorical columns if there are any
-	if len(categoricalData) > 0 {
-		fileResult.CategoricalColumns = categoricalData
+	if len(csvData.CategoricalColumns) > 0 {
+		fileResult.CategoricalColumns = csvData.CategoricalColumns
 	}
 
 	// Add numeric target columns if there are any
-	if len(numericTargetData) > 0 {
-		fileResult.NumericTargetColumns = numericTargetData
+	if len(csvData.NumericTargetColumns) > 0 {
+		fileResult.NumericTargetColumns = csvData.NumericTargetColumns
 	}
 
 	return fileResult.ToJSONSafe(), nil

@@ -15,6 +15,7 @@ import (
 	"strconv"
 	"strings"
 
+	pkgcsv "github.com/bitjungle/gopca/pkg/csv"
 	"github.com/bitjungle/gopca/pkg/types"
 )
 
@@ -43,101 +44,53 @@ func DefaultCSVOptions() CSVOptions {
 
 // LoadCSV reads a CSV file into a Matrix
 func LoadCSV(filename string, options CSVOptions) (types.Matrix, []string, error) {
-	file, err := os.Open(filename)
-	if err != nil {
-		return nil, nil, fmt.Errorf("failed to open file: %w", err)
+	// Convert to unified options
+	opts := pkgcsv.Options{
+		Delimiter:     options.Delimiter,
+		HasHeaders:    options.HasHeader,
+		HasRowNames:   false, // Legacy LoadCSV doesn't use row names
+		SkipRows:      options.SkipRows,
+		MaxRows:       options.MaxRows,
+		Columns:       options.Columns,
+		NullValues:    options.NullValues,
+		StreamingMode: options.StreamingMode,
+		ParseMode:     pkgcsv.ParseNumeric,
 	}
-	defer func() { _ = file.Close() }()
 
-	return ReadCSV(file, options)
+	reader := pkgcsv.NewReader(opts)
+	data, err := reader.ReadFile(filename)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	return data.Matrix, data.Headers, nil
 }
 
 // ReadCSV reads CSV data from an io.Reader
 func ReadCSV(r io.Reader, options CSVOptions) (types.Matrix, []string, error) {
-	reader := csv.NewReader(r)
-	reader.Comma = options.Delimiter
-	reader.FieldsPerRecord = -1 // Variable number of fields allowed initially
-	reader.TrimLeadingSpace = true
-	reader.ReuseRecord = options.StreamingMode
-
-	var headers []string
-	var data [][]float64
-	rowCount := 0
-	skipCount := options.SkipRows
-
-	// Create a map for quick null value lookup
-	nullMap := make(map[string]bool)
-	for _, nv := range options.NullValues {
-		nullMap[nv] = true
+	// Convert to unified options
+	opts := pkgcsv.Options{
+		Delimiter:     options.Delimiter,
+		HasHeaders:    options.HasHeader,
+		HasRowNames:   false, // Legacy ReadCSV doesn't use row names
+		SkipRows:      options.SkipRows,
+		MaxRows:       options.MaxRows,
+		Columns:       options.Columns,
+		NullValues:    options.NullValues,
+		StreamingMode: options.StreamingMode,
+		ParseMode:     pkgcsv.ParseNumeric,
 	}
 
-	for {
-		record, err := reader.Read()
-		if err == io.EOF {
-			break
-		}
-		if err != nil {
-			return nil, nil, fmt.Errorf("error reading CSV at row %d: %w", rowCount+1, err)
-		}
-
-		// Skip rows if needed
-		if skipCount > 0 {
-			skipCount--
-			continue
-		}
-
-		// Handle header
-		if options.HasHeader && len(headers) == 0 {
-			headers = make([]string, len(record))
-			copy(headers, record)
-			continue
-		}
-
-		// Check max rows
-		if options.MaxRows > 0 && len(data) >= options.MaxRows {
-			break
-		}
-
-		// Parse data row
-		row, err := parseRow(record, options.Columns, nullMap)
-		if err != nil {
-			return nil, nil, fmt.Errorf("error parsing row %d: %w", rowCount+1, err)
-		}
-
-		data = append(data, row)
-		rowCount++
+	reader := pkgcsv.NewReader(opts)
+	data, err := reader.Read(r)
+	if err != nil {
+		return nil, nil, err
 	}
 
-	if len(data) == 0 {
-		return nil, nil, fmt.Errorf("no data rows found")
-	}
-
-	// Validate rectangular matrix
-	cols := len(data[0])
-	for i, row := range data {
-		if len(row) != cols {
-			return nil, nil, fmt.Errorf("inconsistent columns at row %d: expected %d, got %d",
-				i+1, cols, len(row))
-		}
-	}
-
-	// Extract selected column headers if specified
-	if len(options.Columns) > 0 && len(headers) > 0 {
-		selectedHeaders := make([]string, len(options.Columns))
-		for i, col := range options.Columns {
-			if col < len(headers) {
-				selectedHeaders[i] = headers[col]
-			} else {
-				selectedHeaders[i] = fmt.Sprintf("Column_%d", col)
-			}
-		}
-		headers = selectedHeaders
-	}
-
-	return data, headers, nil
+	return data.Matrix, data.Headers, nil
 }
 
-// parseRow converts string values to float64
+// parseRow converts string values to float64 - DEPRECATED: Use pkg/csv instead
 func parseRow(record []string, columns []int, nullMap map[string]bool) ([]float64, error) {
 	// Determine which columns to parse
 	var colIndices []int
@@ -186,49 +139,34 @@ func parseRow(record []string, columns []int, nullMap map[string]bool) ([]float6
 
 // SaveCSV writes a Matrix to a CSV file
 func SaveCSV(filename string, data types.Matrix, headers []string, options CSVOptions) error {
-	file, err := os.Create(filename)
-	if err != nil {
-		return fmt.Errorf("failed to create file: %w", err)
+	// Convert to unified options
+	opts := pkgcsv.Options{
+		Delimiter:   options.Delimiter,
+		HasHeaders:  options.HasHeader,
+		HasRowNames: false,
+		NullValues:  options.NullValues,
+		FloatFormat: 'g',
+		Precision:   -1,
 	}
-	defer func() { _ = file.Close() }()
 
-	return WriteCSV(file, data, headers, options)
+	writer := pkgcsv.NewWriter(opts)
+	return writer.WriteMatrixFile(filename, data, headers, nil)
 }
 
 // WriteCSV writes Matrix data to an io.Writer
 func WriteCSV(w io.Writer, data types.Matrix, headers []string, options CSVOptions) error {
-	writer := csv.NewWriter(w)
-	writer.Comma = options.Delimiter
-	defer writer.Flush()
-
-	// Write headers if provided
-	if len(headers) > 0 && options.HasHeader {
-		if err := writer.Write(headers); err != nil {
-			return fmt.Errorf("failed to write headers: %w", err)
-		}
+	// Convert to unified options
+	opts := pkgcsv.Options{
+		Delimiter:   options.Delimiter,
+		HasHeaders:  options.HasHeader,
+		HasRowNames: false,
+		NullValues:  options.NullValues,
+		FloatFormat: 'g',
+		Precision:   -1,
 	}
 
-	// Write data rows
-	for i, row := range data {
-		record := make([]string, len(row))
-		for j, val := range row {
-			if math.IsNaN(val) {
-				record[j] = "NaN"
-			} else if math.IsInf(val, 1) {
-				record[j] = "Inf"
-			} else if math.IsInf(val, -1) {
-				record[j] = "-Inf"
-			} else {
-				record[j] = strconv.FormatFloat(val, 'g', -1, 64)
-			}
-		}
-
-		if err := writer.Write(record); err != nil {
-			return fmt.Errorf("failed to write row %d: %w", i+1, err)
-		}
-	}
-
-	return nil
+	writer := pkgcsv.NewWriter(opts)
+	return writer.WriteMatrix(w, data, headers, nil)
 }
 
 // DataInfo provides information about a dataset
