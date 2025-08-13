@@ -2,7 +2,12 @@
   "help": {
     "data-upload": {
       "title": "Upload CSV Data",
-      "text": "Select a CSV file with numeric data. First row should contain column headers. Missing values are handled based on your preprocessing settings.",
+      "text": "CSV format: Header row, numeric columns for PCA. Non-numeric auto-excluded. Add #target suffix for target variables.",
+      "category": "data-input"
+    },
+    "choose-file": {
+      "title": "Choose CSV File",
+      "text": "Required: CSV with header row. Numeric data in columns. Optional: row names in first column, #target suffix for targets.",
       "category": "data-input"
     },
     "sample-datasets": {
@@ -32,12 +37,12 @@
     },
     "gocsv-integration": {
       "title": "GoCSV Data Editor",
-      "text": "GoCSV is a companion app for data preparation. Click to install GoCSV if not available, or open your current data in GoCSV for editing and cleaning.",
+      "text": "GoCSV is a companion app for data preparation. Click to install GoCSV if not available, and open your data file in GoCSV for editing and cleaning.",
       "category": "data-input"
     },
     "num-components": {
       "title": "Number of Components",
-      "text": "Principal components to extract. Default: min(samples-1, features). Start with 2-3 for visualization.",
+      "text": "Principal components to extract. Default: 2. Max meaningful: min(n-1, p). Use 2-3 for visualization, more for full variance.",
       "category": "configuration"
     },
     "pca-method": {
@@ -47,17 +52,17 @@
     },
     "kernel-type": {
       "title": "Kernel Type",
-      "text": "RBF: General non-linear patterns. Linear: Standard PCA. Polynomial: Specific degree relationships.",
+      "text": "RBF: General nonlinear, most versatile. Linear: Equivalent to standard PCA. Polynomial: Degree-n relationships.",
       "category": "configuration"
     },
     "kernel-gamma": {
       "title": "Gamma Parameter",
-      "text": "Controls RBF kernel width. Higher values = tighter clusters. Start with 1/n_features.",
+      "text": "RBF bandwidth. Small (0.001-0.01): smooth patterns. Large (0.1-10): local patterns. Default: 1/n_features.",
       "category": "configuration"
     },
     "kernel-degree": {
       "title": "Polynomial Degree",
-      "text": "Polynomial kernel degree. Higher = more complex patterns. Usually 2-4.",
+      "text": "Polynomial degree. 2=quadratic, 3=cubic. Higher captures more complex relationships but risks overfitting.",
       "category": "configuration"
     },
     "kernel-coef0": {
@@ -67,7 +72,7 @@
     },
     "row-preprocessing": {
       "title": "Row-wise Preprocessing",
-      "text": "Applied per sample: SNV removes scatter effects, L2 normalizes to unit length.",
+      "text": "Per-sample transforms. SNV: spectroscopic scatter correction. L2: unit vector normalization.",
       "category": "preprocessing"
     },
     "snv": {
@@ -77,7 +82,7 @@
     },
     "l2-norm": {
       "title": "L2 Normalization",
-      "text": "Scales each sample to unit length. Useful when magnitude differences should be ignored.",
+      "text": "Normalize samples to unit Euclidean length. Makes all samples equidistant from origin.",
       "category": "preprocessing"
     },
     "column-preprocessing": {
@@ -92,12 +97,12 @@
     },
     "standard-scale": {
       "title": "Standard Scale",
-      "text": "Centers and divides by std dev. Use when features have different units/scales.",
+      "text": "Centers and divides by std dev. Essential when variables have different units or scales.",
       "category": "preprocessing"
     },
     "robust-scale": {
       "title": "Robust Scale",
-      "text": "Uses median/MAD instead of mean/std. Better with outliers.",
+      "text": "Median/MAD scaling. Robust to outliers. Use when data contains anomalies.",
       "category": "preprocessing"
     },
     "variance-scale": {
@@ -112,7 +117,7 @@
     },
     "explained-variance": {
       "title": "Explained Variance",
-      "text": "Percentage of total data variance captured by each component. Higher = more information retained.",
+      "text": "Percentage of total data variance captured by each component. Higher = more information retained. Cumulative 70-90% typical.",
       "category": "results"
     },
     "scores-plot": {
@@ -122,7 +127,7 @@
     },
     "scree-plot": {
       "title": "Scree Plot",
-      "text": "Variance by component. 'Elbow' suggests optimal component count. Aim for 70-90% cumulative.",
+      "text": "Eigenvalues vs PC number. Elbow point indicates optimal components. Check cumulative % variance.",
       "category": "visualization"
     },
     "loadings-plot": {
@@ -214,6 +219,56 @@
       "title": "Outlier Detection",
       "text": "High T²: unusual but follows model. High Q: doesn't fit model. Both high: strong outlier.",
       "category": "analysis"
+    },
+    "row-labels": {
+      "title": "Row Labels",
+      "text": "Display sample IDs on plots. First column if non-numeric, else row numbers. Useful for identifying specific points.",
+      "category": "visualization"
+    },
+    "diagnostic-metrics": {
+      "title": "Calculate Diagnostic Metrics",
+      "text": "Compute T² (Hotelling) and Q (SPE) residuals for outlier detection. Not available for Kernel PCA.",
+      "category": "configuration"
+    },
+    "export-model": {
+      "title": "Export PCA Model",
+      "text": "Save trained model as JSON for later use with 'pca transform' CLI command or for archival.",
+      "category": "results"
+    },
+    "go-pca-button": {
+      "title": "Run PCA Analysis",
+      "text": "Execute PCA with current settings. Results appear in Step 3. Re-run anytime to update with new parameters.",
+      "category": "interface"
+    },
+    "copy-command": {
+      "title": "Copy CLI Command",
+      "text": "Copy equivalent pca CLI command to clipboard for automation or scripting.",
+      "category": "interface"
+    },
+    "palette-selector": {
+      "title": "Color Palette",
+      "text": "Choose colors for plot. Categorical: distinct colors for groups. Sequential: gradient for continuous values.",
+      "category": "visualization"
+    },
+    "plot-tabs": {
+      "title": "Plot Type Selection",
+      "text": "Switch between plot types. Scores: samples. Loadings: variables. Scree: variance. Biplot: combined view.",
+      "category": "visualization"
+    },
+    "clear-data": {
+      "title": "Clear Data",
+      "text": "Remove current dataset and reset to initial state. All analysis results will be cleared.",
+      "category": "interface"
+    },
+    "exclude-columns": {
+      "title": "Exclude Columns",
+      "text": "Select columns to exclude from PCA. Useful for removing ID columns or problematic variables.",
+      "category": "configuration"
+    },
+    "exclude-rows": {
+      "title": "Exclude Rows",
+      "text": "Select rows to exclude from PCA. Useful for removing outliers or problematic samples.",
+      "category": "configuration"
     }
   },
   "categories": {

@@ -520,18 +520,20 @@ function AppContent() {
                                 <label className="block text-sm font-medium mb-3">
                                     Upload Your CSV File
                                 </label>
-                                <input
-                                    type="file"
-                                    accept=".csv"
-                                    onChange={handleFileUpload}
-                                    className="block w-full text-sm text-gray-700 dark:text-gray-300
-                                        file:mr-4 file:py-2 file:px-4
-                                        file:rounded-full file:border-0
-                                        file:text-sm file:font-semibold
-                                        file:bg-blue-600 file:text-white
-                                        hover:file:bg-blue-700
-                                        file:transition-colors"
-                                />
+                                <HelpWrapper helpKey="choose-file">
+                                    <input
+                                        type="file"
+                                        accept=".csv"
+                                        onChange={handleFileUpload}
+                                        className="block w-full text-sm text-gray-700 dark:text-gray-300
+                                            file:mr-4 file:py-2 file:px-4
+                                            file:rounded-full file:border-0
+                                            file:text-sm file:font-semibold
+                                            file:bg-blue-600 file:text-white
+                                            hover:file:bg-blue-700
+                                            file:transition-colors"
+                                    />
+                                </HelpWrapper>
                                 <p className="mt-2 text-xs text-gray-500 dark:text-gray-400">
                                     Accepts CSV files with headers
                                 </p>
@@ -756,7 +758,7 @@ function AppContent() {
                                         <div className="p-4 bg-gray-50 dark:bg-gray-700/50 rounded-lg space-y-4">
                                             <h4 className="font-medium text-sm">Kernel PCA Options</h4>
                                             <div className="space-y-4">
-                                                <div>
+                                                <HelpWrapper helpKey="kernel-type">
                                                     <label className="block text-sm font-medium mb-1">
                                                         Kernel Type
                                                     </label>
@@ -769,8 +771,8 @@ function AppContent() {
                                                         <option value="linear">Linear</option>
                                                         <option value="poly">Polynomial</option>
                                                     </select>
-                                                </div>
-                                                <div>
+                                                </HelpWrapper>
+                                                <HelpWrapper helpKey="kernel-gamma">
                                                     <label className="block text-sm font-medium mb-1">
                                                         Gamma
                                                     </label>
@@ -782,10 +784,10 @@ function AppContent() {
                                                         onChange={(e) => setConfig({...config, kernelGamma: parseFloat(e.target.value) || 1.0})}
                                                         className="w-full px-3 py-2 bg-gray-100 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg text-gray-900 dark:text-white"
                                                     />
-                                                </div>
+                                                </HelpWrapper>
                                                 {config.kernelType === 'poly' && (
                                                     <>
-                                                        <div>
+                                                        <HelpWrapper helpKey="kernel-degree">
                                                             <label className="block text-sm font-medium mb-1">
                                                                 Degree
                                                             </label>
@@ -797,8 +799,8 @@ function AppContent() {
                                                                 onChange={(e) => setConfig({...config, kernelDegree: parseInt(e.target.value) || 3})}
                                                                 className="w-full px-3 py-2 bg-gray-100 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg text-gray-900 dark:text-white"
                                                             />
-                                                        </div>
-                                                        <div>
+                                                        </HelpWrapper>
+                                                        <HelpWrapper helpKey="kernel-coef0">
                                                             <label className="block text-sm font-medium mb-1">
                                                                 Coef0
                                                             </label>
@@ -809,7 +811,7 @@ function AppContent() {
                                                                 onChange={(e) => setConfig({...config, kernelCoef0: parseFloat(e.target.value) || 0.0})}
                                                                 className="w-full px-3 py-2 bg-gray-100 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg text-gray-900 dark:text-white"
                                                             />
-                                                        </div>
+                                                        </HelpWrapper>
                                                     </>
                                                 )}
                                             </div>
@@ -924,13 +926,15 @@ function AppContent() {
                             
                             {/* Go PCA! button - centered and spanning both columns */}
                             <div className="mt-6 flex justify-center">
-                                <button
-                                    onClick={runPCA}
-                                    disabled={loading}
-                                    className="px-6 py-2 bg-blue-600 hover:bg-blue-700 disabled:bg-gray-400 dark:disabled:bg-gray-600 rounded-lg font-medium text-white"
-                                >
-                                    {loading ? 'Running...' : 'Go PCA!'}
-                                </button>
+                                <HelpWrapper helpKey="go-pca-button">
+                                    <button
+                                        onClick={runPCA}
+                                        disabled={loading}
+                                        className="px-6 py-2 bg-blue-600 hover:bg-blue-700 disabled:bg-gray-400 dark:disabled:bg-gray-600 rounded-lg font-medium text-white"
+                                    >
+                                        {loading ? 'Running...' : 'Go PCA!'}
+                                    </button>
+                                </HelpWrapper>
                             </div>
                             
                             {/* CLI Command Preview */}
@@ -980,35 +984,31 @@ function AppContent() {
                             )}
                             
                             {/* Explained Variance */}
-                            <div className="bg-gray-100 dark:bg-gray-700 rounded-lg p-4">
-                                <div className="flex justify-between items-start mb-2">
-                                    <h3 className="text-lg font-semibold">Explained Variance</h3>
-                                    <button
-                                        onClick={handleExportModel}
-                                        className="px-3 py-1 bg-blue-500 hover:bg-blue-600 text-white text-sm rounded-lg transition-colors"
-                                    >
-                                        Export Model
-                                    </button>
-                                </div>
-                                <div className="space-y-2">
-                                    {pcaResponse.result.explained_variance_ratio.map((percentage, i) => {
-                                        return (
-                                            <div key={i} className="flex justify-between">
-                                                <span>{pcaResponse.result?.component_labels?.[i] || `PC${i+1}`}:</span>
-                                                <span>{percentage.toFixed(2)}%</span>
+                            <HelpWrapper helpKey="explained-variance">
+                                <div className="bg-gray-100 dark:bg-gray-700 rounded-lg p-4">
+                                    <div className="mb-2">
+                                        <h3 className="text-lg font-semibold">Explained Variance</h3>
+                                    </div>
+                                    <div className="space-y-2">
+                                        {pcaResponse.result.explained_variance_ratio.map((percentage, i) => {
+                                            return (
+                                                <div key={i} className="flex justify-between">
+                                                    <span>{pcaResponse.result?.component_labels?.[i] || `PC${i+1}`}:</span>
+                                                    <span>{percentage.toFixed(2)}%</span>
+                                                </div>
+                                            );
+                                        })}
+                                        <div className="border-t border-gray-300 dark:border-gray-600 pt-2 font-semibold">
+                                            <div className="flex justify-between">
+                                                <span>Cumulative:</span>
+                                                <span>
+                                                    {pcaResponse.result.cumulative_variance[pcaResponse.result.cumulative_variance.length - 1].toFixed(2)}%
+                                                </span>
                                             </div>
-                                        );
-                                    })}
-                                    <div className="border-t border-gray-300 dark:border-gray-600 pt-2 font-semibold">
-                                        <div className="flex justify-between">
-                                            <span>Cumulative:</span>
-                                            <span>
-                                                {pcaResponse.result.cumulative_variance[pcaResponse.result.cumulative_variance.length - 1].toFixed(2)}%
-                                            </span>
                                         </div>
                                     </div>
                                 </div>
-                            </div>
+                            </HelpWrapper>
                             
                             {/* Plot Selector and Visualization */}
                             <div className="mt-6">
@@ -1040,7 +1040,9 @@ function AppContent() {
                                     </div>
                                     {selectedGroupColumn && (
                                         <div className="flex-shrink-0">
-                                            <PaletteSelector />
+                                            <HelpWrapper helpKey="palette-selector">
+                                                <PaletteSelector />
+                                            </HelpWrapper>
                                         </div>
                                     )}
                                 </div>
@@ -1295,6 +1297,18 @@ function AppContent() {
                                             <p>Not enough components for scores plot (minimum 2 required)</p>
                                         </div>
                                     )}
+                                </div>
+                                
+                                {/* Export Model button - centered below plot */}
+                                <div className="mt-6 flex justify-center">
+                                    <HelpWrapper helpKey="export-model">
+                                        <button
+                                            onClick={handleExportModel}
+                                            className="px-6 py-2 bg-blue-600 hover:bg-blue-700 rounded-lg font-medium text-white"
+                                        >
+                                            Export Model
+                                        </button>
+                                    </HelpWrapper>
                                 </div>
                             </div>
                             
