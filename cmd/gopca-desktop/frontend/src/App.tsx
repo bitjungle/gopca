@@ -926,13 +926,15 @@ function AppContent() {
                             
                             {/* Go PCA! button - centered and spanning both columns */}
                             <div className="mt-6 flex justify-center">
-                                <button
-                                    onClick={runPCA}
-                                    disabled={loading}
-                                    className="px-6 py-2 bg-blue-600 hover:bg-blue-700 disabled:bg-gray-400 dark:disabled:bg-gray-600 rounded-lg font-medium text-white"
-                                >
-                                    {loading ? 'Running...' : 'Go PCA!'}
-                                </button>
+                                <HelpWrapper helpKey="go-pca-button">
+                                    <button
+                                        onClick={runPCA}
+                                        disabled={loading}
+                                        className="px-6 py-2 bg-blue-600 hover:bg-blue-700 disabled:bg-gray-400 dark:disabled:bg-gray-600 rounded-lg font-medium text-white"
+                                    >
+                                        {loading ? 'Running...' : 'Go PCA!'}
+                                    </button>
+                                </HelpWrapper>
                             </div>
                             
                             {/* CLI Command Preview */}
