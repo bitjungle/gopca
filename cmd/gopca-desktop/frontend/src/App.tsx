@@ -984,29 +984,31 @@ function AppContent() {
                             )}
                             
                             {/* Explained Variance */}
-                            <div className="bg-gray-100 dark:bg-gray-700 rounded-lg p-4">
-                                <div className="mb-2">
-                                    <h3 className="text-lg font-semibold">Explained Variance</h3>
-                                </div>
-                                <div className="space-y-2">
-                                    {pcaResponse.result.explained_variance_ratio.map((percentage, i) => {
-                                        return (
-                                            <div key={i} className="flex justify-between">
-                                                <span>{pcaResponse.result?.component_labels?.[i] || `PC${i+1}`}:</span>
-                                                <span>{percentage.toFixed(2)}%</span>
+                            <HelpWrapper helpKey="explained-variance">
+                                <div className="bg-gray-100 dark:bg-gray-700 rounded-lg p-4">
+                                    <div className="mb-2">
+                                        <h3 className="text-lg font-semibold">Explained Variance</h3>
+                                    </div>
+                                    <div className="space-y-2">
+                                        {pcaResponse.result.explained_variance_ratio.map((percentage, i) => {
+                                            return (
+                                                <div key={i} className="flex justify-between">
+                                                    <span>{pcaResponse.result?.component_labels?.[i] || `PC${i+1}`}:</span>
+                                                    <span>{percentage.toFixed(2)}%</span>
+                                                </div>
+                                            );
+                                        })}
+                                        <div className="border-t border-gray-300 dark:border-gray-600 pt-2 font-semibold">
+                                            <div className="flex justify-between">
+                                                <span>Cumulative:</span>
+                                                <span>
+                                                    {pcaResponse.result.cumulative_variance[pcaResponse.result.cumulative_variance.length - 1].toFixed(2)}%
+                                                </span>
                                             </div>
-                                        );
-                                    })}
-                                    <div className="border-t border-gray-300 dark:border-gray-600 pt-2 font-semibold">
-                                        <div className="flex justify-between">
-                                            <span>Cumulative:</span>
-                                            <span>
-                                                {pcaResponse.result.cumulative_variance[pcaResponse.result.cumulative_variance.length - 1].toFixed(2)}%
-                                            </span>
                                         </div>
                                     </div>
                                 </div>
-                            </div>
+                            </HelpWrapper>
                             
                             {/* Plot Selector and Visualization */}
                             <div className="mt-6">
