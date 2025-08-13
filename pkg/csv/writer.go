@@ -40,7 +40,7 @@ func (w *Writer) Write(output io.Writer, data *Data) error {
 	defer writer.Flush()
 
 	// Determine what type of data to write
-	if data.StringData != nil && len(data.StringData) > 0 {
+	if len(data.StringData) > 0 {
 		return w.writeStringData(writer, data)
 	}
 	return w.writeNumericData(writer, data)
