@@ -520,18 +520,20 @@ function AppContent() {
                                 <label className="block text-sm font-medium mb-3">
                                     Upload Your CSV File
                                 </label>
-                                <input
-                                    type="file"
-                                    accept=".csv"
-                                    onChange={handleFileUpload}
-                                    className="block w-full text-sm text-gray-700 dark:text-gray-300
-                                        file:mr-4 file:py-2 file:px-4
-                                        file:rounded-full file:border-0
-                                        file:text-sm file:font-semibold
-                                        file:bg-blue-600 file:text-white
-                                        hover:file:bg-blue-700
-                                        file:transition-colors"
-                                />
+                                <HelpWrapper helpKey="choose-file">
+                                    <input
+                                        type="file"
+                                        accept=".csv"
+                                        onChange={handleFileUpload}
+                                        className="block w-full text-sm text-gray-700 dark:text-gray-300
+                                            file:mr-4 file:py-2 file:px-4
+                                            file:rounded-full file:border-0
+                                            file:text-sm file:font-semibold
+                                            file:bg-blue-600 file:text-white
+                                            hover:file:bg-blue-700
+                                            file:transition-colors"
+                                    />
+                                </HelpWrapper>
                                 <p className="mt-2 text-xs text-gray-500 dark:text-gray-400">
                                     Accepts CSV files with headers
                                 </p>
@@ -1040,7 +1042,9 @@ function AppContent() {
                                     </div>
                                     {selectedGroupColumn && (
                                         <div className="flex-shrink-0">
-                                            <PaletteSelector />
+                                            <HelpWrapper helpKey="palette-selector">
+                                                <PaletteSelector />
+                                            </HelpWrapper>
                                         </div>
                                     )}
                                 </div>
