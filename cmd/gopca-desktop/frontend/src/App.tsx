@@ -758,7 +758,7 @@ function AppContent() {
                                         <div className="p-4 bg-gray-50 dark:bg-gray-700/50 rounded-lg space-y-4">
                                             <h4 className="font-medium text-sm">Kernel PCA Options</h4>
                                             <div className="space-y-4">
-                                                <div>
+                                                <HelpWrapper helpKey="kernel-type">
                                                     <label className="block text-sm font-medium mb-1">
                                                         Kernel Type
                                                     </label>
@@ -771,8 +771,8 @@ function AppContent() {
                                                         <option value="linear">Linear</option>
                                                         <option value="poly">Polynomial</option>
                                                     </select>
-                                                </div>
-                                                <div>
+                                                </HelpWrapper>
+                                                <HelpWrapper helpKey="kernel-gamma">
                                                     <label className="block text-sm font-medium mb-1">
                                                         Gamma
                                                     </label>
@@ -784,10 +784,10 @@ function AppContent() {
                                                         onChange={(e) => setConfig({...config, kernelGamma: parseFloat(e.target.value) || 1.0})}
                                                         className="w-full px-3 py-2 bg-gray-100 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg text-gray-900 dark:text-white"
                                                     />
-                                                </div>
+                                                </HelpWrapper>
                                                 {config.kernelType === 'poly' && (
                                                     <>
-                                                        <div>
+                                                        <HelpWrapper helpKey="kernel-degree">
                                                             <label className="block text-sm font-medium mb-1">
                                                                 Degree
                                                             </label>
@@ -799,8 +799,8 @@ function AppContent() {
                                                                 onChange={(e) => setConfig({...config, kernelDegree: parseInt(e.target.value) || 3})}
                                                                 className="w-full px-3 py-2 bg-gray-100 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg text-gray-900 dark:text-white"
                                                             />
-                                                        </div>
-                                                        <div>
+                                                        </HelpWrapper>
+                                                        <HelpWrapper helpKey="kernel-coef0">
                                                             <label className="block text-sm font-medium mb-1">
                                                                 Coef0
                                                             </label>
@@ -811,7 +811,7 @@ function AppContent() {
                                                                 onChange={(e) => setConfig({...config, kernelCoef0: parseFloat(e.target.value) || 0.0})}
                                                                 className="w-full px-3 py-2 bg-gray-100 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg text-gray-900 dark:text-white"
                                                             />
-                                                        </div>
+                                                        </HelpWrapper>
                                                     </>
                                                 )}
                                             </div>
