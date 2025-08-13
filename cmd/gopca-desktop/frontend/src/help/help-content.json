@@ -72,7 +72,7 @@
     },
     "row-preprocessing": {
       "title": "Row-wise Preprocessing",
-      "text": "Per-sample transforms. SNV: spectroscopic scatter correction. L2: unit vector normalization.",
+      "text": "Per-sample transforms applied before column operations. SNV: spectroscopic scatter correction. L2: unit vector normalization.",
       "category": "preprocessing"
     },
     "snv": {
@@ -132,12 +132,12 @@
     },
     "loadings-plot": {
       "title": "Loadings Plot",
-      "text": "Shows feature contributions. Features far from origin contribute most to selected PCs.",
+      "text": "Shows feature contributions. Features far from origin contribute most to selected PCs. Not available for Kernel PCA.",
       "category": "visualization"
     },
     "biplot-plot": {
       "title": "Biplot",
-      "text": "Combines scores and loadings. See sample-feature relationships. Arrows show feature influence.",
+      "text": "Combines scores and loadings. See sample-feature relationships. Arrows show feature influence. Not available for Kernel PCA.",
       "category": "visualization"
     },
     "correlations-plot": {
@@ -147,12 +147,12 @@
     },
     "biplot": {
       "title": "Biplot",
-      "text": "Combines scores and loadings. See sample-feature relationships. Arrows show feature influence.",
+      "text": "Combines scores and loadings. See sample-feature relationships. Arrows show feature influence. Not available for Kernel PCA.",
       "category": "visualization"
     },
     "circle-correlations": {
       "title": "Circle of Correlations",
-      "text": "Feature correlations with PCs. Vectors near circle edge = well-represented features.",
+      "text": "Feature correlations with PCs. Vectors near circle edge = well-represented features. Not available for Kernel PCA.",
       "category": "visualization"
     },
     "diagnostics-plot": {
@@ -162,7 +162,7 @@
     },
     "eigencorrelation-plot": {
       "title": "Eigencorrelation Plot",
-      "text": "Heatmap showing correlations between PC scores and metadata variables. Helps identify relationships between components and external factors like batch effects or biological conditions.",
+      "text": "Heatmap showing correlations between PC scores and metadata variables. Helps identify relationships between components and external factors.",
       "category": "visualization"
     },
     "component-selector": {
@@ -232,7 +232,7 @@
     },
     "export-model": {
       "title": "Export PCA Model",
-      "text": "Save trained model as JSON for later use with 'pca transform' CLI command or for archival.",
+      "text": "Save trained model as JSON for later use with 'pca transform' CLI command or for archival (kernel parameters only for Kernel PCA).",
       "category": "results"
     },
     "go-pca-button": {

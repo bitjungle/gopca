@@ -90,21 +90,32 @@ func ConvertToPCAOutputData(result *types.PCAResult, data *CSVData, includeMetri
 	createdAt := time.Now().Format(time.RFC3339)
 
 	// Create model metadata
+	// Use the actual method from the result, not the config
 	metadata := types.ModelMetadata{
 		Version:   "1.0",
 		CreatedAt: createdAt,
 		Software:  "gopca",
 		Config: types.ModelConfig{
-			Method:          config.Method,
-			NComponents:     config.Components,
+			Method:          result.Method,             // Use actual method from result
+			NComponents:     result.ComponentsComputed, // Use actual components computed
 			MissingStrategy: config.MissingStrategy,
 			ExcludedRows:    config.ExcludedRows,
 			ExcludedColumns: config.ExcludedColumns,
-			KernelType:      config.KernelType,
-			KernelGamma:     config.KernelGamma,
-			KernelDegree:    config.KernelDegree,
-			KernelCoef0:     config.KernelCoef0,
 		},
+	}
+
+	// Only include kernel parameters for kernel PCA
+	if result.Method == "kernel" {
+		metadata.Config.KernelType = config.KernelType
+		// Only include relevant parameters based on kernel type
+		if config.KernelType == "rbf" {
+			metadata.Config.KernelGamma = config.KernelGamma
+		} else if config.KernelType == "poly" || config.KernelType == "polynomial" {
+			metadata.Config.KernelGamma = config.KernelGamma
+			metadata.Config.KernelDegree = config.KernelDegree
+			metadata.Config.KernelCoef0 = config.KernelCoef0
+		}
+		// For linear kernel, only kernel_type is needed
 	}
 
 	// Create preprocessing info
@@ -146,8 +157,8 @@ func ConvertToPCAOutputData(result *types.PCAResult, data *CSVData, includeMetri
 		},
 	}
 
-	// Add metrics if requested
-	if includeMetrics {
+	// Add metrics if requested (skip for kernel PCA as it doesn't have loadings)
+	if includeMetrics && result.Method != "kernel" {
 		metrics, err := core.CalculateMetricsFromPCAResult(result, data.Matrix)
 		if err != nil {
 			fmt.Fprintf(os.Stderr, "Warning: Failed to calculate metrics: %v\n", err)
@@ -159,6 +170,23 @@ func ConvertToPCAOutputData(result *types.PCAResult, data *CSVData, includeMetri
 				IsOutlier:   make([]bool, len(metrics)),
 			}
 			for i, m := range metrics {
+				metricsData.HotellingT2[i] = m.HotellingT2
+				metricsData.Mahalanobis[i] = m.Mahalanobis
+				metricsData.RSS[i] = m.RSS
+				metricsData.IsOutlier[i] = m.IsOutlier
+			}
+			resultsData.Samples.Metrics = metricsData
+		}
+	} else if includeMetrics && result.Method == "kernel" {
+		// For kernel PCA, we can't calculate RSS but we can still calculate some metrics if we have them in the result
+		if len(result.Metrics) > 0 {
+			metricsData := &types.MetricsData{
+				HotellingT2: make([]float64, len(result.Metrics)),
+				Mahalanobis: make([]float64, len(result.Metrics)),
+				RSS:         make([]float64, len(result.Metrics)),
+				IsOutlier:   make([]bool, len(result.Metrics)),
+			}
+			for i, m := range result.Metrics {
 				metricsData.HotellingT2[i] = m.HotellingT2
 				metricsData.Mahalanobis[i] = m.Mahalanobis
 				metricsData.RSS[i] = m.RSS
@@ -200,15 +228,25 @@ func ConvertToPCAOutputData(result *types.PCAResult, data *CSVData, includeMetri
 func outputTableFormat(result *types.PCAResult, data *CSVData,
 	outputScores, outputLoadings, outputVariance, includeMetrics bool) error {
 
-	// Calculate metrics if requested
+	// Calculate metrics if requested (skip for kernel PCA as it doesn't have loadings)
 	var metrics []types.SampleMetrics
 	if includeMetrics && outputScores {
-		var err error
-		metrics, err = core.CalculateMetricsFromPCAResult(result, data.Matrix)
-		if err != nil {
-			fmt.Fprintf(os.Stderr, "Warning: Failed to calculate metrics: %v\n", err)
-			// Create placeholder metrics
-			metrics = make([]types.SampleMetrics, len(result.Scores))
+		if result.Method != "kernel" {
+			var err error
+			metrics, err = core.CalculateMetricsFromPCAResult(result, data.Matrix)
+			if err != nil {
+				fmt.Fprintf(os.Stderr, "Warning: Failed to calculate metrics: %v\n", err)
+				// Create placeholder metrics
+				metrics = make([]types.SampleMetrics, len(result.Scores))
+			}
+		} else {
+			// For kernel PCA, use metrics from result if available
+			if len(result.Metrics) > 0 {
+				metrics = result.Metrics
+			} else {
+				// Create empty metrics for kernel PCA
+				metrics = make([]types.SampleMetrics, len(result.Scores))
+			}
 		}
 	}
 
@@ -284,26 +322,30 @@ func outputTableFormat(result *types.PCAResult, data *CSVData,
 		}
 	}
 
-	// Output loadings table
+	// Output loadings table (skip for kernel PCA which doesn't have loadings)
 	if outputLoadings {
-		fmt.Println("\nPCA Loadings:")
-		fmt.Println("──────────────────────────────────────────────────────────────")
+		if result.Method != "kernel" {
+			fmt.Println("\nPCA Loadings:")
+			fmt.Println("──────────────────────────────────────────────────────────────")
 
-		// Print headers
-		fmt.Printf("%-25s", "Variable")
-		for i := 0; i < len(result.ComponentLabels); i++ {
-			fmt.Printf("%12s", result.ComponentLabels[i])
-		}
-		fmt.Println()
-		fmt.Println("──────────────────────────────────────────────────────────────")
-
-		// Add loading rows
-		for i := 0; i < len(data.Headers); i++ {
-			fmt.Printf("%-25s", data.Headers[i])
-			for j := 0; j < len(result.ComponentLabels); j++ {
-				fmt.Printf("%12.4f", result.Loadings[i][j])
+			// Print headers
+			fmt.Printf("%-25s", "Variable")
+			for i := 0; i < len(result.ComponentLabels); i++ {
+				fmt.Printf("%12s", result.ComponentLabels[i])
 			}
 			fmt.Println()
+			fmt.Println("──────────────────────────────────────────────────────────────")
+
+			// Add loading rows
+			for i := 0; i < len(data.Headers); i++ {
+				fmt.Printf("%-25s", data.Headers[i])
+				for j := 0; j < len(result.ComponentLabels); j++ {
+					fmt.Printf("%12.4f", result.Loadings[i][j])
+				}
+				fmt.Println()
+			}
+		} else {
+			fmt.Println("\nNote: Loadings are not available for Kernel PCA")
 		}
 	}
 

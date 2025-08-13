@@ -6,4 +6,8 @@ data = load_iris(as_frame=True)
 
 # Replace the target values with their names
 data.frame['species'] = data.target.map(dict(zip(range(len(data.target_names)), data.target_names)))
+
+# Rename the target column to species#target
+data.frame = data.frame.rename(columns={'target': 'species#target'})
+
 data.frame.to_csv('iris.csv', index=True)

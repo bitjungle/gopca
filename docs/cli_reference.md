@@ -253,7 +253,9 @@ pca transform [OPTIONS] <model.json> <input.csv>
 
 - New data must have the same number of features as training data
 - Column names should match for proper alignment
-- Preprocessing from training is automatically applied
+- Preprocessing from training is automatically applied:
+  - Row-wise transforms (SNV, vector norm) are recalculated fresh for new data
+  - Column-wise transforms (centering, scaling) use parameters from the model
 - Currently supports SVD and NIPALS models
 
 #### Examples

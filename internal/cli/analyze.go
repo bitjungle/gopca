@@ -703,8 +703,20 @@ func runAnalyze(c *cli.Context) error {
 		fmt.Printf("\nRunning PCA analysis using %s method...\n", pcaConfig.Method)
 	}
 
-	engine := core.NewPCAEngineForMethod(pcaConfig.Method)
-	result, err := engine.Fit(processedData, pcaConfig)
+	// Clear preprocessing flags since we've already preprocessed the data
+	// The PCA engine should work on already preprocessed data without additional preprocessing
+	pcaConfigForEngine := pcaConfig
+	if preprocessor != nil {
+		pcaConfigForEngine.MeanCenter = false
+		pcaConfigForEngine.StandardScale = false
+		pcaConfigForEngine.RobustScale = false
+		pcaConfigForEngine.ScaleOnly = false
+		pcaConfigForEngine.SNV = false
+		pcaConfigForEngine.VectorNorm = false
+	}
+
+	engine := core.NewPCAEngineForMethod(pcaConfigForEngine.Method)
+	result, err := engine.Fit(processedData, pcaConfigForEngine)
 	if err != nil {
 		return fmt.Errorf("PCA analysis failed: %w", err)
 	}

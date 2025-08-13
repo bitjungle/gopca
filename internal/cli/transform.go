@@ -205,14 +205,30 @@ func runTransform(c *cli.Context) error {
 		}
 	}
 
-	// Load new data
+	// Load new data (need to handle target columns the same way as analyze)
 	if verbose {
 		fmt.Printf("\nLoading data from %s...\n", inputFile)
 	}
 
-	data, err := ParseCSV(inputFile, parseOpts)
+	data, categoricalData, targetData, err := ParseCSVMixedWithTargets(inputFile, parseOpts, nil)
 	if err != nil {
 		return fmt.Errorf("failed to parse CSV: %w", err)
+	}
+
+	// Report excluded columns if verbose
+	if verbose && (len(categoricalData) > 0 || len(targetData) > 0) {
+		if len(categoricalData) > 0 {
+			fmt.Printf("\nNote: Detected and excluded %d categorical column(s):\n", len(categoricalData))
+			for colName := range categoricalData {
+				fmt.Printf("  - %s\n", colName)
+			}
+		}
+		if len(targetData) > 0 {
+			fmt.Printf("\nNote: Detected and excluded %d target column(s):\n", len(targetData))
+			for colName := range targetData {
+				fmt.Printf("  - %s\n", colName)
+			}
+		}
 	}
 
 	// Validate data
@@ -252,6 +268,12 @@ func runTransform(c *cli.Context) error {
 	if actualFeatures != expectedFeatures {
 		return fmt.Errorf("feature count mismatch: model expects %d features, but data has %d",
 			expectedFeatures, actualFeatures)
+	}
+
+	// Debug: Check the data
+	if false && len(data.Matrix) > 0 && len(data.Matrix[0]) > 0 {
+		fmt.Printf("DEBUG Transform: First row of data: [%.1f, %.1f, %.1f, %.1f]\n",
+			data.Matrix[0][0], data.Matrix[0][1], data.Matrix[0][2], data.Matrix[0][3])
 	}
 
 	// Check feature names match (warning only)
@@ -397,14 +419,15 @@ func reconstructEngine(engine types.PCAEngine, model *types.PCAOutputData) error
 		)
 
 		// Set the fitted parameters
+		// Note: Row means and std devs are not used for SNV/VectorNorm (calculated fresh per sample)
 		params := prepInfo.Parameters
 		if err := preprocessor.SetFittedParameters(
 			params.FeatureMeans,
 			params.FeatureStdDevs,
 			params.FeatureMedians,
 			params.FeatureMADs,
-			params.RowMeans,
-			params.RowStdDevs,
+			nil, // Row means not needed - SNV calculates fresh per row
+			nil, // Row std devs not needed - SNV calculates fresh per row
 		); err != nil {
 			return fmt.Errorf("failed to set preprocessing parameters: %w", err)
 		}
