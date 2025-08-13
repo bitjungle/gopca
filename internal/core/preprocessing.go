@@ -38,7 +38,8 @@ type Preprocessor struct {
 	mad         []float64
 	fitted      bool
 
-	// SNV parameters (stored for potential inverse transform)
+	// SNV parameters (stored but currently not used - row transforms are model-less)
+	// Kept for potential future use in specialized inverse transforms
 	rowMeans   []float64
 	rowStdDevs []float64
 }
@@ -76,7 +77,11 @@ func NewPreprocessorWithScaleOnly(meanCenter, standardScale, robustScale, scaleO
 }
 
 // applyRowWisePreprocessing applies SNV or Vector Normalization to a single row
-func (p *Preprocessor) applyRowWisePreprocessing(row []float64, rowIndex int) []float64 {
+// Parameters:
+//   - row: the data row to transform
+//   - storeStats: if true and rowIndex >= 0, stores statistics for potential inverse transform
+//   - rowIndex: index of the row (only used when storeStats is true)
+func (p *Preprocessor) applyRowWisePreprocessing(row []float64, storeStats bool, rowIndex int) []float64 {
 	result := make([]float64, len(row))
 	copy(result, row)
 
@@ -88,8 +93,8 @@ func (p *Preprocessor) applyRowWisePreprocessing(row []float64, rowIndex int) []
 		rowMean := stat.Mean(result, nil)
 		rowStdDev := stat.StdDev(result, nil)
 
-		// Store for potential inverse transform
-		if p.rowMeans != nil && rowIndex < len(p.rowMeans) {
+		// Store for potential inverse transform (though currently not used for SNV)
+		if storeStats && p.rowMeans != nil && rowIndex >= 0 && rowIndex < len(p.rowMeans) {
 			p.rowMeans[rowIndex] = rowMean
 			p.rowStdDevs[rowIndex] = rowStdDev
 		}
@@ -105,21 +110,21 @@ func (p *Preprocessor) applyRowWisePreprocessing(row []float64, rowIndex int) []
 			}
 		}
 	} else if p.VectorNorm {
-		// Apply L2 normalization
-		rowNorm := 0.0
-		for j := range result {
-			rowNorm += result[j] * result[j]
+		// Apply L2 Vector Normalization: x / ||x||
+		norm := 0.0
+		for _, val := range result {
+			norm += val * val
 		}
-		rowNorm = math.Sqrt(rowNorm)
+		norm = math.Sqrt(norm)
 
-		// Store norm for potential inverse transform
-		if p.rowStdDevs != nil && rowIndex < len(p.rowStdDevs) {
-			p.rowStdDevs[rowIndex] = rowNorm
+		// Store norm for potential inverse transform (though currently not used)
+		if storeStats && p.rowStdDevs != nil && rowIndex >= 0 && rowIndex < len(p.rowStdDevs) {
+			p.rowStdDevs[rowIndex] = norm
 		}
 
-		if rowNorm > MinVarianceThreshold {
+		if norm > MinVarianceThreshold {
 			for j := range result {
-				result[j] /= rowNorm
+				result[j] /= norm
 			}
 		}
 	}
@@ -131,16 +136,25 @@ func (p *Preprocessor) applyRowWisePreprocessing(row []float64, rowIndex int) []
 func (p *Preprocessor) FitTransform(data types.Matrix) (types.Matrix, error) {
 	// If row-wise preprocessing is enabled, we need to fit column statistics on row-normalized data
 	if p.SNV || p.VectorNorm {
+		// Initialize storage for row statistics during fitting
+		n := len(data)
+		p.rowMeans = make([]float64, n)
+		p.rowStdDevs = make([]float64, n)
+
 		// First apply row-wise preprocessing
 		dataForFit := make(types.Matrix, len(data))
 		for i := range data {
-			dataForFit[i] = p.applyRowWisePreprocessing(data[i], i)
+			dataForFit[i] = p.applyRowWisePreprocessing(data[i], true, i)
 		}
 
 		// Fit column statistics on row-normalized data
 		if err := p.Fit(dataForFit); err != nil {
 			return nil, err
 		}
+
+		// Important: We've already fitted on SNV-normalized data
+		// Now we return the transformed data (which includes row-wise and column-wise preprocessing)
+		// The Transform method will apply SNV fresh and then use the fitted column statistics
 	} else {
 		// Standard case: fit on original data
 		if err := p.Fit(data); err != nil {
@@ -232,14 +246,10 @@ func (p *Preprocessor) Transform(data types.Matrix) (types.Matrix, error) {
 
 	// Apply row-wise preprocessing first (SNV or Vector Normalization)
 	if p.SNV || p.VectorNorm {
-		// Initialize storage for row statistics if needed
-		if p.rowMeans == nil {
-			p.rowMeans = make([]float64, n)
-			p.rowStdDevs = make([]float64, n)
-		}
-
+		// For transformation of new data, we calculate fresh row statistics
+		// This is critical: we do NOT use stored row statistics from training
 		for i := 0; i < n; i++ {
-			result[i] = p.applyRowWisePreprocessing(result[i], i)
+			result[i] = p.applyRowWisePreprocessing(result[i], false, -1)
 		}
 	}
 
@@ -683,25 +693,37 @@ func (p *Preprocessor) SetFittedParameters(means, stdDevs, medians, mads, rowMea
 	if p.RobustScale && (len(medians) == 0 || len(mads) == 0) {
 		return fmt.Errorf("medians and MADs required when robust scaling is enabled")
 	}
-	if p.SNV && (len(rowMeans) == 0 || len(rowStdDevs) == 0) {
-		return fmt.Errorf("row means and standard deviations required when SNV is enabled")
-	}
+	// Note: Row means and standard deviations are NOT required for SNV or VectorNorm
+	// because these are calculated fresh for each new sample during transformation
 
 	// Set the parameters
 	p.mean = means
-	p.originalStd = stdDevs
+	if stdDevs != nil {
+		p.originalStd = make([]float64, len(stdDevs))
+		copy(p.originalStd, stdDevs)
+	}
 	p.median = medians
 	p.mad = mads
-	p.rowMeans = rowMeans
-	p.rowStdDevs = rowStdDevs
+	// Don't set row statistics - they should be calculated fresh for new data
+	// p.rowMeans = rowMeans
+	// p.rowStdDevs = rowStdDevs
 
 	// Set scale based on the scaling method
-	if p.StandardScale && stdDevs != nil {
+	if (p.StandardScale || p.ScaleOnly) && stdDevs != nil {
 		p.scale = make([]float64, len(stdDevs))
 		copy(p.scale, stdDevs)
 	} else if p.RobustScale && mads != nil {
 		p.scale = make([]float64, len(mads))
 		copy(p.scale, mads)
+	} else {
+		// For mean centering or row-wise preprocessing without explicit scaling,
+		// scale should be 1.0 for all features
+		if len(means) > 0 {
+			p.scale = make([]float64, len(means))
+			for i := range p.scale {
+				p.scale[i] = 1.0
+			}
+		}
 	}
 
 	p.fitted = true
