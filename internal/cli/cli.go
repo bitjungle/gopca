@@ -26,8 +26,8 @@ func NewApp() *cli.App {
 		Version: version.Get().Short(),
 		Authors: []*cli.Author{
 			{
-				Name:  "GoPCA Team",
-				Email: "support@gopca.example.com",
+				Name:  "bitjungle",
+				Email: "devel@bitjungle.com",
 			},
 		},
 		Description: `GoPCA is the definitive Principal Component Analysis (PCA) application.
