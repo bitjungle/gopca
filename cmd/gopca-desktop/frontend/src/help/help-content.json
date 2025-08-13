@@ -72,7 +72,7 @@
     },
     "row-preprocessing": {
       "title": "Row-wise Preprocessing",
-      "text": "Per-sample transforms. SNV: spectroscopic scatter correction. L2: unit vector normalization.",
+      "text": "Per-sample transforms applied before column operations. SNV: spectroscopic scatter correction. L2: unit vector normalization.",
       "category": "preprocessing"
     },
     "snv": {
@@ -162,7 +162,7 @@
     },
     "eigencorrelation-plot": {
       "title": "Eigencorrelation Plot",
-      "text": "Heatmap showing correlations between PC scores and metadata variables. Helps identify relationships between components and external factors like batch effects or biological conditions.",
+      "text": "Heatmap showing correlations between PC scores and metadata variables. Helps identify relationships between components and external factors.",
       "category": "visualization"
     },
     "component-selector": {
@@ -232,7 +232,7 @@
     },
     "export-model": {
       "title": "Export PCA Model",
-      "text": "Save trained model as JSON for later use with 'pca transform' CLI command or for archival. Export includes only relevant parameters for the method used (kernel parameters only for Kernel PCA).",
+      "text": "Save trained model as JSON for later use with 'pca transform' CLI command or for archival (kernel parameters only for Kernel PCA).",
       "category": "results"
     },
     "go-pca-button": {
