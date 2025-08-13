@@ -296,7 +296,7 @@ Consider Kernel PCA when:
 
 **Computational Cost:** Kernel PCA scales with the square of the number of samples, making it more computationally intensive than standard PCA. It works well for datasets up to ~5,000 samples.
 
-**Interpretation:** Unlike standard PCA, Kernel PCA doesn't produce traditional loadings (variable contributions). The transformation is too complex to express as simple linear combinations of the original variables.
+**Interpretation:** Unlike standard PCA, Kernel PCA doesn't produce traditional loadings (variable contributions). The transformation is too complex to express as simple linear combinations of the original variables. When exporting Kernel PCA models, the loadings matrix will be empty, and only kernel-specific parameters relevant to the chosen kernel type will be included.
 
 ### 9.6. Example: Unrolling the Swiss Roll
 
