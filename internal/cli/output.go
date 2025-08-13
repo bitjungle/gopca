@@ -108,14 +108,15 @@ func ConvertToPCAOutputData(result *types.PCAResult, data *CSVData, includeMetri
 	if result.Method == "kernel" {
 		metadata.Config.KernelType = config.KernelType
 		// Only include relevant parameters based on kernel type
-		if config.KernelType == "rbf" {
+		switch config.KernelType {
+		case "rbf":
 			metadata.Config.KernelGamma = config.KernelGamma
-		} else if config.KernelType == "poly" || config.KernelType == "polynomial" {
+		case "poly", "polynomial":
 			metadata.Config.KernelGamma = config.KernelGamma
 			metadata.Config.KernelDegree = config.KernelDegree
 			metadata.Config.KernelCoef0 = config.KernelCoef0
+			// For linear kernel, only kernel_type is needed
 		}
-		// For linear kernel, only kernel_type is needed
 	}
 
 	// Create preprocessing info
