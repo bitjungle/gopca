@@ -985,14 +985,8 @@ function AppContent() {
                             
                             {/* Explained Variance */}
                             <div className="bg-gray-100 dark:bg-gray-700 rounded-lg p-4">
-                                <div className="flex justify-between items-start mb-2">
+                                <div className="mb-2">
                                     <h3 className="text-lg font-semibold">Explained Variance</h3>
-                                    <button
-                                        onClick={handleExportModel}
-                                        className="px-3 py-1 bg-blue-500 hover:bg-blue-600 text-white text-sm rounded-lg transition-colors"
-                                    >
-                                        Export Model
-                                    </button>
                                 </div>
                                 <div className="space-y-2">
                                     {pcaResponse.result.explained_variance_ratio.map((percentage, i) => {
@@ -1301,6 +1295,18 @@ function AppContent() {
                                             <p>Not enough components for scores plot (minimum 2 required)</p>
                                         </div>
                                     )}
+                                </div>
+                                
+                                {/* Export Model button - centered below plot */}
+                                <div className="mt-6 flex justify-center">
+                                    <HelpWrapper helpKey="export-model">
+                                        <button
+                                            onClick={handleExportModel}
+                                            className="px-6 py-2 bg-blue-600 hover:bg-blue-700 rounded-lg font-medium text-white"
+                                        >
+                                            Export Model
+                                        </button>
+                                    </HelpWrapper>
                                 </div>
                             </div>
                             
