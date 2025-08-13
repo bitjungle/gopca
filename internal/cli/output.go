@@ -100,11 +100,15 @@ func ConvertToPCAOutputData(result *types.PCAResult, data *CSVData, includeMetri
 			MissingStrategy: config.MissingStrategy,
 			ExcludedRows:    config.ExcludedRows,
 			ExcludedColumns: config.ExcludedColumns,
-			KernelType:      config.KernelType,
-			KernelGamma:     config.KernelGamma,
-			KernelDegree:    config.KernelDegree,
-			KernelCoef0:     config.KernelCoef0,
 		},
+	}
+
+	// Only include kernel parameters for kernel PCA
+	if config.Method == "kernel" {
+		metadata.Config.KernelType = config.KernelType
+		metadata.Config.KernelGamma = config.KernelGamma
+		metadata.Config.KernelDegree = config.KernelDegree
+		metadata.Config.KernelCoef0 = config.KernelCoef0
 	}
 
 	// Create preprocessing info

@@ -180,3 +180,164 @@ func TestJSONSerialization(t *testing.T) {
 		t.Error("Component label mismatch after JSON round-trip")
 	}
 }
+
+func TestKernelParametersOnlyForKernelPCA(t *testing.T) {
+	// Create minimal test data
+	result := &types.PCAResult{
+		Scores:             [][]float64{{1.0}},
+		Loadings:           [][]float64{{1.0}},
+		ExplainedVar:       []float64{100.0},
+		ExplainedVarRatio:  []float64{1.0},
+		CumulativeVar:      []float64{100.0},
+		ComponentLabels:    []string{"PC1"},
+		ComponentsComputed: 1,
+		Method:             "svd",
+	}
+
+	csvData := &CSVData{
+		CSVData: &types.CSVData{
+			Headers:  []string{"Feature1"},
+			RowNames: []string{"Sample1"},
+			Matrix:   [][]float64{{1.0}},
+			Rows:     1,
+			Columns:  1,
+		},
+	}
+
+	preprocessor := core.NewPreprocessorWithScaleOnly(true, false, false, false, false, false)
+
+	tests := []struct {
+		name             string
+		method           string
+		expectKernelType bool
+		kernelType       string
+		kernelGamma      float64
+		kernelDegree     int
+		kernelCoef0      float64
+	}{
+		{
+			name:             "SVD method should not include kernel parameters",
+			method:           "svd",
+			expectKernelType: false,
+			kernelType:       "rbf",
+			kernelGamma:      0.001,
+			kernelDegree:     3,
+			kernelCoef0:      1.0,
+		},
+		{
+			name:             "NIPALS method should not include kernel parameters",
+			method:           "nipals",
+			expectKernelType: false,
+			kernelType:       "linear",
+			kernelGamma:      0.5,
+			kernelDegree:     2,
+			kernelCoef0:      0.0,
+		},
+		{
+			name:             "Eigen method should not include kernel parameters",
+			method:           "eigen",
+			expectKernelType: false,
+			kernelType:       "poly",
+			kernelGamma:      0.1,
+			kernelDegree:     4,
+			kernelCoef0:      2.0,
+		},
+		{
+			name:             "Kernel method should include kernel parameters",
+			method:           "kernel",
+			expectKernelType: true,
+			kernelType:       "rbf",
+			kernelGamma:      0.001,
+			kernelDegree:     3,
+			kernelCoef0:      1.0,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			// Update result method
+			result.Method = tt.method
+
+			// Create config with kernel parameters
+			config := types.PCAConfig{
+				Components:      1,
+				MeanCenter:      true,
+				Method:          tt.method,
+				MissingStrategy: types.MissingError,
+				KernelType:      tt.kernelType,
+				KernelGamma:     tt.kernelGamma,
+				KernelDegree:    tt.kernelDegree,
+				KernelCoef0:     tt.kernelCoef0,
+			}
+
+			// Convert to output data
+			outputData := ConvertToPCAOutputData(result, csvData, false, config, preprocessor, nil, nil)
+
+			// Marshal to JSON
+			jsonData, err := json.Marshal(outputData)
+			if err != nil {
+				t.Fatalf("Failed to marshal to JSON: %v", err)
+			}
+
+			// Parse JSON to check if kernel fields are present
+			var jsonMap map[string]interface{}
+			if err := json.Unmarshal(jsonData, &jsonMap); err != nil {
+				t.Fatalf("Failed to unmarshal JSON: %v", err)
+			}
+
+			// Navigate to metadata.config
+			metadata, ok := jsonMap["metadata"].(map[string]interface{})
+			if !ok {
+				t.Fatal("metadata not found in JSON")
+			}
+			configMap, ok := metadata["config"].(map[string]interface{})
+			if !ok {
+				t.Fatal("config not found in metadata")
+			}
+
+			// Check if kernel parameters are present/absent as expected
+			_, hasKernelType := configMap["kernel_type"]
+			_, hasKernelGamma := configMap["kernel_gamma"]
+			_, hasKernelDegree := configMap["kernel_degree"]
+			_, hasKernelCoef0 := configMap["kernel_coef0"]
+
+			if tt.expectKernelType {
+				// Kernel method - parameters should be present
+				if !hasKernelType {
+					t.Error("kernel_type should be present for kernel method")
+				}
+				if !hasKernelGamma {
+					t.Error("kernel_gamma should be present for kernel method")
+				}
+				if !hasKernelDegree {
+					t.Error("kernel_degree should be present for kernel method")
+				}
+				if !hasKernelCoef0 {
+					t.Error("kernel_coef0 should be present for kernel method")
+				}
+
+				// Verify values are correct
+				if hasKernelType && configMap["kernel_type"] != tt.kernelType {
+					t.Errorf("Expected kernel_type %s, got %v", tt.kernelType, configMap["kernel_type"])
+				}
+				if hasKernelGamma && configMap["kernel_gamma"] != tt.kernelGamma {
+					t.Errorf("Expected kernel_gamma %f, got %v", tt.kernelGamma, configMap["kernel_gamma"])
+				}
+			} else {
+				// Non-kernel methods - parameters should NOT be present
+				if hasKernelType {
+					t.Errorf("kernel_type should not be present for %s method", tt.method)
+				}
+				if hasKernelGamma {
+					t.Errorf("kernel_gamma should not be present for %s method", tt.method)
+				}
+				if hasKernelDegree {
+					t.Errorf("kernel_degree should not be present for %s method", tt.method)
+				}
+				if hasKernelCoef0 {
+					t.Errorf("kernel_coef0 should not be present for %s method", tt.method)
+				}
+			}
+		})
+	}
+}
