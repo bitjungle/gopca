@@ -13,6 +13,7 @@ import (
 	"os"
 	"strings"
 
+	pkgcsv "github.com/bitjungle/gopca/pkg/csv"
 	"github.com/bitjungle/gopca/pkg/types"
 )
 
@@ -43,43 +44,84 @@ func NewCSVParseOptions() CSVParseOptions {
 
 // ParseCSV reads and parses a CSV file according to the given options
 func ParseCSV(filename string, options CSVParseOptions) (*CSVData, error) {
-	file, err := os.Open(filename)
-	if err != nil {
-		return nil, fmt.Errorf("failed to open file: %w", err)
-	}
-	defer func() { _ = file.Close() }()
-
-	return ParseCSVReader(file, options)
-}
-
-// ParseCSVReader parses CSV data from an io.Reader
-func ParseCSVReader(r io.Reader, options CSVParseOptions) (*CSVData, error) {
-	// Convert options to unified format
-	format := types.CSVFormat{
-		FieldDelimiter:   options.Delimiter,
+	// Convert to unified options
+	opts := pkgcsv.Options{
+		Delimiter:        options.Delimiter,
 		DecimalSeparator: options.DecimalSeparator,
 		HasHeaders:       options.HasHeaders,
 		HasRowNames:      options.HasIndex,
 		NullValues:       options.NullValues,
+		ParseMode:        pkgcsv.ParseMixed,
 	}
 
-	// Use mixed parser that can handle both numeric and categorical columns
-	unifiedData, categoricalData, err := types.ParseCSVMixed(r, format)
+	// Use unified CSV reader
+	reader := pkgcsv.NewReader(opts)
+	data, err := reader.ReadFile(filename)
 	if err != nil {
 		return nil, err
 	}
 
-	// If categorical columns were detected, notify the user
-	if len(categoricalData) > 0 {
-		fmt.Fprintf(os.Stderr, "\nNote: Detected and excluded %d categorical column(s):\n", len(categoricalData))
-		for colName := range categoricalData {
+	// Notify about categorical columns if any
+	if len(data.CategoricalColumns) > 0 {
+		fmt.Fprintf(os.Stderr, "\nNote: Detected and excluded %d categorical column(s):\n", len(data.CategoricalColumns))
+		for colName := range data.CategoricalColumns {
 			fmt.Fprintf(os.Stderr, "  - %s\n", colName)
 		}
 		fmt.Fprintf(os.Stderr, "\n")
 	}
 
-	// Wrap in CSVData for backward compatibility
-	return &CSVData{CSVData: unifiedData}, nil
+	// Convert to legacy CSVData format
+	return &CSVData{
+		CSVData: &types.CSVData{
+			Matrix:      data.Matrix,
+			Headers:     data.Headers,
+			RowNames:    data.RowNames,
+			MissingMask: data.MissingMask,
+			Rows:        data.Rows,
+			Columns:     data.Columns,
+		},
+	}, nil
+}
+
+// ParseCSVReader parses CSV data from an io.Reader
+func ParseCSVReader(r io.Reader, options CSVParseOptions) (*CSVData, error) {
+	// Convert to unified options
+	opts := pkgcsv.Options{
+		Delimiter:        options.Delimiter,
+		DecimalSeparator: options.DecimalSeparator,
+		HasHeaders:       options.HasHeaders,
+		HasRowNames:      options.HasIndex,
+		NullValues:       options.NullValues,
+		ParseMode:        pkgcsv.ParseMixed,
+	}
+
+	// Use unified CSV reader
+	reader := pkgcsv.NewReader(opts)
+	data, err := reader.Read(r)
+	if err != nil {
+		return nil, err
+	}
+
+	// Notify about categorical columns if any
+	if len(data.CategoricalColumns) > 0 {
+		fmt.Fprintf(os.Stderr, "\nNote: Detected and excluded %d categorical column(s):\n", len(data.CategoricalColumns))
+		for colName := range data.CategoricalColumns {
+			fmt.Fprintf(os.Stderr, "  - %s\n", colName)
+		}
+		fmt.Fprintf(os.Stderr, "\n")
+	}
+
+	// Convert to legacy CSVData format
+	return &CSVData{
+		CSVData: &types.CSVData{
+			Matrix:      data.Matrix,
+			Headers:     data.Headers,
+			RowNames:    data.RowNames,
+			MissingMask: data.MissingMask,
+			Rows:        data.Rows,
+			Columns:     data.Columns,
+		},
+	}, nil
 }
 
 // ValidateCSVData performs basic validation on parsed CSV data
