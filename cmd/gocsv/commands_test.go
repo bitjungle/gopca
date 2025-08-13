@@ -20,9 +20,9 @@ func TestMultiStepUndoRedo(t *testing.T) {
 			{"1", "2", "3"},
 			{"4", "5", "6"},
 		},
-		Rows:         2,
-		Columns:      3,
-		ColumnTypes:  map[string]string{"Col1": "numeric", "Col2": "numeric", "Col3": "numeric"},
+		Rows:        2,
+		Columns:     3,
+		ColumnTypes: map[string]string{"Col1": "numeric", "Col2": "numeric", "Col3": "numeric"},
 	}
 
 	// Create command history
@@ -32,7 +32,7 @@ func TestMultiStepUndoRedo(t *testing.T) {
 	t.Run("MultipleCellEdits", func(t *testing.T) {
 		// Make a copy of the data
 		testData := deepCopyFileData(data)
-		
+
 		// Execute multiple cell edits
 		cmd1 := NewCellEditCommand(0, 0, "1", "10")
 		if err := history.Execute(cmd1, testData); err != nil {
@@ -246,4 +246,3 @@ func TestUndoRedoState(t *testing.T) {
 		t.Error("Should not be able to redo after redoing all")
 	}
 }
-

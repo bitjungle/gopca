@@ -18,7 +18,7 @@ import (
 	"strconv"
 	"strings"
 	"time"
-	
+
 	"github.com/bitjungle/gopca/internal/version"
 	"github.com/bitjungle/gopca/pkg/integration"
 	"github.com/bitjungle/gopca/pkg/types"
@@ -45,7 +45,6 @@ func NewApp() *App {
 func (a *App) startup(ctx context.Context) {
 	a.ctx = ctx
 }
-
 
 // ValidationResult represents the result of GoPCA validation
 type ValidationResult struct {
@@ -94,7 +93,7 @@ func (a *App) LoadCSV(filePath string) (*FileData, error) {
 	// Check file extension
 	ext := filepath.Ext(filePath)
 	var fileData *FileData
-	
+
 	switch ext {
 	case ".xlsx", ".xls":
 		// Handle Excel files
@@ -109,12 +108,12 @@ func (a *App) LoadCSV(filePath string) (*FileData, error) {
 		if err != nil {
 			return nil, fmt.Errorf("error reading file: %w", err)
 		}
-		
+
 		// Check file size
 		if len(content) > 100*1024*1024 { // 100MB
 			wailsruntime.LogWarning(a.ctx, fmt.Sprintf("Large file detected: %d MB", len(content)/1024/1024))
 		}
-		
+
 		// Parse using GoPCA's parser with format detection
 		fileData, err = a.parseCSVContent(string(content), ext)
 		if err != nil {
@@ -143,35 +142,35 @@ func (a *App) LoadCSV(filePath string) (*FileData, error) {
 // loadExcel loads data from an Excel file
 func (a *App) loadExcel(filePath string) (*FileData, error) {
 	wailsruntime.LogInfo(a.ctx, fmt.Sprintf("Loading Excel file: %s", filePath))
-	
+
 	f, err := excelize.OpenFile(filePath)
 	if err != nil {
 		return nil, fmt.Errorf("failed to open Excel file: %w", err)
 	}
 	defer f.Close()
-	
+
 	// Get list of sheets
 	sheets := f.GetSheetList()
 	if len(sheets) == 0 {
 		return nil, fmt.Errorf("no sheets found in Excel file")
 	}
-	
+
 	// For now, use the first sheet. TODO: Add sheet selection dialog
 	selectedSheet := sheets[0]
 	if len(sheets) > 1 {
 		wailsruntime.LogInfo(a.ctx, fmt.Sprintf("Multiple sheets found. Using first sheet: %s", selectedSheet))
 	}
-	
+
 	// Get all rows from the selected sheet
 	rows, err := f.GetRows(selectedSheet)
 	if err != nil {
 		return nil, fmt.Errorf("failed to read sheet %s: %w", selectedSheet, err)
 	}
-	
+
 	if len(rows) == 0 {
 		return nil, fmt.Errorf("no data found in sheet %s", selectedSheet)
 	}
-	
+
 	// Convert Excel data to CSV format for parsing
 	var csvContent strings.Builder
 	for _, row := range rows {
@@ -190,7 +189,7 @@ func (a *App) loadExcel(filePath string) (*FileData, error) {
 		}
 		csvContent.WriteString("\n")
 	}
-	
+
 	// Parse the CSV content using GoPCA's parser
 	wailsruntime.LogInfo(a.ctx, fmt.Sprintf("Excel data converted to CSV, %d bytes", csvContent.Len()))
 	return a.parseCSVContent(csvContent.String(), ".csv")
@@ -203,7 +202,7 @@ func (a *App) parseCSVContent(content string, ext string) (*FileData, error) {
 	formats := []types.CSVFormat{
 		defaultFormat, // Standard CSV: comma with dot decimal
 	}
-	
+
 	// Add TSV format if TSV file
 	if ext == ".tsv" {
 		formats = []types.CSVFormat{
@@ -217,7 +216,7 @@ func (a *App) parseCSVContent(content string, ext string) (*FileData, error) {
 		}
 	} else {
 		// Try multiple CSV formats
-		formats = append(formats, 
+		formats = append(formats,
 			types.CSVFormat{
 				FieldDelimiter:   ';',
 				DecimalSeparator: ',',
@@ -274,17 +273,17 @@ func (a *App) parseCSVContent(content string, ext string) (*FileData, error) {
 
 	// Build column types map
 	columnTypes := make(map[string]string)
-	
+
 	// Mark numeric columns
 	for _, header := range csvData.Headers {
 		columnTypes[header] = "numeric"
 	}
-	
+
 	// Mark categorical columns
 	for colName := range categoricalData {
 		columnTypes[colName] = "categorical"
 	}
-	
+
 	// Mark target columns
 	for colName := range numericTargetData {
 		columnTypes[colName] = "target"
@@ -301,7 +300,7 @@ func (a *App) parseCSVContent(content string, ext string) (*FileData, error) {
 		NumericTargetColumns: ConvertFloat64MapToJSON(numericTargetData),
 		ColumnTypes:          columnTypes,
 	}
-	
+
 	wailsruntime.LogInfo(a.ctx, fmt.Sprintf("Parsed data: %d rows, %d columns, %d headers", csvData.Rows, csvData.Columns, len(csvData.Headers)))
 
 	// If we have categorical or target columns, we need to combine them with numeric data
@@ -321,18 +320,18 @@ func (a *App) getAllOriginalHeaders(content string, format types.CSVFormat) []st
 	csvReader.Comma = format.FieldDelimiter
 	csvReader.LazyQuotes = true
 	csvReader.TrimLeadingSpace = true
-	
+
 	// Read first line to get headers
 	records, err := csvReader.Read()
 	if err != nil || len(records) == 0 {
 		return []string{}
 	}
-	
+
 	// If the format has headers and row names, skip the first column (row name header)
 	if format.HasHeaders && format.HasRowNames && len(records) > 0 {
 		return records[1:]
 	}
-	
+
 	return records
 }
 
@@ -352,27 +351,27 @@ func (a *App) combineAllColumns(csvData *types.CSVData, categoricalData map[stri
 			originalHeaders = append(originalHeaders, colName)
 		}
 	}
-	
+
 	// Create a map to quickly find numeric column indices
 	numericColIndex := make(map[string]int)
 	for idx, header := range csvData.Headers {
 		numericColIndex[header] = idx
 	}
-	
+
 	// Initialize the result data structures
 	allHeaders := make([]string, 0, len(originalHeaders))
 	allData := make([][]string, csvData.Rows)
 	columnTypes := make(map[string]string)
-	
+
 	// Initialize rows
 	for i := range allData {
 		allData[i] = make([]string, 0, len(originalHeaders))
 	}
-	
+
 	// Process columns in their original order
 	for _, header := range originalHeaders {
 		allHeaders = append(allHeaders, header)
-		
+
 		// Check if it's a numeric column
 		if colIdx, isNumeric := numericColIndex[header]; isNumeric {
 			columnTypes[header] = "numeric"
@@ -402,7 +401,7 @@ func (a *App) combineAllColumns(csvData *types.CSVData, categoricalData map[stri
 		}
 		// If header not found in any category, it will be skipped
 	}
-	
+
 	return &FileData{
 		Headers:              allHeaders,
 		RowNames:             csvData.RowNames,
@@ -443,22 +442,22 @@ func (a *App) ValidateForGoPCA(data *FileData) *ValidationResult {
 	// Check for missing values in the data
 	for colIdx, header := range data.Headers {
 		missingInCol := 0
-		
+
 		for i := 0; i < data.Rows; i++ {
 			if i >= len(data.Data) {
 				break
 			}
 			value := data.Data[i][colIdx]
-			
+
 			// Check for missing values
 			trimmed := strings.TrimSpace(value)
-			if trimmed == "" || trimmed == "NA" || trimmed == "N/A" || 
-			   trimmed == "nan" || trimmed == "NaN" || trimmed == "null" || trimmed == "NULL" {
+			if trimmed == "" || trimmed == "NA" || trimmed == "N/A" ||
+				trimmed == "nan" || trimmed == "NaN" || trimmed == "null" || trimmed == "NULL" {
 				missingInCol++
 				totalMissing++
 			}
 		}
-		
+
 		// Report high missing value percentage
 		if data.Rows > 0 {
 			missingPercent := float64(missingInCol) / float64(data.Rows) * 100
@@ -472,7 +471,7 @@ func (a *App) ValidateForGoPCA(data *FileData) *ValidationResult {
 	if categoricalColumns > 0 {
 		warnings = append(warnings, fmt.Sprintf("INFO: %d categorical column(s) detected - these will be excluded from PCA but available for visualization", categoricalColumns))
 	}
-	
+
 	if targetColumns > 0 {
 		warnings = append(warnings, fmt.Sprintf("INFO: %d target column(s) detected - these will be excluded from PCA but available for visualization", targetColumns))
 	}
@@ -504,7 +503,7 @@ func (a *App) ValidateForGoPCA(data *FileData) *ValidationResult {
 	if len(data.RowNames) > 0 {
 		warnings = append(warnings, "INFO: Row names detected in first column")
 	}
-	
+
 	// Determine if data is valid (no ERRORs)
 	isValid := true
 	for _, warning := range warnings {
@@ -524,7 +523,7 @@ func (a *App) ValidateForGoPCA(data *FileData) *ValidationResult {
 func (a *App) SaveCSV(data *FileData) error {
 	// Show save dialog
 	selection, err := wailsruntime.SaveFileDialog(a.ctx, wailsruntime.SaveDialogOptions{
-		Title: "Save CSV File",
+		Title:           "Save CSV File",
 		DefaultFilename: "exported_data.csv",
 		Filters: []wailsruntime.FileFilter{
 			{
@@ -581,7 +580,7 @@ func (a *App) SaveCSV(data *FileData) error {
 func (a *App) SaveExcel(data *FileData) error {
 	// Show save dialog
 	selection, err := wailsruntime.SaveFileDialog(a.ctx, wailsruntime.SaveDialogOptions{
-		Title: "Save Excel File",
+		Title:           "Save Excel File",
 		DefaultFilename: "exported_data.xlsx",
 		Filters: []wailsruntime.FileFilter{
 			{
@@ -600,28 +599,28 @@ func (a *App) SaveExcel(data *FileData) error {
 	// Create new Excel file
 	f := excelize.NewFile()
 	defer f.Close()
-	
+
 	// Create a new sheet
 	sheetName := "Sheet1"
 	index, err := f.NewSheet(sheetName)
 	if err != nil {
 		return fmt.Errorf("failed to create sheet: %w", err)
 	}
-	
+
 	// Write headers with row names if present
 	headers := data.Headers
 	if len(data.RowNames) > 0 {
 		// Add row name header
 		headers = append([]string{"RowName"}, headers...)
 	}
-	
+
 	for i, header := range headers {
 		cell, err := excelize.CoordinatesToCellName(i+1, 1)
 		if err != nil {
 			return fmt.Errorf("failed to get cell coordinate: %w", err)
 		}
 		f.SetCellValue(sheetName, cell, header)
-		
+
 		// Style headers
 		style, err := f.NewStyle(&excelize.Style{
 			Font: &excelize.Font{
@@ -637,11 +636,11 @@ func (a *App) SaveExcel(data *FileData) error {
 			f.SetCellStyle(sheetName, cell, cell, style)
 		}
 	}
-	
+
 	// Write data rows
 	for rowIdx, row := range data.Data {
 		excelRow := rowIdx + 2 // Excel rows are 1-indexed, plus header row
-		
+
 		// Write row name if present
 		colOffset := 0
 		if len(data.RowNames) > 0 && rowIdx < len(data.RowNames) {
@@ -651,21 +650,21 @@ func (a *App) SaveExcel(data *FileData) error {
 			}
 			colOffset = 1
 		}
-		
+
 		// Write data cells
 		for colIdx, value := range row {
 			cell, err := excelize.CoordinatesToCellName(colIdx+1+colOffset, excelRow)
 			if err != nil {
 				continue
 			}
-			
+
 			// Try to convert to number if possible
 			if num, err := strconv.ParseFloat(value, 64); err == nil && value != "" {
 				f.SetCellValue(sheetName, cell, num)
 			} else {
 				f.SetCellValue(sheetName, cell, value)
 			}
-			
+
 			// Apply column type styling
 			if data.ColumnTypes != nil {
 				header := data.Headers[colIdx]
@@ -698,21 +697,21 @@ func (a *App) SaveExcel(data *FileData) error {
 			}
 		}
 	}
-	
+
 	// Auto-fit columns
 	for i := 0; i < len(headers); i++ {
 		col, _ := excelize.ColumnNumberToName(i + 1)
 		f.SetColWidth(sheetName, col, col, 12)
 	}
-	
+
 	// Set active sheet
 	f.SetActiveSheet(index)
-	
+
 	// Save file
 	if err := f.SaveAs(selection); err != nil {
 		return fmt.Errorf("failed to save Excel file: %w", err)
 	}
-	
+
 	wailsruntime.EventsEmit(a.ctx, "file-saved", filepath.Base(selection))
 	return nil
 }
@@ -821,7 +820,6 @@ func (a *App) AnalyzeMissingValues(data *FileData) *MissingValueStats {
 	return stats
 }
 
-
 // detectMissingPattern analyzes the pattern of missing values
 func detectMissingPattern(missingIndices []int, totalRows int) string {
 	if len(missingIndices) == 0 {
@@ -859,7 +857,7 @@ func detectMissingPattern(missingIndices []int, totalRows int) string {
 		for i := 1; i < len(missingIndices); i++ {
 			intervals = append(intervals, missingIndices[i]-missingIndices[i-1])
 		}
-		
+
 		// Check if all intervals are the same
 		systematic := true
 		if len(intervals) > 0 {
@@ -1119,14 +1117,14 @@ type DataQualityReport struct {
 
 // DataProfile contains overall dataset statistics
 type DataProfile struct {
-	Rows              int     `json:"rows"`
-	Columns           int     `json:"columns"`
-	NumericColumns    int     `json:"numericColumns"`
-	CategoricalColumns int    `json:"categoricalColumns"`
-	TargetColumns     int     `json:"targetColumns"`
-	MissingPercent    float64 `json:"missingPercent"`
-	DuplicateRows     int     `json:"duplicateRows"`
-	MemorySize        string  `json:"memorySize"` // Estimated memory usage
+	Rows               int     `json:"rows"`
+	Columns            int     `json:"columns"`
+	NumericColumns     int     `json:"numericColumns"`
+	CategoricalColumns int     `json:"categoricalColumns"`
+	TargetColumns      int     `json:"targetColumns"`
+	MissingPercent     float64 `json:"missingPercent"`
+	DuplicateRows      int     `json:"duplicateRows"`
+	MemorySize         string  `json:"memorySize"` // Estimated memory usage
 }
 
 // ColumnAnalysis contains detailed analysis for each column
@@ -1141,30 +1139,30 @@ type ColumnAnalysis struct {
 
 // ColumnStatistics contains statistical measures for a column
 type ColumnStatistics struct {
-	Count          int              `json:"count"`
-	Missing        int              `json:"missing"`
-	MissingPercent float64          `json:"missingPercent"`
-	Unique         int              `json:"unique"`
-	Mean           *float64         `json:"mean,omitempty"`
-	Median         *float64         `json:"median,omitempty"`
-	Mode           *string          `json:"mode,omitempty"`
-	StdDev         *float64         `json:"stdDev,omitempty"`
-	Min            *float64         `json:"min,omitempty"`
-	Max            *float64         `json:"max,omitempty"`
-	Q1             *float64         `json:"q1,omitempty"`
-	Q3             *float64         `json:"q3,omitempty"`
-	IQR            *float64         `json:"iqr,omitempty"`
-	Skewness       *float64         `json:"skewness,omitempty"`
-	Kurtosis       *float64         `json:"kurtosis,omitempty"`
-	Categories     map[string]int   `json:"categories,omitempty"` // For categorical columns
+	Count          int            `json:"count"`
+	Missing        int            `json:"missing"`
+	MissingPercent float64        `json:"missingPercent"`
+	Unique         int            `json:"unique"`
+	Mean           *float64       `json:"mean,omitempty"`
+	Median         *float64       `json:"median,omitempty"`
+	Mode           *string        `json:"mode,omitempty"`
+	StdDev         *float64       `json:"stdDev,omitempty"`
+	Min            *float64       `json:"min,omitempty"`
+	Max            *float64       `json:"max,omitempty"`
+	Q1             *float64       `json:"q1,omitempty"`
+	Q3             *float64       `json:"q3,omitempty"`
+	IQR            *float64       `json:"iqr,omitempty"`
+	Skewness       *float64       `json:"skewness,omitempty"`
+	Kurtosis       *float64       `json:"kurtosis,omitempty"`
+	Categories     map[string]int `json:"categories,omitempty"` // For categorical columns
 }
 
 // DistributionInfo contains information about data distribution
 type DistributionInfo struct {
-	Histogram      []HistogramBin `json:"histogram,omitempty"`
-	IsNormal       bool           `json:"isNormal"`
+	Histogram       []HistogramBin `json:"histogram,omitempty"`
+	IsNormal        bool           `json:"isNormal"`
 	NormalityPValue float64        `json:"normalityPValue,omitempty"`
-	DistType       string         `json:"distType"` // "normal", "skewed", "bimodal", "uniform", etc.
+	DistType        string         `json:"distType"` // "normal", "skewed", "bimodal", "uniform", etc.
 }
 
 // HistogramBin represents a bin in a histogram
@@ -1188,7 +1186,7 @@ type QualityIssue struct {
 	Category    string   `json:"category"` // "missing", "outlier", "duplicate", "type", "correlation"
 	Description string   `json:"description"`
 	Affected    []string `json:"affected"` // Column names or row indices
-	Impact      string   `json:"impact"` // Impact on PCA analysis
+	Impact      string   `json:"impact"`   // Impact on PCA analysis
 }
 
 // Recommendation represents a suggestion for improving data quality
@@ -1297,7 +1295,7 @@ func calculateNumericStats(data *FileData, colIdx int) ColumnStatistics {
 
 	// Use utility function to get numeric values
 	values := getNumericValues(data.Data, colIdx)
-	
+
 	// Count missing values
 	for rowIdx := 0; rowIdx < data.Rows && rowIdx < len(data.Data); rowIdx++ {
 		if colIdx < len(data.Data[rowIdx]) {
@@ -1429,11 +1427,11 @@ func calculatePercentile(values []float64, percentile float64) float64 {
 	lower := int(math.Floor(index))
 	upper := int(math.Ceil(index))
 	weight := index - float64(lower)
-	
+
 	if lower == upper {
 		return values[lower]
 	}
-	
+
 	return values[lower]*(1-weight) + values[upper]*weight
 }
 
@@ -1441,14 +1439,14 @@ func calculateSkewness(values []float64, mean, stdDev float64) float64 {
 	if stdDev == 0 {
 		return 0
 	}
-	
+
 	n := float64(len(values))
 	sum := 0.0
 	for _, v := range values {
 		z := (v - mean) / stdDev
 		sum += z * z * z
 	}
-	
+
 	return (n / ((n - 1) * (n - 2))) * sum
 }
 
@@ -1456,21 +1454,21 @@ func calculateKurtosis(values []float64, mean, stdDev float64) float64 {
 	if stdDev == 0 {
 		return 0
 	}
-	
+
 	n := float64(len(values))
 	sum := 0.0
 	for _, v := range values {
 		z := (v - mean) / stdDev
 		sum += z * z * z * z
 	}
-	
+
 	return (n*(n+1)/((n-1)*(n-2)*(n-3)))*sum - 3*(n-1)*(n-1)/((n-2)*(n-3))
 }
 
 // analyzeDistribution analyzes the distribution of numeric data
 func analyzeDistribution(data *FileData, colIdx int) DistributionInfo {
 	dist := DistributionInfo{}
-	
+
 	// Collect valid numeric values
 	values := []float64{}
 	for rowIdx := 0; rowIdx < data.Rows && rowIdx < len(data.Data); rowIdx++ {
@@ -1483,16 +1481,16 @@ func analyzeDistribution(data *FileData, colIdx int) DistributionInfo {
 			}
 		}
 	}
-	
+
 	if len(values) < 10 {
 		return dist
 	}
-	
+
 	// Create histogram with 10 bins
 	sort.Float64s(values)
 	min, max := values[0], values[len(values)-1]
 	binWidth := (max - min) / 10
-	
+
 	if binWidth > 0 {
 		dist.Histogram = make([]HistogramBin, 10)
 		for i := 0; i < 10; i++ {
@@ -1501,13 +1499,13 @@ func analyzeDistribution(data *FileData, colIdx int) DistributionInfo {
 			if i == 9 {
 				binMax = max + 0.001 // Include max value in last bin
 			}
-			
+
 			dist.Histogram[i] = HistogramBin{
 				Min: binMin,
 				Max: binMax,
 			}
 		}
-		
+
 		// Count values in each bin
 		for _, v := range values {
 			binIndex := int((v - min) / binWidth)
@@ -1517,16 +1515,16 @@ func analyzeDistribution(data *FileData, colIdx int) DistributionInfo {
 			dist.Histogram[binIndex].Count++
 		}
 	}
-	
+
 	// Simple normality test based on skewness and kurtosis
 	mean := calculateMean(values)
 	stdDev := calculateStdDev(values, mean)
 	skewness := calculateSkewness(values, mean, stdDev)
 	kurtosis := calculateKurtosis(values, mean, stdDev)
-	
+
 	// Very simple normality check
 	dist.IsNormal = math.Abs(skewness) < 0.5 && math.Abs(kurtosis) < 1.0
-	
+
 	// Determine distribution type
 	if dist.IsNormal {
 		dist.DistType = "normal"
@@ -1541,7 +1539,7 @@ func analyzeDistribution(data *FileData, colIdx int) DistributionInfo {
 		peaks := 0
 		for i := 1; i < len(dist.Histogram)-1; i++ {
 			if dist.Histogram[i].Count > dist.Histogram[i-1].Count &&
-			   dist.Histogram[i].Count > dist.Histogram[i+1].Count {
+				dist.Histogram[i].Count > dist.Histogram[i+1].Count {
 				peaks++
 			}
 		}
@@ -1551,25 +1549,25 @@ func analyzeDistribution(data *FileData, colIdx int) DistributionInfo {
 			dist.DistType = "unknown"
 		}
 	}
-	
+
 	return dist
 }
 
 // detectOutliers detects outliers using IQR and Z-score methods
 func detectOutliers(data *FileData, colIdx int, stats ColumnStatistics) []OutlierInfo {
 	outliers := []OutlierInfo{}
-	
+
 	if stats.Q1 == nil || stats.Q3 == nil || stats.Mean == nil || stats.StdDev == nil {
 		return outliers
 	}
-	
+
 	// IQR method
 	lowerBound := *stats.Q1 - 1.5**stats.IQR
 	upperBound := *stats.Q3 + 1.5**stats.IQR
-	
+
 	// Z-score threshold
 	zThreshold := 3.0
-	
+
 	for rowIdx := 0; rowIdx < data.Rows && rowIdx < len(data.Data); rowIdx++ {
 		if colIdx < len(data.Data[rowIdx]) {
 			value := strings.TrimSpace(data.Data[rowIdx][colIdx])
@@ -1584,7 +1582,7 @@ func detectOutliers(data *FileData, colIdx int, stats ColumnStatistics) []Outlie
 							Score:    math.Abs(num-*stats.Median) / *stats.IQR,
 						})
 					}
-					
+
 					// Check Z-score method
 					if *stats.StdDev > 0 {
 						zScore := math.Abs(num-*stats.Mean) / *stats.StdDev
@@ -1611,7 +1609,7 @@ func detectOutliers(data *FileData, colIdx int, stats ColumnStatistics) []Outlie
 			}
 		}
 	}
-	
+
 	return outliers
 }
 
@@ -1619,7 +1617,7 @@ func detectOutliers(data *FileData, colIdx int, stats ColumnStatistics) []Outlie
 func countDuplicateRows(data *FileData) int {
 	rowMap := make(map[string]int)
 	duplicates := 0
-	
+
 	for rowIdx := 0; rowIdx < data.Rows && rowIdx < len(data.Data); rowIdx++ {
 		// Create a key from the row data
 		rowKey := strings.Join(data.Data[rowIdx], "|")
@@ -1630,7 +1628,7 @@ func countDuplicateRows(data *FileData) int {
 			duplicates++ // Count subsequent duplicates
 		}
 	}
-	
+
 	return duplicates
 }
 
@@ -1638,7 +1636,7 @@ func countDuplicateRows(data *FileData) int {
 func estimateMemorySize(data *FileData) string {
 	// Rough estimation: average 10 bytes per cell
 	bytes := data.Rows * data.Columns * 10
-	
+
 	if bytes < 1024 {
 		return fmt.Sprintf("%d B", bytes)
 	} else if bytes < 1024*1024 {
@@ -1652,7 +1650,7 @@ func estimateMemorySize(data *FileData) string {
 // calculateCorrelations calculates correlations between numeric columns
 func calculateCorrelations(data *FileData) map[string]map[string]float64 {
 	correlations := make(map[string]map[string]float64)
-	
+
 	// Get numeric columns
 	numericCols := []int{}
 	numericHeaders := []string{}
@@ -1662,17 +1660,17 @@ func calculateCorrelations(data *FileData) map[string]map[string]float64 {
 			numericHeaders = append(numericHeaders, header)
 		}
 	}
-	
+
 	// Calculate pairwise correlations
 	for i, col1 := range numericCols {
 		header1 := numericHeaders[i]
 		if _, exists := correlations[header1]; !exists {
 			correlations[header1] = make(map[string]float64)
 		}
-		
+
 		for j, col2 := range numericCols {
 			header2 := numericHeaders[j]
-			
+
 			if i == j {
 				correlations[header1][header2] = 1.0
 			} else {
@@ -1681,7 +1679,7 @@ func calculateCorrelations(data *FileData) map[string]map[string]float64 {
 			}
 		}
 	}
-	
+
 	return correlations
 }
 
@@ -1693,7 +1691,7 @@ func calculatePearsonCorrelation(data *FileData, col1, col2 int) float64 {
 		if col1 < len(data.Data[rowIdx]) && col2 < len(data.Data[rowIdx]) {
 			val1 := strings.TrimSpace(data.Data[rowIdx][col1])
 			val2 := strings.TrimSpace(data.Data[rowIdx][col2])
-			
+
 			if !isMissingValue(val1) && !isMissingValue(val2) {
 				if num1, err1 := strconv.ParseFloat(val1, 64); err1 == nil {
 					if num2, err2 := strconv.ParseFloat(val2, 64); err2 == nil {
@@ -1703,11 +1701,11 @@ func calculatePearsonCorrelation(data *FileData, col1, col2 int) float64 {
 			}
 		}
 	}
-	
+
 	if len(pairs) < 2 {
 		return 0
 	}
-	
+
 	// Calculate means
 	mean1, mean2 := 0.0, 0.0
 	for _, pair := range pairs {
@@ -1716,7 +1714,7 @@ func calculatePearsonCorrelation(data *FileData, col1, col2 int) float64 {
 	}
 	mean1 /= float64(len(pairs))
 	mean2 /= float64(len(pairs))
-	
+
 	// Calculate correlation
 	num, den1, den2 := 0.0, 0.0, 0.0
 	for _, pair := range pairs {
@@ -1726,18 +1724,18 @@ func calculatePearsonCorrelation(data *FileData, col1, col2 int) float64 {
 		den1 += diff1 * diff1
 		den2 += diff2 * diff2
 	}
-	
+
 	if den1 == 0 || den2 == 0 {
 		return 0
 	}
-	
+
 	return num / math.Sqrt(den1*den2)
 }
 
 // generateQualityIssues generates quality issues based on the analysis
 func generateQualityIssues(report *DataQualityReport, correlations map[string]map[string]float64) []QualityIssue {
 	issues := []QualityIssue{}
-	
+
 	// Check for high missing data
 	if report.DataProfile.MissingPercent > 20 {
 		issues = append(issues, QualityIssue{
@@ -1754,7 +1752,7 @@ func generateQualityIssues(report *DataQualityReport, correlations map[string]ma
 			Impact:      "Missing data may affect PCA results",
 		})
 	}
-	
+
 	// Check for columns with high missing data
 	for _, col := range report.ColumnAnalysis {
 		if col.Stats.MissingPercent > 50 {
@@ -1767,7 +1765,7 @@ func generateQualityIssues(report *DataQualityReport, correlations map[string]ma
 			})
 		}
 	}
-	
+
 	// Check for duplicate rows
 	if report.DataProfile.DuplicateRows > 0 {
 		issues = append(issues, QualityIssue{
@@ -1777,7 +1775,7 @@ func generateQualityIssues(report *DataQualityReport, correlations map[string]ma
 			Impact:      "Duplicate rows can bias PCA results",
 		})
 	}
-	
+
 	// Check for outliers
 	for _, col := range report.ColumnAnalysis {
 		if col.Type == "numeric" && len(col.Outliers) > 0 {
@@ -1793,7 +1791,7 @@ func generateQualityIssues(report *DataQualityReport, correlations map[string]ma
 			}
 		}
 	}
-	
+
 	// Check for highly correlated variables
 	for col1, corrMap := range correlations {
 		for col2, corr := range corrMap {
@@ -1808,7 +1806,7 @@ func generateQualityIssues(report *DataQualityReport, correlations map[string]ma
 			}
 		}
 	}
-	
+
 	// Check for low variance columns
 	for _, col := range report.ColumnAnalysis {
 		if col.Type == "numeric" && col.Stats.StdDev != nil && *col.Stats.StdDev < 0.01 {
@@ -1821,7 +1819,7 @@ func generateQualityIssues(report *DataQualityReport, correlations map[string]ma
 			})
 		}
 	}
-	
+
 	// Check for non-normal distributions
 	nonNormalCount := 0
 	for _, col := range report.ColumnAnalysis {
@@ -1837,14 +1835,14 @@ func generateQualityIssues(report *DataQualityReport, correlations map[string]ma
 			Impact:      "PCA assumes normality; consider data transformations",
 		})
 	}
-	
+
 	return issues
 }
 
 // generateRecommendations generates recommendations based on the quality analysis
 func generateRecommendations(report *DataQualityReport) []Recommendation {
 	recs := []Recommendation{}
-	
+
 	// Missing data recommendations
 	if report.DataProfile.MissingPercent > 10 {
 		recs = append(recs, Recommendation{
@@ -1854,7 +1852,7 @@ func generateRecommendations(report *DataQualityReport) []Recommendation {
 			Description: "Use appropriate fill strategies (mean/median for numeric, mode for categorical) or remove rows/columns with excessive missing data",
 		})
 	}
-	
+
 	// Duplicate rows recommendation
 	if report.DataProfile.DuplicateRows > 0 {
 		recs = append(recs, Recommendation{
@@ -1864,7 +1862,7 @@ func generateRecommendations(report *DataQualityReport) []Recommendation {
 			Description: fmt.Sprintf("Remove %d duplicate rows to avoid biasing the analysis", report.DataProfile.DuplicateRows),
 		})
 	}
-	
+
 	// Outlier recommendations
 	colsWithOutliers := []string{}
 	for _, col := range report.ColumnAnalysis {
@@ -1881,7 +1879,7 @@ func generateRecommendations(report *DataQualityReport) []Recommendation {
 			Columns:     colsWithOutliers,
 		})
 	}
-	
+
 	// Scaling recommendation
 	varyingScales := false
 	for _, col := range report.ColumnAnalysis {
@@ -1901,7 +1899,7 @@ func generateRecommendations(report *DataQualityReport) []Recommendation {
 			Description: "Columns have varying scales; consider standardization or normalization before PCA",
 		})
 	}
-	
+
 	// Distribution recommendations
 	skewedCols := []string{}
 	for _, col := range report.ColumnAnalysis {
@@ -1918,7 +1916,7 @@ func generateRecommendations(report *DataQualityReport) []Recommendation {
 			Columns:     skewedCols,
 		})
 	}
-	
+
 	// Correlation recommendations
 	if report.DataProfile.NumericColumns < 3 {
 		recs = append(recs, Recommendation{
@@ -1928,30 +1926,30 @@ func generateRecommendations(report *DataQualityReport) []Recommendation {
 			Description: fmt.Sprintf("Only %d numeric columns available; PCA requires multiple numeric features", report.DataProfile.NumericColumns),
 		})
 	}
-	
+
 	return recs
 }
 
 // calculateQualityScore calculates an overall quality score for the dataset
 func calculateQualityScore(report *DataQualityReport) float64 {
 	score := 100.0
-	
+
 	// Deduct for missing data
 	score -= report.DataProfile.MissingPercent * 0.5
-	
+
 	// Deduct for duplicate rows
 	if report.DataProfile.Rows > 0 {
 		duplicatePercent := float64(report.DataProfile.DuplicateRows) / float64(report.DataProfile.Rows) * 100
 		score -= duplicatePercent * 0.3
 	}
-	
+
 	// Deduct for columns with excessive missing data
 	for _, col := range report.ColumnAnalysis {
 		if col.Stats.MissingPercent > 50 {
 			score -= 5.0
 		}
 	}
-	
+
 	// Deduct for outliers
 	totalOutliers := 0
 	for _, col := range report.ColumnAnalysis {
@@ -1961,12 +1959,12 @@ func calculateQualityScore(report *DataQualityReport) float64 {
 		outlierPercent := float64(totalOutliers) / float64(report.DataProfile.Rows*report.DataProfile.NumericColumns) * 100
 		score -= outlierPercent * 0.2
 	}
-	
+
 	// Deduct for insufficient numeric columns
 	if report.DataProfile.NumericColumns < 3 {
 		score -= 20.0
 	}
-	
+
 	// Ensure score is between 0 and 100
 	if score < 0 {
 		score = 0
@@ -1974,30 +1972,30 @@ func calculateQualityScore(report *DataQualityReport) float64 {
 	if score > 100 {
 		score = 100
 	}
-	
+
 	return score
 }
 
 // calculateColumnQualityScore calculates quality score for a single column
 func calculateColumnQualityScore(analysis ColumnAnalysis) float64 {
 	score := 100.0
-	
+
 	// Deduct for missing data
 	score -= analysis.Stats.MissingPercent * 0.5
-	
+
 	// Deduct for outliers
 	if analysis.Stats.Count > 0 {
 		outlierPercent := float64(len(analysis.Outliers)) / float64(analysis.Stats.Count) * 100
 		score -= outlierPercent * 0.3
 	}
-	
+
 	// Deduct for low variance (numeric columns)
 	if analysis.Type == "numeric" && analysis.Stats.StdDev != nil {
 		if *analysis.Stats.StdDev < 0.01 {
 			score -= 10.0
 		}
 	}
-	
+
 	// Ensure score is between 0 and 100
 	if score < 0 {
 		score = 0
@@ -2005,7 +2003,7 @@ func calculateColumnQualityScore(analysis ColumnAnalysis) float64 {
 	if score > 100 {
 		score = 100
 	}
-	
+
 	return score
 }
 
@@ -2025,15 +2023,15 @@ func (a *App) CheckGoPCAStatus() *GoPCAStatus {
 		CommonPaths: getGoPCAPathsWithDev(),
 		DisplayName: "GoPCA Desktop",
 	}
-	
+
 	appStatus := integration.CheckApp(integrationConfig)
-	
+
 	status := &GoPCAStatus{
 		Installed: appStatus.Installed,
 		Path:      appStatus.Path,
 		Error:     appStatus.Error,
 	}
-	
+
 	// If found, try to get version
 	if status.Installed && status.Path != "" {
 		cmd := exec.Command(status.Path, "--version")
@@ -2042,7 +2040,7 @@ func (a *App) CheckGoPCAStatus() *GoPCAStatus {
 			status.Version = strings.TrimSpace(string(output))
 		}
 	}
-	
+
 	return status
 }
 
@@ -2050,12 +2048,12 @@ func (a *App) CheckGoPCAStatus() *GoPCAStatus {
 func getGoPCAPathsWithDev() []string {
 	// Start with common installation paths
 	paths := integration.GetCommonPaths("gopca-desktop")
-	
+
 	// Add development-specific paths
 	execPath, _ := os.Executable()
 	execDir := filepath.Dir(execPath)
 	cwd, _ := os.Getwd()
-	
+
 	devPaths := []string{
 		// When running from cmd/gocsv with make csv-dev
 		filepath.Join(execDir, "../../build/bin/gopca-desktop"),
@@ -2072,7 +2070,7 @@ func getGoPCAPathsWithDev() []string {
 		// Direct path to GoPCA Desktop build output
 		filepath.Join(cwd, "../../cmd/gopca-desktop/build/bin/gopca-desktop.app/Contents/MacOS/gopca-desktop"),
 	}
-	
+
 	paths = append(paths, devPaths...)
 	return paths
 }
@@ -2156,10 +2154,10 @@ func (a *App) DownloadGoPCA() error {
 
 // UndoRedoState represents the current state of undo/redo
 type UndoRedoState struct {
-	CanUndo     bool     `json:"canUndo"`
-	CanRedo     bool     `json:"canRedo"`
-	History     []string `json:"history"`
-	CurrentPos  int      `json:"currentPos"`
+	CanUndo    bool     `json:"canUndo"`
+	CanRedo    bool     `json:"canRedo"`
+	History    []string `json:"history"`
+	CurrentPos int      `json:"currentPos"`
 }
 
 // GetUndoRedoState returns the current undo/redo state
@@ -2220,7 +2218,7 @@ func (a *App) executeCommand(cmd Command, data *FileData, operation string) (*Fi
 		return nil, fmt.Errorf("%s: %w", operation, err)
 	}
 	a.currentData = data // Store the current data
-	
+
 	if a.ctx != nil {
 		wailsruntime.EventsEmit(a.ctx, "undo-redo-state-changed", a.GetUndoRedoState())
 	}
@@ -2247,38 +2245,38 @@ func (a *App) ExecuteFillMissingValues(data *FileData, strategy, column, customV
 
 // ImportFileInfo represents information about a file to be imported
 type ImportFileInfo struct {
-	FileName    string   `json:"fileName"`
-	FilePath    string   `json:"filePath"`
-	FileSize    int64    `json:"fileSize"`
-	FileFormat  string   `json:"fileFormat"` // "csv", "tsv", "excel", "json"
-	Encoding    string   `json:"encoding"`
-	Sheets      []string `json:"sheets,omitempty"` // For Excel files
-	Error       string   `json:"error,omitempty"`
+	FileName   string   `json:"fileName"`
+	FilePath   string   `json:"filePath"`
+	FileSize   int64    `json:"fileSize"`
+	FileFormat string   `json:"fileFormat"` // "csv", "tsv", "excel", "json"
+	Encoding   string   `json:"encoding"`
+	Sheets     []string `json:"sheets,omitempty"` // For Excel files
+	Error      string   `json:"error,omitempty"`
 }
 
 // ImportOptions represents options for importing a file
 type ImportOptions struct {
-	Format         string `json:"format"`
-	Delimiter      string `json:"delimiter,omitempty"`      // For CSV/TSV
-	HasHeaders     bool   `json:"hasHeaders"`
-	HeaderRow      int    `json:"headerRow"`                // 0-based
-	Sheet          string `json:"sheet,omitempty"`          // For Excel
-	Range          string `json:"range,omitempty"`          // For Excel (e.g., "A1:Z100")
-	RowNameColumn  int    `json:"rowNameColumn"`            // -1 if none, 0-based
-	SkipRows       int    `json:"skipRows"`                 // Number of rows to skip from top
-	MaxRows        int    `json:"maxRows"`                  // 0 for all rows
+	Format          string `json:"format"`
+	Delimiter       string `json:"delimiter,omitempty"` // For CSV/TSV
+	HasHeaders      bool   `json:"hasHeaders"`
+	HeaderRow       int    `json:"headerRow"`                 // 0-based
+	Sheet           string `json:"sheet,omitempty"`           // For Excel
+	Range           string `json:"range,omitempty"`           // For Excel (e.g., "A1:Z100")
+	RowNameColumn   int    `json:"rowNameColumn"`             // -1 if none, 0-based
+	SkipRows        int    `json:"skipRows"`                  // Number of rows to skip from top
+	MaxRows         int    `json:"maxRows"`                   // 0 for all rows
 	SelectedColumns []int  `json:"selectedColumns,omitempty"` // Indices of columns to import
 }
 
 // FilePreview represents a preview of file contents
 type FilePreview struct {
-	Headers     []string          `json:"headers"`
-	Data        [][]string        `json:"data"`        // First N rows
-	ColumnTypes []string          `json:"columnTypes"` // Detected types
-	Delimiter   string            `json:"delimiter"`   // Detected delimiter
-	TotalRows   int               `json:"totalRows"`
-	TotalCols   int               `json:"totalCols"`
-	Issues      []string          `json:"issues,omitempty"`
+	Headers     []string   `json:"headers"`
+	Data        [][]string `json:"data"`        // First N rows
+	ColumnTypes []string   `json:"columnTypes"` // Detected types
+	Delimiter   string     `json:"delimiter"`   // Detected delimiter
+	TotalRows   int        `json:"totalRows"`
+	TotalCols   int        `json:"totalCols"`
+	Issues      []string   `json:"issues,omitempty"`
 }
 
 // GetFileInfo gets information about a file for the import wizard
@@ -2287,14 +2285,14 @@ func (a *App) GetFileInfo(filePath string) (*ImportFileInfo, error) {
 		FilePath: filePath,
 		FileName: filepath.Base(filePath),
 	}
-	
+
 	// Get file size
 	stat, err := os.Stat(filePath)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get file info: %w", err)
 	}
 	info.FileSize = stat.Size()
-	
+
 	// Detect file format
 	ext := strings.ToLower(filepath.Ext(filePath))
 	switch ext {
@@ -2321,7 +2319,7 @@ func (a *App) GetFileInfo(filePath string) (*ImportFileInfo, error) {
 		info.FileFormat = a.detectFileFormat(filePath)
 		info.Encoding = "UTF-8"
 	}
-	
+
 	return info, nil
 }
 
@@ -2330,7 +2328,7 @@ func (a *App) PreviewFile(filePath string, options ImportOptions) (*FilePreview,
 	preview := &FilePreview{
 		Issues: []string{},
 	}
-	
+
 	switch options.Format {
 	case "csv", "tsv":
 		return a.previewCSV(filePath, options, preview)
@@ -2364,7 +2362,7 @@ func (a *App) getExcelSheets(filePath string) ([]string, error) {
 		return nil, err
 	}
 	defer f.Close()
-	
+
 	return f.GetSheetList(), nil
 }
 
@@ -2376,12 +2374,12 @@ func (a *App) detectFileFormat(filePath string) string {
 		return "unknown"
 	}
 	defer file.Close()
-	
+
 	// Read first 512 bytes
 	buf := make([]byte, 512)
 	n, _ := file.Read(buf)
 	buf = buf[:n]
-	
+
 	// Check for Excel magic bytes
 	if len(buf) >= 8 {
 		if buf[0] == 0xD0 && buf[1] == 0xCF && buf[2] == 0x11 && buf[3] == 0xE0 {
@@ -2391,21 +2389,21 @@ func (a *App) detectFileFormat(filePath string) string {
 			return "excel" // New Excel format (ZIP)
 		}
 	}
-	
+
 	// Check for JSON
 	content := string(buf)
 	content = strings.TrimSpace(content)
 	if strings.HasPrefix(content, "{") || strings.HasPrefix(content, "[") {
 		return "json"
 	}
-	
+
 	// Check for TSV (more tabs than commas)
 	tabCount := strings.Count(content, "\t")
 	commaCount := strings.Count(content, ",")
 	if tabCount > commaCount*2 {
 		return "tsv"
 	}
-	
+
 	// Default to CSV
 	return "csv"
 }
@@ -2417,19 +2415,19 @@ func (a *App) previewCSV(filePath string, options ImportOptions, preview *FilePr
 		return nil, err
 	}
 	defer file.Close()
-	
+
 	reader := csv.NewReader(file)
-	
+
 	// Set delimiter
 	if options.Format == "tsv" || options.Delimiter == "\t" {
 		reader.Comma = '\t'
 	} else if options.Delimiter != "" && len(options.Delimiter) == 1 {
 		reader.Comma = rune(options.Delimiter[0])
 	}
-	
+
 	reader.LazyQuotes = true
 	reader.TrimLeadingSpace = true
-	
+
 	// Skip rows if specified
 	for i := 0; i < options.SkipRows; i++ {
 		_, err := reader.Read()
@@ -2437,20 +2435,20 @@ func (a *App) previewCSV(filePath string, options ImportOptions, preview *FilePr
 			preview.Issues = append(preview.Issues, fmt.Sprintf("Failed to skip row %d: %v", i+1, err))
 		}
 	}
-	
+
 	// Read all data for analysis
 	allData, err := reader.ReadAll()
 	if err != nil {
 		return nil, fmt.Errorf("failed to read CSV: %w", err)
 	}
-	
+
 	if len(allData) == 0 {
 		return nil, fmt.Errorf("no data found in file")
 	}
-	
+
 	preview.TotalRows = len(allData)
 	preview.TotalCols = len(allData[0])
-	
+
 	// Extract headers
 	if options.HasHeaders && options.HeaderRow < len(allData) {
 		preview.Headers = allData[options.HeaderRow]
@@ -2463,7 +2461,7 @@ func (a *App) previewCSV(filePath string, options ImportOptions, preview *FilePr
 			preview.Headers[i] = fmt.Sprintf("Column_%d", i+1)
 		}
 	}
-	
+
 	// Get preview data (first 100 rows or less)
 	previewRows := 100
 	if options.MaxRows > 0 && options.MaxRows < previewRows {
@@ -2472,15 +2470,15 @@ func (a *App) previewCSV(filePath string, options ImportOptions, preview *FilePr
 	if len(allData) < previewRows {
 		previewRows = len(allData)
 	}
-	
+
 	preview.Data = allData[:previewRows]
-	
+
 	// Detect column types
 	preview.ColumnTypes = make([]string, preview.TotalCols)
 	for i := 0; i < preview.TotalCols; i++ {
 		preview.ColumnTypes[i] = a.detectColumnType(allData, i)
 	}
-	
+
 	// Detect delimiter if not specified
 	if options.Delimiter == "" {
 		if options.Format == "tsv" {
@@ -2491,7 +2489,7 @@ func (a *App) previewCSV(filePath string, options ImportOptions, preview *FilePr
 	} else {
 		preview.Delimiter = options.Delimiter
 	}
-	
+
 	return preview, nil
 }
 
@@ -2502,7 +2500,7 @@ func (a *App) previewExcel(filePath string, options ImportOptions, preview *File
 		return nil, err
 	}
 	defer f.Close()
-	
+
 	// Use specified sheet or first sheet
 	sheet := options.Sheet
 	if sheet == "" {
@@ -2512,33 +2510,33 @@ func (a *App) previewExcel(filePath string, options ImportOptions, preview *File
 		}
 		sheet = sheets[0]
 	}
-	
+
 	// Get all rows
 	rows, err := f.GetRows(sheet)
 	if err != nil {
 		return nil, fmt.Errorf("failed to read sheet %s: %w", sheet, err)
 	}
-	
+
 	if len(rows) == 0 {
 		return nil, fmt.Errorf("no data found in sheet %s", sheet)
 	}
-	
+
 	// Apply range if specified
 	if options.Range != "" {
 		// TODO: Implement range parsing
 		preview.Issues = append(preview.Issues, "Range selection not yet implemented")
 	}
-	
+
 	// Skip rows if specified
 	if options.SkipRows > 0 && options.SkipRows < len(rows) {
 		rows = rows[options.SkipRows:]
 	}
-	
+
 	preview.TotalRows = len(rows)
 	if len(rows) > 0 {
 		preview.TotalCols = len(rows[0])
 	}
-	
+
 	// Extract headers
 	if options.HasHeaders && options.HeaderRow < len(rows) {
 		preview.Headers = rows[options.HeaderRow]
@@ -2551,7 +2549,7 @@ func (a *App) previewExcel(filePath string, options ImportOptions, preview *File
 			preview.Headers[i] = fmt.Sprintf("Column_%d", i+1)
 		}
 	}
-	
+
 	// Get preview data
 	previewRows := 100
 	if options.MaxRows > 0 && options.MaxRows < previewRows {
@@ -2560,15 +2558,15 @@ func (a *App) previewExcel(filePath string, options ImportOptions, preview *File
 	if len(rows) < previewRows {
 		previewRows = len(rows)
 	}
-	
+
 	preview.Data = rows[:previewRows]
-	
+
 	// Detect column types
 	preview.ColumnTypes = make([]string, preview.TotalCols)
 	for i := 0; i < preview.TotalCols; i++ {
 		preview.ColumnTypes[i] = a.detectColumnType(rows, i)
 	}
-	
+
 	return preview, nil
 }
 
@@ -2585,19 +2583,19 @@ func (a *App) importCSVWithOptions(filePath string, options ImportOptions) (*Fil
 		return nil, err
 	}
 	defer file.Close()
-	
+
 	reader := csv.NewReader(file)
-	
+
 	// Set delimiter
 	if options.Format == "tsv" || options.Delimiter == "\t" {
 		reader.Comma = '\t'
 	} else if options.Delimiter != "" && len(options.Delimiter) == 1 {
 		reader.Comma = rune(options.Delimiter[0])
 	}
-	
+
 	reader.LazyQuotes = true
 	reader.TrimLeadingSpace = true
-	
+
 	// Skip rows if specified
 	for i := 0; i < options.SkipRows; i++ {
 		_, err := reader.Read()
@@ -2605,23 +2603,23 @@ func (a *App) importCSVWithOptions(filePath string, options ImportOptions) (*Fil
 			return nil, fmt.Errorf("failed to skip row %d: %w", i+1, err)
 		}
 	}
-	
+
 	// Read all data
 	allData, err := reader.ReadAll()
 	if err != nil {
 		return nil, fmt.Errorf("failed to read CSV: %w", err)
 	}
-	
+
 	if len(allData) == 0 {
 		return nil, fmt.Errorf("no data found in file")
 	}
-	
+
 	fileData := &FileData{
 		CategoricalColumns:   make(map[string][]string),
 		NumericTargetColumns: make(map[string][]types.JSONFloat64),
 		ColumnTypes:          make(map[string]string),
 	}
-	
+
 	// Extract headers
 	if options.HasHeaders && options.HeaderRow < len(allData) {
 		fileData.Headers = allData[options.HeaderRow]
@@ -2634,7 +2632,7 @@ func (a *App) importCSVWithOptions(filePath string, options ImportOptions) (*Fil
 			fileData.Headers[i] = fmt.Sprintf("Column_%d", i+1)
 		}
 	}
-	
+
 	// Extract row names if specified
 	if options.RowNameColumn >= 0 && options.RowNameColumn < len(allData[0]) {
 		fileData.RowNames = make([]string, len(allData))
@@ -2643,7 +2641,7 @@ func (a *App) importCSVWithOptions(filePath string, options ImportOptions) (*Fil
 				fileData.RowNames[i] = row[options.RowNameColumn]
 			}
 		}
-		
+
 		// Remove row name column from headers and data
 		fileData.Headers = append(fileData.Headers[:options.RowNameColumn], fileData.Headers[options.RowNameColumn+1:]...)
 		for i := range allData {
@@ -2652,7 +2650,7 @@ func (a *App) importCSVWithOptions(filePath string, options ImportOptions) (*Fil
 			}
 		}
 	}
-	
+
 	// Apply column selection if specified
 	if len(options.SelectedColumns) > 0 {
 		// Filter headers
@@ -2663,7 +2661,7 @@ func (a *App) importCSVWithOptions(filePath string, options ImportOptions) (*Fil
 			}
 		}
 		fileData.Headers = newHeaders
-		
+
 		// Filter data
 		newData := make([][]string, len(allData))
 		for i, row := range allData {
@@ -2677,7 +2675,7 @@ func (a *App) importCSVWithOptions(filePath string, options ImportOptions) (*Fil
 		}
 		allData = newData
 	}
-	
+
 	// Apply max rows if specified
 	if options.MaxRows > 0 && len(allData) > options.MaxRows {
 		allData = allData[:options.MaxRows]
@@ -2685,16 +2683,16 @@ func (a *App) importCSVWithOptions(filePath string, options ImportOptions) (*Fil
 			fileData.RowNames = fileData.RowNames[:options.MaxRows]
 		}
 	}
-	
+
 	fileData.Data = allData
 	fileData.Rows = len(allData)
 	fileData.Columns = len(fileData.Headers)
-	
+
 	// Detect column types and process data
 	for i, header := range fileData.Headers {
 		colType := a.detectColumnType(allData, i)
 		fileData.ColumnTypes[header] = colType
-		
+
 		if strings.HasSuffix(header, "#target") {
 			// Skip numeric target columns for now to avoid NaN JSON serialization issues
 			// These columns are stored in the regular Data array and can be used for visualization
@@ -2710,13 +2708,13 @@ func (a *App) importCSVWithOptions(filePath string, options ImportOptions) (*Fil
 			fileData.CategoricalColumns[header] = values
 		}
 	}
-	
+
 	// Emit file loaded event
 	wailsruntime.EventsEmit(a.ctx, "file-loaded", filepath.Base(filePath))
-	
+
 	// Clear command history for new file
 	a.ClearHistory()
-	
+
 	return fileData, nil
 }
 
@@ -2727,7 +2725,7 @@ func (a *App) importExcelWithOptions(filePath string, options ImportOptions) (*F
 		return nil, err
 	}
 	defer f.Close()
-	
+
 	// Use specified sheet or first sheet
 	sheet := options.Sheet
 	if sheet == "" {
@@ -2737,29 +2735,29 @@ func (a *App) importExcelWithOptions(filePath string, options ImportOptions) (*F
 		}
 		sheet = sheets[0]
 	}
-	
+
 	// Get all rows
 	rows, err := f.GetRows(sheet)
 	if err != nil {
 		return nil, fmt.Errorf("failed to read sheet %s: %w", sheet, err)
 	}
-	
+
 	// Process similar to CSV
 	// Skip rows if specified
 	if options.SkipRows > 0 && options.SkipRows < len(rows) {
 		rows = rows[options.SkipRows:]
 	}
-	
+
 	if len(rows) == 0 {
 		return nil, fmt.Errorf("no data found in sheet %s", sheet)
 	}
-	
+
 	fileData := &FileData{
 		CategoricalColumns:   make(map[string][]string),
 		NumericTargetColumns: make(map[string][]types.JSONFloat64),
 		ColumnTypes:          make(map[string]string),
 	}
-	
+
 	// Extract headers
 	if options.HasHeaders && options.HeaderRow < len(rows) {
 		fileData.Headers = rows[options.HeaderRow]
@@ -2774,7 +2772,7 @@ func (a *App) importExcelWithOptions(filePath string, options ImportOptions) (*F
 			}
 		}
 	}
-	
+
 	// Extract row names if specified
 	if options.RowNameColumn >= 0 && len(rows) > 0 && options.RowNameColumn < len(rows[0]) {
 		fileData.RowNames = make([]string, len(rows))
@@ -2783,7 +2781,7 @@ func (a *App) importExcelWithOptions(filePath string, options ImportOptions) (*F
 				fileData.RowNames[i] = row[options.RowNameColumn]
 			}
 		}
-		
+
 		// Remove row name column
 		fileData.Headers = append(fileData.Headers[:options.RowNameColumn], fileData.Headers[options.RowNameColumn+1:]...)
 		for i := range rows {
@@ -2792,7 +2790,7 @@ func (a *App) importExcelWithOptions(filePath string, options ImportOptions) (*F
 			}
 		}
 	}
-	
+
 	// Apply column selection if specified
 	if len(options.SelectedColumns) > 0 {
 		// Filter headers
@@ -2803,7 +2801,7 @@ func (a *App) importExcelWithOptions(filePath string, options ImportOptions) (*F
 			}
 		}
 		fileData.Headers = newHeaders
-		
+
 		// Filter data
 		newRows := make([][]string, len(rows))
 		for i, row := range rows {
@@ -2817,7 +2815,7 @@ func (a *App) importExcelWithOptions(filePath string, options ImportOptions) (*F
 		}
 		rows = newRows
 	}
-	
+
 	// Apply max rows if specified
 	if options.MaxRows > 0 && len(rows) > options.MaxRows {
 		rows = rows[:options.MaxRows]
@@ -2825,16 +2823,16 @@ func (a *App) importExcelWithOptions(filePath string, options ImportOptions) (*F
 			fileData.RowNames = fileData.RowNames[:options.MaxRows]
 		}
 	}
-	
+
 	fileData.Data = rows
 	fileData.Rows = len(rows)
 	fileData.Columns = len(fileData.Headers)
-	
+
 	// Detect column types
 	for i, header := range fileData.Headers {
 		colType := a.detectColumnType(rows, i)
 		fileData.ColumnTypes[header] = colType
-		
+
 		if strings.HasSuffix(header, "#target") {
 			// Skip numeric target columns for now to avoid NaN JSON serialization issues
 			// These columns are stored in the regular Data array and can be used for visualization
@@ -2850,13 +2848,13 @@ func (a *App) importExcelWithOptions(filePath string, options ImportOptions) (*F
 			fileData.CategoricalColumns[header] = values
 		}
 	}
-	
+
 	// Emit file loaded event
 	wailsruntime.EventsEmit(a.ctx, "file-loaded", filepath.Base(filePath))
-	
+
 	// Clear command history for new file
 	a.ClearHistory()
-	
+
 	return fileData, nil
 }
 
@@ -2893,16 +2891,16 @@ func (a *App) SelectFileForImport() (string, error) {
 			},
 		},
 	}
-	
+
 	filePath, err := wailsruntime.OpenFileDialog(a.ctx, dialogOptions)
 	if err != nil {
 		return "", err
 	}
-	
+
 	if filePath == "" {
 		return "", fmt.Errorf("no file selected")
 	}
-	
+
 	return filePath, nil
 }
 
@@ -2911,45 +2909,45 @@ func (a *App) detectColumnType(data [][]string, colIndex int) string {
 	if len(data) == 0 || colIndex < 0 {
 		return "unknown"
 	}
-	
+
 	// Count different types
 	numericCount := 0
 	totalCount := 0
 	uniqueValues := make(map[string]bool)
-	
+
 	for _, row := range data {
 		if colIndex >= len(row) {
 			continue
 		}
-		
+
 		value := strings.TrimSpace(row[colIndex])
 		if value == "" {
 			continue
 		}
-		
+
 		totalCount++
 		uniqueValues[value] = true
-		
+
 		// Try to parse as float
 		if _, err := strconv.ParseFloat(value, 64); err == nil {
 			numericCount++
 		}
 	}
-	
+
 	if totalCount == 0 {
 		return "empty"
 	}
-	
+
 	// If more than 90% of non-empty values are numeric, consider it numeric
 	if float64(numericCount)/float64(totalCount) > 0.9 {
 		return "numeric"
 	}
-	
+
 	// If unique values are less than 20% of total values or less than 20, consider it categorical
 	if float64(len(uniqueValues))/float64(totalCount) < 0.2 || len(uniqueValues) < 20 {
 		return "categorical"
 	}
-	
+
 	return "text"
 }
 
@@ -2957,31 +2955,31 @@ func (a *App) detectColumnType(data [][]string, colIndex int) string {
 type TransformationType string
 
 const (
-	TransformLog          TransformationType = "log"
-	TransformSqrt         TransformationType = "sqrt"
-	TransformSquare       TransformationType = "square"
-	TransformStandardize  TransformationType = "standardize"
-	TransformMinMax       TransformationType = "minmax"
-	TransformBin          TransformationType = "bin"
-	TransformOneHot       TransformationType = "onehot"
+	TransformLog         TransformationType = "log"
+	TransformSqrt        TransformationType = "sqrt"
+	TransformSquare      TransformationType = "square"
+	TransformStandardize TransformationType = "standardize"
+	TransformMinMax      TransformationType = "minmax"
+	TransformBin         TransformationType = "bin"
+	TransformOneHot      TransformationType = "onehot"
 )
 
 // TransformOptions represents options for data transformation
 type TransformOptions struct {
-	Type      TransformationType `json:"type"`
-	Columns   []string          `json:"columns"`
-	BinCount  int               `json:"binCount,omitempty"`  // For binning
-	MinValue  float64           `json:"minValue,omitempty"`  // For min-max scaling
-	MaxValue  float64           `json:"maxValue,omitempty"`  // For min-max scaling
+	Type     TransformationType `json:"type"`
+	Columns  []string           `json:"columns"`
+	BinCount int                `json:"binCount,omitempty"` // For binning
+	MinValue float64            `json:"minValue,omitempty"` // For min-max scaling
+	MaxValue float64            `json:"maxValue,omitempty"` // For min-max scaling
 }
 
 // TransformationResult represents the result of a transformation
 type TransformationResult struct {
-	Success       bool               `json:"success"`
-	TransformedColumns []string      `json:"transformedColumns"`
-	NewColumns    []string          `json:"newColumns,omitempty"`
-	Messages      []string          `json:"messages"`
-	Data          *FileData         `json:"data"`
+	Success            bool      `json:"success"`
+	TransformedColumns []string  `json:"transformedColumns"`
+	NewColumns         []string  `json:"newColumns,omitempty"`
+	Messages           []string  `json:"messages"`
+	Data               *FileData `json:"data"`
 }
 
 // ApplyTransformation applies a transformation to the data with undo support
@@ -2995,7 +2993,7 @@ func (a *App) ApplyTransformation(data *FileData, options TransformOptions) (*Tr
 	if a.ctx != nil {
 		wailsruntime.EventsEmit(a.ctx, "undo-redo-state-changed", a.GetUndoRedoState())
 	}
-	
+
 	// Return the transformation result
 	return cmd.result, nil
 }
@@ -3005,13 +3003,13 @@ func (a *App) applyTransformationInternal(data *FileData, options TransformOptio
 	if data == nil || len(data.Data) == 0 {
 		return nil, fmt.Errorf("no data to transform")
 	}
-	
+
 	result := &TransformationResult{
 		Success:            true,
 		TransformedColumns: []string{},
-		Messages:          []string{},
+		Messages:           []string{},
 	}
-	
+
 	// Create a copy of the data
 	newData := &FileData{
 		Headers:              make([]string, len(data.Headers)),
@@ -3022,27 +3020,27 @@ func (a *App) applyTransformationInternal(data *FileData, options TransformOptio
 		NumericTargetColumns: make(map[string][]types.JSONFloat64),
 		ColumnTypes:          make(map[string]string),
 	}
-	
+
 	// Copy headers
 	copy(newData.Headers, data.Headers)
-	
+
 	// Copy data
 	for i := range data.Data {
 		newData.Data[i] = make([]string, len(data.Data[i]))
 		copy(newData.Data[i], data.Data[i])
 	}
-	
+
 	// Copy row names if present
 	if data.RowNames != nil {
 		newData.RowNames = make([]string, len(data.RowNames))
 		copy(newData.RowNames, data.RowNames)
 	}
-	
+
 	// Copy column types
 	for k, v := range data.ColumnTypes {
 		newData.ColumnTypes[k] = v
 	}
-	
+
 	// Apply transformation based on type
 	switch options.Type {
 	case TransformLog, TransformSqrt, TransformSquare:
@@ -3073,7 +3071,7 @@ func (a *App) applyTransformationInternal(data *FileData, options TransformOptio
 	default:
 		return nil, fmt.Errorf("unsupported transformation type: %s", options.Type)
 	}
-	
+
 	result.Data = newData
 	return result, nil
 }
@@ -3089,35 +3087,35 @@ func (a *App) applyMathTransformation(data *FileData, options TransformOptions, 
 				break
 			}
 		}
-		
+
 		if colIndex == -1 {
 			result.Messages = append(result.Messages, fmt.Sprintf("Column '%s' not found", colName))
 			continue
 		}
-		
+
 		// Check if column is numeric
 		if data.ColumnTypes[colName] != "numeric" {
 			result.Messages = append(result.Messages, fmt.Sprintf("Column '%s' is not numeric, skipping", colName))
 			continue
 		}
-		
+
 		// Apply transformation
 		transformedCount := 0
 		for i := range data.Data {
 			if colIndex >= len(data.Data[i]) {
 				continue
 			}
-			
+
 			value := strings.TrimSpace(data.Data[i][colIndex])
 			if value == "" {
 				continue
 			}
-			
+
 			num, err := strconv.ParseFloat(value, 64)
 			if err != nil {
 				continue
 			}
-			
+
 			var transformed float64
 			switch options.Type {
 			case TransformLog:
@@ -3135,15 +3133,15 @@ func (a *App) applyMathTransformation(data *FileData, options TransformOptions, 
 			case TransformSquare:
 				transformed = num * num
 			}
-			
+
 			data.Data[i][colIndex] = fmt.Sprintf("%.6g", transformed)
 			transformedCount++
 		}
-		
+
 		result.TransformedColumns = append(result.TransformedColumns, colName)
 		result.Messages = append(result.Messages, fmt.Sprintf("Transformed %d values in column '%s'", transformedCount, colName))
 	}
-	
+
 	return nil
 }
 
@@ -3158,18 +3156,18 @@ func (a *App) applyStandardization(data *FileData, options TransformOptions, res
 				break
 			}
 		}
-		
+
 		if colIndex == -1 {
 			result.Messages = append(result.Messages, fmt.Sprintf("Column '%s' not found", colName))
 			continue
 		}
-		
+
 		// Check if column is numeric
 		if data.ColumnTypes[colName] != "numeric" {
 			result.Messages = append(result.Messages, fmt.Sprintf("Column '%s' is not numeric, skipping", colName))
 			continue
 		}
-		
+
 		// Collect values
 		values := []float64{}
 		indices := []int{}
@@ -3177,55 +3175,55 @@ func (a *App) applyStandardization(data *FileData, options TransformOptions, res
 			if colIndex >= len(data.Data[i]) {
 				continue
 			}
-			
+
 			value := strings.TrimSpace(data.Data[i][colIndex])
 			if value == "" {
 				continue
 			}
-			
+
 			num, err := strconv.ParseFloat(value, 64)
 			if err != nil {
 				continue
 			}
-			
+
 			values = append(values, num)
 			indices = append(indices, i)
 		}
-		
+
 		if len(values) < 2 {
 			result.Messages = append(result.Messages, fmt.Sprintf("Column '%s' has insufficient numeric values for standardization", colName))
 			continue
 		}
-		
+
 		// Calculate mean and std dev
 		mean := 0.0
 		for _, v := range values {
 			mean += v
 		}
 		mean /= float64(len(values))
-		
+
 		variance := 0.0
 		for _, v := range values {
 			variance += (v - mean) * (v - mean)
 		}
 		variance /= float64(len(values))
 		stdDev := math.Sqrt(variance)
-		
+
 		if stdDev < 1e-10 {
 			result.Messages = append(result.Messages, fmt.Sprintf("Column '%s' has zero variance, cannot standardize", colName))
 			continue
 		}
-		
+
 		// Apply standardization
 		for i, idx := range indices {
 			standardized := (values[i] - mean) / stdDev
 			data.Data[idx][colIndex] = fmt.Sprintf("%.6g", standardized)
 		}
-		
+
 		result.TransformedColumns = append(result.TransformedColumns, colName)
 		result.Messages = append(result.Messages, fmt.Sprintf("Standardized %d values in column '%s' (mean=%.3f, std=%.3f)", len(values), colName, mean, stdDev))
 	}
-	
+
 	return nil
 }
 
@@ -3237,7 +3235,7 @@ func (a *App) applyMinMaxScaling(data *FileData, options TransformOptions, resul
 		targetMin = 0.0
 		targetMax = 1.0
 	}
-	
+
 	for _, colName := range options.Columns {
 		// Find column index
 		colIndex := -1
@@ -3247,42 +3245,42 @@ func (a *App) applyMinMaxScaling(data *FileData, options TransformOptions, resul
 				break
 			}
 		}
-		
+
 		if colIndex == -1 {
 			result.Messages = append(result.Messages, fmt.Sprintf("Column '%s' not found", colName))
 			continue
 		}
-		
+
 		// Check if column is numeric
 		if data.ColumnTypes[colName] != "numeric" {
 			result.Messages = append(result.Messages, fmt.Sprintf("Column '%s' is not numeric, skipping", colName))
 			continue
 		}
-		
+
 		// Collect values and find min/max
 		values := []float64{}
 		indices := []int{}
 		minVal := math.Inf(1)
 		maxVal := math.Inf(-1)
-		
+
 		for i := range data.Data {
 			if colIndex >= len(data.Data[i]) {
 				continue
 			}
-			
+
 			value := strings.TrimSpace(data.Data[i][colIndex])
 			if value == "" {
 				continue
 			}
-			
+
 			num, err := strconv.ParseFloat(value, 64)
 			if err != nil {
 				continue
 			}
-			
+
 			values = append(values, num)
 			indices = append(indices, i)
-			
+
 			if num < minVal {
 				minVal = num
 			}
@@ -3290,27 +3288,27 @@ func (a *App) applyMinMaxScaling(data *FileData, options TransformOptions, resul
 				maxVal = num
 			}
 		}
-		
+
 		if len(values) == 0 {
 			result.Messages = append(result.Messages, fmt.Sprintf("Column '%s' has no numeric values", colName))
 			continue
 		}
-		
+
 		if maxVal <= minVal {
 			result.Messages = append(result.Messages, fmt.Sprintf("Column '%s' has constant values, cannot scale", colName))
 			continue
 		}
-		
+
 		// Apply min-max scaling
 		for i, idx := range indices {
-			scaled := (values[i] - minVal) / (maxVal - minVal) * (targetMax - targetMin) + targetMin
+			scaled := (values[i]-minVal)/(maxVal-minVal)*(targetMax-targetMin) + targetMin
 			data.Data[idx][colIndex] = fmt.Sprintf("%.6g", scaled)
 		}
-		
+
 		result.TransformedColumns = append(result.TransformedColumns, colName)
 		result.Messages = append(result.Messages, fmt.Sprintf("Scaled %d values in column '%s' to range [%.2f, %.2f]", len(values), colName, targetMin, targetMax))
 	}
-	
+
 	return nil
 }
 
@@ -3320,7 +3318,7 @@ func (a *App) applyBinning(data *FileData, options TransformOptions, result *Tra
 	if binCount <= 0 {
 		binCount = 5 // Default to 5 bins
 	}
-	
+
 	for _, colName := range options.Columns {
 		// Find column index
 		colIndex := -1
@@ -3330,42 +3328,42 @@ func (a *App) applyBinning(data *FileData, options TransformOptions, result *Tra
 				break
 			}
 		}
-		
+
 		if colIndex == -1 {
 			result.Messages = append(result.Messages, fmt.Sprintf("Column '%s' not found", colName))
 			continue
 		}
-		
+
 		// Check if column is numeric
 		if data.ColumnTypes[colName] != "numeric" {
 			result.Messages = append(result.Messages, fmt.Sprintf("Column '%s' is not numeric, skipping", colName))
 			continue
 		}
-		
+
 		// Collect values and find min/max
 		values := []float64{}
 		indices := []int{}
 		minVal := math.Inf(1)
 		maxVal := math.Inf(-1)
-		
+
 		for i := range data.Data {
 			if colIndex >= len(data.Data[i]) {
 				continue
 			}
-			
+
 			value := strings.TrimSpace(data.Data[i][colIndex])
 			if value == "" {
 				continue
 			}
-			
+
 			num, err := strconv.ParseFloat(value, 64)
 			if err != nil {
 				continue
 			}
-			
+
 			values = append(values, num)
 			indices = append(indices, i)
-			
+
 			if num < minVal {
 				minVal = num
 			}
@@ -3373,29 +3371,29 @@ func (a *App) applyBinning(data *FileData, options TransformOptions, result *Tra
 				maxVal = num
 			}
 		}
-		
+
 		if len(values) == 0 {
 			result.Messages = append(result.Messages, fmt.Sprintf("Column '%s' has no numeric values", colName))
 			continue
 		}
-		
+
 		// Create bins
 		binWidth := (maxVal - minVal) / float64(binCount)
-		
+
 		// Apply binning
 		for i, idx := range indices {
 			binIndex := int((values[i] - minVal) / binWidth)
 			if binIndex >= binCount {
 				binIndex = binCount - 1
 			}
-			
+
 			binLabel := fmt.Sprintf("Bin_%d", binIndex+1)
 			data.Data[idx][colIndex] = binLabel
 		}
-		
+
 		// Update column type to categorical
 		data.ColumnTypes[colName] = "categorical"
-		
+
 		// Update categorical columns
 		catValues := make([]string, len(data.Data))
 		for i := range data.Data {
@@ -3404,11 +3402,11 @@ func (a *App) applyBinning(data *FileData, options TransformOptions, result *Tra
 			}
 		}
 		data.CategoricalColumns[colName] = catValues
-		
+
 		result.TransformedColumns = append(result.TransformedColumns, colName)
 		result.Messages = append(result.Messages, fmt.Sprintf("Binned %d values in column '%s' into %d bins", len(values), colName, binCount))
 	}
-	
+
 	return nil
 }
 
@@ -3423,18 +3421,18 @@ func (a *App) applyOneHotEncoding(data *FileData, options TransformOptions, resu
 				break
 			}
 		}
-		
+
 		if colIndex == -1 {
 			result.Messages = append(result.Messages, fmt.Sprintf("Column '%s' not found", colName))
 			continue
 		}
-		
+
 		// Check if column is categorical
 		if data.ColumnTypes[colName] != "categorical" {
 			result.Messages = append(result.Messages, fmt.Sprintf("Column '%s' is not categorical, skipping", colName))
 			continue
 		}
-		
+
 		// Get unique values
 		uniqueValues := make(map[string]bool)
 		for i := range data.Data {
@@ -3446,24 +3444,24 @@ func (a *App) applyOneHotEncoding(data *FileData, options TransformOptions, resu
 				uniqueValues[value] = true
 			}
 		}
-		
+
 		if len(uniqueValues) == 0 {
 			result.Messages = append(result.Messages, fmt.Sprintf("Column '%s' has no values", colName))
 			continue
 		}
-		
+
 		if len(uniqueValues) > 20 {
 			result.Messages = append(result.Messages, fmt.Sprintf("Column '%s' has too many unique values (%d), skipping one-hot encoding", colName, len(uniqueValues)))
 			continue
 		}
-		
+
 		// Create sorted list of unique values
 		sortedValues := make([]string, 0, len(uniqueValues))
 		for val := range uniqueValues {
 			sortedValues = append(sortedValues, val)
 		}
 		sort.Strings(sortedValues)
-		
+
 		// Add new columns for each unique value
 		newColumns := []string{}
 		for _, val := range sortedValues {
@@ -3471,7 +3469,7 @@ func (a *App) applyOneHotEncoding(data *FileData, options TransformOptions, resu
 			data.Headers = append(data.Headers, newColName)
 			data.ColumnTypes[newColName] = "numeric"
 			newColumns = append(newColumns, newColName)
-			
+
 			// Add the encoded values
 			for i := range data.Data {
 				if colIndex < len(data.Data[i]) && strings.TrimSpace(data.Data[i][colIndex]) == val {
@@ -3481,24 +3479,24 @@ func (a *App) applyOneHotEncoding(data *FileData, options TransformOptions, resu
 				}
 			}
 		}
-		
+
 		// Remove original column
 		data.Headers = append(data.Headers[:colIndex], data.Headers[colIndex+1:]...)
 		delete(data.ColumnTypes, colName)
 		delete(data.CategoricalColumns, colName)
-		
+
 		for i := range data.Data {
 			if colIndex < len(data.Data[i]) {
 				data.Data[i] = append(data.Data[i][:colIndex], data.Data[i][colIndex+1:]...)
 			}
 		}
-		
+
 		data.Columns = len(data.Headers)
-		
+
 		result.TransformedColumns = append(result.TransformedColumns, colName)
 		result.NewColumns = append(result.NewColumns, newColumns...)
 		result.Messages = append(result.Messages, fmt.Sprintf("One-hot encoded column '%s' into %d new columns", colName, len(newColumns)))
-		
+
 		// Adjust indices for remaining columns
 		for j := range options.Columns {
 			if j > 0 && options.Columns[j] != colName {
@@ -3512,17 +3510,17 @@ func (a *App) applyOneHotEncoding(data *FileData, options TransformOptions, resu
 			}
 		}
 	}
-	
+
 	return nil
 }
 
 // GetTransformableColumns returns columns that can be transformed
 func (a *App) GetTransformableColumns(data *FileData, transformType TransformationType) []string {
 	columns := []string{}
-	
+
 	for _, header := range data.Headers {
 		colType := data.ColumnTypes[header]
-		
+
 		switch transformType {
 		case TransformLog, TransformSqrt, TransformSquare, TransformStandardize, TransformMinMax, TransformBin:
 			// These transformations require numeric columns
@@ -3536,7 +3534,7 @@ func (a *App) GetTransformableColumns(data *FileData, transformType Transformati
 			}
 		}
 	}
-	
+
 	return columns
 }
 
@@ -3570,12 +3568,12 @@ func (a *App) ExecuteToggleTargetColumn(data *FileData, colIndex int) (*FileData
 	if colIndex < 0 || colIndex >= len(data.Headers) {
 		return nil, fmt.Errorf("toggle target column: invalid column index: %d", colIndex)
 	}
-	
+
 	cmd := NewToggleTargetColumnCommand(a, data, colIndex)
 	if cmd == nil {
 		return nil, fmt.Errorf("toggle target column: invalid column index: %d", colIndex)
 	}
-	
+
 	return a.executeCommand(cmd, data, "toggle target column")
 }
 
@@ -3584,8 +3582,7 @@ func (a *App) ExecuteDuplicateRows(data *FileData, rowIndices []int) (*FileData,
 	if len(rowIndices) == 0 {
 		return nil, fmt.Errorf("duplicate rows: no rows selected for duplication")
 	}
-	
+
 	cmd := NewDuplicateRowCommand(a, data, rowIndices)
 	return a.executeCommand(cmd, data, "duplicate rows")
 }
-

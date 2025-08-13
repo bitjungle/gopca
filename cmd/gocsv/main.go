@@ -35,10 +35,10 @@ func main() {
 			app,
 		},
 		DragAndDrop: &options.DragAndDrop{
-			EnableFileDrop:       true,
-			DisableWebViewDrop:   false,
-			CSSDropProperty:      "--wails-dragging",
-			CSSDropValue:         "1",
+			EnableFileDrop:     true,
+			DisableWebViewDrop: false,
+			CSSDropProperty:    "--wails-dragging",
+			CSSDropValue:       "1",
 		},
 	})
 

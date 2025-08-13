@@ -39,7 +39,7 @@ func getNumericValues(data [][]string, colIdx int) []float64 {
 		if colIdx >= len(data[rowIdx]) {
 			continue
 		}
-		
+
 		if num, ok := parseNumericValue(data[rowIdx][colIdx]); ok {
 			values = append(values, num)
 		}
@@ -54,7 +54,7 @@ func getColumnMean(data [][]string, colIdx int) float64 {
 	if len(values) == 0 {
 		return 0
 	}
-	
+
 	return calculateMean(values)
 }
 
@@ -65,7 +65,7 @@ func getColumnMedian(data [][]string, colIdx int) float64 {
 	if len(values) == 0 {
 		return 0
 	}
-	
+
 	return calculateMedian(values)
 }
 
@@ -75,7 +75,7 @@ func fillMissingWithValue(data [][]string, colIdx int, fillValue string) {
 		if colIdx >= len(data[rowIdx]) {
 			continue
 		}
-		
+
 		if isMissingValue(data[rowIdx][colIdx]) {
 			data[rowIdx][colIdx] = fillValue
 		}
