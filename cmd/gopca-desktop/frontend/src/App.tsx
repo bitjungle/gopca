@@ -936,16 +936,18 @@ function AppContent() {
                             {/* CLI Command Preview */}
                             {fileData && fileName && (
                                 <div className="mt-4 bg-gray-900 dark:bg-gray-950 rounded-lg p-4 border border-gray-700">
-                                    <div className="flex items-center space-x-3">
-                                        <span className="text-sm font-medium text-gray-300">Command line:</span>
-                                        <HelpWrapper helpKey="cli-command-preview">
-                                            <div className="flex-1 flex items-center bg-black rounded px-3 py-2 font-mono text-sm text-green-400 overflow-x-auto">
-                                                {generateCLICommand()}
-                                            </div>
-                                        </HelpWrapper>
+                                    <div className="flex items-center justify-between gap-3">
+                                        <div className="flex items-center gap-3 flex-1">
+                                            <span className="text-sm font-medium text-gray-300">Command line:</span>
+                                            <HelpWrapper helpKey="cli-command-preview">
+                                                <div className="flex-1 bg-black rounded px-3 py-2 font-mono text-xs text-green-400 overflow-x-auto">
+                                                    {generateCLICommand()}
+                                                </div>
+                                            </HelpWrapper>
+                                        </div>
                                         <button
                                             onClick={() => copyToClipboard(generateCLICommand())}
-                                            className="px-3 py-2 bg-gray-700 hover:bg-gray-600 rounded text-white transition-colors"
+                                            className="px-2 py-1 bg-gray-700 hover:bg-gray-600 rounded text-white transition-colors flex-shrink-0"
                                             title="Copy command"
                                         >
                                             {showCopied ? <Check className="w-4 h-4" /> : <Copy className="w-4 h-4" />}
