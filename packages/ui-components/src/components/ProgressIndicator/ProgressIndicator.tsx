@@ -151,11 +151,9 @@ export const ProgressIndicator: React.FC<ProgressIndicatorProps> = ({
         </div>
       </div>
       
-      {(message || getStatusMessage) && (
-        <div className={`mt-4 ${config.subtitle} text-gray-500 dark:text-gray-400`}>
-          {message || getStatusMessage(clampedProgress)}
-        </div>
-      )}
+      <div className={`mt-4 ${config.subtitle} text-gray-500 dark:text-gray-400`}>
+        {message || getStatusMessage(clampedProgress)}
+      </div>
     </div>
   );
 };
