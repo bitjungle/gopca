@@ -31,8 +31,11 @@ export const ExportButton: React.FC<ExportButtonProps> = ({ chartRef, fileName, 
       let dataUrl: string;
       
       if (format === 'png') {
-        // Add a small delay to ensure the chart is fully rendered
-        await new Promise(resolve => setTimeout(resolve, 100));
+        // Wait for fonts to be fully loaded
+        await document.fonts.ready;
+        
+        // Give Recharts time to fully render all text elements
+        await new Promise(resolve => setTimeout(resolve, 300));
         
         // Get the chart element and its bounds
         const chartElement = chartRef.current;
@@ -43,6 +46,10 @@ export const ExportButton: React.FC<ExportButtonProps> = ({ chartRef, fileName, 
           width: bounds.width,
           height: bounds.height,
           pixelRatio: 2,
+          cacheBust: true,
+          style: {
+            fontFamily: '"Nunito", -apple-system, BlinkMacSystemFont, "Segoe UI", "Roboto", sans-serif',
+          },
           filter: (node) => {
             // Exclude tooltip wrapper
             if (node.classList?.contains('recharts-tooltip-wrapper')) {
