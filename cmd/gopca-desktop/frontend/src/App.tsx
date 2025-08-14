@@ -781,7 +781,10 @@ function AppContent() {
                                                         value={config.kernelGamma}
                                                         step="0.01"
                                                         min="0.001"
-                                                        onChange={(e) => setConfig({...config, kernelGamma: parseFloat(e.target.value) || 1.0})}
+                                                        onChange={(e) => {
+                                                            const value = parseFloat(e.target.value);
+                                                            setConfig({...config, kernelGamma: isNaN(value) ? 1.0 : value});
+                                                        }}
                                                         className="w-full px-3 py-2 bg-gray-100 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg text-gray-900 dark:text-white"
                                                     />
                                                 </HelpWrapper>
@@ -808,7 +811,10 @@ function AppContent() {
                                                                 type="number"
                                                                 value={config.kernelCoef0}
                                                                 step="0.1"
-                                                                onChange={(e) => setConfig({...config, kernelCoef0: parseFloat(e.target.value) || 0.0})}
+                                                                onChange={(e) => {
+                                                                    const value = parseFloat(e.target.value);
+                                                                    setConfig({...config, kernelCoef0: isNaN(value) ? 0.0 : value});
+                                                                }}
                                                                 className="w-full px-3 py-2 bg-gray-100 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg text-gray-900 dark:text-white"
                                                             />
                                                         </HelpWrapper>
