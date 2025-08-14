@@ -14,48 +14,24 @@ import (
 	"strings"
 
 	pkgcsv "github.com/bitjungle/gopca/pkg/csv"
-	"github.com/bitjungle/gopca/pkg/types"
 )
 
-// CSVData wraps the unified types.CSVData for backward compatibility
-type CSVData struct {
-	*types.CSVData
-}
-
-// CSVParseOptions contains options for parsing CSV files
-type CSVParseOptions struct {
-	Delimiter        rune     // Field delimiter
-	DecimalSeparator rune     // Decimal separator (for European formats)
-	HasHeaders       bool     // First row contains column names
-	HasIndex         bool     // First column contains row names
-	NullValues       []string // Strings to treat as missing values
-}
+// Type aliases for backward compatibility
+type CSVData = pkgcsv.Data
+type CSVParseOptions = pkgcsv.Options
 
 // NewCSVParseOptions creates default parse options
 func NewCSVParseOptions() CSVParseOptions {
-	return CSVParseOptions{
-		Delimiter:        ',',
-		DecimalSeparator: '.',
-		HasHeaders:       true,
-		HasIndex:         true,
-		NullValues:       []string{"", "NA", "N/A", "nan", "NaN", "null", "NULL"},
-	}
+	return pkgcsv.DefaultOptions()
 }
 
 // ParseCSV reads and parses a CSV file according to the given options
 func ParseCSV(filename string, options CSVParseOptions) (*CSVData, error) {
-	// Convert to unified options
-	opts := pkgcsv.Options{
-		Delimiter:        options.Delimiter,
-		DecimalSeparator: options.DecimalSeparator,
-		HasHeaders:       options.HasHeaders,
-		HasRowNames:      options.HasIndex,
-		NullValues:       options.NullValues,
-		ParseMode:        pkgcsv.ParseMixed,
-	}
+	// Set parse mode to Mixed for CLI usage
+	options.ParseMode = pkgcsv.ParseMixed
 
 	// Use unified CSV reader
-	reader := pkgcsv.NewReader(opts)
+	reader := pkgcsv.NewReader(options)
 	data, err := reader.ReadFile(filename)
 	if err != nil {
 		return nil, err
@@ -70,33 +46,16 @@ func ParseCSV(filename string, options CSVParseOptions) (*CSVData, error) {
 		fmt.Fprintf(os.Stderr, "\n")
 	}
 
-	// Convert to legacy CSVData format
-	return &CSVData{
-		CSVData: &types.CSVData{
-			Matrix:      data.Matrix,
-			Headers:     data.Headers,
-			RowNames:    data.RowNames,
-			MissingMask: data.MissingMask,
-			Rows:        data.Rows,
-			Columns:     data.Columns,
-		},
-	}, nil
+	return data, nil
 }
 
 // ParseCSVReader parses CSV data from an io.Reader
 func ParseCSVReader(r io.Reader, options CSVParseOptions) (*CSVData, error) {
-	// Convert to unified options
-	opts := pkgcsv.Options{
-		Delimiter:        options.Delimiter,
-		DecimalSeparator: options.DecimalSeparator,
-		HasHeaders:       options.HasHeaders,
-		HasRowNames:      options.HasIndex,
-		NullValues:       options.NullValues,
-		ParseMode:        pkgcsv.ParseMixed,
-	}
+	// Set parse mode to Mixed for CLI usage
+	options.ParseMode = pkgcsv.ParseMixed
 
 	// Use unified CSV reader
-	reader := pkgcsv.NewReader(opts)
+	reader := pkgcsv.NewReader(options)
 	data, err := reader.Read(r)
 	if err != nil {
 		return nil, err
@@ -111,17 +70,7 @@ func ParseCSVReader(r io.Reader, options CSVParseOptions) (*CSVData, error) {
 		fmt.Fprintf(os.Stderr, "\n")
 	}
 
-	// Convert to legacy CSVData format
-	return &CSVData{
-		CSVData: &types.CSVData{
-			Matrix:      data.Matrix,
-			Headers:     data.Headers,
-			RowNames:    data.RowNames,
-			MissingMask: data.MissingMask,
-			Rows:        data.Rows,
-			Columns:     data.Columns,
-		},
-	}, nil
+	return data, nil
 }
 
 // ValidateCSVData performs basic validation on parsed CSV data
@@ -217,27 +166,21 @@ func min(a, b int) int {
 
 // ParseCSVMixedWithTargets reads and parses a CSV file with support for target columns
 func ParseCSVMixedWithTargets(filename string, options CSVParseOptions, targetColumns []string) (*CSVData, map[string][]string, map[string][]float64, error) {
-	file, err := os.Open(filename)
-	if err != nil {
-		return nil, nil, nil, fmt.Errorf("failed to open file: %w", err)
-	}
-	defer func() { _ = file.Close() }()
+	// Set parse mode to Mixed with targets
+	options.ParseMode = pkgcsv.ParseMixedWithTargets
 
-	// Convert options to types.CSVFormat
-	format := types.CSVFormat{
-		FieldDelimiter:   options.Delimiter,
-		DecimalSeparator: options.DecimalSeparator,
-		HasHeaders:       options.HasHeaders,
-		HasRowNames:      options.HasIndex,
-		NullValues:       options.NullValues,
+	// Set target suffix if we have target columns
+	if len(targetColumns) > 0 {
+		// Assume target columns are identified by suffix
+		options.TargetSuffix = "#target"
 	}
 
-	// Use the types package function
-	data, catData, targetData, err := types.ParseCSVMixedWithTargets(file, format, targetColumns)
+	// Use unified CSV reader
+	reader := pkgcsv.NewReader(options)
+	data, err := reader.ReadFile(filename)
 	if err != nil {
 		return nil, nil, nil, err
 	}
 
-	// Wrap in CSVData for backward compatibility
-	return &CSVData{CSVData: data}, catData, targetData, nil
+	return data, data.CategoricalColumns, data.NumericTargetColumns, nil
 }

@@ -9,6 +9,8 @@ package csv
 import (
 	"fmt"
 	"math"
+
+	"github.com/bitjungle/gopca/pkg/types"
 )
 
 // NewValidator creates a new CSV validator with the given options
@@ -351,4 +353,57 @@ func AnalyzeMissingValues(data *Data) map[string]interface{} {
 	analysis["missing_by_row"] = rowMissing
 
 	return analysis
+}
+
+// GetMissingValueInfo returns information about missing values in selected columns
+func (d *Data) GetMissingValueInfo(selectedColumns []int) *types.MissingValueInfo {
+	info := &types.MissingValueInfo{
+		ColumnIndices:   []int{},
+		RowsAffected:    []int{},
+		TotalMissing:    0,
+		MissingByColumn: make(map[int]int),
+	}
+
+	// If no columns selected, analyze all columns
+	if len(selectedColumns) == 0 {
+		selectedColumns = make([]int, d.Columns)
+		for i := range selectedColumns {
+			selectedColumns[i] = i
+		}
+	}
+
+	// Track which rows have missing values in selected columns
+	rowHasMissing := make(map[int]bool)
+
+	// Analyze each selected column
+	for _, col := range selectedColumns {
+		if col < 0 || col >= d.Columns {
+			continue
+		}
+
+		columnMissingCount := 0
+		for row := 0; row < d.Rows; row++ {
+			if d.MissingMask != nil && d.MissingMask[row][col] {
+				columnMissingCount++
+				rowHasMissing[row] = true
+				info.TotalMissing++
+			} else if math.IsNaN(d.Matrix[row][col]) {
+				columnMissingCount++
+				rowHasMissing[row] = true
+				info.TotalMissing++
+			}
+		}
+
+		if columnMissingCount > 0 {
+			info.ColumnIndices = append(info.ColumnIndices, col)
+			info.MissingByColumn[col] = columnMissingCount
+		}
+	}
+
+	// Collect affected rows
+	for row := range rowHasMissing {
+		info.RowsAffected = append(info.RowsAffected, row)
+	}
+
+	return info
 }
