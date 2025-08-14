@@ -26,16 +26,27 @@ export const createChartExportHandler = (
     let dataUrl: string;
     
     if (format === 'png') {
-      await new Promise(resolve => setTimeout(resolve, 100));
+      // Wait for fonts to be fully loaded
+      await document.fonts.ready;
+      
+      // Give Recharts time to fully render all text elements
+      await new Promise(resolve => setTimeout(resolve, 300));
       
       const chartElement = chartRef.current;
       const bounds = chartElement.getBoundingClientRect();
+      
+      // Clone the element to ensure all styles are computed
+      const clonedElement = chartElement.cloneNode(true) as HTMLElement;
       
       dataUrl = await toPng(chartElement, {
         backgroundColor: theme === 'dark' ? '#1F2937' : '#FFFFFF',
         width: bounds.width,
         height: bounds.height,
         pixelRatio: 2,
+        cacheBust: true,
+        style: {
+          fontFamily: '"Nunito", -apple-system, BlinkMacSystemFont, "Segoe UI", "Roboto", sans-serif',
+        },
         filter: (node) => {
           if (node.classList?.contains('recharts-tooltip-wrapper')) {
             return false;
