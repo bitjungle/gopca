@@ -44,7 +44,7 @@ func NewPCAEngineForMethod(method string) types.PCAEngine {
 
 // Fit trains the PCA model on the provided data
 func (p *PCAImpl) Fit(data types.Matrix, config types.PCAConfig) (*types.PCAResult, error) {
-	if err := p.validateInput(data, config); err != nil {
+	if err := ValidatePCAInput(data, config); err != nil {
 		return nil, fmt.Errorf("validation failed: %w", err)
 	}
 
@@ -250,12 +250,10 @@ func (p *PCAImpl) nipalsAlgorithm(X *mat.Dense, nComponents int) (*mat.Dense, *m
 	n, m := X.Dims()
 
 	// Initialize matrices
-	T := mat.NewDense(n, nComponents, nil) // Scores
-	P := mat.NewDense(m, nComponents, nil) // Loadings
+	T, P := InitializeScoresAndLoadings(n, m, nComponents)
 
 	// Working copy of X for deflation
-	Xwork := mat.NewDense(n, m, nil)
-	Xwork.Copy(X)
+	Xwork := CreateWorkingCopy(X)
 
 	// Tolerance for convergence
 	const tolerance = 1e-8
@@ -412,12 +410,10 @@ func (p *PCAImpl) nipalsAlgorithmWithMissing(X *mat.Dense, nComponents int) (*ma
 	n, m := X.Dims()
 
 	// Initialize matrices
-	T := mat.NewDense(n, nComponents, nil) // Scores
-	P := mat.NewDense(m, nComponents, nil) // Loadings
+	T, P := InitializeScoresAndLoadings(n, m, nComponents)
 
 	// Working copy of X for deflation
-	Xwork := mat.NewDense(n, m, nil)
-	Xwork.Copy(X)
+	Xwork := CreateWorkingCopy(X)
 
 	// Calculate column means using only non-missing values if mean centering is requested
 	columnMeans := make([]float64, m)
@@ -744,57 +740,6 @@ func (p *PCAImpl) calculateEigenvaluesFromScores(scores *mat.Dense) []float64 {
 }
 
 // validateInput checks input data and configuration
-func (p *PCAImpl) validateInput(data types.Matrix, config types.PCAConfig) error {
-	if len(data) == 0 {
-		return fmt.Errorf("empty data matrix")
-	}
-
-	n := len(data)
-	m := len(data[0])
-
-	// Check rectangular matrix
-	for i, row := range data {
-		if len(row) != m {
-			return fmt.Errorf("inconsistent row length at index %d: expected %d, got %d", i, m, len(row))
-		}
-	}
-
-	// Check dimensions
-	if n < 2 {
-		return fmt.Errorf("insufficient samples: need at least 2, got %d", n)
-	}
-
-	if m < 1 {
-		return fmt.Errorf("insufficient features: need at least 1, got %d", m)
-	}
-
-	// Check for NaN values (unless using NIPALS with native missing value handling)
-	if config.Method != "nipals" || config.MissingStrategy != types.MissingNative {
-		for i := 0; i < n; i++ {
-			for j := 0; j < m; j++ {
-				if math.IsNaN(data[i][j]) {
-					return fmt.Errorf("NaN value found at row %d, column %d - use missing value handling before PCA", i+1, j+1)
-				}
-			}
-		}
-	}
-
-	// Check components
-	maxComponents := n
-	if m < n {
-		maxComponents = m
-	}
-
-	if config.Components <= 0 {
-		return fmt.Errorf("number of components must be positive, got %d", config.Components)
-	}
-
-	if config.Components > maxComponents {
-		return fmt.Errorf("too many components requested: maximum %d, got %d", maxComponents, config.Components)
-	}
-
-	return nil
-}
 
 // SetPreprocessor sets the preprocessor for the PCA engine
 func (p *PCAImpl) SetPreprocessor(preprocessor *Preprocessor) {

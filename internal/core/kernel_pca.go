@@ -51,37 +51,10 @@ func NewKernelPCAEngine() types.PCAEngine {
 	return &KernelPCAImpl{}
 }
 
-// validateKernelConfig validates kernel-specific configuration
-func (kpca *KernelPCAImpl) validateKernelConfig(config types.PCAConfig) error {
-	if config.KernelType == "" {
-		return fmt.Errorf("kernel type must be specified for kernel PCA")
-	}
-
-	switch KernelType(config.KernelType) {
-	case KernelRBF:
-		if config.KernelGamma < 0 {
-			return fmt.Errorf("gamma must be non-negative for RBF kernel")
-		}
-	case KernelPoly:
-		if config.KernelGamma < 0 {
-			return fmt.Errorf("gamma must be non-negative for polynomial kernel")
-		}
-		if config.KernelDegree < 1 {
-			return fmt.Errorf("degree must be at least 1 for polynomial kernel")
-		}
-	case KernelLinear:
-		// No specific validation needed
-	default:
-		return fmt.Errorf("unsupported kernel type: %s", config.KernelType)
-	}
-
-	return nil
-}
-
 // computeKernel computes the kernel function between two vectors
 func (kpca *KernelPCAImpl) computeKernel(x, y []float64) (float64, error) {
-	if len(x) != len(y) {
-		return 0, fmt.Errorf("vectors must have the same length")
+	if err := ValidateVectorPair(x, y); err != nil {
+		return 0, err
 	}
 
 	switch kpca.kernelType {
@@ -234,7 +207,7 @@ func (kpca *KernelPCAImpl) eigenDecomposition(K *mat.Dense, k int) ([]float64, [
 // Fit trains the Kernel PCA model on the provided data
 func (kpca *KernelPCAImpl) Fit(data types.Matrix, config types.PCAConfig) (*types.PCAResult, error) {
 	// Validate configuration
-	if err := kpca.validateKernelConfig(config); err != nil {
+	if err := ValidateKernelConfig(config); err != nil {
 		return nil, fmt.Errorf("invalid kernel configuration: %w", err)
 	}
 
