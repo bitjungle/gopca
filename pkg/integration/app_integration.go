@@ -15,6 +15,7 @@ import (
 	"path/filepath"
 	"runtime"
 	"strings"
+	"time"
 )
 
 // AppStatus represents the installation status of an external application
@@ -385,11 +386,38 @@ func LaunchWithFile(appPath, filePath string) error {
 		return fmt.Errorf("failed to launch application: %w", err)
 	}
 
-	// Detach from the process so it continues running after our app exits
-	// Ignore the error as it's not critical - the app will still run
-	_ = cmd.Process.Release()
+	// Create a channel to signal completion
+	done := make(chan error, 1)
 
-	return nil
+	// Monitor the process for a short time to ensure it started successfully
+	go func() {
+		// Wait for a short time to ensure the process is stable
+		time.Sleep(100 * time.Millisecond)
+
+		// Check if process is still running
+		if cmd.Process != nil {
+			// Process started successfully, detach from it
+			if err := cmd.Process.Release(); err != nil {
+				// Log but don't fail - process may still run
+				if os.Getenv("GOPCA_DEBUG") == "1" {
+					fmt.Printf("[DEBUG] Warning: Failed to release process: %v\n", err)
+				}
+			}
+		}
+		done <- nil
+	}()
+
+	// Wait for process monitoring with timeout
+	select {
+	case err := <-done:
+		return err
+	case <-time.After(2 * time.Second):
+		// Timeout reached, but process likely started successfully
+		if cmd.Process != nil {
+			_ = cmd.Process.Release()
+		}
+		return nil
+	}
 }
 
 // IsAppRunning checks if an application is currently running
