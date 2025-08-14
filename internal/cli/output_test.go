@@ -42,16 +42,14 @@ func TestConvertToPCAOutputData(t *testing.T) {
 	}
 
 	csvData := &CSVData{
-		CSVData: &types.CSVData{
-			Headers:  []string{"Feature1", "Feature2"},
-			RowNames: []string{"Sample1", "Sample2"},
-			Matrix: [][]float64{
-				{1.0, 2.0},
-				{3.0, 4.0},
-			},
-			Rows:    2,
-			Columns: 2,
+		Headers:  []string{"Feature1", "Feature2"},
+		RowNames: []string{"Sample1", "Sample2"},
+		Matrix: [][]float64{
+			{1.0, 2.0},
+			{3.0, 4.0},
 		},
+		Rows:    2,
+		Columns: 2,
 	}
 
 	config := types.PCAConfig{
@@ -139,13 +137,11 @@ func TestJSONSerialization(t *testing.T) {
 	}
 
 	csvData := &CSVData{
-		CSVData: &types.CSVData{
-			Headers:  []string{"Feature1"},
-			RowNames: []string{"Sample1"},
-			Matrix:   [][]float64{{1.0}},
-			Rows:     1,
-			Columns:  1,
-		},
+		Headers:  []string{"Feature1"},
+		RowNames: []string{"Sample1"},
+		Matrix:   [][]float64{{1.0}},
+		Rows:     1,
+		Columns:  1,
 	}
 
 	config := types.PCAConfig{
@@ -184,13 +180,11 @@ func TestJSONSerialization(t *testing.T) {
 func TestKernelParametersOnlyForKernelPCA(t *testing.T) {
 	// Create minimal test data
 	csvData := &CSVData{
-		CSVData: &types.CSVData{
-			Headers:  []string{"Feature1"},
-			RowNames: []string{"Sample1"},
-			Matrix:   [][]float64{{1.0}},
-			Rows:     1,
-			Columns:  1,
-		},
+		Headers:  []string{"Feature1"},
+		RowNames: []string{"Sample1"},
+		Matrix:   [][]float64{{1.0}},
+		Rows:     1,
+		Columns:  1,
 	}
 
 	preprocessor := core.NewPreprocessorWithScaleOnly(true, false, false, false, false, false)

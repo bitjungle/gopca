@@ -1020,13 +1020,11 @@ func (a *App) ExportPCAModel(request ExportPCAModelRequest) error {
 	// But we already have them in the PCAResult
 	// Create a mock CSVData structure for the output conversion
 	csvData := &cli.CSVData{
-		CSVData: &types.CSVData{
-			Headers:  request.Headers,
-			RowNames: request.RowNames,
-			Matrix:   request.Data,
-			Rows:     len(request.Data),
-			Columns:  len(request.Headers),
-		},
+		Headers:  request.Headers,
+		RowNames: request.RowNames,
+		Matrix:   request.Data,
+		Rows:     len(request.Data),
+		Columns:  len(request.Headers),
 	}
 
 	// Convert to PCAOutputData using the CLI function

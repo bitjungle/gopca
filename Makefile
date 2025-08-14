@@ -117,6 +117,12 @@ build-windows-amd64:
 build-all: build-darwin-amd64 build-darwin-arm64 build-linux-amd64 build-linux-arm64 build-windows-amd64
 	@echo "All CLI platform builds complete!"
 
+## build-all-parallel: Build CLI for all platforms in parallel
+build-all-parallel:
+	@echo "Building CLI for all platforms in parallel..."
+	@$(MAKE) -j5 build-darwin-amd64 build-darwin-arm64 build-linux-amd64 build-linux-arm64 build-windows-amd64
+	@echo "All parallel CLI builds complete!"
+
 ## pca-dev: Run PCA Desktop in development mode with hot reload
 pca-dev:
 	@if [ -x "$(WAILS)" ]; then \
@@ -194,6 +200,18 @@ csv-run:
 		echo "CSV editor application not found. Build it first with 'make csv-build'"; \
 		exit 1; \
 	fi
+
+## build-everything-parallel: Build all apps and platforms in parallel
+build-everything-parallel:
+	@echo "Building all applications in parallel..."
+	@$(MAKE) -j3 build-all-parallel pca-build csv-build
+	@echo "All parallel builds complete!"
+
+## test-parallel: Run tests in parallel
+test-parallel:
+	@echo "Running tests in parallel..."
+	@$(GOCMD) test -parallel 4 ./...
+	@echo "Parallel tests complete!"
 
 ## sign: Sign all macOS binaries (requires Apple Developer ID)
 sign:

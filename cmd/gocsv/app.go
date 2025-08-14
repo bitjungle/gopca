@@ -19,6 +19,8 @@ import (
 	"strings"
 	"time"
 
+	pkgcsv "github.com/bitjungle/gopca/pkg/csv"
+
 	"github.com/bitjungle/gopca/internal/version"
 	"github.com/bitjungle/gopca/pkg/integration"
 	"github.com/bitjungle/gopca/pkg/types"
@@ -539,37 +541,23 @@ func (a *App) SaveCSV(data *FileData) error {
 		return fmt.Errorf("no file selected")
 	}
 
-	// Create the file
-	file, err := os.Create(selection)
-	if err != nil {
-		return fmt.Errorf("error creating file: %w", err)
-	}
-	defer file.Close()
-
-	// Create CSV writer
-	writer := csv.NewWriter(file)
-	defer writer.Flush()
-
-	// Write headers with row name column if present
-	headers := data.Headers
-	if len(data.RowNames) > 0 {
-		// Add empty header for row names column
-		headers = append([]string{""}, headers...)
-	}
-	if err := writer.Write(headers); err != nil {
-		return fmt.Errorf("error writing headers: %w", err)
+	// Convert FileData to pkg/csv.Data
+	csvData := &pkgcsv.Data{
+		Headers:    data.Headers,
+		RowNames:   data.RowNames,
+		StringData: data.Data,
+		Rows:       data.Rows,
+		Columns:    data.Columns,
 	}
 
-	// Write data with row names
-	for i, row := range data.Data {
-		outputRow := row
-		if len(data.RowNames) > 0 && i < len(data.RowNames) {
-			// Prepend row name to the row
-			outputRow = append([]string{data.RowNames[i]}, row...)
-		}
-		if err := writer.Write(outputRow); err != nil {
-			return fmt.Errorf("error writing row: %w", err)
-		}
+	// Use pkg/csv writer with appropriate options
+	opts := pkgcsv.DefaultOptions()
+	opts.HasHeaders = true
+	opts.HasRowNames = len(data.RowNames) > 0
+	
+	// Write using the unified CSV writer
+	if err := pkgcsv.SaveFile(selection, csvData, opts); err != nil {
+		return fmt.Errorf("error writing CSV file: %w", err)
 	}
 
 	wailsruntime.EventsEmit(a.ctx, "file-saved", filepath.Base(selection))

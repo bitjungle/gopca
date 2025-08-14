@@ -90,7 +90,7 @@ func runValidate(c *cli.Context) error {
 	// Parse CSV options
 	parseOpts := NewCSVParseOptions()
 	parseOpts.HasHeaders = !c.Bool("no-headers")
-	parseOpts.HasIndex = !c.Bool("no-index")
+	parseOpts.HasRowNames = !c.Bool("no-index")
 	parseOpts.Delimiter = rune(c.String("delimiter")[0])
 
 	// Parse NA values

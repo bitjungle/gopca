@@ -10,12 +10,16 @@ export { ExportButton } from './components/ExportButton';
 export { FileSelector } from './components/FileSelector';
 export { ConfirmDialog } from './components/ConfirmDialog';
 export { ProgressIndicator } from './components/ProgressIndicator';
+export { Dialog, DialogFooter, DialogBody } from './components/Dialog';
+export { InputDialog } from './components/InputDialog';
 
 // Component Types
 export type { ExportButtonProps, ExportConfig, ExportFormat } from './components/ExportButton';
 export type { FileSelectorProps } from './components/FileSelector';
 export type { ConfirmDialogProps } from './components/ConfirmDialog';
 export type { ProgressIndicatorProps } from './components/ProgressIndicator';
+export type { DialogProps } from './components/Dialog';
+export type { InputDialogProps } from './components/InputDialog';
 
 // Contexts
 export { ThemeProvider, useTheme } from './contexts/ThemeContext';
