@@ -92,18 +92,19 @@ The installer creates registry entries for:
 
 ## Cross-Platform Building
 
-The installer can be built on any platform with NSIS installed:
+The installer can be built on any platform with NSIS installed. This enables CI/CD pipelines and developers on non-Windows systems to create Windows installers.
 
-### On macOS/Linux
+### Platform-Specific Considerations
+
+#### On macOS
 ```bash
-# Install NSIS
-brew install nsis        # macOS
-sudo apt-get install nsis  # Ubuntu/Debian
+# Install NSIS via Homebrew
+brew install nsis
 
-# Build Windows CLI
-make build-windows-amd64
+# Build Windows CLI (cross-compilation)
+GOOS=windows GOARCH=amd64 make build
 
-# Build Windows Desktop apps (cross-compilation with Wails)
+# Build Windows Desktop apps with Wails
 cd cmd/gopca-desktop && wails build -platform windows/amd64
 cd cmd/gocsv && wails build -platform windows/amd64
 
@@ -111,16 +112,60 @@ cd cmd/gocsv && wails build -platform windows/amd64
 make windows-installer
 ```
 
-### On Windows
+**Note:** macOS NSIS via Homebrew includes all standard plugins and works identically to Windows version.
+
+#### On Linux
 ```bash
-# Build all components
+# Install NSIS (Ubuntu/Debian)
+sudo apt-get update
+sudo apt-get install -y nsis nsis-pluginapi
+
+# For other distributions
+# Fedora: sudo dnf install mingw32-nsis
+# Arch: yay -S nsis
+
+# Build Windows CLI
+GOOS=windows GOARCH=amd64 make build
+
+# Build Windows Desktop apps with Wails
+cd cmd/gopca-desktop && wails build -platform windows/amd64
+cd cmd/gocsv && wails build -platform windows/amd64
+
+# Create installer
+make windows-installer
+```
+
+**Note:** Some Linux distributions may have older NSIS versions. Ensure version 3.0+ for full compatibility.
+
+#### On Windows
+```bash
+# Native builds (faster than cross-compilation)
 make build-windows-amd64
 make pca-build
 make csv-build
 
-# Create installer with all components
+# Create installer
 make windows-installer
 ```
+
+**Note:** Windows builds create native binaries without the `-amd64` suffix.
+
+### Cross-Compilation Notes
+
+1. **Binary Naming**: 
+   - Cross-compiled: `GoPCA-amd64.exe`, `GoCSV-amd64.exe`
+   - Native Windows: `GoPCA.exe`, `GoCSV.exe`
+   - The installer handles both naming conventions
+
+2. **Build Performance**:
+   - Native builds are faster than cross-compilation
+   - Use CI/CD for automated cross-platform builds
+   - Cache dependencies for faster subsequent builds
+
+3. **Testing**:
+   - Always test installer on actual Windows system
+   - Use Windows VMs or containers for validation
+   - Check both installation and uninstallation processes
 
 ## Installer Script
 

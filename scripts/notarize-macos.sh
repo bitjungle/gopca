@@ -141,17 +141,37 @@ notarize_binary() {
     echo ""
 }
 
-# Notarize CLI binary
-echo "🔧 Processing CLI binary..."
-notarize_binary "build/pca" "GoPCA CLI" false
+# Check for command-line argument to determine what to notarize
+MODE="${1:-all}"
 
-# Notarize GoPCA Desktop app
-echo "🖥️  Processing GoPCA Desktop app..."
-notarize_binary "cmd/gopca-desktop/build/bin/GoPCA.app" "GoPCA Desktop" true
-
-# Notarize GoCSV app
-echo "📊 Processing GoCSV app..."
-notarize_binary "cmd/gocsv/build/bin/GoCSV.app" "GoCSV" true
+case "$MODE" in
+    cli-only)
+        # Notarize CLI binary only
+        echo "🔧 Processing CLI binary..."
+        notarize_binary "build/pca" "GoPCA CLI" false
+        ;;
+    desktop-only)
+        # Notarize GoPCA Desktop app only
+        echo "🖥️  Processing GoPCA Desktop app..."
+        notarize_binary "cmd/gopca-desktop/build/bin/GoPCA.app" "GoPCA Desktop" true
+        ;;
+    csv-only)
+        # Notarize GoCSV app only
+        echo "📊 Processing GoCSV app..."
+        notarize_binary "cmd/gocsv/build/bin/GoCSV.app" "GoCSV" true
+        ;;
+    all|*)
+        # Notarize all binaries (default)
+        echo "🔧 Processing CLI binary..."
+        notarize_binary "build/pca" "GoPCA CLI" false
+        
+        echo "🖥️  Processing GoPCA Desktop app..."
+        notarize_binary "cmd/gopca-desktop/build/bin/GoPCA.app" "GoPCA Desktop" true
+        
+        echo "📊 Processing GoCSV app..."
+        notarize_binary "cmd/gocsv/build/bin/GoCSV.app" "GoCSV" true
+        ;;
+esac
 
 echo -e "${GREEN}✨ Notarization complete!${NC}"
 echo ""
