@@ -352,15 +352,22 @@ func (p *PCAImpl) nipalsAlgorithm(X *mat.Dense, nComponents int) (*mat.Dense, *m
 		P.SetCol(k, pData)
 
 		// Deflate X: X = X - t * p^T
-		tMat := mat.NewDense(n, 1, tData)
-		pMat := mat.NewDense(1, m, pData)
+		// This removes the contribution of the current component from the data matrix,
+		// allowing subsequent components to capture remaining variance.
+		// Mathematical explanation: We're projecting X onto the space orthogonal to
+		// the current principal component, ensuring orthogonality between components.
+		tMat := mat.NewDense(n, 1, tData) // Score vector as column matrix (n×1)
+		pMat := mat.NewDense(1, m, pData) // Loading vector as row matrix (1×m)
 		deflation := mat.NewDense(n, m, nil)
-		deflation.Mul(tMat, pMat)
-		Xwork.Sub(Xwork, deflation)
+		deflation.Mul(tMat, pMat)   // Outer product: t * p^T gives rank-1 approximation
+		Xwork.Sub(Xwork, deflation) // Remove this component's contribution
 	}
 
 	// Calculate eigenvalues from scores for retained components
 	// For NIPALS, eigenvalue = variance of the score vector
+	// Note: Unlike SVD where eigenvalues come from singular values (λ = s²/(n-1)),
+	// NIPALS computes eigenvalues as the sum of squared scores for each component.
+	// Both approaches yield equivalent results for complete data.
 	allEigenvalues := make([]float64, nComponents)
 	for i := 0; i < nComponents; i++ {
 		scoreCol := mat.Col(nil, i, T)
@@ -671,7 +678,13 @@ func (p *PCAImpl) nipalsAlgorithmWithMissing(X *mat.Dense, nComponents int) (*ma
 
 // svdAlgorithm implements SVD-based PCA using Singular Value Decomposition
 // The scores are computed as T = U * Σ and loadings as P = V
-// Reference: Jolliffe, I.T. (2002). Principal Component Analysis (2nd ed.). Springer.
+//
+// Mathematical References:
+//   - Jolliffe, I.T. (2002). Principal Component Analysis (2nd ed.). Springer.
+//   - Golub, G.H. & Van Loan, C.F. (2013). Matrix Computations (4th ed.). Johns Hopkins University Press.
+//     (Chapter 8: The Singular Value Decomposition)
+//
+// Algorithm complexity: O(min(mn², m²n)) where m = samples, n = features
 func (p *PCAImpl) svdAlgorithm(X *mat.Dense, nComponents int) (*mat.Dense, *mat.Dense, []float64, error) {
 	n, m := X.Dims()
 
