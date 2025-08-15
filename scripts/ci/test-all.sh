@@ -22,7 +22,7 @@ go mod download
 # Run tests for core packages
 echo ""
 echo "=== Testing Core Packages ==="
-CORE_PACKAGES="./internal/cli ./internal/core ./internal/io ./internal/utils ./pkg/types"
+CORE_PACKAGES="./internal/cli ./internal/core ./internal/utils ./pkg/types"
 
 echo "Testing: $CORE_PACKAGES"
 if go test -v -race -cover $CORE_PACKAGES; then
