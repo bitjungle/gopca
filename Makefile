@@ -480,7 +480,7 @@ notarize-cli:
 ## notarize-pca: Notarize only the GoPCA Desktop app
 notarize-pca:
 	@echo "Notarizing GoPCA Desktop app..."
-	@if [ ! -d "$(DESKTOP_PATH)/build/bin/gopca-desktop.app" ]; then \
+	@if [ ! -d "$(DESKTOP_PATH)/build/bin/GoPCA.app" ]; then \
 		echo "GoPCA Desktop app not found. Build it first with 'make pca-build'"; \
 		exit 1; \
 	fi
@@ -494,7 +494,7 @@ notarize-pca:
 ## notarize-csv: Notarize only the GoCSV app
 notarize-csv:
 	@echo "Notarizing GoCSV app..."
-	@if [ ! -d "$(CSV_PATH)/build/bin/gocsv.app" ]; then \
+	@if [ ! -d "$(CSV_PATH)/build/bin/GoCSV.app" ]; then \
 		echo "GoCSV app not found. Build it first with 'make csv-build'"; \
 		exit 1; \
 	fi
