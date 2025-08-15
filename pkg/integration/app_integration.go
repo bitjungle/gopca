@@ -16,6 +16,8 @@ import (
 	"runtime"
 	"strings"
 	"time"
+
+	"github.com/bitjungle/gopca/pkg/security"
 )
 
 // AppStatus represents the installation status of an external application
@@ -335,7 +337,12 @@ func LaunchWithFile(appPath, filePath string) error {
 
 	var cmd *exec.Cmd
 
-	// Platform-specific launching
+	// Validate the file path for security
+	if err := security.ValidateInputPath(filePath); err != nil {
+		return fmt.Errorf("invalid file path: %w", err)
+	}
+
+	// Platform-specific launching with security validation
 	switch runtime.GOOS {
 	case "darwin":
 		// On macOS, check if this is an app bundle
@@ -350,16 +357,23 @@ func LaunchWithFile(appPath, filePath string) error {
 				// Check if the app is already running
 				if IsAppRunning(appName) {
 					// App is running, use 'open -n' to force a new instance
-					// This ensures the file argument is properly passed
-					// Wails apps don't handle AppleScript open events, so we need a new instance
-					cmd = exec.Command("open", "-n", "-a", appBundlePath, "--args", "--open", filePath)
+					// Validate command before execution
+					args := []string{"-n", "-a", appBundlePath, "--args", "--open", filePath}
+					if err := security.ValidateCommand("open", args); err != nil {
+						return fmt.Errorf("command validation failed: %w", err)
+					}
+					cmd = exec.Command("open", args...)
 
 					if os.Getenv("GOPCA_DEBUG") == "1" {
 						fmt.Printf("[DEBUG] App %s is running, forcing new instance with file\n", appName)
 					}
 				} else {
 					// App not running, use the standard open command
-					cmd = exec.Command("open", "-a", appBundlePath, "--args", "--open", filePath)
+					args := []string{"-a", appBundlePath, "--args", "--open", filePath}
+					if err := security.ValidateCommand("open", args); err != nil {
+						return fmt.Errorf("command validation failed: %w", err)
+					}
+					cmd = exec.Command("open", args...)
 
 					if os.Getenv("GOPCA_DEBUG") == "1" {
 						fmt.Printf("[DEBUG] App %s not running, using open command\n", appName)
@@ -367,17 +381,29 @@ func LaunchWithFile(appPath, filePath string) error {
 				}
 			} else {
 				// Fallback to direct execution
+				if err := security.ValidateCommand(appPath, []string{"--open", filePath}); err != nil {
+					return fmt.Errorf("command validation failed: %w", err)
+				}
 				cmd = exec.Command(appPath, "--open", filePath)
 			}
 		} else {
 			// Regular binary
+			if err := security.ValidateCommand(appPath, []string{"--open", filePath}); err != nil {
+				return fmt.Errorf("command validation failed: %w", err)
+			}
 			cmd = exec.Command(appPath, "--open", filePath)
 		}
 	case "windows":
 		// On Windows, just launch the executable with the file
+		if err := security.ValidateCommand(appPath, []string{"--open", filePath}); err != nil {
+			return fmt.Errorf("command validation failed: %w", err)
+		}
 		cmd = exec.Command(appPath, "--open", filePath)
 	default: // Linux and others
 		// On Linux, just launch the executable with the file
+		if err := security.ValidateCommand(appPath, []string{"--open", filePath}); err != nil {
+			return fmt.Errorf("command validation failed: %w", err)
+		}
 		cmd = exec.Command(appPath, "--open", filePath)
 	}
 

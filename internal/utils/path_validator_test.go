@@ -7,24 +7,34 @@
 package utils
 
 import (
+	"os"
+	"path/filepath"
 	"testing"
 )
 
 func TestValidateFilePath(t *testing.T) {
+	// Create a temp file for testing valid paths
+	tmpFile, err := os.CreateTemp("", "test*.csv")
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer os.Remove(tmpFile.Name())
+	tmpFile.Close()
+
 	tests := []struct {
 		name    string
 		path    string
 		wantErr bool
 	}{
 		{
-			name:    "valid relative path",
-			path:    "data/test.csv",
+			name:    "valid existing file",
+			path:    tmpFile.Name(),
 			wantErr: false,
 		},
 		{
-			name:    "valid absolute path",
-			path:    "/home/user/data.csv",
-			wantErr: false,
+			name:    "non-existent file",
+			path:    "/nonexistent/file.csv",
+			wantErr: true,
 		},
 		{
 			name:    "directory traversal attempt",
@@ -54,14 +64,21 @@ func TestValidateFilePath(t *testing.T) {
 }
 
 func TestValidateOutputPath(t *testing.T) {
+	// Create a temp directory for testing valid output paths
+	tmpDir, err := os.MkdirTemp("", "test_output")
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer os.RemoveAll(tmpDir)
+
 	tests := []struct {
 		name    string
 		path    string
 		wantErr bool
 	}{
 		{
-			name:    "valid output path",
-			path:    "output/results.csv",
+			name:    "valid output path in temp dir",
+			path:    filepath.Join(tmpDir, "results.csv"),
 			wantErr: false,
 		},
 		{
@@ -75,9 +92,14 @@ func TestValidateOutputPath(t *testing.T) {
 			wantErr: true,
 		},
 		{
-			name:    "valid user directory",
-			path:    "/home/user/output.csv",
-			wantErr: false,
+			name:    "proc directory",
+			path:    "/proc/something",
+			wantErr: true,
+		},
+		{
+			name:    "non-existent parent directory",
+			path:    "/nonexistent/dir/output.csv",
+			wantErr: true,
 		},
 	}
 

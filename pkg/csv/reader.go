@@ -15,7 +15,14 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/bitjungle/gopca/pkg/security"
 	"github.com/bitjungle/gopca/pkg/types"
+)
+
+// Security limits for CSV parsing
+const (
+	MaxFileSize    = security.MaxFileSize    // Use security module's limit
+	MaxFieldLength = security.MaxFieldLength // Use security module's limit
 )
 
 // NewReader creates a new CSV reader with the given options
@@ -23,13 +30,28 @@ func NewReader(opts Options) *Reader {
 	return &Reader{opts: opts}
 }
 
-// ReadFile reads and parses a CSV file
+// ReadFile reads and parses a CSV file with security validations
 func (r *Reader) ReadFile(filename string) (*Data, error) {
+	// Validate file path for security
+	if err := r.validateFilePath(filename); err != nil {
+		return nil, fmt.Errorf("file path validation failed: %w", err)
+	}
+
 	file, err := os.Open(filename)
 	if err != nil {
 		return nil, fmt.Errorf("failed to open file: %w", err)
 	}
 	defer func() { _ = file.Close() }()
+
+	// Check file size
+	info, err := file.Stat()
+	if err != nil {
+		return nil, fmt.Errorf("failed to stat file: %w", err)
+	}
+
+	if info.Size() > MaxFileSize {
+		return nil, fmt.Errorf("file too large: %d bytes (max %d)", info.Size(), MaxFileSize)
+	}
 
 	return r.Read(file)
 }
@@ -65,6 +87,27 @@ func (r *Reader) Read(input io.Reader) (*Data, error) {
 
 	if len(records) == 0 {
 		return nil, fmt.Errorf("empty CSV file")
+	}
+
+	// Validate record count
+	if err := r.validateRecordCount(len(records)); err != nil {
+		return nil, err
+	}
+
+	// Validate column count
+	if len(records) > 0 && len(records[0]) > 0 {
+		if err := r.validateColumnCount(len(records[0])); err != nil {
+			return nil, err
+		}
+	}
+
+	// Validate field lengths
+	for i, record := range records {
+		for j, field := range record {
+			if err := r.validateField(field); err != nil {
+				return nil, fmt.Errorf("row %d, column %d: %w", i+1, j+1, err)
+			}
+		}
 	}
 
 	// Skip rows if needed
@@ -438,4 +481,33 @@ func ParseFile(filename string, opts Options) (*Data, error) {
 func Parse(r io.Reader, opts Options) (*Data, error) {
 	reader := NewReader(opts)
 	return reader.Read(r)
+}
+
+// validateFilePath validates the file path for security
+func (r *Reader) validateFilePath(filename string) error {
+	return security.ValidateInputPath(filename)
+}
+
+// validateField validates a single field for security constraints
+func (r *Reader) validateField(field string) error {
+	if len(field) > MaxFieldLength {
+		return fmt.Errorf("field too long: %d characters (max %d)", len(field), MaxFieldLength)
+	}
+	return nil
+}
+
+// validateRecordCount validates the number of records
+func (r *Reader) validateRecordCount(count int) error {
+	if count > security.MaxCSVRows {
+		return fmt.Errorf("too many rows: %d (max %d)", count, security.MaxCSVRows)
+	}
+	return nil
+}
+
+// validateColumnCount validates the number of columns
+func (r *Reader) validateColumnCount(count int) error {
+	if count > security.MaxCSVColumns {
+		return fmt.Errorf("too many columns: %d (max %d)", count, security.MaxCSVColumns)
+	}
+	return nil
 }
