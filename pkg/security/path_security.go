@@ -197,27 +197,72 @@ func validateWindowsPath(path string) error {
 		"LPT1", "LPT2", "LPT3", "LPT4", "LPT5", "LPT6", "LPT7", "LPT8", "LPT9",
 	}
 
-	base := strings.ToUpper(filepath.Base(path))
-	base = strings.TrimSuffix(base, filepath.Ext(base))
+	// Check each path component for reserved names
+	// Use backslash as separator for Windows paths
+	parts := strings.Split(path, `\`)
+	for _, part := range parts {
+		// Skip empty parts and drive letters
+		if part == "" || (len(part) == 2 && part[1] == ':') {
+			continue
+		}
 
-	for _, reserved := range reservedNames {
-		if base == reserved {
-			return fmt.Errorf("reserved filename: %s", reserved)
+		// Get the base name without extension
+		base := strings.ToUpper(part)
+		// Remove extension if present
+		if dotPos := strings.LastIndex(base, "."); dotPos != -1 {
+			base = base[:dotPos]
+		}
+
+		// Check against reserved names
+		for _, reserved := range reservedNames {
+			if base == reserved {
+				return fmt.Errorf("reserved filename: %s", reserved)
+			}
 		}
 	}
 
-	// Check for invalid characters
-	invalidChars := `<>:"|?*`
+	// Check for invalid characters (excluding colon which needs special handling)
+	// Colon is valid only in specific positions:
+	// - Position 1 for drive letters (C:)
+	// - After \\ for UNC paths (\\server\share)
+	invalidChars := `<>"|?*`
 	for _, char := range invalidChars {
 		if strings.ContainsRune(path, char) {
 			return fmt.Errorf("invalid character in path: %c", char)
 		}
 	}
 
+	// Special handling for colon - only allowed after drive letter or in UNC paths
+	colonPositions := []int{}
+	for i, char := range path {
+		if char == ':' {
+			colonPositions = append(colonPositions, i)
+		}
+	}
+
+	for _, pos := range colonPositions {
+		// Allow colon at position 1 for drive letters (e.g., "C:")
+		if pos == 1 && len(path) > 1 {
+			// Check if it's a valid drive letter
+			if path[0] >= 'A' && path[0] <= 'Z' || path[0] >= 'a' && path[0] <= 'z' {
+				continue // This colon is valid
+			}
+		}
+		// All other colons are invalid
+		return fmt.Errorf("invalid character in path: colon not allowed except after drive letter")
+	}
+
 	// Check for trailing dots or spaces (Windows doesn't like these)
-	parts := strings.Split(path, string(filepath.Separator))
-	for _, part := range parts {
-		if part != "" && (strings.HasSuffix(part, ".") || strings.HasSuffix(part, " ")) {
+	// Note: We need to use backslash as separator for Windows paths
+	// even when running on Unix systems for cross-platform validation
+	// Re-split the path to check each component
+	pathComponents := strings.Split(path, `\`)
+	for _, part := range pathComponents {
+		// Skip empty parts and drive letters (e.g., "C:")
+		if part == "" || (len(part) == 2 && part[1] == ':') {
+			continue
+		}
+		if strings.HasSuffix(part, ".") || strings.HasSuffix(part, " ") {
 			return fmt.Errorf("invalid path component: '%s' (trailing dot or space)", part)
 		}
 	}
