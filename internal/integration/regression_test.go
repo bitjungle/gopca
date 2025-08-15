@@ -35,7 +35,7 @@ func TestRegressionSuite(t *testing.T) {
 			SetupFunc: func(t *testing.T, tc *TestConfig) string {
 				return tc.CreateTestCSV(t, "basic.csv", GenerateTestMatrix(20, 8, 1.0))
 			},
-			Args: []string{"analyze", "", "--method", "svd", "--components", "2"},
+			Args: []string{"analyze", "--method", "svd", "--components", "2", ""},
 			ValidateFunc: func(t *testing.T, output string, outputDir string) {
 				AssertContains(t, output, "completed", "Analysis should complete")
 			},
@@ -49,7 +49,7 @@ func TestRegressionSuite(t *testing.T) {
 				data[10][5] = "NA"
 				return tc.CreateTestCSV(t, "missing.csv", data)
 			},
-			Args: []string{"analyze", "", "--method", "nipals", "--components", "3", "--missing", "native"},
+			Args: []string{"analyze", "--method", "nipals", "--components", "3", "--missing-strategy", "native", ""},
 			ValidateFunc: func(t *testing.T, output string, outputDir string) {
 				if strings.Contains(output, "error") {
 					t.Error("NIPALS should handle missing data without errors")
@@ -62,7 +62,7 @@ func TestRegressionSuite(t *testing.T) {
 			SetupFunc: func(t *testing.T, tc *TestConfig) string {
 				return tc.CreateTestCSV(t, "kernel.csv", GenerateTestMatrix(15, 6, 3.0))
 			},
-			Args: []string{"analyze", "", "--method", "kernel", "--kernel", "rbf", "--gamma", "0.1"},
+			Args: []string{"analyze", "--method", "kernel", "--kernel-type", "rbf", "--kernel-gamma", "0.1", "--components", "2", ""},
 			ValidateFunc: func(t *testing.T, output string, outputDir string) {
 				AssertContains(t, output, "kernel", "Should mention kernel PCA")
 			},
@@ -75,7 +75,7 @@ func TestRegressionSuite(t *testing.T) {
 			SetupFunc: func(t *testing.T, tc *TestConfig) string {
 				return tc.CreateTestCSV(t, "snv.csv", GenerateTestMatrix(30, 12, 4.0))
 			},
-			Args: []string{"analyze", "", "--method", "svd", "--snv", "--preprocessing", "standard"},
+			Args: []string{"analyze", "--method", "svd", "--snv", "--scale", "standard", "--components", "2", ""},
 			ValidateFunc: func(t *testing.T, output string, outputDir string) {
 				if strings.Contains(strings.ToLower(output), "error") {
 					t.Error("SNV preprocessing should not cause errors")
@@ -88,7 +88,7 @@ func TestRegressionSuite(t *testing.T) {
 			SetupFunc: func(t *testing.T, tc *TestConfig) string {
 				return tc.CreateTestCSV(t, "l2.csv", GenerateTestMatrix(25, 10, 5.0))
 			},
-			Args: []string{"analyze", "", "--method", "svd", "--l2-norm"},
+			Args: []string{"analyze", "--method", "svd", "--l2-norm", "--components", "2", ""},
 			ValidateFunc: func(t *testing.T, output string, outputDir string) {
 				// L2 norm should not cause errors
 				if strings.Contains(strings.ToLower(output), "error") {
@@ -102,7 +102,7 @@ func TestRegressionSuite(t *testing.T) {
 			SetupFunc: func(t *testing.T, tc *TestConfig) string {
 				return tc.CreateTestCSV(t, "robust.csv", GenerateTestMatrix(20, 8, 6.0))
 			},
-			Args: []string{"analyze", "", "--method", "svd", "--preprocessing", "robust"},
+			Args: []string{"analyze", "--method", "svd", "--scale", "robust", "--components", "2", ""},
 			ValidateFunc: func(t *testing.T, output string, outputDir string) {
 				// Robust scaling should complete
 				AssertContains(t, output, "completed", "Robust scaling should complete")
@@ -119,16 +119,24 @@ func TestRegressionSuite(t *testing.T) {
 			Args:          []string{"analyze", "", "--format", "json", "--output", ""},
 			ExpectedFiles: []string{"pca_results.json"},
 			ValidateFunc: func(t *testing.T, output string, outputDir string) {
-				jsonPath := filepath.Join(outputDir, "pca_results.json")
+				// The CLI outputs files as {basename}_pca.json
+				baseName := "json" // from json.csv
+				jsonPath := filepath.Join(outputDir, baseName+"_pca.json")
 				data, err := os.ReadFile(jsonPath)
 				AssertNoError(t, err, "Should read JSON file")
 
 				// Validate JSON structure
+				if !strings.Contains(string(data), "\"results\"") {
+					t.Error("JSON should contain results")
+				}
+				if !strings.Contains(string(data), "\"model\"") {
+					t.Error("JSON should contain model")
+				}
 				if !strings.Contains(string(data), "\"scores\"") {
 					t.Error("JSON should contain scores")
 				}
-				if !strings.Contains(string(data), "\"explainedVariance\"") {
-					t.Error("JSON should contain explainedVariance")
+				if !strings.Contains(string(data), "\"explained_variance\"") {
+					t.Error("JSON should contain explained_variance")
 				}
 			},
 		},
@@ -141,7 +149,9 @@ func TestRegressionSuite(t *testing.T) {
 			Args:          []string{"analyze", "", "--format", "csv", "--output", ""},
 			ExpectedFiles: []string{"scores.csv", "loadings.csv"},
 			ValidateFunc: func(t *testing.T, output string, outputDir string) {
-				scoresPath := filepath.Join(outputDir, "scores.csv")
+				// CSV format outputs multiple files
+				baseName := "csv" // from csv.csv
+				scoresPath := filepath.Join(outputDir, baseName+"_scores.csv")
 				data, err := os.ReadFile(scoresPath)
 				AssertNoError(t, err, "Should read scores CSV")
 
@@ -160,14 +170,20 @@ func TestRegressionSuite(t *testing.T) {
 			},
 			Args: []string{"analyze", "", "--method", "svd", "--diagnostics", "--format", "json", "--output", ""},
 			ValidateFunc: func(t *testing.T, output string, outputDir string) {
-				jsonPath := filepath.Join(outputDir, "pca_results.json")
+				// The CLI outputs files as {basename}_pca.json
+				baseName := "diag" // from diag.csv
+				jsonPath := filepath.Join(outputDir, baseName+"_pca.json")
 				results := tc.LoadJSONResult(t, jsonPath)
 
-				if _, ok := results["tSquared"]; !ok {
-					t.Error("Diagnostics should include T-squared values")
-				}
-				if _, ok := results["qResiduals"]; !ok {
-					t.Error("Diagnostics should include Q residuals")
+				if diagnostics, ok := results["diagnostics"].(map[string]interface{}); ok {
+					if _, ok := diagnostics["t_squared"]; !ok {
+						t.Error("Diagnostics should include T-squared values")
+					}
+					if _, ok := diagnostics["q_residuals"]; !ok {
+						t.Error("Diagnostics should include Q residuals")
+					}
+				} else {
+					t.Error("Missing diagnostics section")
 				}
 			},
 		},
@@ -241,7 +257,7 @@ func TestRegressionSuite(t *testing.T) {
 				}
 				return tc.CreateTestCSV(t, "empty_row.csv", data)
 			},
-			Args: []string{"analyze", "", "--missing", "drop"},
+			Args: []string{"analyze", "--missing-strategy", "drop", "--method", "svd", "--components", "2", ""},
 			ValidateFunc: func(t *testing.T, output string, outputDir string) {
 				// Should handle empty rows gracefully
 				AssertContains(t, output, "completed", "Should complete with empty rows")
@@ -258,7 +274,7 @@ func TestRegressionSuite(t *testing.T) {
 				}
 				return tc.CreateTestCSV(t, "constant.csv", data)
 			},
-			Args: []string{"analyze", "", "--preprocessing", "standard"},
+			Args: []string{"analyze", "--scale", "standard", "--method", "svd", "--components", "2", ""},
 			ValidateFunc: func(t *testing.T, output string, outputDir string) {
 				// Should handle constant columns (zero variance)
 				// This might produce a warning but shouldn't crash

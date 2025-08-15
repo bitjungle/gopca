@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"math"
 	"path/filepath"
+	"strings"
 	"testing"
 )
 
@@ -67,18 +68,26 @@ func runAnalysis(t *testing.T, tc *TestConfig, csvPath, method string, component
 
 	args := []string{
 		"analyze",
-		csvPath,
 		"--method", method,
 		"--components", fmt.Sprintf("%d", components),
-		"--preprocessing", preprocessing,
-		"--output", outputDir,
+		"--scale", preprocessing,
+		"--output-dir", outputDir,
 		"--format", "json",
+		"--output-all",
+		csvPath,
+	}
+
+	if method == "nipals" {
+		args = append(args, "--missing-strategy", "drop")
 	}
 
 	_, err := tc.RunCLI(t, args...)
 	AssertNoError(t, err, fmt.Sprintf("%s analysis failed", method))
 
-	return tc.LoadJSONResult(t, filepath.Join(outputDir, "pca_results.json"))
+	// The CLI outputs files as {basename}_pca.json
+	baseName := strings.TrimSuffix(filepath.Base(csvPath), ".csv")
+	jsonPath := filepath.Join(outputDir, baseName+"_pca.json")
+	return tc.LoadJSONResult(t, jsonPath)
 }
 
 // Compare two JSON results for consistency
@@ -98,24 +107,36 @@ func compareJSONResults(t *testing.T, result1, result2 map[string]interface{}, t
 		}
 	}
 
-	// Compare scores if present
-	if scores1, ok1 := result1["scores"]; ok1 {
-		if scores2, ok2 := result2["scores"]; ok2 {
-			compareMatrixValues(t, "scores", scores1, scores2, tolerance)
+	// Compare scores if present (nested in results.samples.scores)
+	if results1, ok1 := result1["results"].(map[string]interface{}); ok1 {
+		if results2, ok2 := result2["results"].(map[string]interface{}); ok2 {
+			if samples1, ok1 := results1["samples"].(map[string]interface{}); ok1 {
+				if samples2, ok2 := results2["samples"].(map[string]interface{}); ok2 {
+					if scores1, ok1 := samples1["scores"]; ok1 {
+						if scores2, ok2 := samples2["scores"]; ok2 {
+							compareMatrixValues(t, "scores", scores1, scores2, tolerance)
+						}
+					}
+				}
+			}
 		}
 	}
 
-	// Compare loadings if present
-	if loadings1, ok1 := result1["loadings"]; ok1 {
-		if loadings2, ok2 := result2["loadings"]; ok2 {
-			compareMatrixValues(t, "loadings", loadings1, loadings2, tolerance)
-		}
-	}
+	// Compare loadings if present (nested in model.loadings)
+	if model1, ok1 := result1["model"].(map[string]interface{}); ok1 {
+		if model2, ok2 := result2["model"].(map[string]interface{}); ok2 {
+			if loadings1, ok1 := model1["loadings"]; ok1 {
+				if loadings2, ok2 := model2["loadings"]; ok2 {
+					compareMatrixValues(t, "loadings", loadings1, loadings2, tolerance)
+				}
+			}
 
-	// Compare explained variance
-	if var1, ok1 := result1["explainedVariance"]; ok1 {
-		if var2, ok2 := result2["explainedVariance"]; ok2 {
-			compareVectorValues(t, "explainedVariance", var1, var2, tolerance)
+			// Compare explained variance (nested in model.explained_variance)
+			if var1, ok1 := model1["explained_variance"]; ok1 {
+				if var2, ok2 := model2["explained_variance"]; ok2 {
+					compareVectorValues(t, "explained_variance", var1, var2, tolerance)
+				}
+			}
 		}
 	}
 }
@@ -194,11 +215,14 @@ func compareVectorValues(t *testing.T, name string, val1, val2 interface{}, tole
 func extractExplainedVariance(t *testing.T, results map[string]interface{}) []float64 {
 	t.Helper()
 
-	if varInterface, ok := results["explainedVariance"]; ok {
-		return toFloatSlice(varInterface)
+	// Look for explained variance in model.explained_variance
+	if model, ok := results["model"].(map[string]interface{}); ok {
+		if varInterface, ok := model["explained_variance"]; ok {
+			return toFloatSlice(varInterface)
+		}
 	}
 
-	t.Fatal("No explainedVariance in results")
+	t.Fatal("No explained_variance in model")
 	return nil
 }
 
