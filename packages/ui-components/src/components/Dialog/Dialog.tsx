@@ -5,6 +5,8 @@
 // military, warfare, or surveillance applications.
 
 import React, { useEffect, useRef } from 'react';
+import { useFocusManagement, useFocusRestore } from '../../hooks/useFocusManagement';
+import { useEscapeKey } from '../../hooks/useKeyboardShortcuts';
 
 export interface DialogProps {
     isOpen: boolean;
@@ -34,25 +36,31 @@ export const Dialog: React.FC<DialogProps> = ({
     closeOnEscape = true,
 }) => {
     const dialogRef = useRef<HTMLDivElement>(null);
+    const { trapFocus, focusFirst } = useFocusManagement();
+    
+    // Save and restore focus when dialog opens/closes
+    useFocusRestore();
+    
+    // Handle Escape key
+    useEscapeKey(() => {
+        if (closeOnEscape) onClose();
+    }, isOpen && closeOnEscape);
 
     useEffect(() => {
-        const handleEscape = (e: KeyboardEvent) => {
-            if (closeOnEscape && e.key === 'Escape') {
-                onClose();
-            }
-        };
-
-        if (isOpen) {
-            document.addEventListener('keydown', handleEscape);
+        if (isOpen && dialogRef.current) {
+            // Focus the dialog and trap focus within it
+            focusFirst(dialogRef.current);
+            const cleanup = trapFocus(dialogRef.current);
+            
             // Prevent body scroll when dialog is open
             document.body.style.overflow = 'hidden';
+            
+            return () => {
+                cleanup();
+                document.body.style.overflow = 'unset';
+            };
         }
-
-        return () => {
-            document.removeEventListener('keydown', handleEscape);
-            document.body.style.overflow = 'unset';
-        };
-    }, [isOpen, onClose, closeOnEscape]);
+    }, [isOpen, trapFocus, focusFirst]);
 
     if (!isOpen) return null;
 

@@ -1,0 +1,53 @@
+/* Skip Links - Only visible when focused */
+.skip-links {
+  position: absolute;
+  top: 0;
+  left: 0;
+  z-index: 9999;
+}
+
+.skip-link {
+  position: absolute;
+  left: -10000px;
+  top: auto;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  background-color: #0066cc;
+  color: white;
+  padding: 0.75rem 1rem;
+  text-decoration: none;
+  border-radius: 0 0 0.25rem 0;
+  font-weight: 500;
+}
+
+.skip-link:focus {
+  position: absolute;
+  left: 0;
+  top: 0;
+  width: auto;
+  height: auto;
+  overflow: visible;
+  outline: 3px solid #0066cc;
+  outline-offset: 2px;
+  z-index: 10000;
+}
+
+/* Dark mode support */
+@media (prefers-color-scheme: dark) {
+  .skip-link {
+    background-color: #3b82f6;
+  }
+  
+  .skip-link:focus {
+    outline-color: #3b82f6;
+  }
+}
+
+/* High contrast mode support */
+@media (prefers-contrast: high) {
+  .skip-link:focus {
+    outline-width: 4px;
+    font-weight: bold;
+  }
+}
