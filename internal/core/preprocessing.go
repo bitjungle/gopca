@@ -331,6 +331,14 @@ func (p *Preprocessor) InverseTransform(data types.Matrix) (types.Matrix, error)
 }
 
 // medianAbsoluteDeviation calculates MAD for robust scaling
+//
+// Mathematical References:
+//   - Hampel, F.R., Ronchetti, E.M., Rousseeuw, P.J., & Stahel, W.A. (1986).
+//     Robust Statistics: The Approach Based on Influence Functions. Wiley.
+//   - Huber, P.J. (1981). Robust Statistics. Wiley.
+//
+// The scale factor 1.4826 makes MAD consistent with standard deviation for normally distributed data.
+// This ensures MAD(X) ≈ σ when X ~ N(μ, σ²)
 func medianAbsoluteDeviation(data []float64, median float64) float64 {
 	deviations := make([]float64, len(data))
 	for i, v := range data {

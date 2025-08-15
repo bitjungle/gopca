@@ -70,7 +70,8 @@ func DefaultOptions() Options {
 	}
 }
 
-// EuropeanOptions returns options for European CSV format (semicolon delimiter, comma decimal)
+// EuropeanOptions returns options for European CSV format (semicolon delimiter, comma decimal).
+// This is commonly used in countries where comma is the decimal separator.
 func EuropeanOptions() Options {
 	opts := DefaultOptions()
 	opts.Delimiter = ';'
@@ -159,13 +160,17 @@ type ColumnStatistics struct {
 
 // ConversionHelpers provide utilities for converting between data representations
 
-// ToNumericMatrix converts string data to numeric matrix with missing value tracking
+// ToNumericMatrix converts string data to numeric matrix with missing value tracking.
+// It parses each string value as a float64 and tracks missing values based on the
+// provided null value list. Returns the numeric matrix, missing value mask, and any errors.
 func ToNumericMatrix(stringData [][]string, nullValues []string) (types.Matrix, [][]bool, error) {
 	// Implementation will be in reader.go
 	return nil, nil, nil
 }
 
-// ToStringMatrix converts numeric matrix to string representation
+// ToStringMatrix converts numeric matrix to string representation.
+// The precision parameter controls the number of decimal places (-1 for automatic).
+// NaN and Inf values are converted to appropriate string representations.
 func ToStringMatrix(matrix types.Matrix, precision int) [][]string {
 	// Implementation will be in writer.go
 	return nil
