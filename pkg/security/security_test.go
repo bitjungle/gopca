@@ -302,21 +302,47 @@ func TestJailPath(t *testing.T) {
 }
 
 func TestValidateWindowsPath(t *testing.T) {
-	if runtime.GOOS != "windows" {
-		t.Skip("Windows-specific test")
-	}
+	// Don't skip on non-Windows - we want to test the validation logic
+	// on all platforms to ensure CI works correctly
 
 	tests := []struct {
 		name    string
 		path    string
 		wantErr bool
 	}{
-		{"normal path", `C:\Users\data.csv`, false},
+		// Valid Windows paths
+		{"drive letter path", `C:\Users\data.csv`, false},
+		{"different drive", `D:\temp\file.txt`, false},
+		{"lowercase drive letter", `c:\windows\temp.csv`, false},
+		{"multiple subdirectories", `C:\Users\test\Documents\data.csv`, false},
+		{"temp directory path", `C:\Users\RUNNER~1\AppData\Local\Temp\test.csv`, false},
+		{"path with numbers", `C:\folder1\folder2\file3.csv`, false},
+
+		// Invalid paths with colons in wrong places
+		{"colon in filename", `C:\test\file:name.csv`, true},
+		{"multiple colons", `C:\test:data\file.csv`, true},
+		{"colon at end", `C:\test\file:`, true},
+		{"colon without drive letter", `:test\file.csv`, true},
+
+		// Reserved names
 		{"reserved name CON", `C:\data\CON.txt`, true},
 		{"reserved name PRN", `PRN`, true},
-		{"invalid chars", `file<>:.txt`, true},
-		{"trailing dot", `file.`, true},
-		{"trailing space", `file `, true},
+		{"reserved COM1", `COM1.txt`, true},
+		{"reserved LPT1", `C:\test\LPT1`, true},
+
+		// Invalid characters
+		{"pipe character", `C:\test|file.txt`, true},
+		{"question mark", `C:\test?file.txt`, true},
+		{"asterisk", `C:\test*file.txt`, true},
+		{"less than", `C:\test<file.txt`, true},
+		{"greater than", `C:\test>file.txt`, true},
+		{"quotes", `C:\test"file.txt`, true},
+
+		// Trailing dots and spaces
+		{"trailing dot", `C:\test\file.`, true},
+		{"trailing space", `C:\test\file `, true},
+		{"folder trailing dot", `C:\test.\file.csv`, true},
+		{"folder trailing space", `C:\test \file.csv`, true},
 	}
 
 	for _, tt := range tests {
