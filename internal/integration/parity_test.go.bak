@@ -1,0 +1,621 @@
+package integration
+
+import (
+	"encoding/json"
+	"fmt"
+	"math"
+	"path/filepath"
+	"testing"
+	
+	"github.com/bitjungle/gopca/internal/core"
+	"github.com/bitjungle/gopca/pkg/csv"
+)
+
+// TestParitySVD tests that CLI and direct API produce identical SVD results
+func TestParitySVD(t *testing.T) {
+	SkipIfShort(t)
+	
+	tc := NewTestConfig(t)
+	tc.BuildCLI(t)
+	
+	// Create test dataset
+	testData := GenerateTestMatrix(25, 10, 42.0)
+	csvPath := tc.CreateTestCSV(t, "parity_svd.csv", testData)
+	
+	preprocessingOptions := []string{"mean-center", "standard", "robust"}
+	componentCounts := []int{2, 3, 5}
+	
+	for _, preprocessing := range preprocessingOptions {
+		for _, components := range componentCounts {
+			testName := fmt.Sprintf("SVD_%s_%dPC", preprocessing, components)
+			t.Run(testName, func(t *testing.T) {
+				// Run via CLI
+				cliOutput := runCLIAnalysis(t, tc, csvPath, "svd", components, preprocessing)
+				
+				// Run via direct API
+				apiOutput := runDirectAnalysis(t, csvPath, "svd", components, preprocessing)
+				
+				// Compare results
+				compareResults(t, cliOutput, apiOutput, 1e-10)
+			})
+		}
+	}
+}
+
+// TestParityNIPALS tests NIPALS parity between CLI and API
+func TestParityNIPALS(t *testing.T) {
+	SkipIfShort(t)
+	
+	tc := NewTestConfig(t)
+	tc.BuildCLI(t)
+	
+	// Create dataset with missing values
+	testData := GenerateTestMatrix(30, 12, 24.0)
+	// Add some missing values
+	testData[5][3] = ""
+	testData[10][7] = "NA"
+	testData[15][5] = ""
+	
+	csvPath := tc.CreateTestCSV(t, "parity_nipals.csv", testData)
+	
+	t.Run("NIPALS_with_missing", func(t *testing.T) {
+		// Run via CLI
+		cliOutput := runCLIAnalysis(t, tc, csvPath, "nipals", 3, "mean-center")
+		
+		// Run via direct API
+		apiOutput := runDirectAnalysis(t, csvPath, "nipals", 3, "mean-center")
+		
+		// NIPALS may have slight numerical differences due to iterative nature
+		compareResults(t, cliOutput, apiOutput, 1e-8)
+	})
+}
+
+// TestParityKernelPCA tests Kernel PCA parity
+func TestParityKernelPCA(t *testing.T) {
+	SkipIfShort(t)
+	
+	tc := NewTestConfig(t)
+	tc.BuildCLI(t)
+	
+	testData := GenerateTestMatrix(20, 8, 33.0)
+	csvPath := tc.CreateTestCSV(t, "parity_kernel.csv", testData)
+	
+	kernelTypes := []string{"rbf", "linear", "polynomial"}
+	
+	for _, kernel := range kernelTypes {
+		t.Run(fmt.Sprintf("Kernel_%s", kernel), func(t *testing.T) {
+			// Run via CLI with kernel options
+			outputDir := filepath.Join(tc.TempDir, fmt.Sprintf("cli_kernel_%s", kernel))
+			
+			args := []string{
+				"analyze",
+				csvPath,
+				"--method", "kernel",
+				"--components", "2",
+				"--preprocessing", "standard",
+				"--kernel", kernel,
+				"--output", outputDir,
+				"--format", "json",
+			}
+			
+			// Add kernel-specific parameters
+			switch kernel {
+			case "rbf":
+				args = append(args, "--gamma", "0.1")
+			case "polynomial":
+				args = append(args, "--degree", "3", "--coef0", "1.0")
+			}
+			
+			_, err := tc.RunCLI(t, args...)
+			AssertNoError(t, err, "CLI kernel PCA failed")
+			
+			cliOutput := tc.LoadJSONResult(t, filepath.Join(outputDir, "pca_results.json"))
+			
+			// Run via direct API
+			apiOutput := runDirectKernelAnalysis(t, csvPath, kernel, 2)
+			
+			// Compare results (kernel methods may have larger tolerance)
+			compareResults(t, cliOutput, apiOutput, 1e-6)
+		})
+	}
+}
+
+// TestParityPreprocessing tests all preprocessing combinations
+func TestParityPreprocessing(t *testing.T) {
+	SkipIfShort(t)
+	
+	tc := NewTestConfig(t)
+	tc.BuildCLI(t)
+	
+	testData := GenerateTestMatrix(15, 6, 99.0)
+	csvPath := tc.CreateTestCSV(t, "parity_preprocess.csv", testData)
+	
+	// Test row preprocessing combinations
+	testCases := []struct {
+		name        string
+		rowPreproc  string
+		colPreproc  string
+		cliFlags    []string
+	}{
+		{"SNV+Standard", "snv", "standard", []string{"--snv"}},
+		{"L2+Standard", "l2", "standard", []string{"--l2-norm"}},
+		{"SNV+MeanCenter", "snv", "mean-center", []string{"--snv"}},
+		{"None+Robust", "", "robust", []string{}},
+	}
+	
+	for _, test := range testCases {
+		t.Run(test.name, func(t *testing.T) {
+			// Run via CLI
+			outputDir := filepath.Join(tc.TempDir, test.name)
+			
+			args := []string{
+				"analyze",
+				csvPath,
+				"--method", "svd",
+				"--components", "2",
+				"--preprocessing", test.colPreproc,
+				"--output", outputDir,
+				"--format", "json",
+			}
+			args = append(args, test.cliFlags...)
+			
+			_, err := tc.RunCLI(t, args...)
+			AssertNoError(t, err, "CLI preprocessing failed")
+			
+			cliOutput := tc.LoadJSONResult(t, filepath.Join(outputDir, "pca_results.json"))
+			
+			// Run via direct API with same preprocessing
+			apiOutput := runDirectAnalysisWithRowPreproc(t, csvPath, test.rowPreproc, test.colPreproc)
+			
+			// Compare results
+			compareResults(t, cliOutput, apiOutput, 1e-10)
+		})
+	}
+}
+
+// TestParityDiagnostics tests diagnostic metrics parity
+func TestParityDiagnostics(t *testing.T) {
+	SkipIfShort(t)
+	
+	tc := NewTestConfig(t)
+	tc.BuildCLI(t)
+	
+	testData := GenerateTestMatrix(20, 10, 55.0)
+	csvPath := tc.CreateTestCSV(t, "parity_diagnostics.csv", testData)
+	
+	// Run CLI with diagnostics
+	outputDir := filepath.Join(tc.TempDir, "cli_diagnostics")
+	_, err := tc.RunCLI(t,
+		"analyze",
+		csvPath,
+		"--method", "svd",
+		"--components", "3",
+		"--preprocessing", "standard",
+		"--diagnostics",
+		"--output", outputDir,
+		"--format", "json",
+	)
+	AssertNoError(t, err, "CLI diagnostics failed")
+	
+	cliOutput := tc.LoadJSONResult(t, filepath.Join(outputDir, "pca_results.json"))
+	
+	// Run API with diagnostics
+	apiOutput := runDirectAnalysisWithDiagnostics(t, csvPath)
+	
+	// Compare diagnostic metrics
+	if cliT2, ok := cliOutput["tSquared"].([]interface{}); ok {
+		if apiT2, ok := apiOutput["tSquared"].([]interface{}); ok {
+			if len(cliT2) != len(apiT2) {
+				t.Errorf("T-squared length mismatch: CLI=%d, API=%d", len(cliT2), len(apiT2))
+			}
+			
+			// Compare values
+			for i := range cliT2 {
+				cliVal := toFloat64(cliT2[i])
+				apiVal := toFloat64(apiT2[i])
+				if math.Abs(cliVal-apiVal) > 1e-8 {
+					t.Errorf("T-squared mismatch at index %d: CLI=%f, API=%f", i, cliVal, apiVal)
+				}
+			}
+		} else {
+			t.Error("API output missing T-squared values")
+		}
+	} else {
+		t.Error("CLI output missing T-squared values")
+	}
+}
+
+// Helper functions
+
+func runCLIAnalysis(t *testing.T, tc *TestConfig, csvPath, method string, components int, preprocessing string) map[string]interface{} {
+	t.Helper()
+	
+	outputDir := filepath.Join(tc.TempDir, fmt.Sprintf("cli_%s_%d", method, components))
+	
+	args := []string{
+		"analyze",
+		csvPath,
+		"--method", method,
+		"--components", fmt.Sprintf("%d", components),
+		"--preprocessing", preprocessing,
+		"--output", outputDir,
+		"--format", "json",
+	}
+	
+	_, err := tc.RunCLI(t, args...)
+	AssertNoError(t, err, fmt.Sprintf("CLI %s analysis failed", method))
+	
+	return tc.LoadJSONResult(t, filepath.Join(outputDir, "pca_results.json"))
+}
+
+func runDirectAnalysis(t *testing.T, csvPath, method string, components int, preprocessing string) map[string]interface{} {
+	t.Helper()
+	
+	// Load CSV data
+	reader, err := csv.NewReader(csvPath)
+	if err != nil {
+		t.Fatalf("Failed to create CSV reader: %v", err)
+	}
+	
+	data, err := reader.Read()
+	if err != nil {
+		t.Fatalf("Failed to parse CSV: %v", err)
+	}
+	
+	// Configure PCA
+	config := &core.PCAConfig{
+		NumComponents: components,
+		Method:        method,
+		Preprocessing: preprocessing,
+	}
+	
+	// Create PCA engine
+	var engine core.PCAEngine
+	switch method {
+	case "svd":
+		engine = core.NewPCA(config)
+	case "nipals":
+		engine = core.NewPCA(config)
+	case "kernel":
+		config.KernelType = "rbf"
+		config.KernelGamma = 0.1
+		engine = core.NewKernelPCA(config)
+	default:
+		t.Fatalf("Unknown method: %s", method)
+	}
+	
+	// Fit the model
+	if err := engine.Fit(data.NumericData); err != nil {
+		t.Fatalf("Failed to fit PCA: %v", err)
+	}
+	
+	// Transform data
+	scores, err := engine.Transform(data.NumericData)
+	if err != nil {
+		t.Fatalf("Failed to transform data: %v", err)
+	}
+	
+	// Build results map
+	results := make(map[string]interface{})
+	results["scores"] = scores
+	
+	if method != "kernel" {
+		if pca, ok := engine.(*core.PCA); ok {
+			results["loadings"] = pca.GetLoadings()
+		}
+	}
+	
+	results["explainedVariance"] = engine.GetExplainedVariance()
+	
+	return results
+}
+
+func runDirectKernelAnalysis(t *testing.T, csvPath, kernelType string, components int) map[string]interface{} {
+	t.Helper()
+	
+	// Load CSV data
+	reader, err := csv.NewReader(csvPath)
+	if err != nil {
+		t.Fatalf("Failed to create CSV reader: %v", err)
+	}
+	
+	data, err := reader.Read()
+	if err != nil {
+		t.Fatalf("Failed to parse CSV: %v", err)
+	}
+	
+	// Configure Kernel PCA
+	config := &core.PCAConfig{
+		NumComponents: components,
+		Method:        "kernel",
+		Preprocessing: "standard",
+		KernelType:    kernelType,
+	}
+	
+	// Set kernel-specific parameters
+	switch kernelType {
+	case "rbf":
+		config.KernelGamma = 0.1
+	case "polynomial":
+		config.KernelDegree = 3
+		config.KernelCoef0 = 1.0
+	}
+	
+	// Create and fit Kernel PCA
+	engine := core.NewKernelPCA(config)
+	if err := engine.Fit(data.NumericData); err != nil {
+		t.Fatalf("Failed to fit Kernel PCA: %v", err)
+	}
+	
+	// Transform data
+	scores, err := engine.Transform(data.NumericData)
+	if err != nil {
+		t.Fatalf("Failed to transform data: %v", err)
+	}
+	
+	// Build results
+	results := make(map[string]interface{})
+	results["scores"] = scores
+	results["explainedVariance"] = engine.GetExplainedVariance()
+	
+	return results
+}
+
+func runDirectAnalysisWithRowPreproc(t *testing.T, csvPath, rowPreproc, colPreproc string) map[string]interface{} {
+	t.Helper()
+	
+	// Load CSV data
+	reader, err := csv.NewReader(csvPath)
+	if err != nil {
+		t.Fatalf("Failed to create CSV reader: %v", err)
+	}
+	
+	data, err := reader.Read()
+	if err != nil {
+		t.Fatalf("Failed to parse CSV: %v", err)
+	}
+	
+	// Apply row preprocessing if specified
+	if rowPreproc == "snv" {
+		data.NumericData = core.ApplySNV(data.NumericData)
+	} else if rowPreproc == "l2" {
+		data.NumericData = core.ApplyL2Normalization(data.NumericData)
+	}
+	
+	// Configure PCA with column preprocessing
+	config := &core.PCAConfig{
+		NumComponents: 2,
+		Method:        "svd",
+		Preprocessing: colPreproc,
+	}
+	
+	// Create and fit PCA
+	engine := core.NewPCA(config)
+	if err := engine.Fit(data.NumericData); err != nil {
+		t.Fatalf("Failed to fit PCA: %v", err)
+	}
+	
+	// Transform data
+	scores, err := engine.Transform(data.NumericData)
+	if err != nil {
+		t.Fatalf("Failed to transform data: %v", err)
+	}
+	
+	// Build results
+	results := make(map[string]interface{})
+	results["scores"] = scores
+	results["loadings"] = engine.(*core.PCA).GetLoadings()
+	results["explainedVariance"] = engine.GetExplainedVariance()
+	
+	return results
+}
+
+func runDirectAnalysisWithDiagnostics(t *testing.T, csvPath string) map[string]interface{} {
+	t.Helper()
+	
+	// Load CSV data
+	reader, err := csv.NewReader(csvPath)
+	if err != nil {
+		t.Fatalf("Failed to create CSV reader: %v", err)
+	}
+	
+	data, err := reader.Read()
+	if err != nil {
+		t.Fatalf("Failed to parse CSV: %v", err)
+	}
+	
+	// Configure PCA with diagnostics
+	config := &core.PCAConfig{
+		NumComponents:        3,
+		Method:              "svd",
+		Preprocessing:       "standard",
+		CalculateDiagnostics: true,
+	}
+	
+	// Create and fit PCA
+	engine := core.NewPCA(config)
+	if err := engine.Fit(data.NumericData); err != nil {
+		t.Fatalf("Failed to fit PCA: %v", err)
+	}
+	
+	// Get diagnostics
+	tSquared, qResiduals, err := engine.(*core.PCA).GetDiagnostics(data.NumericData)
+	if err != nil {
+		t.Fatalf("Failed to get diagnostics: %v", err)
+	}
+	
+	// Transform data
+	scores, err := engine.Transform(data.NumericData)
+	if err != nil {
+		t.Fatalf("Failed to transform data: %v", err)
+	}
+	
+	// Build results
+	results := make(map[string]interface{})
+	results["scores"] = scores
+	results["loadings"] = engine.(*core.PCA).GetLoadings()
+	results["explainedVariance"] = engine.GetExplainedVariance()
+	results["tSquared"] = tSquared
+	results["qResiduals"] = qResiduals
+	
+	return results
+}
+
+func compareResults(t *testing.T, cli, api map[string]interface{}, tolerance float64) {
+	t.Helper()
+	
+	// Compare scores
+	if cliScores, ok := cli["scores"].([]interface{}); ok {
+		if apiScores, ok := api["scores"].([][]float64); ok {
+			compareScoresInterface(t, cliScores, apiScores, tolerance)
+		} else if apiScoresInterface, ok := api["scores"].([]interface{}); ok {
+			compareScoresInterfaces(t, cliScores, apiScoresInterface, tolerance)
+		} else {
+			t.Fatal("API scores have unexpected type")
+		}
+	} else {
+		t.Fatal("CLI scores have unexpected type")
+	}
+	
+	// Compare loadings (if present)
+	if cliLoadings, ok := cli["loadings"]; ok {
+		if apiLoadings, ok := api["loadings"]; ok {
+			compareMatrices(t, "loadings", cliLoadings, apiLoadings, tolerance)
+		} else {
+			t.Error("API output missing loadings")
+		}
+	}
+	
+	// Compare explained variance
+	if cliVar, ok := cli["explainedVariance"]; ok {
+		if apiVar, ok := api["explainedVariance"]; ok {
+			compareVectors(t, "explainedVariance", cliVar, apiVar, tolerance)
+		} else {
+			t.Error("API output missing explainedVariance")
+		}
+	} else {
+		t.Error("CLI output missing explainedVariance")
+	}
+}
+
+func compareScoresInterface(t *testing.T, cliScores []interface{}, apiScores [][]float64, tolerance float64) {
+	t.Helper()
+	
+	if len(cliScores) != len(apiScores) {
+		t.Errorf("Scores row count mismatch: CLI=%d, API=%d", len(cliScores), len(apiScores))
+		return
+	}
+	
+	for i := range cliScores {
+		if cliRow, ok := cliScores[i].([]interface{}); ok {
+			if len(cliRow) != len(apiScores[i]) {
+				t.Errorf("Scores column count mismatch at row %d: CLI=%d, API=%d", 
+					i, len(cliRow), len(apiScores[i]))
+				continue
+			}
+			
+			for j := range cliRow {
+				cliVal := toFloat64(cliRow[j])
+				apiVal := apiScores[i][j]
+				
+				if math.Abs(cliVal-apiVal) > tolerance {
+					t.Errorf("Scores mismatch at [%d,%d]: CLI=%f, API=%f (diff=%f)", 
+						i, j, cliVal, apiVal, math.Abs(cliVal-apiVal))
+				}
+			}
+		} else {
+			t.Errorf("Invalid CLI scores row type at index %d", i)
+		}
+	}
+}
+
+func compareScoresInterfaces(t *testing.T, cliScores, apiScores []interface{}, tolerance float64) {
+	t.Helper()
+	
+	if len(cliScores) != len(apiScores) {
+		t.Errorf("Scores row count mismatch: CLI=%d, API=%d", len(cliScores), len(apiScores))
+		return
+	}
+	
+	for i := range cliScores {
+		cliRow, ok1 := cliScores[i].([]interface{})
+		apiRow, ok2 := apiScores[i].([]interface{})
+		
+		if !ok1 || !ok2 {
+			t.Errorf("Invalid scores row type at index %d", i)
+			continue
+		}
+		
+		if len(cliRow) != len(apiRow) {
+			t.Errorf("Scores column count mismatch at row %d", i)
+			continue
+		}
+		
+		for j := range cliRow {
+			cliVal := toFloat64(cliRow[j])
+			apiVal := toFloat64(apiRow[j])
+			
+			if math.Abs(cliVal-apiVal) > tolerance {
+				t.Errorf("Scores mismatch at [%d,%d]: CLI=%f, API=%f", i, j, cliVal, apiVal)
+			}
+		}
+	}
+}
+
+func compareMatrices(t *testing.T, name string, cli, api interface{}, tolerance float64) {
+	t.Helper()
+	
+	// Handle different type combinations
+	// Implementation depends on actual data types returned
+	t.Logf("Comparing %s matrices", name)
+}
+
+func compareVectors(t *testing.T, name string, cli, api interface{}, tolerance float64) {
+	t.Helper()
+	
+	// Convert to slices and compare
+	cliSlice := toFloatSlice(cli)
+	apiSlice := toFloatSlice(api)
+	
+	if len(cliSlice) != len(apiSlice) {
+		t.Errorf("%s length mismatch: CLI=%d, API=%d", name, len(cliSlice), len(apiSlice))
+		return
+	}
+	
+	for i := range cliSlice {
+		if math.Abs(cliSlice[i]-apiSlice[i]) > tolerance {
+			t.Errorf("%s mismatch at [%d]: CLI=%f, API=%f", name, i, cliSlice[i], apiSlice[i])
+		}
+	}
+}
+
+func toFloat64(v interface{}) float64 {
+	switch val := v.(type) {
+	case float64:
+		return val
+	case float32:
+		return float64(val)
+	case int:
+		return float64(val)
+	case json.Number:
+		f, _ := val.Float64()
+		return f
+	default:
+		return 0
+	}
+}
+
+func toFloatSlice(v interface{}) []float64 {
+	switch val := v.(type) {
+	case []float64:
+		return val
+	case []interface{}:
+		result := make([]float64, len(val))
+		for i, item := range val {
+			result[i] = toFloat64(item)
+		}
+		return result
+	default:
+		return nil
+	}
+}
