@@ -390,7 +390,7 @@ func TestPerformanceRegression(t *testing.T) {
 				csvPath,
 				"--method", "svd",
 				"--components", "10",
-				"--preprocessing", "standard",
+				"--scale", "standard",
 			)
 			duration := time.Since(start)
 
@@ -425,7 +425,7 @@ func TestMemoryRegression(t *testing.T) {
 		csvPath,
 		"--method", "svd",
 		"--components", "20",
-		"--preprocessing", "standard",
+		"--scale", "standard",
 		"--verbose", // This might include memory stats
 	)
 
@@ -615,7 +615,7 @@ func TestNumericalStability(t *testing.T) {
 					csvPath,
 					"--method", method,
 					"--components", "2",
-					"--preprocessing", "standard",
+					"--scale", "standard",
 				)
 
 				// Should handle numerical issues gracefully

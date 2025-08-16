@@ -11,5 +11,6 @@ import (
 )
 
 func main() {
-	cli.RunWithOSExit()
+	// Use the new Cobra-based CLI
+	cli.RunCobra()
 }
