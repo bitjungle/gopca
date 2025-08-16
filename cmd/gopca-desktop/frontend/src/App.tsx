@@ -317,20 +317,25 @@ function AppContent() {
         
         // Add row preprocessing (Step 1)
         if (config.snv) {
-            cmd += ` --row-preprocessing snv`;
+            cmd += ` --snv`;
         } else if (config.vectorNorm) {
-            cmd += ` --row-preprocessing vector-norm`;
+            cmd += ` --vector-norm`;
         }
         
         // Add column preprocessing (Step 2)
         if (config.standardScale) {
-            cmd += ` --col-preprocessing standard`;
+            cmd += ` --scale standard`;
         } else if (config.robustScale) {
-            cmd += ` --col-preprocessing robust`;
-        } else if (config.meanCenter) {
-            cmd += ` --col-preprocessing mean-center`;
-        } else if (config.scaleOnly) {
-            cmd += ` --col-preprocessing scale-only`;
+            cmd += ` --scale robust`;
+        } else if (!config.meanCenter) {
+            // Mean centering is on by default in CLI, so we need to explicitly disable it
+            cmd += ` --no-mean-centering`;
+        }
+        // Note: if only meanCenter is true, we don't need any flag (it's the default)
+        
+        // Add scale-only flag if needed
+        if (config.scaleOnly) {
+            cmd += ` --scale-only`;
         }
         
         // Add missing data strategy
