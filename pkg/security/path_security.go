@@ -101,8 +101,14 @@ func ValidateOutputPath(path string) error {
 	if err != nil {
 		return fmt.Errorf("directory is not writable: %s", dir)
 	}
-	f.Close()
-	os.Remove(testFile)
+	if err := f.Close(); err != nil {
+		// Ignore close error, we're just testing
+		_ = err
+	}
+	if err := os.Remove(testFile); err != nil {
+		// File may not exist or may have permission issues
+		_ = err
+	}
 
 	return nil
 }
@@ -308,8 +314,14 @@ func SecureTempFile(pattern string) (*os.File, error) {
 	// Set restrictive permissions (owner read/write only)
 	if runtime.GOOS != "windows" {
 		if err := f.Chmod(0600); err != nil {
-			f.Close()
-			os.Remove(f.Name())
+			if err := f.Close(); err != nil {
+				// Best effort cleanup
+				_ = err
+			}
+			if err := os.Remove(f.Name()); err != nil {
+				// Best effort cleanup
+				_ = err
+			}
 			return nil, fmt.Errorf("cannot set file permissions: %w", err)
 		}
 	}

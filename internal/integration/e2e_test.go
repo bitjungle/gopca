@@ -185,9 +185,10 @@ func TestE2EAllPreprocessingMethods(t *testing.T) {
 					dataset,
 				}
 
-				if rowPrep == "snv" {
+				switch rowPrep {
+				case "snv":
 					args = append(args, "--snv")
-				} else if rowPrep == "vector-norm" {
+				case "vector-norm":
 					args = append(args, "--vector-norm")
 				}
 
@@ -415,7 +416,9 @@ func TestE2EErrorHandling(t *testing.T) {
 			name: "Invalid CSV file",
 			setupFunc: func() string {
 				path := filepath.Join(tc.TempDir, "invalid.csv")
-				os.WriteFile(path, []byte("not,a,valid\ncsv,file"), 0644)
+				if err := os.WriteFile(path, []byte("not,a,valid\ncsv,file"), 0644); err != nil {
+					t.Fatalf("Failed to create test file: %v", err)
+				}
 				return path
 			},
 			args:        []string{"analyze", "--method", "svd", "--components", "2", ""},

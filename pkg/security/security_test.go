@@ -360,8 +360,16 @@ func TestSecureTempFile(t *testing.T) {
 	if err != nil {
 		t.Fatalf("SecureTempFile() error = %v", err)
 	}
-	defer os.Remove(f.Name())
-	defer f.Close()
+	defer func() {
+		if err := os.Remove(f.Name()); err != nil {
+			t.Logf("Warning: failed to remove file: %v", err)
+		}
+	}()
+	defer func() {
+		if err := f.Close(); err != nil {
+			t.Logf("Warning: failed to close file: %v", err)
+		}
+	}()
 
 	// Check file exists
 	if _, err := os.Stat(f.Name()); err != nil {

@@ -142,7 +142,12 @@ func WriteHeapProfile(filename string) error {
 	if err != nil {
 		return fmt.Errorf("could not create heap profile: %w", err)
 	}
-	defer f.Close()
+	defer func() {
+		if err := f.Close(); err != nil {
+			// Best effort, file may have already been closed
+			_ = err
+		}
+	}()
 
 	runtime.GC() // Force GC before heap profile
 	if err := pprof.WriteHeapProfile(f); err != nil {

@@ -45,7 +45,9 @@ func TestTempFileManager(t *testing.T) {
 	}
 
 	// Clean up
-	os.Remove(tempFile)
+	if err := os.Remove(tempFile); err != nil {
+		t.Logf("Warning: failed to remove temp file: %v", err)
+	}
 }
 
 // TestJSONConsistency tests JSON field naming consistency
@@ -115,7 +117,11 @@ func TestAppLaunchingTimeout(t *testing.T) {
 	if err := os.WriteFile(tempFile, []byte("test"), 0644); err != nil {
 		t.Fatalf("Failed to create temp file: %v", err)
 	}
-	defer os.Remove(tempFile)
+	defer func() {
+		if err := os.Remove(tempFile); err != nil {
+			t.Logf("Warning: failed to remove temp file: %v", err)
+		}
+	}()
 
 	// Try to launch non-existent app (should fail quickly)
 	start := time.Now()
@@ -153,7 +159,11 @@ func TestCleanupGoPCATempFiles(t *testing.T) {
 	if err := os.WriteFile(newFile, []byte("new data"), 0644); err != nil {
 		t.Fatalf("Failed to create new file: %v", err)
 	}
-	defer os.Remove(newFile)
+	defer func() {
+		if err := os.Remove(newFile); err != nil {
+			t.Logf("Warning: failed to remove new file: %v", err)
+		}
+	}()
 
 	// Run cleanup
 	if err := CleanupGoPCATempFiles(); err != nil {
@@ -163,7 +173,10 @@ func TestCleanupGoPCATempFiles(t *testing.T) {
 	// Old file should be removed
 	if _, err := os.Stat(oldFile); !os.IsNotExist(err) {
 		t.Error("Old file should have been removed")
-		os.Remove(oldFile) // Clean up if test fails
+		if err := os.Remove(oldFile); err != nil {
+			// Best effort cleanup
+			_ = err
+		}
 	}
 
 	// New file should still exist

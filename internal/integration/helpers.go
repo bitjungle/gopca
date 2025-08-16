@@ -136,7 +136,10 @@ func (tc *TestConfig) RunCLI(t *testing.T, args ...string) (string, error) {
 		}
 		return stdout.String(), nil
 	case <-time.After(tc.Timeout):
-		cmd.Process.Kill()
+		if err := cmd.Process.Kill(); err != nil {
+			// Process may have already exited, ignore error
+			_ = err
+		}
 		return "", fmt.Errorf("CLI timeout after %v", tc.Timeout)
 	}
 }
@@ -150,7 +153,11 @@ func (tc *TestConfig) CreateTestCSV(t *testing.T, name string, data [][]string) 
 	if err != nil {
 		t.Fatalf("Failed to create test CSV: %v", err)
 	}
-	defer file.Close()
+	defer func() {
+		if err := file.Close(); err != nil {
+			t.Logf("Warning: failed to close file: %v", err)
+		}
+	}()
 
 	writer := csv.NewWriter(file)
 	if err := writer.WriteAll(data); err != nil {
@@ -276,6 +283,7 @@ func ExtractJSONFromOutput(output string) (map[string]interface{}, error) {
 	// Find matching closing brace
 	depth := 0
 	end := -1
+outer:
 	for i := start; i < len(output); i++ {
 		switch output[i] {
 		case '{':
@@ -284,7 +292,7 @@ func ExtractJSONFromOutput(output string) (map[string]interface{}, error) {
 			depth--
 			if depth == 0 {
 				end = i + 1
-				break
+				break outer
 			}
 		}
 	}
@@ -414,7 +422,7 @@ func (tc *TestConfig) BenchmarkCLI(t *testing.T, args ...string) *BenchmarkResul
 	t.Helper()
 
 	start := time.Now()
-	output, err := tc.RunCLI(t, args...)
+	_, err := tc.RunCLI(t, args...)
 	duration := time.Since(start)
 
 	if err != nil {
@@ -423,10 +431,7 @@ func (tc *TestConfig) BenchmarkCLI(t *testing.T, args ...string) *BenchmarkResul
 
 	// Parse memory usage if available in output
 	var memUsed uint64
-	if strings.Contains(output, "Memory:") {
-		// Parse memory from output
-		// This would need actual implementation based on output format
-	}
+	// Memory parsing is not yet implemented
 
 	return &BenchmarkResult{
 		Duration: duration,
