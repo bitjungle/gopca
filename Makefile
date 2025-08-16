@@ -69,7 +69,7 @@ WAILS := $(shell which wails 2> /dev/null || echo "$${HOME}/go/bin/wails")
 .DEFAULT_GOAL := all
 
 # Phony targets
-.PHONY: all build cli cli-all build-cross build-darwin-amd64 build-darwin-arm64 build-linux-amd64 build-linux-arm64 build-windows-amd64 build-all pca-dev pca-build pca-build-all pca-run pca-deps csv-dev csv-build csv-build-all csv-run csv-deps build-everything test test-verbose test-coverage fmt lint run-pca-iris clean clean-cross install deps deps-all install-hooks sign sign-cli sign-pca sign-csv sign-windows windows-installer windows-installer-signed windows-installer-all notarize notarize-cli notarize-pca notarize-csv sign-and-notarize help
+.PHONY: all build cli cli-all build-cross build-darwin-amd64 build-darwin-arm64 build-linux-amd64 build-linux-arm64 build-windows-amd64 build-all pca-dev pca-build pca-build-all pca-run pca-deps csv-dev csv-build csv-build-all csv-run csv-deps build-everything test test-verbose test-coverage test-integration test-platforms test-e2e test-parity test-regression fmt lint run-pca-iris clean clean-cross install deps deps-all install-hooks sign sign-cli sign-pca sign-csv sign-windows windows-installer windows-installer-signed windows-installer-all notarize notarize-cli notarize-pca notarize-csv sign-and-notarize help
 
 ## all: Build all applications for current platform and run tests
 all: build pca-build csv-build test
@@ -531,6 +531,31 @@ test-coverage:
 	$(GOTEST) -coverprofile=$(COVERAGE_FILE) ./...
 	$(GOCMD) tool cover -html=$(COVERAGE_FILE) -o coverage.html
 	@echo "Coverage report generated: coverage.html"
+
+## test-integration: Run comprehensive integration tests
+test-integration:
+	@echo "Running integration tests..."
+	@./scripts/ci/test-integration.sh
+
+## test-platforms: Run platform-specific tests
+test-platforms:
+	@echo "Running platform-specific tests..."
+	@./scripts/ci/test-platforms.sh
+
+## test-e2e: Run end-to-end tests only
+test-e2e:
+	@echo "Running end-to-end tests..."
+	$(GOTEST) -v -run TestE2E ./internal/integration/...
+
+## test-parity: Run CLI/GUI parity tests
+test-parity:
+	@echo "Running parity tests..."
+	$(GOTEST) -v -run TestParity ./internal/integration/...
+
+## test-regression: Run regression tests
+test-regression:
+	@echo "Running regression tests..."
+	$(GOTEST) -v -run TestRegression ./internal/integration/...
 
 ## fmt: Format all Go code
 fmt:
