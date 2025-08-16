@@ -52,11 +52,64 @@ func NewTestConfig(t *testing.T) *TestConfig {
 func (tc *TestConfig) BuildCLI(t *testing.T) {
 	t.Helper()
 
-	cmd := exec.Command("go", "build", "-o", tc.CLIPath, "../../cmd/gopca-cli")
+	// First, check if there's a pre-built CLI (from make build)
+	// This is the case in CI where 'make build' runs before tests
+	prebuiltPath := filepath.Join("build", "pca")
+	if runtime.GOOS == "windows" {
+		prebuiltPath += ".exe"
+	}
+
+	// Try to find the prebuilt CLI by checking various possible locations
+	possiblePaths := []string{
+		prebuiltPath,                                        // build/pca (if in project root)
+		filepath.Join("..", "..", prebuiltPath),             // ../../build/pca (if in internal/integration)
+		filepath.Join("..", "..", "..", "..", prebuiltPath), // ../../../../build/pca (if deeper in test)
+	}
+
+	var sourceFile string
+	for _, path := range possiblePaths {
+		if _, err := os.Stat(path); err == nil {
+			sourceFile = path
+			break
+		}
+	}
+
+	if sourceFile != "" {
+		// Found pre-built CLI, copy it to test directory
+		t.Logf("Using pre-built CLI from %s", sourceFile)
+		input, err := os.ReadFile(sourceFile)
+		if err != nil {
+			t.Fatalf("Failed to read pre-built CLI: %v", err)
+		}
+
+		err = os.WriteFile(tc.CLIPath, input, 0755)
+		if err != nil {
+			t.Fatalf("Failed to copy CLI to test directory: %v", err)
+		}
+		return
+	}
+
+	// No pre-built CLI found, build it from source
+	// Use absolute path to ensure it works regardless of working directory
+	projectRoot := filepath.Join(filepath.Dir(tc.CLIPath), "..", "..")
+	for {
+		if _, err := os.Stat(filepath.Join(projectRoot, "go.mod")); err == nil {
+			break
+		}
+		parent := filepath.Dir(projectRoot)
+		if parent == projectRoot {
+			t.Fatalf("Could not find project root (go.mod)")
+		}
+		projectRoot = parent
+	}
+
+	cliSource := filepath.Join(projectRoot, "cmd", "gopca-cli")
+	cmd := exec.Command("go", "build", "-o", tc.CLIPath, cliSource)
 	output, err := cmd.CombinedOutput()
 	if err != nil {
-		t.Fatalf("Failed to build CLI: %v\nOutput: %s", err, output)
+		t.Fatalf("Failed to build CLI from %s: %v\nOutput: %s", cliSource, err, output)
 	}
+	t.Logf("Built CLI from source at %s", cliSource)
 }
 
 // RunCLI executes the CLI with given arguments
