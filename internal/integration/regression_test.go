@@ -563,7 +563,9 @@ func TestNumericalStability(t *testing.T) {
 				for i := 1; i < len(data); i++ {
 					data[i][2] = data[i][1] // Column 2 = Column 1
 					var val float64
-					fmt.Sscanf(data[i][1], "%f", &val)
+					if _, err := fmt.Sscanf(data[i][1], "%f", &val); err != nil {
+						t.Fatalf("Failed to parse value: %v", err)
+					}
 					data[i][3] = fmt.Sprintf("%.6f", val*1.0001) // Column 3 ≈ Column 1
 				}
 				return tc.CreateTestCSV(t, "singular.csv", data)
@@ -592,7 +594,9 @@ func TestNumericalStability(t *testing.T) {
 					for j := 1; j < len(data[i]); j++ {
 						if j%2 == 0 {
 							var val float64
-							fmt.Sscanf(data[i][j], "%f", &val)
+							if _, err := fmt.Sscanf(data[i][j], "%f", &val); err != nil {
+								t.Fatalf("Failed to parse value: %v", err)
+							}
 							data[i][j] = fmt.Sprintf("%.6f", val*1000000)
 						}
 					}
