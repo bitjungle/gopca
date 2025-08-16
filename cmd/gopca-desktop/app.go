@@ -19,12 +19,12 @@ import (
 	"strings"
 	"time"
 
-	"github.com/bitjungle/gopca/internal/cli"
 	"github.com/bitjungle/gopca/internal/config"
 	"github.com/bitjungle/gopca/internal/core"
 	"github.com/bitjungle/gopca/internal/datasets"
 	"github.com/bitjungle/gopca/internal/utils"
 	"github.com/bitjungle/gopca/internal/version"
+	pkgcsv "github.com/bitjungle/gopca/pkg/csv"
 	"github.com/bitjungle/gopca/pkg/integration"
 	"github.com/bitjungle/gopca/pkg/types"
 	"github.com/wailsapp/wails/v2/pkg/runtime"
@@ -1019,7 +1019,7 @@ func (a *App) ExportPCAModel(request ExportPCAModelRequest) error {
 	// We need to fit the preprocessor to get the parameters
 	// But we already have them in the PCAResult
 	// Create a mock CSVData structure for the output conversion
-	csvData := &cli.CSVData{
+	csvData := &pkgcsv.Data{
 		Headers:  request.Headers,
 		RowNames: request.RowNames,
 		Matrix:   request.Data,
@@ -1027,9 +1027,9 @@ func (a *App) ExportPCAModel(request ExportPCAModelRequest) error {
 		Columns:  len(request.Headers),
 	}
 
-	// Convert to PCAOutputData using the CLI function
+	// Convert to PCAOutputData using the shared function from pkg/csv
 	// Note: We don't have categorical/target data in the export request, so pass nil
-	outputData := cli.ConvertToPCAOutputData(request.PCAResult, csvData, true, pcaConfig, preprocessor, nil, nil)
+	outputData := pkgcsv.ConvertToPCAOutputData(request.PCAResult, csvData, true, pcaConfig, preprocessor, nil, nil)
 
 	// Marshal to JSON
 	jsonData, err := json.MarshalIndent(outputData, "", "  ")

@@ -4,98 +4,97 @@
 // The author respectfully requests that it not be used for
 // military, warfare, or surveillance applications.
 
-package cli
+package cobra
 
 import (
 	"fmt"
 	"math"
 	"strings"
 
-	cli "github.com/urfave/cli/v2"
+	pkgcsv "github.com/bitjungle/gopca/pkg/csv"
+	"github.com/spf13/cobra"
 )
 
-func validateCommand() *cli.Command {
-	return &cli.Command{
-		Name:      "validate",
-		Usage:     "Validate input data for PCA analysis",
-		ArgsUsage: "<input.csv>",
-		Description: `The validate command checks the input CSV file for common issues before PCA analysis.
+// ValidateOptions holds all the options for the validate command
+type ValidateOptions struct {
+	// Data format options
+	NoHeaders bool
+	NoIndex   bool
+	Delimiter string
+	NAValues  string
 
-USAGE:
-  pca validate [OPTIONS] <input.csv>
+	// Validation options
+	Strict  bool
+	Summary bool
+}
+
+// NewValidateCommand creates the validate subcommand
+func NewValidateCommand() *cobra.Command {
+	opts := &ValidateOptions{}
+
+	cmd := &cobra.Command{
+		Use:   "validate [flags] <input.csv>",
+		Short: "Validate input data for PCA analysis",
+		Long: `Validate CSV data before PCA analysis.
+
+The validate command checks your data for common issues that might
+affect PCA analysis, including missing values, low variance columns,
+and data format issues.
 
 EXAMPLES:
   # Basic validation
-  pca validate data/iris_data.csv
+  pca validate data.csv
 
   # Show detailed summary
-  pca validate --summary data/iris_data.csv
+  pca validate --summary data.csv
 
   # Strict mode (fail on warnings)
-  pca validate --strict data/iris_data.csv
+  pca validate --strict data.csv
 
 The validation includes:
-  - File format and structure
-  - Missing values detection
-  - Data type consistency
-  - Numerical range checks
-  - Low variance detection
-  - High missing value warnings`,
-		Flags: []cli.Flag{
-			// Data format flags (same as analyze)
-			&cli.BoolFlag{
-				Name:  "no-headers",
-				Usage: "First row contains data, not column names",
-			},
-			&cli.BoolFlag{
-				Name:  "no-index",
-				Usage: "First column contains data, not row names",
-			},
-			&cli.StringFlag{
-				Name:  "delimiter",
-				Usage: "CSV field delimiter",
-				Value: ",",
-			},
-			&cli.StringFlag{
-				Name:  "na-values",
-				Usage: "String(s) representing missing values (comma-separated)",
-				Value: ",NA,N/A,nan,NaN,null,NULL,m",
-			},
-
-			// Validation options
-			&cli.BoolFlag{
-				Name:  "strict",
-				Usage: "Enable strict validation (fail on warnings)",
-			},
-			&cli.BoolFlag{
-				Name:  "summary",
-				Usage: "Show data summary statistics",
-			},
-		},
-		Action: runValidate,
-		Before: func(c *cli.Context) error {
-			if c.NArg() < 1 {
-				return fmt.Errorf("missing required argument: input CSV file")
-			}
-			return nil
+  • File format and structure
+  • Missing values detection
+  • Data type consistency
+  • Numerical range checks
+  • Low variance detection
+  • High missing value warnings`,
+		Args: cobra.ExactArgs(1),
+		RunE: func(cmd *cobra.Command, args []string) error {
+			return runValidate(opts, args[0])
 		},
 	}
+
+	// Data format options
+	cmd.Flags().BoolVar(&opts.NoHeaders, "no-headers", false,
+		"First row contains data, not column names")
+	cmd.Flags().BoolVar(&opts.NoIndex, "no-index", false,
+		"First column contains data, not row names")
+	cmd.Flags().StringVar(&opts.Delimiter, "delimiter", ",",
+		"CSV field delimiter")
+	cmd.Flags().StringVar(&opts.NAValues, "na-values", ",NA,N/A,nan,NaN,null,NULL,m",
+		"Comma-separated list of strings representing missing values")
+
+	// Validation options
+	cmd.Flags().BoolVar(&opts.Strict, "strict", false,
+		"Enable strict validation (fail on warnings)")
+	cmd.Flags().BoolVar(&opts.Summary, "summary", false,
+		"Show data summary statistics")
+
+	return cmd
 }
 
-func runValidate(c *cli.Context) error {
-	inputFile := c.Args().First()
-	strict := c.Bool("strict")
-	showSummary := c.Bool("summary")
-
+// runValidate executes the validate command
+func runValidate(opts *ValidateOptions, inputFile string) error {
 	// Parse CSV options
-	parseOpts := NewCSVParseOptions()
-	parseOpts.HasHeaders = !c.Bool("no-headers")
-	parseOpts.HasRowNames = !c.Bool("no-index")
-	parseOpts.Delimiter = rune(c.String("delimiter")[0])
+	parseOpts := pkgcsv.DefaultOptions()
+	parseOpts.HasHeaders = !opts.NoHeaders
+	parseOpts.HasRowNames = !opts.NoIndex
+	parseOpts.Delimiter = rune(opts.Delimiter[0])
+	parseOpts.ParseMode = pkgcsv.ParseMixedWithTargets
 
 	// Parse NA values
-	if naValues := c.String("na-values"); naValues != "" {
-		parseOpts.NullValues = strings.Split(naValues, ",")
+	if opts.NAValues != "" {
+		parseOpts.NullValues = strings.Split(opts.NAValues, ",")
 		for i := range parseOpts.NullValues {
 			parseOpts.NullValues[i] = strings.TrimSpace(parseOpts.NullValues[i])
 		}
@@ -104,13 +103,14 @@ func runValidate(c *cli.Context) error {
 	fmt.Printf("Validating file: %s\n", inputFile)
 
 	// Load CSV data with target column detection
-	data, categoricalData, targetData, err := ParseCSVMixedWithTargets(inputFile, parseOpts, nil)
+	reader := pkgcsv.NewReader(parseOpts)
+	data, err := reader.ReadFile(inputFile)
 	if err != nil {
 		return fmt.Errorf("failed to parse CSV: %w", err)
 	}
 
 	// Basic validation
-	if err := ValidateCSVData(data); err != nil {
+	if err := validateCSVData(data); err != nil {
 		return fmt.Errorf("data validation failed: %w", err)
 	}
 
@@ -174,24 +174,24 @@ func runValidate(c *cli.Context) error {
 	fmt.Printf("  - Dimensions: %d rows × %d columns\n", data.Rows, data.Columns)
 
 	// Show categorical columns if any
-	if len(categoricalData) > 0 {
-		fmt.Printf("  - Categorical columns: %d\n", len(categoricalData))
-		for colName := range categoricalData {
+	if len(data.CategoricalColumns) > 0 {
+		fmt.Printf("  - Categorical columns: %d\n", len(data.CategoricalColumns))
+		for colName := range data.CategoricalColumns {
 			fmt.Printf("    • %s\n", colName)
 		}
 	}
 
 	// Show numeric target columns if any
-	if len(targetData) > 0 {
-		fmt.Printf("  - Numeric target columns: %d (excluded from PCA)\n", len(targetData))
-		for colName := range targetData {
+	if len(data.NumericTargetColumns) > 0 {
+		fmt.Printf("  - Numeric target columns: %d (excluded from PCA)\n", len(data.NumericTargetColumns))
+		for colName := range data.NumericTargetColumns {
 			fmt.Printf("    • %s\n", colName)
 		}
 	}
 
-	if showSummary {
+	if opts.Summary {
 		fmt.Println("\nData summary:")
-		summary := GetDataSummary(data)
+		summary := getDataSummary(data)
 		// Add indentation to summary
 		lines := strings.Split(summary, "\n")
 		for _, line := range lines {
@@ -207,7 +207,7 @@ func runValidate(c *cli.Context) error {
 			fmt.Printf("  - %s\n", w)
 		}
 
-		if strict {
+		if opts.Strict {
 			return fmt.Errorf("validation failed with %d warnings in strict mode", len(warnings))
 		}
 	} else {

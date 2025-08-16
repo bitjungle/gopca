@@ -109,7 +109,7 @@ func (p *PCAImpl) Fit(data types.Matrix, config types.PCAConfig) (*types.PCAResu
 			scores, loadings, allEigenvalues, err = p.nipalsAlgorithm(X, config.Components)
 		}
 	default:
-		return nil, fmt.Errorf("unknown PCA method: %s", config.Method)
+		return nil, fmt.Errorf("invalid PCA method: %s", config.Method)
 	}
 
 	if err != nil {

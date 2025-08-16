@@ -4,7 +4,7 @@
 // The author respectfully requests that it not be used for
 // military, warfare, or surveillance applications.
 
-package cli
+package cobra
 
 import (
 	"encoding/json"
@@ -18,81 +18,8 @@ import (
 	"github.com/bitjungle/gopca/pkg/types"
 )
 
-// OutputData represents the complete output data structure
-type OutputData struct {
-	Metadata OutputMetadata `json:"metadata"`
-	Results  []SampleResult `json:"results"`
-	Summary  OutputSummary  `json:"summary,omitempty"`
-}
-
-// OutputMetadata contains analysis metadata
-type OutputMetadata struct {
-	NSamples      int    `json:"n_samples"`
-	NFeatures     int    `json:"n_features"`
-	NComponents   int    `json:"n_components"`
-	Preprocessing string `json:"preprocessing"`
-}
-
-// SampleResult contains results for a single sample
-type SampleResult struct {
-	ID      string             `json:"id"`
-	Scores  map[string]float64 `json:"scores,omitempty"`
-	Metrics *SampleMetrics     `json:"metrics,omitempty"`
-}
-
-// SampleMetrics contains advanced metrics for a sample
-type SampleMetrics struct {
-	HotellingT2         float64 `json:"hotelling_t2"`
-	MahalanobisDistance float64 `json:"mahalanobis_distance"`
-	RSS                 float64 `json:"rss"`
-	IsOutlier           bool    `json:"is_outlier"`
-}
-
-// OutputSummary contains summary statistics
-type OutputSummary struct {
-	ExplainedVariance  []float64            `json:"explained_variance,omitempty"`
-	CumulativeVariance []float64            `json:"cumulative_variance,omitempty"`
-	Loadings           map[string][]float64 `json:"loadings,omitempty"`
-}
-
-// generateOutputPaths creates output file paths based on input file and format
-func generateOutputPaths(inputFile, outputDir, format string) map[string]string {
-	paths := make(map[string]string)
-
-	// Get the directory and base name of the input file
-	dir := filepath.Dir(inputFile)
-	base := filepath.Base(inputFile)
-
-	// Remove extension to get the base name
-	ext := filepath.Ext(base)
-	baseName := strings.TrimSuffix(base, ext)
-
-	// Use output directory if specified, otherwise use input directory
-	if outputDir != "" {
-		dir = outputDir
-	}
-
-	// Generate paths based on format
-	const outputFileSuffix = "_pca"
-	if format == "json" {
-		paths["output"] = filepath.Join(dir, baseName+outputFileSuffix+".json")
-	}
-
-	return paths
-}
-
-// ConvertToPCAOutputData is a wrapper that calls the shared function from pkg/csv
-// This maintains backward compatibility for CLI code while following DRY principle
-func ConvertToPCAOutputData(result *types.PCAResult, data *CSVData, includeMetrics bool,
-	config types.PCAConfig, preprocessor *core.Preprocessor,
-	categoricalData map[string][]string, targetData map[string][]float64) *types.PCAOutputData {
-
-	// Call the shared function from pkg/csv
-	return pkgcsv.ConvertToPCAOutputData(result, data, includeMetrics, config, preprocessor, categoricalData, targetData)
-}
-
-// OutputTableFormat outputs results in table format to stdout
-func OutputTableFormat(result *types.PCAResult, data *CSVData,
+// outputTableFormat outputs PCA results in table format
+func outputTableFormat(result *types.PCAResult, data *pkgcsv.Data,
 	outputScores, outputLoadings, outputVariance, includeMetrics bool) error {
 
 	// Calculate metrics if requested (skip for kernel PCA as it doesn't have loadings)
@@ -133,19 +60,19 @@ func OutputTableFormat(result *types.PCAResult, data *CSVData,
 		fmt.Println()
 		fmt.Println("──────────────────────────────────────────────────────────────")
 
-		// Add data rows (show first 10 and last 5 for large datasets)
+		// Add data rows (show first 20 and last 5 for large datasets)
 		nRows := len(result.Scores)
 		rowsToShow := nRows
-		if nRows > 15 {
-			rowsToShow = 15
+		if nRows > 25 {
+			rowsToShow = 25
 		}
 
 		for i := 0; i < rowsToShow; i++ {
 			rowIdx := i
-			if i >= 10 && nRows > 15 {
+			if i >= 20 && nRows > 25 {
 				// Skip to last 5 rows
-				rowIdx = nRows - (15 - i)
-				if i == 10 {
+				rowIdx = nRows - (25 - i)
+				if i == 20 {
 					// Add ellipsis row
 					fmt.Printf("%-15s", "...")
 					for j := 0; j < len(result.ComponentLabels); j++ {
@@ -184,8 +111,8 @@ func OutputTableFormat(result *types.PCAResult, data *CSVData,
 			fmt.Println()
 		}
 
-		if nRows > 15 {
-			fmt.Printf("\nShowing first 10 and last 5 of %d samples\n", nRows)
+		if nRows > 25 {
+			fmt.Printf("\nShowing first 20 and last 5 of %d samples\n", nRows)
 		}
 	}
 
@@ -203,13 +130,37 @@ func OutputTableFormat(result *types.PCAResult, data *CSVData,
 			fmt.Println()
 			fmt.Println("──────────────────────────────────────────────────────────────")
 
-			// Add loading rows
-			for i := 0; i < len(data.Headers); i++ {
-				fmt.Printf("%-25s", data.Headers[i])
+			// Add loading rows (show first 20 and last 5 for large datasets)
+			nFeatures := len(data.Headers)
+			featuresToShow := nFeatures
+			if nFeatures > 25 {
+				featuresToShow = 25
+			}
+
+			for i := 0; i < featuresToShow; i++ {
+				featureIdx := i
+				if i >= 20 && nFeatures > 25 {
+					// Skip to last 5 features
+					featureIdx = nFeatures - (25 - i)
+					if i == 20 {
+						// Add ellipsis row
+						fmt.Printf("%-25s", "...")
+						for j := 0; j < len(result.ComponentLabels); j++ {
+							fmt.Printf("%12s", "...")
+						}
+						fmt.Println()
+					}
+				}
+
+				fmt.Printf("%-25s", data.Headers[featureIdx])
 				for j := 0; j < len(result.ComponentLabels); j++ {
-					fmt.Printf("%12.4f", result.Loadings[i][j])
+					fmt.Printf("%12.4f", result.Loadings[featureIdx][j])
 				}
 				fmt.Println()
+			}
+
+			if nFeatures > 25 {
+				fmt.Printf("\nShowing first 20 and last 5 of %d features\n", nFeatures)
 			}
 		} else {
 			fmt.Println("\nNote: Loadings are not available for Kernel PCA")
@@ -249,22 +200,21 @@ func OutputTableFormat(result *types.PCAResult, data *CSVData,
 	return nil
 }
 
-// OutputJSONFormat outputs results in JSON format
-func OutputJSONFormat(result *types.PCAResult, data *CSVData, inputFile, outputDir string,
-	outputScores, outputLoadings, outputVariance, includeMetrics bool,
-	config types.PCAConfig, preprocessor *core.Preprocessor,
+// outputJSONFormat outputs PCA results in JSON format
+func outputJSONFormat(result *types.PCAResult, data *pkgcsv.Data, inputFile string,
+	opts *AnalyzeOptions, config types.PCAConfig, preprocessor *core.Preprocessor,
 	categoricalData map[string][]string, targetData map[string][]float64) error {
 
 	// Convert to PCAOutputData
-	outputData := ConvertToPCAOutputData(result, data, includeMetrics, config, preprocessor, categoricalData, targetData)
+	outputData := pkgcsv.ConvertToPCAOutputData(result, data, opts.IncludeMetrics,
+		config, preprocessor, categoricalData, targetData)
 
 	// Generate output paths
-	paths := generateOutputPaths(inputFile, outputDir, "json")
-	outputFile := paths["output"]
+	outputFile := generateOutputPath(inputFile, opts.OutputDir, "_pca.json")
 
 	// Create output directory if needed
-	if outputDir != "" {
-		if err := os.MkdirAll(outputDir, 0755); err != nil {
+	if opts.OutputDir != "" {
+		if err := os.MkdirAll(opts.OutputDir, 0755); err != nil {
 			return fmt.Errorf("failed to create output directory: %w", err)
 		}
 	}
@@ -283,4 +233,22 @@ func OutputJSONFormat(result *types.PCAResult, data *CSVData, inputFile, outputD
 	fmt.Printf("\nResults saved to: %s\n", outputFile)
 
 	return nil
+}
+
+// generateOutputPath creates an output file path based on input file and format
+func generateOutputPath(inputFile, outputDir, suffix string) string {
+	// Get the directory and base name of the input file
+	dir := filepath.Dir(inputFile)
+	base := filepath.Base(inputFile)
+
+	// Remove extension to get the base name
+	ext := filepath.Ext(base)
+	baseName := strings.TrimSuffix(base, ext)
+
+	// Use output directory if specified, otherwise use input directory
+	if outputDir != "" {
+		dir = outputDir
+	}
+
+	return filepath.Join(dir, baseName+suffix)
 }
