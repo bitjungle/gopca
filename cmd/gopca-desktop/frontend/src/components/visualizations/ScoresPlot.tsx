@@ -199,6 +199,7 @@ export const ScoresPlot: React.FC<ScoresPlotProps> = ({
   // Use zoom/pan hook
   const {
     zoomDomain,
+    zoomLevel,
     isPanning,
     handleZoomIn,
     handleZoomOut,
@@ -327,7 +328,7 @@ export const ScoresPlot: React.FC<ScoresPlotProps> = ({
           )}
           {isZoomed && (
             <span className="text-sm text-gray-600 dark:text-gray-400">
-              Zoomed (drag to pan)
+              Zoom: {(100 / zoomLevel).toFixed(0)}% (drag to pan)
             </span>
           )}
         </div>
