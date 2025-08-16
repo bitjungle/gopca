@@ -5,8 +5,7 @@
 // military, warfare, or surveillance applications.
 
 import React, { useState, useMemo } from 'react';
-import { useChartConfig } from '@gopca/ui-components';
-import { PlotlyScoresPlot } from '../../../../packages/ui-components/src/charts/adapters/plotly/PlotlyScoresPlot';
+import { useChartConfig, ScatterChart } from '@gopca/ui-components';
 import { ScoresPlot } from './visualizations/ScoresPlot';
 
 interface PlotlyDemoProps {
@@ -135,17 +134,25 @@ export const PlotlyDemo: React.FC<PlotlyDemoProps> = ({
             maxLabelsToShow={10}
           />
         ) : (
-          <PlotlyScoresPlot
-            data={plotlyData}
-            xLabel={xLabel}
-            yLabel={yLabel}
-            groupEllipses={groupEllipses}
-            showEllipses={showEllipses}
-            confidenceLevel={confidenceLevel}
-            groupColorMap={groupColorMap}
-            showRowLabels={false}
-            maxLabelsToShow={10}
-          />
+          <div className="w-full h-full">
+            <ScatterChart
+              data={plotlyData}
+              xLabel={xLabel}
+              yLabel={yLabel}
+              domain={{
+                x: undefined,
+                y: undefined
+              }}
+              showGrid={true}
+              showReferenceLines={true}
+              className="w-full h-full"
+            />
+            {showEllipses && (
+              <div className="absolute top-2 left-2 bg-yellow-100 dark:bg-yellow-900 text-yellow-700 dark:text-yellow-200 px-3 py-1 rounded text-sm">
+                Note: Ellipse rendering with Plotly requires additional implementation
+              </div>
+            )}
+          </div>
         )}
       </div>
     </div>
