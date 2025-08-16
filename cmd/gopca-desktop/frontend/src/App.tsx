@@ -12,7 +12,7 @@ import { EventsOn } from '../wailsjs/runtime/runtime';
 import { DataTable, SelectionTable, MatrixIllustration, HelpWrapper, DocumentationViewer } from './components';
 import { ScoresPlot, ScreePlot, LoadingsPlot, Biplot, CircleOfCorrelations, DiagnosticScatterPlot, EigencorrelationPlot } from './components/visualizations';
 import { FileData, PCARequest, PCAResponse } from './types';
-import { ThemeProvider, ThemeToggle, ConfirmDialog } from '@gopca/ui-components';
+import { ThemeProvider, ThemeToggle, ConfirmDialog, ChartProvider } from '@gopca/ui-components';
 import { HelpProvider, useHelp } from './contexts/HelpContext';
 import { PaletteProvider, usePalette } from './contexts/PaletteContext';
 import { HelpDisplay } from './components/HelpDisplay';
@@ -1359,11 +1359,13 @@ function AppContent() {
 function App() {
     return (
         <ThemeProvider>
-            <PaletteProvider>
-                <HelpProvider>
-                    <AppContent />
-                </HelpProvider>
-            </PaletteProvider>
+            <ChartProvider>
+                <PaletteProvider>
+                    <HelpProvider>
+                        <AppContent />
+                    </HelpProvider>
+                </PaletteProvider>
+            </ChartProvider>
         </ThemeProvider>
     );
 }
