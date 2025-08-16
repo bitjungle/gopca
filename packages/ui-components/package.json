@@ -19,9 +19,12 @@
     "react-dom": "^18.2.0"
   },
   "dependencies": {
-    "lucide-react": "^0.539.0"
+    "lucide-react": "^0.539.0",
+    "plotly.js-dist-min": "^3.1.0",
+    "react-plotly.js": "^2.6.0"
   },
   "devDependencies": {
+    "@types/plotly.js": "^3.0.3",
     "@types/react": "^18.0.17",
     "@types/react-dom": "^18.0.6",
     "@vitejs/plugin-react": "^5.0.0",

@@ -8,6 +8,7 @@ import React from 'react';
 import { useChartConfig } from '../ChartProvider';
 import { LineChartProps } from '../types';
 import RechartsAdapter from '../adapters/recharts/RechartsAdapter';
+import PlotlyAdapter from '../adapters/plotly/PlotlyAdapter';
 
 export const LineChart: React.FC<LineChartProps> = (props) => {
   const { config } = useChartConfig();
@@ -16,9 +17,7 @@ export const LineChart: React.FC<LineChartProps> = (props) => {
     case 'recharts':
       return <RechartsAdapter.LineChart {...props} />;
     case 'plotly':
-      // Future: return <PlotlyAdapter.LineChart {...props} />;
-      console.warn('Plotly adapter not yet implemented, falling back to Recharts');
-      return <RechartsAdapter.LineChart {...props} />;
+      return <PlotlyAdapter.LineChart {...props} />;
     case 'd3':
       // Future: return <D3Adapter.LineChart {...props} />;
       console.warn('D3 adapter not yet implemented, falling back to Recharts');

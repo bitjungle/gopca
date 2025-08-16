@@ -8,6 +8,7 @@ import React from 'react';
 import { useChartConfig } from '../ChartProvider';
 import { BarChartProps } from '../types';
 import RechartsAdapter from '../adapters/recharts/RechartsAdapter';
+import PlotlyAdapter from '../adapters/plotly/PlotlyAdapter';
 
 export const BarChart: React.FC<BarChartProps> = (props) => {
   const { config } = useChartConfig();
@@ -16,9 +17,7 @@ export const BarChart: React.FC<BarChartProps> = (props) => {
     case 'recharts':
       return <RechartsAdapter.BarChart {...props} />;
     case 'plotly':
-      // Future: return <PlotlyAdapter.BarChart {...props} />;
-      console.warn('Plotly adapter not yet implemented, falling back to Recharts');
-      return <RechartsAdapter.BarChart {...props} />;
+      return <PlotlyAdapter.BarChart {...props} />;
     case 'd3':
       // Future: return <D3Adapter.BarChart {...props} />;
       console.warn('D3 adapter not yet implemented, falling back to Recharts');
