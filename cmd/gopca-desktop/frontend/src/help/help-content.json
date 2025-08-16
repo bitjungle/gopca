@@ -269,6 +269,26 @@
       "title": "Exclude Rows",
       "text": "Select rows to exclude from PCA. Useful for removing outliers or problematic samples.",
       "category": "configuration"
+    },
+    "keyboard-shortcuts": {
+      "title": "Keyboard Shortcuts",
+      "text": "Press ? to show keyboard shortcuts. Ctrl/Cmd+O to open file, Ctrl/Cmd+S to save, Ctrl/Cmd+E to export, Alt+T to toggle theme, Escape to close dialogs.",
+      "category": "interface"
+    },
+    "accessibility-navigation": {
+      "title": "Accessibility Navigation",
+      "text": "Use Tab to navigate through controls, Enter/Space to activate buttons, Arrow keys for dropdowns. Skip links available for keyboard users.",
+      "category": "interface"
+    },
+    "focus-management": {
+      "title": "Focus Management",
+      "text": "Focus automatically moves to new dialogs and returns when closed. Use Tab to cycle through dialog elements.",
+      "category": "interface"
+    },
+    "screen-reader-support": {
+      "title": "Screen Reader Support",
+      "text": "All interactive elements have ARIA labels. Dynamic updates announced via live regions. Use landmarks to navigate page structure.",
+      "category": "interface"
     }
   },
   "categories": {
