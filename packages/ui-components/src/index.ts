@@ -69,3 +69,31 @@ export {
   type FormattedError,
   type ErrorSeverity
 } from './utils/errorMessages';
+
+// Charts
+export {
+  ChartProvider,
+  useChartConfig,
+  ScatterChart,
+  BarChart,
+  LineChart,
+  ComposedChart,
+  // Native Recharts components for composition
+  Scatter,
+  Bar,
+  Line,
+  Cell,
+  Legend,
+  ReferenceLine,
+  RechartsTooltip,
+  // Types
+  type ChartLibrary,
+  type ChartDataPoint,
+  type ChartDomain,
+  type ChartMargin,
+  type BaseChartProps,
+  type ScatterChartProps,
+  type BarChartProps,
+  type LineChartProps,
+  type ComposedChartProps,
+} from './charts';
