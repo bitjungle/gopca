@@ -8,6 +8,7 @@ import React from 'react';
 import { useChartConfig } from '../ChartProvider';
 import { ScatterChartProps } from '../types';
 import RechartsAdapter from '../adapters/recharts/RechartsAdapter';
+import PlotlyAdapter from '../adapters/plotly/PlotlyAdapter';
 
 export const ScatterChart: React.FC<ScatterChartProps> = (props) => {
   const { config } = useChartConfig();
@@ -16,14 +17,12 @@ export const ScatterChart: React.FC<ScatterChartProps> = (props) => {
     case 'recharts':
       return <RechartsAdapter.ScatterChart {...props} />;
     case 'plotly':
-      // Future: return <PlotlyAdapter.ScatterChart {...props} />;
-      console.warn('Plotly adapter not yet implemented, falling back to Recharts');
-      return <RechartsAdapter.ScatterChart {...props} />;
+      return <PlotlyAdapter.ScatterChart {...props} />;
     case 'd3':
       // Future: return <D3Adapter.ScatterChart {...props} />;
       console.warn('D3 adapter not yet implemented, falling back to Recharts');
       return <RechartsAdapter.ScatterChart {...props} />;
     default:
-      return <RechartsAdapter.ScatterChart {...props} />;
+      return <PlotlyAdapter.ScatterChart {...props} />;
   }
 };

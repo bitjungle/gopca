@@ -8,6 +8,7 @@ import React from 'react';
 import { useChartConfig } from '../ChartProvider';
 import { ComposedChartProps } from '../types';
 import RechartsAdapter from '../adapters/recharts/RechartsAdapter';
+import PlotlyAdapter from '../adapters/plotly/PlotlyAdapter';
 
 export const ComposedChart: React.FC<ComposedChartProps> = (props) => {
   const { config } = useChartConfig();
@@ -16,14 +17,12 @@ export const ComposedChart: React.FC<ComposedChartProps> = (props) => {
     case 'recharts':
       return <RechartsAdapter.ComposedChart {...props} />;
     case 'plotly':
-      // Future: return <PlotlyAdapter.ComposedChart {...props} />;
-      console.warn('Plotly adapter not yet implemented, falling back to Recharts');
-      return <RechartsAdapter.ComposedChart {...props} />;
+      return <PlotlyAdapter.ComposedChart {...props} />;
     case 'd3':
       // Future: return <D3Adapter.ComposedChart {...props} />;
       console.warn('D3 adapter not yet implemented, falling back to Recharts');
       return <RechartsAdapter.ComposedChart {...props} />;
     default:
-      return <RechartsAdapter.ComposedChart {...props} />;
+      return <PlotlyAdapter.ComposedChart {...props} />;
   }
 };

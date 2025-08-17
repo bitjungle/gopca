@@ -1,0 +1,346 @@
+// Copyright 2025 bitjungle - Rune Mathisen. All rights reserved.
+// Biplot combining scores and loading vectors
+
+import React, { useMemo } from 'react';
+import Plot from 'react-plotly.js';
+import { Data, Layout } from 'plotly.js';
+import { 
+  calculateBiplotScaling, 
+  selectSmartLabels
+} from '../utils/plotlyMath';
+import { getExportMenuItems } from '../utils/plotlyExport';
+import { getPlotlyTheme, mergeLayouts, ThemeMode } from '../utils/plotlyTheme';
+
+export interface BiplotData {
+  scores: number[][];  // [n_samples][n_components]
+  loadings: number[][];  // [n_components][n_variables]
+  explainedVariance: number[];
+  sampleNames?: string[];
+  variableNames: string[];
+  groups?: string[];
+}
+
+export interface BiplotConfig {
+  pcX?: number;  // PC for X-axis (1-indexed)
+  pcY?: number;  // PC for Y-axis (1-indexed)
+  scalingType?: 'correlation' | 'symmetric' | 'pca';
+  showScores?: boolean;
+  showLoadings?: boolean;
+  showLabels?: boolean;
+  labelThreshold?: number;
+  vectorScale?: number;
+  colorScheme?: string[];
+  pointSize?: number;
+  arrowWidth?: number;
+  theme?: ThemeMode;
+}
+
+/**
+ * Biplot visualization combining PCA scores and loading vectors
+ * Reference: Gabriel (1971), "The biplot graphic display of matrices with application to principal component analysis"
+ */
+export class PlotlyBiplot {
+  private data: BiplotData;
+  private config: BiplotConfig;
+  
+  constructor(data: BiplotData, config?: BiplotConfig) {
+    this.data = data;
+    this.config = {
+      pcX: 1,
+      pcY: 2,
+      scalingType: 'correlation',
+      showScores: true,
+      showLoadings: true,
+      showLabels: true,
+      labelThreshold: 20,
+      vectorScale: 1.0,
+      pointSize: 8,
+      arrowWidth: 2,
+      theme: 'light',
+      ...config
+    };
+  }
+  
+  private prepareData() {
+    const { scores, loadings, explainedVariance } = this.data;
+    const pcX = (this.config.pcX || 1) - 1;
+    const pcY = (this.config.pcY || 2) - 1;
+    
+    // Extract scores for selected PCs
+    const scoresX = scores.map(row => row[pcX]);
+    const scoresY = scores.map(row => row[pcY]);
+    
+    // Apply biplot scaling to loadings
+    const { scaledLoadings } = calculateBiplotScaling(
+      loadings,
+      explainedVariance,
+      this.config.scalingType || 'correlation'
+    );
+    
+    // Extract loadings for selected PCs with additional scaling
+    const loadingsX = scaledLoadings[pcX].map((v: number) => v * this.config.vectorScale!);
+    const loadingsY = scaledLoadings[pcY].map((v: number) => v * this.config.vectorScale!);
+    
+    return { scoresX, scoresY, loadingsX, loadingsY, pcX, pcY };
+  }
+  
+  getTraces(): Data[] {
+    const traces: Data[] = [];
+    const { scoresX, scoresY, loadingsX, loadingsY, pcX, pcY } = this.prepareData();
+    const { groups, sampleNames, variableNames } = this.data;
+    
+    // Add scores scatter plot
+    if (this.config.showScores) {
+      if (groups) {
+        // Group by categories
+        const uniqueGroups = Array.from(new Set(groups));
+        uniqueGroups.forEach((group, i) => {
+          const indices = groups.map((g, idx) => g === group ? idx : -1).filter(idx => idx >= 0);
+          
+          traces.push({
+            type: 'scatter',
+            mode: 'markers',
+            x: indices.map((idx: number) => scoresX[idx]),
+            y: indices.map((idx: number) => scoresY[idx]),
+            name: group,
+            marker: {
+              color: this.config.colorScheme
+                ? this.config.colorScheme[i % this.config.colorScheme.length]
+                : ['#3b82f6', '#ef4444', '#10b981', '#f59e0b', '#8b5cf6'][i % 5],
+              size: this.config.pointSize,
+              opacity: 0.7
+            },
+            text: sampleNames ? indices.map((idx: number) => sampleNames[idx]) : undefined,
+            hovertemplate: '<b>%{text}</b><br>PC' + (pcX + 1) + ': %{x:.2f}<br>PC' + 
+                          (pcY + 1) + ': %{y:.2f}<extra></extra>'
+          });
+        });
+      } else {
+        // Single group
+        traces.push({
+          type: 'scatter',
+          mode: 'markers',
+          x: scoresX,
+          y: scoresY,
+          name: 'Scores',
+          marker: {
+            color: this.config.colorScheme?.[0] || '#3b82f6',
+            size: this.config.pointSize,
+            opacity: 0.7
+          },
+          text: sampleNames,
+          hovertemplate: '<b>%{text}</b><br>PC' + (pcX + 1) + ': %{x:.2f}<br>PC' + 
+                        (pcY + 1) + ': %{y:.2f}<extra></extra>'
+        });
+      }
+      
+      // Add smart labels for scores
+      if (this.config.showLabels && sampleNames) {
+        const scorePoints = scoresX.map((x, i) => ({ x, y: scoresY[i] }));
+        const selectedIndices = selectSmartLabels(
+          scorePoints,
+          this.config.labelThreshold || 20
+        );
+        
+        traces.push({
+          type: 'scatter',
+          mode: 'text',
+          x: selectedIndices.map(i => scoresX[i]),
+          y: selectedIndices.map(i => scoresY[i]),
+          text: selectedIndices.map(i => sampleNames[i]),
+          textposition: 'top center',
+          textfont: {
+            size: 10,
+            color: 'black'
+          },
+          showlegend: false,
+          hoverinfo: 'skip'
+        });
+      }
+    }
+    
+    // Add loading vectors
+    if (this.config.showLoadings) {
+      // Filter out small vectors
+      const minMagnitude = 0.01;
+      const validVectors = variableNames.map((name, i) => {
+        const magnitude = Math.sqrt(loadingsX[i]**2 + loadingsY[i]**2);
+        return magnitude >= minMagnitude ? { name, i, magnitude } : null;
+      }).filter(v => v !== null);
+      
+      // Add all loading vectors as a single trace for better performance
+      if (validVectors.length > 0) {
+        const vectorX: number[] = [];
+        const vectorY: number[] = [];
+        const vectorText: string[] = [];
+        
+        validVectors.forEach(v => {
+          if (!v) return;
+          // Add line from origin to loading point
+          vectorX.push(0, loadingsX[v.i]);
+          vectorX.push(null as any);  // null creates line break
+          vectorY.push(0, loadingsY[v.i]);
+          vectorY.push(null as any);
+          vectorText.push('', v.name, '');
+        });
+        
+        // Add loading vectors as lines
+        traces.push({
+          type: 'scatter',
+          mode: 'lines',
+          x: vectorX,
+          y: vectorY,
+          line: {
+            color: this.config.colorScheme?.[1] || '#ef4444',
+            width: this.config.arrowWidth || 2
+          },
+          name: 'Loadings',
+          showlegend: false,
+          hoverinfo: 'skip'
+        });
+        
+        // Add arrowheads as markers at the end of vectors
+        traces.push({
+          type: 'scatter',
+          mode: 'markers',
+          x: validVectors.map(v => v ? loadingsX[v.i] : 0),
+          y: validVectors.map(v => v ? loadingsY[v.i] : 0),
+          marker: {
+            symbol: 'arrow',
+            size: 12,
+            color: this.config.colorScheme?.[1] || '#ef4444'
+          } as any,
+          showlegend: false,
+          hovertemplate: validVectors.map(v => 
+            `<b>${v?.name}</b><br>Loading X: %{x:.3f}<br>Loading Y: %{y:.3f}<extra></extra>`
+          )
+        });
+        
+        // Add text labels for variables
+        const labelPositions = validVectors.map(v => {
+          if (!v) return { x: 0, y: 0 };
+          // Position labels slightly beyond the arrow tip
+          const scale = 1.15;
+          return {
+            x: loadingsX[v.i] * scale,
+            y: loadingsY[v.i] * scale
+          };
+        });
+        
+        traces.push({
+          type: 'scatter',
+          mode: 'text',
+          x: labelPositions.map(p => p.x),
+          y: labelPositions.map(p => p.y),
+          text: validVectors.map(v => v?.name || ''),
+          textposition: 'middle center',
+          textfont: {
+            size: 10,
+            color: this.config.colorScheme?.[1] || '#ef4444'
+          },
+          showlegend: false,
+          hoverinfo: 'skip'
+        });
+      }
+    }
+    
+    return traces;
+  }
+  
+  getEnhancedLayout(): Partial<Layout> {
+    const baseLayout = this.getLayout();
+    const themeLayout = getPlotlyTheme(this.config.theme || 'light').layout;
+    return mergeLayouts(themeLayout, baseLayout);
+  }
+  
+  getLayout(): Partial<Layout> {
+    const { pcX, pcY } = this.prepareData();
+    const { explainedVariance } = this.data;
+    
+    // Calculate axis ranges to accommodate both scores and loadings
+    const { scoresX, scoresY, loadingsX, loadingsY } = this.prepareData();
+    const allX = [...scoresX, ...loadingsX, 0];
+    const allY = [...scoresY, ...loadingsY, 0];
+    const xRange = [Math.min(...allX) * 1.2, Math.max(...allX) * 1.2];
+    const yRange = [Math.min(...allY) * 1.2, Math.max(...allY) * 1.2];
+    
+    const layout: Partial<Layout> = {
+      title: {
+        text: `Biplot (${this.config.scalingType} scaling)`
+      },
+      xaxis: {
+        title: {
+          text: `PC${pcX + 1} (${explainedVariance[pcX].toFixed(1)}%)`
+        },
+        zeroline: true,
+        zerolinewidth: 1,
+        zerolinecolor: 'gray',
+        showgrid: true,
+        gridcolor: 'rgba(128, 128, 128, 0.2)',
+        range: xRange
+      },
+      yaxis: {
+        title: {
+          text: `PC${pcY + 1} (${explainedVariance[pcY].toFixed(1)}%)`
+        },
+        zeroline: true,
+        zerolinewidth: 1,
+        zerolinecolor: 'gray',
+        showgrid: true,
+        gridcolor: 'rgba(128, 128, 128, 0.2)',
+        range: yRange,
+        scaleanchor: 'x',
+        scaleratio: 1
+      },
+      hovermode: 'closest',
+      showlegend: true,
+      legend: {
+        x: 1,
+        y: 1,
+        xanchor: 'right',
+        yanchor: 'top',
+        bgcolor: 'rgba(255, 255, 255, 0.9)',
+        bordercolor: 'black',
+        borderwidth: 1
+      },
+      annotations: []
+    };
+    
+    return layout;
+  }
+  
+  getConfig(): Partial<any> {
+    return {
+      responsive: true,
+      displaylogo: false,
+      modeBarButtonsToAdd: getExportMenuItems() as any,
+      toImageButtonOptions: {
+        format: 'svg',
+        filename: 'biplot',
+        height: 1600,
+        width: 1600,
+        scale: 2
+      }
+    };
+  }
+}
+
+/**
+ * React component wrapper for Biplot
+ */
+export const PCABiplot: React.FC<{
+  data: BiplotData;
+  config?: BiplotConfig;
+}> = ({ data, config }) => {
+  const plot = useMemo(() => new PlotlyBiplot(data, config), [data, config]);
+  
+  return (
+    <Plot
+      data={plot.getTraces()}
+      layout={plot.getEnhancedLayout()}
+      config={plot.getConfig()}
+      style={{ width: '100%', height: '100%' }}
+      useResizeHandler={true}
+    />
+  );
+};

@@ -97,3 +97,42 @@ export {
   type LineChartProps,
   type ComposedChartProps,
 } from './charts';
+
+// Plotly PCA Visualizations
+export {
+  // Components
+  PCAScoresPlot,
+  PCA3DScoresPlot,
+  PCAScreePlot,
+  PCALoadingsPlot,
+  PCABiplot,
+  PCACircleOfCorrelations,
+  PCADiagnosticPlot,
+  PCAEigencorrelationPlot,
+  // Classes for advanced usage
+  PlotlyScoresPlot,
+  Plotly3DScoresPlot,
+  PlotlyScreePlot,
+  PlotlyLoadingsPlot,
+  PlotlyBiplot,
+  PlotlyCircleOfCorrelations,
+  PlotlyDiagnosticPlot,
+  PlotlyEigencorrelationPlot,
+  // Types
+  type ScoresPlotData,
+  type ScoresPlotConfig,
+  type Scores3DPlotData,
+  type Scores3DPlotConfig,
+  type ScreePlotData,
+  type ScreePlotConfig,
+  type LoadingsPlotData,
+  type LoadingsPlotConfig,
+  type BiplotData,
+  type BiplotConfig,
+  type CircleOfCorrelationsData,
+  type CircleOfCorrelationsConfig,
+  type DiagnosticPlotData,
+  type DiagnosticPlotConfig,
+  type EigencorrelationPlotData,
+  type EigencorrelationPlotConfig,
+} from './charts/adapters/plotly/pca';

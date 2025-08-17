@@ -1049,13 +1049,11 @@ function AppContent() {
                                             </select>
                                         </HelpWrapper>
                                     </div>
-                                    {selectedGroupColumn && (
-                                        <div className="flex-shrink-0">
-                                            <HelpWrapper helpKey="palette-selector">
-                                                <PaletteSelector />
-                                            </HelpWrapper>
-                                        </div>
-                                    )}
+                                    <div className="flex-shrink-0">
+                                        <HelpWrapper helpKey="palette-selector">
+                                            <PaletteSelector />
+                                        </HelpWrapper>
+                                    </div>
                                 </div>
                                 
                                 {/* Tier 2: Context-Sensitive Controls */}
@@ -1269,11 +1267,9 @@ function AppContent() {
                                             xComponent={selectedXComponent}
                                             yComponent={selectedYComponent}
                                             showRowLabels={showRowLabels}
-                                            maxRowLabelsToShow={maxLabelsToShow}
+                                            maxLabelsToShow={maxLabelsToShow}
                                             groupColumn={selectedGroupColumn}
                                             groupLabels={getColumnData(selectedGroupColumn).type === 'categorical' ? getColumnData(selectedGroupColumn).values as string[] : undefined}
-                                            groupValues={getColumnData(selectedGroupColumn).type === 'continuous' ? getColumnData(selectedGroupColumn).values as number[] : undefined}
-                                            groupType={getColumnData(selectedGroupColumn).type}
                                             groupEllipses={
                                                 confidenceLevel === 0.90 ? pcaResponse.groupEllipses90 :
                                                 confidenceLevel === 0.95 ? pcaResponse.groupEllipses95 :
@@ -1281,27 +1277,21 @@ function AppContent() {
                                             }
                                             showEllipses={showEllipses && !!selectedGroupColumn && getColumnData(selectedGroupColumn).type === 'categorical'}
                                             confidenceLevel={confidenceLevel}
-                                            maxVariables={guiConfig?.visualization?.biplot_max_variables || 100}
                                         />
                                     ) : selectedPlot === 'correlations' ? (
                                         <CircleOfCorrelations
                                             pcaResult={pcaResponse.result}
                                             xComponent={selectedXComponent}
                                             yComponent={selectedYComponent}
-                                            threshold={guiConfig?.visualization?.correlation_threshold || 0.3}
-                                            maxVariables={guiConfig?.visualization?.circle_max_variables || 100}
                                         />
                                     ) : selectedPlot === 'diagnostics' ? (
                                         <DiagnosticScatterPlot
                                             pcaResult={pcaResponse.result}
                                             rowNames={fileData?.rowNames || []}
-                                            showRowLabels={showRowLabels}
-                                            maxRowLabelsToShow={maxLabelsToShow}
                                         />
                                     ) : selectedPlot === 'eigencorrelation' ? (
                                         <EigencorrelationPlot
                                             pcaResult={pcaResponse.result}
-                                            fileData={fileData!}
                                         />
                                     ) : (
                                         <div className="w-full h-full flex items-center justify-center text-gray-500 dark:text-gray-400">

@@ -24,7 +24,7 @@ interface ChartContextType {
 const ChartContext = createContext<ChartContextType | undefined>(undefined);
 
 const DEFAULT_CONFIG: ChartConfig = {
-  provider: 'recharts',
+  provider: 'plotly',
   zoomEnabled: true,
   panEnabled: true,
 };
