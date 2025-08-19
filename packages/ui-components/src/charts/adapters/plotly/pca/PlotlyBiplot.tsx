@@ -20,6 +20,8 @@ export interface BiplotData {
   sampleNames?: string[];
   variableNames: string[];
   groups?: string[];
+  groupValues?: number[]; // For continuous data
+  groupType?: 'categorical' | 'continuous';
 }
 
 export interface BiplotConfig {
@@ -110,11 +112,60 @@ export class PlotlyBiplot {
   getTraces(): Data[] {
     const traces: Data[] = [];
     const { scoresX, scoresY, loadingsX, loadingsY, pcX, pcY } = this.prepareData();
-    const { groups, sampleNames, variableNames } = this.data;
+    const { groups, groupValues, groupType, sampleNames, variableNames } = this.data;
     
     // Add scores scatter plot
     if (this.config.showScores) {
-      if (groups) {
+      // Handle continuous vs categorical data
+      if (groupType === 'continuous' && groupValues) {
+        // Continuous coloring
+        const validValues = groupValues.filter(v => v !== null && v !== undefined && !isNaN(v) && isFinite(v));
+        const min = Math.min(...validValues);
+        const max = Math.max(...validValues);
+        
+        // Create a custom colorscale from the palette
+        const palette = this.config.colorScheme || ['#440154', '#31688e', '#35b779', '#fde725'];
+        const colorscale: [number, string][] = palette.map((color, i) => [
+          i / (palette.length - 1),
+          color
+        ]);
+        
+        // Prepare hover text
+        const hovertext = scoresX.map((x, i) => {
+          const label = sampleNames?.[i] || `Sample ${i}`;
+          const value = groupValues[i];
+          const valueStr = value !== null && value !== undefined && !isNaN(value) && isFinite(value)
+            ? value.toFixed(2)
+            : 'Missing';
+          return `<b>${label}</b><br>Value: ${valueStr}<br>PC${pcX + 1}: ${x.toFixed(2)}<br>PC${pcY + 1}: ${scoresY[i].toFixed(2)}`;
+        });
+        
+        traces.push({
+          type: 'scatter',
+          mode: 'markers',
+          x: scoresX,
+          y: scoresY,
+          name: 'Scores',
+          hovertext: hovertext,
+          hovertemplate: '%{hovertext}<extra></extra>',
+          marker: {
+            size: this.config.pointSize,
+            color: groupValues, // Use raw numeric values
+            colorscale: colorscale, // Use custom colorscale from palette
+            cmin: min,
+            cmax: max,
+            showscale: true,
+            colorbar: {
+              title: {
+                text: 'Value'
+              } as any,
+              thickness: 15,
+              len: 0.9
+            },
+            opacity: 0.7
+          }
+        });
+      } else if (groups) {
         // Group by categories
         const uniqueGroups = Array.from(new Set(groups));
         uniqueGroups.forEach((group, i) => {

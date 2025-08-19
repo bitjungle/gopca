@@ -12,7 +12,6 @@ import {
   kernelDensityEstimate2D,
   Point2D
 } from '../utils/plotlyMath';
-import { getSequentialColor } from '../utils/plotlyHelpers';
 import { optimizeTraceType, getOptimalConfig } from '../utils/plotlyPerformance';
 import { getExportMenuItems } from '../utils/plotlyExport';
 
@@ -206,10 +205,12 @@ export class PlotlyScoresPlot extends PlotlyVisualization<ScoresPlotData> {
       ? calculateSmartLabels(allPoints, this.scoresConfig.maxLabels!)
       : [];
     
-    // Create color array for each point
-    const colors = groupValues.map(value => 
-      getSequentialColor(value, min, max, this.scoresConfig.colorScheme || [])
-    );
+    // Create a custom colorscale from the palette
+    const palette = this.scoresConfig.colorScheme || ['#440154', '#31688e', '#35b779', '#fde725'];
+    const colorscale: [number, string][] = palette.map((color, i) => [
+      i / (palette.length - 1),
+      color
+    ]);
     
     // Prepare hover text
     const hovertext = scores.map((score, i) => {
@@ -228,6 +229,7 @@ export class PlotlyScoresPlot extends PlotlyVisualization<ScoresPlotData> {
     });
     
     // Create single trace with gradient colors
+    // Use the actual numeric values for colors, not interpolated hex colors
     traces.push({
       type: 'scatter',
       mode: 'markers+text' as any,
@@ -244,8 +246,10 @@ export class PlotlyScoresPlot extends PlotlyVisualization<ScoresPlotData> {
       },
       marker: {
         size: 8,
-        color: colors,
-        colorscale: 'Viridis', // Fallback colorscale if needed
+        color: groupValues, // Use raw numeric values
+        colorscale: colorscale, // Use custom colorscale from palette
+        cmin: min,
+        cmax: max,
         showscale: true,
         colorbar: {
           title: {

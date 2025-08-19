@@ -9,7 +9,7 @@ import {
   createBiplotConfig
 } from '../../utils/plotlyDataTransform';
 import { usePalette } from '../../contexts/PaletteContext';
-import { getQualitativePalette } from '../../utils/colorPalettes';
+import { getQualitativePalette, getSequentialPalette } from '../../utils/colorPalettes';
 
 interface BiplotProps {
   pcaResult: PCAResult;
@@ -18,6 +18,8 @@ interface BiplotProps {
   yComponent?: number; // 0-based index
   groupColumn?: string | null;
   groupLabels?: string[];
+  groupValues?: number[]; // For continuous columns
+  groupType?: 'categorical' | 'continuous';
   groupEllipses?: Record<string, EllipseParams>;
   showEllipses?: boolean;
   confidenceLevel?: 0.90 | 0.95 | 0.99;
@@ -34,6 +36,8 @@ export const Biplot: React.FC<BiplotProps> = ({
   yComponent = 1,
   groupColumn,
   groupLabels,
+  groupValues,
+  groupType = 'categorical',
   groupEllipses,
   showEllipses = false,
   confidenceLevel = 0.95,
@@ -43,16 +47,20 @@ export const Biplot: React.FC<BiplotProps> = ({
   vectorScale = 1.0
 }) => {
   const { theme } = useTheme();
-  const { qualitativePalette } = usePalette();
+  const { qualitativePalette, sequentialPalette } = usePalette();
   
-  // Get the color scheme from the current palette
-  const colorScheme = getQualitativePalette(qualitativePalette);
+  // Get the appropriate color scheme based on palette mode
+  const colorScheme = groupType === 'continuous' 
+    ? getSequentialPalette(sequentialPalette)
+    : getQualitativePalette(qualitativePalette);
   
   // Transform data to Plotly format
   const plotlyData = transformToBiplotData(
     pcaResult,
     rowNames,
-    groupLabels
+    groupLabels,
+    groupValues,
+    groupType
   );
 
   // Create config for Plotly component with additional settings

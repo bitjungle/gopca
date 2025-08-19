@@ -168,7 +168,9 @@ export function createLoadingsPlotConfig(
 export function transformToBiplotData(
   pcaResult: PCAResult,
   rowNames: string[],
-  groupLabels?: string[]
+  groupLabels?: string[],
+  groupValues?: number[],
+  groupType?: 'categorical' | 'continuous'
 ): BiplotData {
   // Backend stores loadings as [variables][components], but frontend expects [components][variables]
   const transposedLoadings = transposeMatrix(pcaResult.loadings);
@@ -180,7 +182,9 @@ export function transformToBiplotData(
     sampleNames: rowNames,
     variableNames: pcaResult.variable_labels || 
       Array.from({ length: pcaResult.loadings.length }, (_, i) => `Var${i + 1}`), // Use loadings.length for number of variables
-    groups: groupLabels
+    groups: groupLabels,
+    groupValues,
+    groupType
   };
 }
 
