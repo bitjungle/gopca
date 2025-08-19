@@ -50,13 +50,7 @@ export const ExportButton: React.FC<ExportButtonProps> = ({ chartRef, fileName, 
           style: {
             fontFamily: '"Nunito", -apple-system, BlinkMacSystemFont, "Segoe UI", "Roboto", sans-serif',
           },
-          filter: (node) => {
-            // Exclude tooltip wrapper
-            if (node.classList?.contains('recharts-tooltip-wrapper')) {
-              return false;
-            }
-            return true;
-          }
+          // No filter needed for Plotly charts
         });
       } else {
         // SVG export

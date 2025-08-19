@@ -5,7 +5,6 @@ import React, { useMemo } from 'react';
 import Plot from 'react-plotly.js';
 import { Data, Layout } from 'plotly.js';
 import { 
-  calculateBiplotScaling, 
   selectSmartLabels
 } from '../utils/plotlyMath';
 import { getExportMenuItems } from '../utils/plotlyExport';
@@ -62,7 +61,7 @@ export class PlotlyBiplot {
   }
   
   private prepareData() {
-    const { scores, loadings, explainedVariance } = this.data;
+    const { scores, loadings } = this.data;
     const pcX = (this.config.pcX || 1) - 1;
     const pcY = (this.config.pcY || 2) - 1;
     
@@ -70,16 +69,33 @@ export class PlotlyBiplot {
     const scoresX = scores.map(row => row[pcX]);
     const scoresY = scores.map(row => row[pcY]);
     
-    // Apply biplot scaling to loadings
-    const { scaledLoadings } = calculateBiplotScaling(
-      loadings,
-      explainedVariance,
-      this.config.scalingType || 'correlation'
-    );
+    // Calculate maximum loading magnitude for the selected components
+    const loadingMagnitudes: number[] = [];
+    for (let i = 0; i < loadings[pcX].length; i++) {
+      const x = loadings[pcX][i];
+      const y = loadings[pcY][i];
+      loadingMagnitudes.push(Math.sqrt(x * x + y * y));
+    }
+    const maxLoadingMagnitude = Math.max(...loadingMagnitudes);
     
-    // Extract loadings for selected PCs with additional scaling
-    const loadingsX = scaledLoadings[pcX].map((v: number) => v * this.config.vectorScale!);
-    const loadingsY = scaledLoadings[pcY].map((v: number) => v * this.config.vectorScale!);
+    // Calculate score plot bounds
+    const maxAbsScore = Math.max(
+      ...scoresX.map(Math.abs),
+      ...scoresY.map(Math.abs)
+    );
+    // Add 20% padding, but ensure minimum visibility
+    const plotMax = Math.max(maxAbsScore * 1.2, 1.0);
+    
+    // Scale factor to make the largest loading vector reach 70% of plot bounds
+    // This is the same approach as the working Recharts implementation
+    const scaleFactor = maxLoadingMagnitude > 0 ? (plotMax * 0.7) / maxLoadingMagnitude : 1;
+    
+    // Apply scaling to loadings with optional manual adjustment
+    const manualScale = this.config.vectorScale !== undefined ? this.config.vectorScale : 1.0;
+    const totalScale = scaleFactor * manualScale;
+    
+    const loadingsX = loadings[pcX].map((v: number) => v * totalScale);
+    const loadingsY = loadings[pcY].map((v: number) => v * totalScale);
     
     return { scoresX, scoresY, loadingsX, loadingsY, pcX, pcY };
   }
@@ -151,7 +167,7 @@ export class PlotlyBiplot {
           textposition: 'top center',
           textfont: {
             size: 10,
-            color: 'black'
+            color: this.config.theme === 'dark' ? '#e5e7eb' : '#374151'
           },
           showlegend: false,
           hoverinfo: 'skip'
@@ -254,11 +270,10 @@ export class PlotlyBiplot {
   }
   
   getLayout(): Partial<Layout> {
-    const { pcX, pcY } = this.prepareData();
+    const { pcX, pcY, scoresX, scoresY, loadingsX, loadingsY } = this.prepareData();
     const { explainedVariance } = this.data;
     
     // Calculate axis ranges to accommodate both scores and loadings
-    const { scoresX, scoresY, loadingsX, loadingsY } = this.prepareData();
     const allX = [...scoresX, ...loadingsX, 0];
     const allY = [...scoresY, ...loadingsY, 0];
     const xRange = [Math.min(...allX) * 1.2, Math.max(...allX) * 1.2];
@@ -295,12 +310,10 @@ export class PlotlyBiplot {
       hovermode: 'closest',
       showlegend: true,
       legend: {
-        x: 1,
+        x: 1.02,
         y: 1,
-        xanchor: 'right',
+        xanchor: 'left',
         yanchor: 'top',
-        bgcolor: 'rgba(255, 255, 255, 0.9)',
-        bordercolor: 'black',
         borderwidth: 1
       },
       annotations: []

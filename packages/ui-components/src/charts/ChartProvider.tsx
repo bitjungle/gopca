@@ -6,7 +6,7 @@
 
 import React, { createContext, useContext, useState, ReactNode } from 'react';
 
-export type ChartLibrary = 'recharts' | 'plotly' | 'd3';
+export type ChartLibrary = 'plotly'; // Only Plotly supported after migration
 
 interface ChartConfig {
   provider: ChartLibrary;

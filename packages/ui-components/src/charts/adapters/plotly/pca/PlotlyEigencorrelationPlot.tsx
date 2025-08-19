@@ -26,8 +26,9 @@ export interface EigencorrelationPlotConfig {
 }
 
 /**
- * Eigencorrelation Plot showing correlations between original variables and principal components
- * as a heatmap visualization
+ * Eigencorrelation Plot showing correlations between metadata variables and principal components
+ * as a heatmap visualization. This helps identify confounding influences or meaningful associations
+ * between external covariates (e.g., batch, treatment, clinical variables) and PCA components.
  * Reference: Friendly (2002), "Corrgrams: Exploratory displays for correlation matrices"
  */
 export class PlotlyEigencorrelationPlot {
@@ -115,8 +116,8 @@ export class PlotlyEigencorrelationPlot {
     traces.push({
       type: 'heatmap',
       z: transposedMatrix,
-      x: componentLabels,
-      y: variableNames,
+      x: Array.from({ length: componentLabels.length }, (_, i) => i),
+      y: Array.from({ length: variableNames.length }, (_, i) => i),
       colorscale: this.config.colorScale as any,
       zmin: -1,
       zmax: 1,
@@ -145,8 +146,8 @@ export class PlotlyEigencorrelationPlot {
           // Only show annotations for significant correlations
           if (Math.abs(value) >= this.config.annotationThreshold!) {
             annotations.push({
-              x: componentLabels[j],
-              y: variableNames[i],
+              x: j,
+              y: i,
               text: value.toFixed(2),
               showarrow: false,
               font: {
@@ -183,7 +184,7 @@ export class PlotlyEigencorrelationPlot {
     
     const layout: Partial<Layout> = {
       title: {
-        text: 'Eigencorrelation Matrix'
+        text: 'Eigencorrelation Plot: Component-Metadata Correlations'
       },
       xaxis: {
         title: {
@@ -193,16 +194,16 @@ export class PlotlyEigencorrelationPlot {
         side: 'bottom',
         tickangle: variableNames.length > 10 ? -45 : 0,
         tickmode: 'array',
-        tickvals: componentLabels,
+        tickvals: Array.from({ length: componentLabels.length }, (_, i) => i),
         ticktext: componentLabels
       },
       yaxis: {
         title: {
-          text: 'Variables',
+          text: 'Metadata Variables',
           standoff: 20
         },
         tickmode: 'array',
-        tickvals: variableNames,
+        tickvals: Array.from({ length: variableNames.length }, (_, i) => i),
         ticktext: variableNames,
         autorange: 'reversed'  // Put first variable at top
       },
@@ -239,7 +240,7 @@ export class PlotlyEigencorrelationPlot {
     
     // Add interpretation guide
     layout.annotations!.push({
-      text: 'Strong correlations (|r| > 0.7) indicate variables that contribute significantly to each PC',
+      text: 'Strong correlations (|r| > 0.7) indicate metadata variables that are associated with PC variance',
       xref: 'paper',
       yref: 'paper',
       x: 0.5,
@@ -250,11 +251,12 @@ export class PlotlyEigencorrelationPlot {
     });
     
     // Adjust layout dimensions based on data size
-    const height = Math.max(400, variableNames.length * 25 + 200);
-    const width = Math.max(600, componentLabels.length * 80 + 200);
+    // Commenting out fixed dimensions to let Plotly handle sizing
+    // const height = Math.max(400, variableNames.length * 25 + 200);
+    // const width = Math.max(600, componentLabels.length * 80 + 200);
     
-    layout.height = height;
-    layout.width = width;
+    // layout.height = height;
+    // layout.width = width;
     
     // Adjust margins to accommodate labels
     layout.margin = {

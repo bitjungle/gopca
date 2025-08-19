@@ -18,6 +18,8 @@ interface DiagnosticScatterPlotProps {
   groupLabels?: string[];
   showThresholds?: boolean;
   confidenceLevel?: number;
+  showRowLabels?: boolean;
+  maxLabelsToShow?: number;
 }
 
 export const DiagnosticScatterPlot: React.FC<DiagnosticScatterPlotProps> = ({
@@ -26,7 +28,9 @@ export const DiagnosticScatterPlot: React.FC<DiagnosticScatterPlotProps> = ({
   groupColumn,
   groupLabels,
   showThresholds = true,
-  confidenceLevel = 0.975
+  confidenceLevel = 0.975,
+  showRowLabels = false,
+  maxLabelsToShow = 10
 }) => {
   const { theme } = useTheme();
   const { qualitativePalette } = usePalette();
@@ -41,13 +45,17 @@ export const DiagnosticScatterPlot: React.FC<DiagnosticScatterPlotProps> = ({
     groupLabels
   );
 
-  // Create config for Plotly component
-  const plotlyConfig = createDiagnosticPlotConfig(
-    showThresholds,
-    confidenceLevel,
-    theme,
-    colorScheme
-  );
+  // Create config for Plotly component with label settings
+  const plotlyConfig = {
+    ...createDiagnosticPlotConfig(
+      showThresholds,
+      confidenceLevel,
+      theme,
+      colorScheme
+    ),
+    showLabels: showRowLabels,
+    labelThreshold: maxLabelsToShow
+  };
 
   return (
     <div style={{ width: '100%', height: '100%' }}>

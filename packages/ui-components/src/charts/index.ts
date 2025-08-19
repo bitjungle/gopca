@@ -4,17 +4,14 @@
 // The author respectfully requests that it not be used for
 // military, warfare, or surveillance applications.
 
-// Provider
+// Charts module - Legacy chart components removed as part of Plotly migration
+// Use the Plotly PCA visualizations from '../charts/adapters/plotly/pca' instead
+
+// Provider (kept for potential future use)
 export { ChartProvider, useChartConfig } from './ChartProvider';
 export type { ChartLibrary } from './ChartProvider';
 
-// Chart Components
-export { ScatterChart } from './components/ScatterChart';
-export { BarChart } from './components/BarChart';
-export { LineChart } from './components/LineChart';
-export { ComposedChart } from './components/ComposedChart';
-
-// Types
+// Types (kept for backward compatibility)
 export type {
   ChartDataPoint,
   ChartDomain,
@@ -25,14 +22,3 @@ export type {
   LineChartProps,
   ComposedChartProps,
 } from './types';
-
-// Native components for use within ComposedChart
-export { 
-  Scatter,
-  Bar,
-  Line,
-  Cell,
-  Legend,
-  ReferenceLine,
-  Tooltip as RechartsTooltip,
-} from 'recharts';

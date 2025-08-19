@@ -5,24 +5,10 @@
 // military, warfare, or surveillance applications.
 
 import React from 'react';
-import { useChartConfig } from '../ChartProvider';
 import { ScatterChartProps } from '../types';
-import RechartsAdapter from '../adapters/recharts/RechartsAdapter';
 import PlotlyAdapter from '../adapters/plotly/PlotlyAdapter';
 
+// ScatterChart now only uses Plotly - Recharts support removed
 export const ScatterChart: React.FC<ScatterChartProps> = (props) => {
-  const { config } = useChartConfig();
-  
-  switch (config.provider) {
-    case 'recharts':
-      return <RechartsAdapter.ScatterChart {...props} />;
-    case 'plotly':
-      return <PlotlyAdapter.ScatterChart {...props} />;
-    case 'd3':
-      // Future: return <D3Adapter.ScatterChart {...props} />;
-      console.warn('D3 adapter not yet implemented, falling back to Recharts');
-      return <RechartsAdapter.ScatterChart {...props} />;
-    default:
-      return <PlotlyAdapter.ScatterChart {...props} />;
-  }
+  return <PlotlyAdapter.ScatterChart {...props} />;
 };

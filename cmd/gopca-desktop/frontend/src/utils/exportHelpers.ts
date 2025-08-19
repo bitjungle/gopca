@@ -29,7 +29,7 @@ export const createChartExportHandler = (
       // Wait for fonts to be fully loaded
       await document.fonts.ready;
       
-      // Give Recharts time to fully render all text elements
+      // Give charts time to fully render all text elements
       await new Promise(resolve => setTimeout(resolve, 300));
       
       const chartElement = chartRef.current;
@@ -47,12 +47,7 @@ export const createChartExportHandler = (
         style: {
           fontFamily: '"Nunito", -apple-system, BlinkMacSystemFont, "Segoe UI", "Roboto", sans-serif',
         },
-        filter: (node) => {
-          if (node.classList?.contains('recharts-tooltip-wrapper')) {
-            return false;
-          }
-          return true;
-        }
+        // No filter needed for Plotly charts
       });
     } else {
       dataUrl = await toSvg(chartRef.current, {

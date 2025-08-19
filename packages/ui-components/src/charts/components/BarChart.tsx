@@ -5,24 +5,10 @@
 // military, warfare, or surveillance applications.
 
 import React from 'react';
-import { useChartConfig } from '../ChartProvider';
 import { BarChartProps } from '../types';
-import RechartsAdapter from '../adapters/recharts/RechartsAdapter';
 import PlotlyAdapter from '../adapters/plotly/PlotlyAdapter';
 
+// BarChart now only uses Plotly - Recharts support removed
 export const BarChart: React.FC<BarChartProps> = (props) => {
-  const { config } = useChartConfig();
-  
-  switch (config.provider) {
-    case 'recharts':
-      return <RechartsAdapter.BarChart {...props} />;
-    case 'plotly':
-      return <PlotlyAdapter.BarChart {...props} />;
-    case 'd3':
-      // Future: return <D3Adapter.BarChart {...props} />;
-      console.warn('D3 adapter not yet implemented, falling back to Recharts');
-      return <RechartsAdapter.BarChart {...props} />;
-    default:
-      return <PlotlyAdapter.BarChart {...props} />;
-  }
+  return <PlotlyAdapter.BarChart {...props} />;
 };

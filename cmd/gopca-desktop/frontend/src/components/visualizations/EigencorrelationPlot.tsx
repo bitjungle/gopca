@@ -31,6 +31,17 @@ export const EigencorrelationPlot: React.FC<EigencorrelationPlotProps> = ({
   // Transform data to Plotly format
   const plotlyData = transformToEigencorrelationPlotData(pcaResult);
 
+  // Check if eigencorrelations are available
+  if (!plotlyData) {
+    return (
+      <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+        <p style={{ color: theme === 'dark' ? '#9ca3af' : '#6b7280', textAlign: 'center' }}>
+          No eigencorrelation data available. Please ensure metadata variables were included when calculating PCA.
+        </p>
+      </div>
+    );
+  }
+
   // Create config for Plotly component
   const plotlyConfig = createEigencorrelationPlotConfig(maxComponents, theme, colorScheme);
 

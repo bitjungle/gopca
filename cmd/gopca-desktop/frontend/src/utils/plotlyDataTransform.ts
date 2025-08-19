@@ -20,6 +20,25 @@ import type {
 } from '@gopca/ui-components';
 
 /**
+ * Helper function to transpose a matrix
+ * Converts [rows][cols] to [cols][rows]
+ */
+function transposeMatrix(matrix: number[][]): number[][] {
+  if (!matrix || matrix.length === 0) return [];
+  const rows = matrix.length;
+  const cols = matrix[0].length;
+  const transposed: number[][] = Array(cols).fill(null).map(() => Array(rows));
+  
+  for (let i = 0; i < rows; i++) {
+    for (let j = 0; j < cols; j++) {
+      transposed[j][i] = matrix[i][j];
+    }
+  }
+  
+  return transposed;
+}
+
+/**
  * Transform PCAResult to Plotly ScoresPlot data format
  */
 export function transformToScoresPlotData(
@@ -37,7 +56,7 @@ export function transformToScoresPlotData(
     groups: groupLabels || [],
     groupValues,
     groupType,
-    explainedVariance: pcaResult.explained_variance,
+    explainedVariance: pcaResult.explained_variance_ratio, // Already in percentages from backend
     pc1: xComponent,
     pc2: yComponent
   };
@@ -71,7 +90,7 @@ export function createScoresPlotConfig(
  */
 export function transformToScreePlotData(pcaResult: PCAResult): ScreePlotData {
   return {
-    explainedVariance: pcaResult.explained_variance,
+    explainedVariance: pcaResult.explained_variance_ratio, // Already in percentages from backend
     cumulativeVariance: pcaResult.cumulative_variance,
     // eigenvalues could be calculated if needed
   };
@@ -102,10 +121,13 @@ export function transformToLoadingsPlotData(
   pcaResult: PCAResult,
   selectedComponent: number = 0
 ): LoadingsPlotData {
+  // Backend stores loadings as [variables][components], but frontend expects [components][variables]
+  const transposedLoadings = transposeMatrix(pcaResult.loadings);
+  
   return {
-    loadings: pcaResult.loadings,
+    loadings: transposedLoadings,
     variableNames: pcaResult.variable_labels || 
-      Array.from({ length: pcaResult.loadings[0]?.length || 0 }, (_, i) => `Var${i + 1}`),
+      Array.from({ length: pcaResult.loadings.length }, (_, i) => `Var${i + 1}`), // Use loadings.length for number of variables
     componentIndex: selectedComponent
   };
 }
@@ -124,6 +146,7 @@ export function createLoadingsPlotConfig(
     sortByMagnitude,
     showThreshold: true,
     thresholdValue: 0.3,
+    // Don't set maxVariables - show all by default
     theme,
     colorScheme
   };
@@ -137,13 +160,16 @@ export function transformToBiplotData(
   rowNames: string[],
   groupLabels?: string[]
 ): BiplotData {
+  // Backend stores loadings as [variables][components], but frontend expects [components][variables]
+  const transposedLoadings = transposeMatrix(pcaResult.loadings);
+  
   return {
     scores: pcaResult.scores,
-    loadings: pcaResult.loadings,
-    explainedVariance: pcaResult.explained_variance,
+    loadings: transposedLoadings,
+    explainedVariance: pcaResult.explained_variance_ratio, // Already in percentages from backend
     sampleNames: rowNames,
     variableNames: pcaResult.variable_labels || 
-      Array.from({ length: pcaResult.loadings[0]?.length || 0 }, (_, i) => `Var${i + 1}`),
+      Array.from({ length: pcaResult.loadings.length }, (_, i) => `Var${i + 1}`), // Use loadings.length for number of variables
     groups: groupLabels
   };
 }
@@ -178,11 +204,14 @@ export function createBiplotConfig(
 export function transformToCircleOfCorrelationsData(
   pcaResult: PCAResult
 ): CircleOfCorrelationsData {
+  // Backend stores loadings as [variables][components], but frontend expects [components][variables]
+  const transposedLoadings = transposeMatrix(pcaResult.loadings);
+  
   return {
-    loadings: pcaResult.loadings,
+    loadings: transposedLoadings,
     variableNames: pcaResult.variable_labels || 
-      Array.from({ length: pcaResult.loadings[0]?.length || 0 }, (_, i) => `Var${i + 1}`),
-    explainedVariance: pcaResult.explained_variance
+      Array.from({ length: pcaResult.loadings.length }, (_, i) => `Var${i + 1}`), // Use loadings.length for number of variables
+    explainedVariance: pcaResult.explained_variance_ratio // Already in percentages from backend
   };
 }
 
@@ -251,13 +280,35 @@ export function createDiagnosticPlotConfig(
  */
 export function transformToEigencorrelationPlotData(
   pcaResult: PCAResult
-): EigencorrelationPlotData {
-  // Loadings are already correlations in standardized PCA
+): EigencorrelationPlotData | null {
+  // Check if eigencorrelations exist
+  if (!pcaResult.eigencorrelations) {
+    return null;
+  }
+
+  const eigencorr = pcaResult.eigencorrelations;
+  
+  // Transform from map format to 2D array format [components][variables]
+  // Backend format: {variable: [correlations per component]}
+  // Frontend expects: [[correlations per component for all variables]]
+  const numComponents = eigencorr.components.length;
+  const numVariables = eigencorr.variables.length;
+  
+  const correlationMatrix: number[][] = [];
+  
+  // Build the matrix with components as rows and variables as columns
+  for (let compIdx = 0; compIdx < numComponents; compIdx++) {
+    const row: number[] = [];
+    for (const variable of eigencorr.variables) {
+      row.push(eigencorr.correlations[variable][compIdx]);
+    }
+    correlationMatrix.push(row);
+  }
+  
   return {
-    correlations: pcaResult.loadings,
-    variableNames: pcaResult.variable_labels || 
-      Array.from({ length: pcaResult.loadings[0]?.length || 0 }, (_, i) => `Var${i + 1}`),
-    explainedVariance: pcaResult.explained_variance
+    correlations: correlationMatrix,
+    variableNames: eigencorr.variables, // Metadata variable names
+    explainedVariance: pcaResult.explained_variance_ratio // Already in percentages from backend
   };
 }
 

@@ -11,7 +11,7 @@ export interface PerformanceConfig {
 }
 
 export const DEFAULT_PERFORMANCE_CONFIG: PerformanceConfig = {
-  webglThreshold: 1000,
+  webglThreshold: 100,  // Use WebGL for datasets > 100 points for better performance
   decimationThreshold: 10000,
   densityThreshold: 100000,
   targetFPS: 60
@@ -25,7 +25,7 @@ export const DEFAULT_PERFORMANCE_CONFIG: PerformanceConfig = {
  * @param threshold - Size threshold for WebGL (default 1000)
  * @returns Optimized trace type
  */
-export function optimizeTraceType(data: any[], threshold: number = 1000): 'scatter' | 'scattergl' {
+export function optimizeTraceType(data: any[], threshold: number = 100): 'scatter' | 'scattergl' {
   return data.length > threshold ? 'scattergl' : 'scatter';
 }
 

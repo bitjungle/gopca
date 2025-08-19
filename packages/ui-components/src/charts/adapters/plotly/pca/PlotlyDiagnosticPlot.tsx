@@ -178,7 +178,7 @@ export class PlotlyDiagnosticPlot {
           textposition: 'top center',
           textfont: {
             size: 10,
-            color: 'black'
+            color: this.config.theme === 'dark' ? '#e5e7eb' : '#374151'
           },
           showlegend: false,
           hoverinfo: 'skip'
@@ -223,12 +223,10 @@ export class PlotlyDiagnosticPlot {
       hovermode: 'closest',
       showlegend: true,
       legend: {
-        x: 1,
+        x: 1.02,
         y: 1,
-        xanchor: 'right',
+        xanchor: 'left',
         yanchor: 'top',
-        bgcolor: 'rgba(255, 255, 255, 0.9)',
-        bordercolor: 'black',
         borderwidth: 1
       },
       shapes: [],
@@ -246,7 +244,7 @@ export class PlotlyDiagnosticPlot {
         y1: 1,
         yref: 'paper',
         line: {
-          color: 'red',
+          color: this.config.colorScheme?.[3] || '#C44E52',  // Use palette color (red from deep palette)
           width: 2,
           dash: 'dash'
         }
@@ -261,7 +259,7 @@ export class PlotlyDiagnosticPlot {
         y0: this.config.rssThreshold,
         y1: this.config.rssThreshold,
         line: {
-          color: 'red',
+          color: this.config.colorScheme?.[3] || '#C44E52',  // Use palette color (red from deep palette)
           width: 2,
           dash: 'dash'
         }

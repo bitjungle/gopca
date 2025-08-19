@@ -4,15 +4,23 @@
 // The author respectfully requests that it not be used for
 // military, warfare, or surveillance applications.
 
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef, useEffect, lazy, Suspense } from 'react';
 import './App.css';
 import { ParseCSV, RunPCA, LoadIrisDataset, LoadDatasetFile, GetVersion, CalculateEllipses, GetGUIConfig, LoadCSVFile, CheckGoCSVStatus, OpenInGoCSV, LaunchGoCSV, DownloadGoCSV } from "../wailsjs/go/main/App";
 import { Copy, Check } from 'lucide-react';
 import { EventsOn } from '../wailsjs/runtime/runtime';
 import { DataTable, SelectionTable, MatrixIllustration, HelpWrapper, DocumentationViewer } from './components';
-import { ScoresPlot, ScreePlot, LoadingsPlot, Biplot, CircleOfCorrelations, DiagnosticScatterPlot, EigencorrelationPlot } from './components/visualizations';
+
+// Lazy load visualization components for better performance
+const ScoresPlot = lazy(() => import('./components/visualizations/ScoresPlot').then(m => ({ default: m.ScoresPlot })));
+const ScreePlot = lazy(() => import('./components/visualizations/ScreePlot').then(m => ({ default: m.ScreePlot })));
+const LoadingsPlot = lazy(() => import('./components/visualizations/LoadingsPlot').then(m => ({ default: m.LoadingsPlot })));
+const Biplot = lazy(() => import('./components/visualizations/Biplot').then(m => ({ default: m.Biplot })));
+const CircleOfCorrelations = lazy(() => import('./components/visualizations/CircleOfCorrelations').then(m => ({ default: m.CircleOfCorrelations })));
+const DiagnosticScatterPlot = lazy(() => import('./components/visualizations/DiagnosticScatterPlot').then(m => ({ default: m.DiagnosticScatterPlot })));
+const EigencorrelationPlot = lazy(() => import('./components/visualizations/EigencorrelationPlot').then(m => ({ default: m.EigencorrelationPlot })));
 import { FileData, PCARequest, PCAResponse } from './types';
-import { ThemeProvider, ThemeToggle, ConfirmDialog, ChartProvider } from '@gopca/ui-components';
+import { ThemeProvider, ThemeToggle, ConfirmDialog } from '@gopca/ui-components';
 import { HelpProvider, useHelp } from './contexts/HelpContext';
 import { PaletteProvider, usePalette } from './contexts/PaletteContext';
 import { HelpDisplay } from './components/HelpDisplay';
@@ -1227,77 +1235,88 @@ function AppContent() {
                                     </div>
                                 </div>
                                 
-                                <div className="bg-gray-50 dark:bg-gray-700 rounded-lg p-4 border border-gray-200 dark:border-gray-600" style={{ height: '500px' }}>
-                                    {selectedPlot === 'scores' && pcaResponse.result.scores.length > 0 && pcaResponse.result.scores[0].length >= 2 ? (
-                                        <ScoresPlot
-                                            pcaResult={pcaResponse.result}
-                                            rowNames={fileData?.rowNames || []}
-                                            xComponent={selectedXComponent}
-                                            yComponent={selectedYComponent}
-                                            groupColumn={selectedGroupColumn}
-                                            groupLabels={getColumnData(selectedGroupColumn).type === 'categorical' ? getColumnData(selectedGroupColumn).values as string[] : undefined}
-                                            groupValues={getColumnData(selectedGroupColumn).type === 'continuous' ? getColumnData(selectedGroupColumn).values as number[] : undefined}
-                                            groupType={getColumnData(selectedGroupColumn).type}
-                                            groupEllipses={
-                                                confidenceLevel === 0.90 ? pcaResponse.groupEllipses90 :
-                                                confidenceLevel === 0.95 ? pcaResponse.groupEllipses95 :
-                                                pcaResponse.groupEllipses99
-                                            }
-                                            showEllipses={showEllipses && !!selectedGroupColumn && getColumnData(selectedGroupColumn).type === 'categorical'}
-                                            confidenceLevel={confidenceLevel}
-                                            showRowLabels={showRowLabels}
-                                            maxLabelsToShow={maxLabelsToShow}
-                                        />
-                                    ) : selectedPlot === 'scree' ? (
-                                        <ScreePlot
-                                            pcaResult={pcaResponse.result}
-                                            showCumulative={true}
-                                            elbowThreshold={80}
-                                        />
-                                    ) : selectedPlot === 'loadings' ? (
-                                        <LoadingsPlot
-                                            pcaResult={pcaResponse.result}
-                                            selectedComponent={selectedLoadingComponent}
-                                            variableThreshold={guiConfig?.visualization?.loadings_variable_threshold || 100}
-                                        />
-                                    ) : selectedPlot === 'biplot' ? (
-                                        <Biplot
-                                            pcaResult={pcaResponse.result}
-                                            rowNames={fileData?.rowNames || []}
-                                            xComponent={selectedXComponent}
-                                            yComponent={selectedYComponent}
-                                            showRowLabels={showRowLabels}
-                                            maxLabelsToShow={maxLabelsToShow}
-                                            groupColumn={selectedGroupColumn}
-                                            groupLabels={getColumnData(selectedGroupColumn).type === 'categorical' ? getColumnData(selectedGroupColumn).values as string[] : undefined}
-                                            groupEllipses={
-                                                confidenceLevel === 0.90 ? pcaResponse.groupEllipses90 :
-                                                confidenceLevel === 0.95 ? pcaResponse.groupEllipses95 :
-                                                pcaResponse.groupEllipses99
-                                            }
-                                            showEllipses={showEllipses && !!selectedGroupColumn && getColumnData(selectedGroupColumn).type === 'categorical'}
-                                            confidenceLevel={confidenceLevel}
-                                        />
-                                    ) : selectedPlot === 'correlations' ? (
-                                        <CircleOfCorrelations
-                                            pcaResult={pcaResponse.result}
-                                            xComponent={selectedXComponent}
-                                            yComponent={selectedYComponent}
-                                        />
-                                    ) : selectedPlot === 'diagnostics' ? (
-                                        <DiagnosticScatterPlot
-                                            pcaResult={pcaResponse.result}
-                                            rowNames={fileData?.rowNames || []}
-                                        />
-                                    ) : selectedPlot === 'eigencorrelation' ? (
-                                        <EigencorrelationPlot
-                                            pcaResult={pcaResponse.result}
-                                        />
-                                    ) : (
-                                        <div className="w-full h-full flex items-center justify-center text-gray-500 dark:text-gray-400">
-                                            <p>Not enough components for scores plot (minimum 2 required)</p>
+                                <div className="bg-gray-50 dark:bg-gray-700 rounded-lg" style={{ height: '500px' }}>
+                                    <Suspense fallback={
+                                        <div className="w-full h-full flex items-center justify-center">
+                                            <div className="flex flex-col items-center gap-4">
+                                                <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
+                                                <p className="text-gray-600 dark:text-gray-400">Loading visualization...</p>
+                                            </div>
                                         </div>
-                                    )}
+                                    }>
+                                        {selectedPlot === 'scores' && pcaResponse.result.scores.length > 0 && pcaResponse.result.scores[0].length >= 2 ? (
+                                            <ScoresPlot
+                                                pcaResult={pcaResponse.result}
+                                                rowNames={fileData?.rowNames || []}
+                                                xComponent={selectedXComponent}
+                                                yComponent={selectedYComponent}
+                                                groupColumn={selectedGroupColumn}
+                                                groupLabels={getColumnData(selectedGroupColumn).type === 'categorical' ? getColumnData(selectedGroupColumn).values as string[] : undefined}
+                                                groupValues={getColumnData(selectedGroupColumn).type === 'continuous' ? getColumnData(selectedGroupColumn).values as number[] : undefined}
+                                                groupType={getColumnData(selectedGroupColumn).type}
+                                                groupEllipses={
+                                                    confidenceLevel === 0.90 ? pcaResponse.groupEllipses90 :
+                                                    confidenceLevel === 0.95 ? pcaResponse.groupEllipses95 :
+                                                    pcaResponse.groupEllipses99
+                                                }
+                                                showEllipses={showEllipses && !!selectedGroupColumn && getColumnData(selectedGroupColumn).type === 'categorical'}
+                                                confidenceLevel={confidenceLevel}
+                                                showRowLabels={showRowLabels}
+                                                maxLabelsToShow={maxLabelsToShow}
+                                            />
+                                        ) : selectedPlot === 'scree' ? (
+                                            <ScreePlot
+                                                pcaResult={pcaResponse.result}
+                                                showCumulative={true}
+                                                elbowThreshold={80}
+                                            />
+                                        ) : selectedPlot === 'loadings' ? (
+                                            <LoadingsPlot
+                                                pcaResult={pcaResponse.result}
+                                                selectedComponent={selectedLoadingComponent}
+                                                variableThreshold={guiConfig?.visualization?.loadings_variable_threshold || 100}
+                                            />
+                                        ) : selectedPlot === 'biplot' ? (
+                                            <Biplot
+                                                pcaResult={pcaResponse.result}
+                                                rowNames={fileData?.rowNames || []}
+                                                xComponent={selectedXComponent}
+                                                yComponent={selectedYComponent}
+                                                showRowLabels={showRowLabels}
+                                                maxLabelsToShow={maxLabelsToShow}
+                                                groupColumn={selectedGroupColumn}
+                                                groupLabels={getColumnData(selectedGroupColumn).type === 'categorical' ? getColumnData(selectedGroupColumn).values as string[] : undefined}
+                                                groupEllipses={
+                                                    confidenceLevel === 0.90 ? pcaResponse.groupEllipses90 :
+                                                    confidenceLevel === 0.95 ? pcaResponse.groupEllipses95 :
+                                                    pcaResponse.groupEllipses99
+                                                }
+                                                showEllipses={showEllipses && !!selectedGroupColumn && getColumnData(selectedGroupColumn).type === 'categorical'}
+                                                confidenceLevel={confidenceLevel}
+                                            />
+                                        ) : selectedPlot === 'correlations' ? (
+                                            <CircleOfCorrelations
+                                                pcaResult={pcaResponse.result}
+                                                xComponent={selectedXComponent}
+                                                yComponent={selectedYComponent}
+                                            />
+                                        ) : selectedPlot === 'diagnostics' ? (
+                                            <DiagnosticScatterPlot
+                                                pcaResult={pcaResponse.result}
+                                                rowNames={fileData?.rowNames || []}
+                                                showRowLabels={showRowLabels}
+                                                maxLabelsToShow={maxLabelsToShow}
+                                            />
+                                        ) : selectedPlot === 'eigencorrelation' ? (
+                                            <EigencorrelationPlot
+                                                pcaResult={pcaResponse.result}
+                                            />
+                                        ) : (
+                                            <div className="w-full h-full flex items-center justify-center text-gray-500 dark:text-gray-400">
+                                                <p>Not enough components for scores plot (minimum 2 required)</p>
+                                            </div>
+                                        )}
+                                    </Suspense>
                                 </div>
                                 
                                 {/* Export Model button - centered below plot */}
@@ -1349,13 +1368,11 @@ function AppContent() {
 function App() {
     return (
         <ThemeProvider>
-            <ChartProvider>
-                <PaletteProvider>
-                    <HelpProvider>
-                        <AppContent />
-                    </HelpProvider>
-                </PaletteProvider>
-            </ChartProvider>
+            <PaletteProvider>
+                <HelpProvider>
+                    <AppContent />
+                </HelpProvider>
+            </PaletteProvider>
         </ThemeProvider>
     );
 }

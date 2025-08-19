@@ -224,33 +224,39 @@ export function calculateSmartLabels(
 export const selectSmartLabels = calculateSmartLabels;
 
 /**
- * Calculate biplot scaling for loading vectors
+ * Calculate biplot scaling for loading vectors with adaptive visual scaling
  * Reference: Gabriel (1971), "The biplot graphic display of matrices with application to principal component analysis"
  * 
  * @param loadings - Loading matrix [n_components][n_variables]
  * @param explainedVariance - Explained variance per component
  * @param scalingType - Type of scaling to apply
+ * @param scores - Optional score matrix for adaptive scaling [n_samples][n_components]
  * @returns Scaled loadings for biplot visualization
  */
 export function calculateBiplotScaling(
   loadings: number[][],
   explainedVariance: number[],
-  scalingType: 'correlation' | 'symmetric' | 'pca' = 'correlation'
-): { scaledLoadings: number[][] } {
-  const scaledLoadings = loadings.map((componentLoadings, i) => {
+  scalingType: 'correlation' | 'symmetric' | 'pca' = 'correlation',
+  scores?: number[][]
+): { scaledLoadings: number[][]; adaptiveScale: number } {
+  // First apply mathematical scaling based on biplot type
+  const mathScaledLoadings = loadings.map((componentLoadings, i) => {
     let scale = 1;
     
     switch (scalingType) {
       case 'correlation':
         // Scale by sqrt of explained variance (preserves correlations)
+        // This emphasizes variable relationships
         scale = Math.sqrt(explainedVariance[i] / 100);
         break;
       case 'symmetric':
         // Square root scaling for both scores and loadings
+        // This provides a balanced representation
         scale = Math.pow(explainedVariance[i] / 100, 0.25);
         break;
       case 'pca':
         // Standard PCA scaling (loadings as-is)
+        // Raw loadings without variance scaling
         scale = 1;
         break;
     }
@@ -258,7 +264,34 @@ export function calculateBiplotScaling(
     return componentLoadings.map(loading => loading * scale);
   });
   
-  return { scaledLoadings };
+  // Apply adaptive visual scaling if scores are provided
+  let adaptiveScale = 1;
+  if (scores && scores.length > 0) {
+    // Calculate the range of scores
+    const scoreValues = scores.flat();
+    const scoreRange = Math.max(...scoreValues.map(Math.abs));
+    
+    // Calculate the range of mathematically scaled loadings
+    const loadingValues = mathScaledLoadings.flat();
+    const loadingRange = Math.max(...loadingValues.map(Math.abs));
+    
+    // Ensure loadings are not too small
+    if (loadingRange > 0 && scoreRange > 0) {
+      // Scale loadings to use 60-70% of the score range for good visibility
+      // This ensures arrows are clearly visible without dominating the plot
+      adaptiveScale = (scoreRange * 0.65) / loadingRange;
+      
+      // Apply reasonable limits to prevent extreme scaling
+      adaptiveScale = Math.max(0.1, Math.min(adaptiveScale, 100));
+    }
+  }
+  
+  // Apply adaptive scaling to all loadings
+  const scaledLoadings = mathScaledLoadings.map(componentLoadings =>
+    componentLoadings.map(loading => loading * adaptiveScale)
+  );
+  
+  return { scaledLoadings, adaptiveScale };
 }
 
 /**

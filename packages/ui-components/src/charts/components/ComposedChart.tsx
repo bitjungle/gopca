@@ -5,24 +5,10 @@
 // military, warfare, or surveillance applications.
 
 import React from 'react';
-import { useChartConfig } from '../ChartProvider';
 import { ComposedChartProps } from '../types';
-import RechartsAdapter from '../adapters/recharts/RechartsAdapter';
 import PlotlyAdapter from '../adapters/plotly/PlotlyAdapter';
 
+// ComposedChart now only uses Plotly - Recharts support removed
 export const ComposedChart: React.FC<ComposedChartProps> = (props) => {
-  const { config } = useChartConfig();
-  
-  switch (config.provider) {
-    case 'recharts':
-      return <RechartsAdapter.ComposedChart {...props} />;
-    case 'plotly':
-      return <PlotlyAdapter.ComposedChart {...props} />;
-    case 'd3':
-      // Future: return <D3Adapter.ComposedChart {...props} />;
-      console.warn('D3 adapter not yet implemented, falling back to Recharts');
-      return <RechartsAdapter.ComposedChart {...props} />;
-    default:
-      return <PlotlyAdapter.ComposedChart {...props} />;
-  }
+  return <PlotlyAdapter.ComposedChart {...props} />;
 };

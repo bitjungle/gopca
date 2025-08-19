@@ -4,9 +4,8 @@
 import React, { useMemo } from 'react';
 import Plot from 'react-plotly.js';
 import { Data, Layout } from 'plotly.js';
-import { PCA_REFERENCES } from '../utils/plotlyMath';
 import { getExportMenuItems } from '../utils/plotlyExport';
-import { ThemeMode } from '../utils/plotlyTheme';
+import { getPlotlyTheme, mergeLayouts, ThemeMode } from '../utils/plotlyTheme';
 
 export interface LoadingsPlotData {
   loadings: number[][];  // [components][variables]
@@ -92,13 +91,16 @@ export class PlotlyLoadingsPlot {
         hovertemplate: '<b>%{x}</b><br>Loading: %{y:.3f}<extra></extra>'
       });
     } else if (this.config.mode === 'line') {
-      // Line chart mode
+      // Line chart mode - use indices for x-axis
       const colors = this.config.colorScheme || ['#3b82f6', '#ef4444'];
+      const xValues = Array.from({ length: sortedVariableNames.length }, (_, i) => i);
+      
       traces.push({
         type: 'scatter',
         mode: 'lines+markers',
-        x: sortedVariableNames,
+        x: xValues,
         y: componentLoadings,
+        text: sortedVariableNames,
         name: `PC${componentIndex + 1} Loadings`,
         line: {
           color: colors[0],
@@ -108,7 +110,7 @@ export class PlotlyLoadingsPlot {
           size: 8,
           color: componentLoadings.map(v => v >= 0 ? colors[0] : colors[1])
         },
-        hovertemplate: '<b>%{x}</b><br>Loading: %{y:.3f}<extra></extra>'
+        hovertemplate: '<b>%{text}</b><br>Loading: %{y:.3f}<br>Index: %{x}<extra></extra>'
       });
     } else if (this.config.mode === 'grouped') {
       // Grouped bar chart for multiple components
@@ -155,6 +157,12 @@ export class PlotlyLoadingsPlot {
     return { componentLoadings, sortedVariableNames };
   }
   
+  getEnhancedLayout(): Partial<Layout> {
+    const baseLayout = this.getLayout();
+    const themeLayout = getPlotlyTheme(this.config.theme || 'light').layout;
+    return mergeLayouts(themeLayout, baseLayout);
+  }
+  
   getLayout(): Partial<Layout> {
     const { sortedVariableNames } = this.prepareData();
     const componentIndex = this.data.componentIndex || 0;
@@ -167,10 +175,10 @@ export class PlotlyLoadingsPlot {
       },
       xaxis: {
         title: {
-          text: 'Variables'
+          text: this.config.mode === 'line' ? 'Variable Index' : 'Variables'
         },
-        type: 'category',
-        tickangle: sortedVariableNames.length > 10 ? -45 : 0
+        type: this.config.mode === 'line' ? 'linear' : 'category',
+        tickangle: this.config.mode === 'bar' && sortedVariableNames.length > 10 ? -45 : 0
       },
       yaxis: {
         title: {
@@ -185,15 +193,12 @@ export class PlotlyLoadingsPlot {
       hovermode: 'x unified',
       showlegend: this.config.mode === 'grouped',
       legend: {
-        x: 1,
+        x: 1.02,
         y: 1,
-        xanchor: 'right',
+        xanchor: 'left',
         yanchor: 'top',
-        bgcolor: 'rgba(255, 255, 255, 0.9)',
-        bordercolor: 'black',
         borderwidth: 1
       },
-      template: 'plotly_white' as any,
       shapes: [],
       annotations: []
     };
@@ -244,18 +249,7 @@ export class PlotlyLoadingsPlot {
           font: {
             color: 'orange',
             size: 10
-          },
-          bgcolor: 'rgba(255, 255, 255, 0.8)'
-        },
-        // Add references
-        {
-          text: `References: ${PCA_REFERENCES.map(r => `${r.authors} (${r.year})`).join(', ')}`,
-          xref: 'paper',
-          yref: 'paper',
-          x: 0,
-          y: -0.15,
-          showarrow: false,
-          font: { size: 10, color: 'gray' }
+          }
         }
       ];
     }
@@ -291,7 +285,7 @@ export const PCALoadingsPlot: React.FC<{
   return (
     <Plot
       data={plot.getTraces()}
-      layout={plot.getLayout()}
+      layout={plot.getEnhancedLayout()}
       config={plot.getConfig()}
       style={{ width: '100%', height: '100%' }}
       useResizeHandler={true}

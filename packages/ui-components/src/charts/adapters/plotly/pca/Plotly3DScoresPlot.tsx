@@ -6,6 +6,7 @@ import Plot from 'react-plotly.js';
 import { Data, Layout, Config } from 'plotly.js';
 import { PCA_REFERENCES } from '../utils/plotlyMath';
 import { getExportMenuItems } from '../utils/plotlyExport';
+import { getPlotlyTheme, mergeLayouts, ThemeMode } from '../utils/plotlyTheme';
 
 export interface Scores3DPlotData {
   scores: number[][];
@@ -26,6 +27,7 @@ export interface Scores3DPlotConfig {
     eye: { x: number; y: number; z: number };
     center?: { x: number; y: number; z: number };
   };
+  theme?: ThemeMode;
 }
 
 /**
@@ -84,11 +86,7 @@ export class Plotly3DScoresPlot {
         marker: {
           size: this.config.markerSize,
           color: this.config.colorScheme![groupIndex % this.config.colorScheme!.length],
-          opacity: this.config.opacity,
-          line: {
-            width: 0.5,
-            color: 'white'
-          }
+          opacity: this.config.opacity
         }
       });
     });
@@ -167,6 +165,12 @@ export class Plotly3DScoresPlot {
     return projectionTraces;
   }
   
+  getEnhancedLayout(): Partial<Layout> {
+    const baseLayout = this.getLayout();
+    const themeLayout = getPlotlyTheme(this.config.theme || 'light').layout;
+    return mergeLayouts(themeLayout, baseLayout);
+  }
+  
   getLayout(): Partial<Layout> {
     const { explainedVariance, pc1 = 0, pc2 = 1, pc3 = 2 } = this.data;
     
@@ -208,14 +212,13 @@ export class Plotly3DScoresPlot {
       },
       showlegend: true,
       legend: {
-        bgcolor: 'rgba(255, 255, 255, 0.9)',
-        bordercolor: 'black',
         borderwidth: 1,
         font: { size: 12 },
-        x: 0.02,
-        y: 0.98
+        x: 1.02,
+        y: 1,
+        xanchor: 'left',
+        yanchor: 'top'
       },
-      template: 'plotly_white' as any,
       annotations: [
         {
           text: `References: ${PCA_REFERENCES.map(r => `${r.authors} (${r.year})`).join(', ')}`,
@@ -258,7 +261,7 @@ export const PCA3DScoresPlot: React.FC<{
   return (
     <Plot
       data={plot.getTraces()}
-      layout={plot.getLayout()}
+      layout={plot.getEnhancedLayout()}
       config={plot.getConfig()}
       style={{ width: '100%', height: '100%' }}
       useResizeHandler={true}

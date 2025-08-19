@@ -5,24 +5,10 @@
 // military, warfare, or surveillance applications.
 
 import React from 'react';
-import { useChartConfig } from '../ChartProvider';
 import { LineChartProps } from '../types';
-import RechartsAdapter from '../adapters/recharts/RechartsAdapter';
 import PlotlyAdapter from '../adapters/plotly/PlotlyAdapter';
 
+// LineChart now only uses Plotly - Recharts support removed
 export const LineChart: React.FC<LineChartProps> = (props) => {
-  const { config } = useChartConfig();
-  
-  switch (config.provider) {
-    case 'recharts':
-      return <RechartsAdapter.LineChart {...props} />;
-    case 'plotly':
-      return <PlotlyAdapter.LineChart {...props} />;
-    case 'd3':
-      // Future: return <D3Adapter.LineChart {...props} />;
-      console.warn('D3 adapter not yet implemented, falling back to Recharts');
-      return <RechartsAdapter.LineChart {...props} />;
-    default:
-      return <PlotlyAdapter.LineChart {...props} />;
-  }
+  return <PlotlyAdapter.LineChart {...props} />;
 };

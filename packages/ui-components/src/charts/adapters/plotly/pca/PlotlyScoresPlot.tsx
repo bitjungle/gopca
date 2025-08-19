@@ -3,7 +3,7 @@
 
 import React, { useMemo } from 'react';
 import Plot from 'react-plotly.js';
-import { Data, Layout } from 'plotly.js';
+import { Data, Layout, Config } from 'plotly.js';
 import { PlotlyVisualization, PlotlyVisualizationConfig } from '../core/PlotlyVisualization';
 import {
   calculateConfidenceEllipse,
@@ -95,12 +95,6 @@ export class PlotlyScoresPlot extends PlotlyVisualization<ScoresPlotData> {
       const groupScores = groupIndices.map(i => scores[i]);
       const groupPoints = groupScores.map(s => ({ x: s[pc1], y: s[pc2] }));
       
-      // Prepare text labels
-      const text = groupIndices.map(i => {
-        const label = sampleNames?.[i] || `Sample ${i}`;
-        return smartLabelIndices.includes(i) ? label : '';
-      });
-      
       // Prepare hover text
       const hovertext = groupIndices.map(i => {
         const label = sampleNames?.[i] || `Sample ${i}`;
@@ -110,46 +104,30 @@ export class PlotlyScoresPlot extends PlotlyVisualization<ScoresPlotData> {
       // Determine trace type based on performance
       const traceType = optimizeTraceType(groupScores, this.config.dataThreshold!);
       
-      // Main scatter trace
+      // Main scatter trace - markers only (WebGL compatible)
       traces.push({
         type: traceType as any,
-        mode: 'markers+text' as any,
+        mode: 'markers',
         name: group,
         x: groupScores.map(s => s[pc1]),
         y: groupScores.map(s => s[pc2]),
-        text: text,
         hovertext: hovertext,
         hovertemplate: '%{hovertext}<extra></extra>',
-        textposition: 'top center',
-        textfont: {
-          size: 10,
-          color: this.scoresConfig.colorScheme![groupIndex % this.scoresConfig.colorScheme!.length]
-        },
         marker: {
           size: 8,
           color: this.scoresConfig.colorScheme![groupIndex % this.scoresConfig.colorScheme!.length],
-          opacity: 0.8,
-          line: {
-            width: 1,
-            color: 'white'
-          }
+          opacity: 0.8
         },
         selectedpoints: undefined,
         selected: {
           marker: {
             size: 12,
             opacity: 1
-          },
-          textfont: {
-            color: this.scoresConfig.colorScheme![groupIndex % this.scoresConfig.colorScheme!.length]
           }
         } as any,
         unselected: {
           marker: {
             opacity: 0.3
-          },
-          textfont: {
-            color: this.scoresConfig.colorScheme![groupIndex % this.scoresConfig.colorScheme!.length]
           }
         } as any
       });
@@ -162,6 +140,35 @@ export class PlotlyScoresPlot extends PlotlyVisualization<ScoresPlotData> {
         }
       }
     });
+    
+    // Add text labels as a separate trace (if enabled)
+    // This ensures text renders properly with both scatter and scattergl
+    if (this.scoresConfig.showSmartLabels && smartLabelIndices.length > 0) {
+      const labelX: number[] = [];
+      const labelY: number[] = [];
+      const labelText: string[] = [];
+      
+      smartLabelIndices.forEach(i => {
+        labelX.push(scores[i][pc1]);
+        labelY.push(scores[i][pc2]);
+        labelText.push(sampleNames?.[i] || `Sample ${i}`);
+      });
+      
+      traces.push({
+        type: 'scatter',
+        mode: 'text',
+        x: labelX,
+        y: labelY,
+        text: labelText,
+        textposition: 'top center',
+        textfont: {
+          size: 10,
+          color: this.config.theme === 'dark' ? '#e5e7eb' : '#374151'
+        },
+        showlegend: false,
+        hoverinfo: 'skip'
+      });
+    }
     
     return traces;
   }
@@ -233,7 +240,7 @@ export class PlotlyScoresPlot extends PlotlyVisualization<ScoresPlotData> {
       textposition: 'top center',
       textfont: {
         size: 10,
-        color: 'black'
+        color: this.config.theme === 'dark' ? '#e5e7eb' : '#374151'
       },
       marker: {
         size: 8,
@@ -247,11 +254,7 @@ export class PlotlyScoresPlot extends PlotlyVisualization<ScoresPlotData> {
           thickness: 15,
           len: 0.9
         },
-        opacity: 0.8,
-        line: {
-          width: 1,
-          color: 'white'
-        }
+        opacity: 0.8
       }
     });
     
@@ -356,6 +359,41 @@ export class PlotlyScoresPlot extends PlotlyVisualization<ScoresPlotData> {
       dragmode: this.config.enableLasso ? 'lasso' : 'zoom'
     };
   }
+  
+  /**
+   * Public method to get optimized traces based on data size
+   */
+  public getOptimizedTraces(): Data[] {
+    const dataSize = this.getDataSize();
+    const perfConfig = getOptimalConfig(
+      dataSize,
+      Array.from(new Set(this.data.groups)).length > 1,
+      true
+    );
+    
+    return perfConfig.useWebGL ? this.getWebGLTraces() : this.getStandardTraces();
+  }
+  
+  /**
+   * Public method to get the layout
+   */
+  public getPlotLayout(): Partial<Layout> {
+    return this.getEnhancedLayout();
+  }
+  
+  /**
+   * Public method to get the config
+   */
+  public getPlotConfig(): Partial<Config> {
+    const baseConfig = this.getAdvancedConfig();
+    return {
+      ...baseConfig,
+      modeBarButtonsToAdd: [
+        ...(this.config.enableLasso ? ['select2d', 'lasso2d'] : []),
+        ...getExportMenuItems()
+      ] as any
+    };
+  }
 }
 
 /**
@@ -368,23 +406,6 @@ export const PCAScoresPlot: React.FC<{
 }> = ({ data, config, onSelection }) => {
   const plot = useMemo(() => new PlotlyScoresPlot(data, config), [data, config]);
   
-  // Get optimized configuration
-  const perfConfig = getOptimalConfig(
-    data.scores.length,
-    Array.from(new Set(data.groups)).length > 1,
-    true
-  );
-  
-  const traces = perfConfig.useWebGL ? plot['getWebGLTraces']() : plot['getStandardTraces']();
-  const layout = plot['getEnhancedLayout']();
-  const plotConfig = {
-    ...plot['getAdvancedConfig'](),
-    modeBarButtonsToAdd: [
-      ...(config?.enableLasso ? ['select2d', 'lasso2d'] : []),
-      ...getExportMenuItems()
-    ]
-  };
-  
   const handleSelected = (event: any) => {
     if (onSelection && event?.points) {
       const indices = event.points.map((p: any) => p.pointIndex);
@@ -394,9 +415,9 @@ export const PCAScoresPlot: React.FC<{
   
   return (
     <Plot
-      data={traces}
-      layout={layout}
-      config={plotConfig}
+      data={plot.getOptimizedTraces()}
+      layout={plot.getPlotLayout()}
+      config={plot.getPlotConfig()}
       style={{ width: '100%', height: '100%' }}
       useResizeHandler={true}
       onSelected={handleSelected}

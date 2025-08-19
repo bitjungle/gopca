@@ -4,9 +4,8 @@
 import React, { useMemo } from 'react';
 import Plot from 'react-plotly.js';
 import { Data, Layout } from 'plotly.js';
-import { PCA_REFERENCES } from '../utils/plotlyMath';
 import { getExportMenuItems } from '../utils/plotlyExport';
-import { ThemeMode } from '../utils/plotlyTheme';
+import { getPlotlyTheme, mergeLayouts, ThemeMode } from '../utils/plotlyTheme';
 
 export interface CircleOfCorrelationsData {
   loadings: number[][];  // [n_components][n_variables]
@@ -46,7 +45,7 @@ export class PlotlyCircleOfCorrelations {
       showGrid: true,
       showLabels: true,
       minVectorLength: 0.1,
-      colorByMagnitude: true,
+      colorByMagnitude: false,  // Changed to false for consistency with Biplot
       arrowWidth: 2,
       labelSize: 10,
       ...config
@@ -119,11 +118,11 @@ export class PlotlyCircleOfCorrelations {
       });
     }
     
-    // Add correlation vectors
+    // Add correlation vectors - use same color as Biplot (colorScheme[1])
     filteredNames.forEach((name, i) => {
       const color = this.config.colorByMagnitude
         ? `hsl(${240 - magnitudes[i] * 240}, 70%, 50%)`  // Blue to red gradient
-        : (this.config.colorScheme?.[i % this.config.colorScheme.length] || '#3b82f6');
+        : (this.config.colorScheme?.[1] || '#ef4444');  // Use index 1 like Biplot
       
       // Vector line
       traces.push({
@@ -169,7 +168,7 @@ export class PlotlyCircleOfCorrelations {
         textposition: 'middle center',
         textfont: {
           size: this.config.labelSize,
-          color: 'black'
+          color: this.config.theme === 'dark' ? '#e5e7eb' : '#374151'
         },
         showlegend: false,
         hoverinfo: 'skip'
@@ -183,7 +182,7 @@ export class PlotlyCircleOfCorrelations {
       x: [-1.1, 1.1],
       y: [0, 0],
       line: {
-        color: 'black',
+        color: this.config.theme === 'dark' ? '#6b7280' : '#374151',
         width: 1
       },
       showlegend: false,
@@ -196,7 +195,7 @@ export class PlotlyCircleOfCorrelations {
       x: [0, 0],
       y: [-1.1, 1.1],
       line: {
-        color: 'black',
+        color: this.config.theme === 'dark' ? '#6b7280' : '#374151',
         width: 1
       },
       showlegend: false,
@@ -204,6 +203,12 @@ export class PlotlyCircleOfCorrelations {
     });
     
     return traces;
+  }
+  
+  getEnhancedLayout(): Partial<Layout> {
+    const baseLayout = this.getLayout();
+    const themeLayout = getPlotlyTheme(this.config.theme || 'light').layout;
+    return mergeLayouts(themeLayout, baseLayout);
   }
   
   getLayout(): Partial<Layout> {
@@ -236,7 +241,6 @@ export class PlotlyCircleOfCorrelations {
       },
       hovermode: 'closest',
       showlegend: false,
-      template: 'plotly_white' as any,
       annotations: [
         // Add quadrant labels
         {
@@ -274,28 +278,6 @@ export class PlotlyCircleOfCorrelations {
           yref: 'y',
           showarrow: false,
           font: { size: 12, color: 'gray' }
-        },
-        // Add interpretation note
-        {
-          text: 'Vectors show correlations between variables and PCs. ' +
-                'Length indicates strength, direction indicates sign.',
-          xref: 'paper',
-          yref: 'paper',
-          x: 0.5,
-          y: -0.05,
-          xanchor: 'center',
-          showarrow: false,
-          font: { size: 10, color: 'gray' }
-        },
-        // Add references
-        {
-          text: `References: Abdi & Williams (2010), ${PCA_REFERENCES.map(r => `${r.authors} (${r.year})`).join(', ')}`,
-          xref: 'paper',
-          yref: 'paper',
-          x: 0,
-          y: -0.1,
-          showarrow: false,
-          font: { size: 10, color: 'gray' }
         }
       ]
     };
@@ -353,7 +335,7 @@ export const PCACircleOfCorrelations: React.FC<{
   return (
     <Plot
       data={plot.getTraces()}
-      layout={plot.getLayout()}
+      layout={plot.getEnhancedLayout()}
       config={plot.getConfig()}
       style={{ width: '100%', height: '100%' }}
       useResizeHandler={true}

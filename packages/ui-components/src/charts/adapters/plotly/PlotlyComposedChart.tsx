@@ -5,7 +5,7 @@
 // military, warfare, or surveillance applications.
 
 import React, { useEffect, useRef, Children, isValidElement } from 'react';
-import Plotly from 'plotly.js-dist-min';
+import Plotly from 'plotly.js-basic-dist-min';
 import { ComposedChartProps } from '../../types';
 import { getPlotlyTheme, mergeLayouts, getColorFromPalette } from './utils';
 import { useChartTheme } from '../../../hooks/useChartTheme';

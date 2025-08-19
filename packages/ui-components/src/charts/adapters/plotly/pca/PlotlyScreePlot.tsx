@@ -4,9 +4,8 @@
 import React, { useMemo } from 'react';
 import Plot from 'react-plotly.js';
 import { Data, Layout } from 'plotly.js';
-import { PCA_REFERENCES } from '../utils/plotlyMath';
 import { getExportMenuItems } from '../utils/plotlyExport';
-import { ThemeMode } from '../utils/plotlyTheme';
+import { getPlotlyTheme, mergeLayouts, ThemeMode } from '../utils/plotlyTheme';
 
 export interface ScreePlotData {
   explainedVariance: number[];
@@ -95,6 +94,12 @@ export class PlotlyScreePlot {
     return traces;
   }
   
+  getEnhancedLayout(): Partial<Layout> {
+    const baseLayout = this.getLayout();
+    const themeLayout = getPlotlyTheme(this.config.theme || 'light').layout;
+    return mergeLayouts(themeLayout, baseLayout);
+  }
+  
   getLayout(): Partial<Layout> {
     const { explainedVariance } = this.data;
     const numComponents = this.config.maxComponents 
@@ -140,11 +145,8 @@ export class PlotlyScreePlot {
         xanchor: 'center',
         yanchor: 'top',
         orientation: 'h',
-        bgcolor: 'rgba(255, 255, 255, 0.9)',
-        bordercolor: 'black',
         borderwidth: 1
       },
-      template: 'plotly_white' as any,
       shapes: [],
       annotations: []
     };
@@ -161,7 +163,7 @@ export class PlotlyScreePlot {
           y1: this.config.thresholdValue,
           yref: 'y2',
           line: {
-            color: 'red',
+            color: this.config.colorScheme?.[3] || '#C44E52',  // Use palette color (red from deep palette)
             width: 2,
             dash: 'dash'
           }
@@ -179,23 +181,12 @@ export class PlotlyScreePlot {
           yanchor: 'middle',
           showarrow: false,
           font: {
-            color: 'red',
+            color: this.config.colorScheme?.[3] || '#C44E52',  // Use palette color
             size: 12
           },
-          bgcolor: 'rgba(255, 255, 255, 0.8)',
-          bordercolor: 'red',
+          bordercolor: this.config.colorScheme?.[3] || '#C44E52',
           borderwidth: 1,
           borderpad: 2
-        },
-        // Add references
-        {
-          text: `References: ${PCA_REFERENCES.map(r => `${r.authors} (${r.year})`).join(', ')}`,
-          xref: 'paper',
-          yref: 'paper',
-          x: 0,
-          y: -0.25,
-          showarrow: false,
-          font: { size: 10, color: 'gray' }
         }
       ];
     }
@@ -231,7 +222,7 @@ export const PCAScreePlot: React.FC<{
   return (
     <Plot
       data={plot.getTraces()}
-      layout={plot.getLayout()}
+      layout={plot.getEnhancedLayout()}
       config={plot.getConfig()}
       style={{ width: '100%', height: '100%' }}
       useResizeHandler={true}
