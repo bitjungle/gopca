@@ -56,6 +56,7 @@ function AppContent() {
     const [showDocumentation, setShowDocumentation] = useState(false);
     const [datasetId, setDatasetId] = useState(0); // Force DataTable re-render on dataset change
     const [showCopied, setShowCopied] = useState(false);
+    const [loadingsPlotType, setLoadingsPlotType] = useState<'bar' | 'line' | null>(null); // null means auto
     
     // Refs for smooth scrolling
     const pcaErrorRef = useRef<HTMLDivElement>(null);
@@ -1239,6 +1240,20 @@ function AppContent() {
                                                         </option>
                                                     ))}
                                                 </select>
+                                                <div className="w-px h-5 bg-gray-300 dark:bg-gray-600 mx-1" />
+                                                <label className="text-sm text-gray-600 dark:text-gray-400">Plot type:</label>
+                                                <select
+                                                    value={loadingsPlotType || 'auto'}
+                                                    onChange={(e) => {
+                                                        const value = e.target.value;
+                                                        setLoadingsPlotType(value === 'auto' ? null : value as 'bar' | 'line');
+                                                    }}
+                                                    className="px-2 py-1 bg-gray-100 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded text-sm text-gray-900 dark:text-white"
+                                                >
+                                                    <option value="auto">Auto</option>
+                                                    <option value="bar">Bar Chart</option>
+                                                    <option value="line">Line Chart</option>
+                                                </select>
                                             </div>
                                         )}
                                     </div>
@@ -1284,6 +1299,7 @@ function AppContent() {
                                                 pcaResult={pcaResponse.result}
                                                 selectedComponent={selectedLoadingComponent}
                                                 variableThreshold={guiConfig?.visualization?.loadings_variable_threshold || 100}
+                                                plotType={loadingsPlotType || undefined}
                                             />
                                         ) : selectedPlot === 'biplot' ? (
                                             <Biplot
