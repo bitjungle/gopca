@@ -4,8 +4,8 @@
 import React, { useMemo } from 'react';
 import Plot from 'react-plotly.js';
 import { Data, Layout } from 'plotly.js';
-import { getExportMenuItems } from '../utils/plotlyExport';
 import { getPlotlyTheme, mergeLayouts, ThemeMode } from '../utils/plotlyTheme';
+import { getExportMenuItems } from '../utils/plotlyExport';
 
 export interface ScreePlotData {
   explainedVariance: number[];
@@ -200,7 +200,7 @@ export class PlotlyScreePlot {
       displaylogo: false,
       modeBarButtonsToAdd: getExportMenuItems() as any,
       toImageButtonOptions: {
-        format: 'svg',
+        format: 'png',
         filename: 'scree-plot',
         height: 1200,
         width: 1600,

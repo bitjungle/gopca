@@ -5,8 +5,8 @@ import React, { useMemo } from 'react';
 import Plot from 'react-plotly.js';
 import { Data, Layout, Config } from 'plotly.js';
 import { PCA_REFERENCES } from '../utils/plotlyMath';
-import { getExportMenuItems } from '../utils/plotlyExport';
 import { getPlotlyTheme, mergeLayouts, ThemeMode } from '../utils/plotlyTheme';
+import { getExportMenuItems } from '../utils/plotlyExport';
 
 export interface Scores3DPlotData {
   scores: number[][];

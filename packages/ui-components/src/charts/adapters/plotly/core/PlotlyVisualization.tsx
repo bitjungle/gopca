@@ -199,17 +199,13 @@ export abstract class PlotlyVisualization<T = any> {
       displaylogo: false,
       modeBarButtonsToAdd: [],
       toImageButtonOptions: {
-        format: 'svg',
+        format: 'png',
         filename: 'pca-plot',
-        height: 1200 * (this.config.exportScale || 2),
-        width: 1600 * (this.config.exportScale || 2),
-        scale: this.config.exportScale || 2
+        height: 1600,
+        width: 1600,
+        scale: 2
       }
     };
-    
-    if (this.config.enableLasso) {
-      config.modeBarButtonsToAdd = ['select2d', 'lasso2d'];
-    }
     
     return config;
   }

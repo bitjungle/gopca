@@ -111,3 +111,8 @@ export {
   type EigencorrelationPlotData,
   type EigencorrelationPlotConfig,
 } from './charts/adapters/plotly/pca';
+
+// Plotly Export Utils
+export {
+  setupPlotlyWailsIntegration
+} from './charts/adapters/plotly/utils/plotlyExport';

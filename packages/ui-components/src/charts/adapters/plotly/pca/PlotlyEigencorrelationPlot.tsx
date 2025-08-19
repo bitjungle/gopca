@@ -4,8 +4,8 @@
 import React, { useMemo } from 'react';
 import Plot from 'react-plotly.js';
 import { Data, Layout } from 'plotly.js';
-import { getExportMenuItems } from '../utils/plotlyExport';
 import { getPlotlyTheme, mergeLayouts, ThemeMode } from '../utils/plotlyTheme';
+import { getExportMenuItems } from '../utils/plotlyExport';
 
 export interface EigencorrelationPlotData {
   correlations: number[][];  // [n_components][n_variables]
@@ -267,7 +267,7 @@ export class PlotlyEigencorrelationPlot {
       displaylogo: false,
       modeBarButtonsToAdd: getExportMenuItems() as any,
       toImageButtonOptions: {
-        format: 'svg',
+        format: 'png',
         filename: 'eigencorrelation-matrix',
         height: 1600,
         width: 1200,

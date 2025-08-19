@@ -388,10 +388,7 @@ export class PlotlyScoresPlot extends PlotlyVisualization<ScoresPlotData> {
     const baseConfig = this.getAdvancedConfig();
     return {
       ...baseConfig,
-      modeBarButtonsToAdd: [
-        ...(this.config.enableLasso ? ['select2d', 'lasso2d'] : []),
-        ...getExportMenuItems()
-      ] as any
+      modeBarButtonsToAdd: getExportMenuItems() as any
     };
   }
 }

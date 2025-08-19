@@ -216,41 +216,131 @@ export async function copyToClipboard(
 
 /**
  * Generate export menu items for modebar
+ * Returns empty array - we'll patch Plotly's download mechanism instead
  */
 export function getExportMenuItems(): any[] {
-  return [
-    {
-      name: 'Export as Publication Quality SVG',
-      icon: null,
-      click: (gd: PlotlyHTMLElement) => {
-        downloadPlot(gd, PUBLICATION_EXPORT_CONFIG);
-      }
-    },
-    {
-      name: 'Export as Presentation PNG',
-      icon: null,
-      click: (gd: PlotlyHTMLElement) => {
-        downloadPlot(gd, PRESENTATION_EXPORT_CONFIG);
-      }
-    },
-    {
-      name: 'Export Data as CSV',
-      icon: null,
-      click: (gd: PlotlyHTMLElement) => {
-        const data = (gd as any).data;
-        exportToCSV(data);
-      }
-    },
-    {
-      name: 'Copy to Clipboard',
-      icon: null,
-      click: async (gd: PlotlyHTMLElement) => {
+  return [];
+}
+
+/**
+ * Setup Plotly to work with Wails SaveFile API
+ * This patches Plotly's downloadImage function to use Wails when available
+ */
+export function setupPlotlyWailsIntegration(): void {
+  console.info('Starting Plotly-Wails integration setup...');
+  
+  // Wait for Plotly to be available
+  const checkPlotly = () => {
+    const Plotly = (window as any).Plotly;
+    if (Plotly && Plotly.downloadImage) {
+      console.info('Plotly found, patching downloadImage...');
+      
+      // Store original downloadImage function
+      const originalDownloadImage = Plotly.downloadImage.bind(Plotly);
+      
+      // Replace with our version that uses Wails SaveFile
+      Plotly.downloadImage = async function(gd: any, opts: any = {}) {
+        console.info('Plotly.downloadImage called with opts:', opts);
+        
         try {
-          await copyToClipboard(gd);
+          // Generate the image data URL
+          const imageOpts = {
+            format: opts.format || 'png',
+            width: opts.width || 1600,
+            height: opts.height || 1200,
+            scale: opts.scale || 2
+          };
+          
+          console.info('Generating image with options:', imageOpts);
+          const dataUrl = await Plotly.toImage(gd, imageOpts);
+          
+          // Check if we're in Wails environment and have SaveFile available
+          // Try multiple ways to access the SaveFile function
+          let saveFileFunc = null;
+          
+          // Method 1: Direct window.go access
+          if ((window as any).go?.main?.App?.SaveFile) {
+            saveFileFunc = (window as any).go.main.App.SaveFile;
+            console.info('Found SaveFile via window.go.main.App');
+          }
+          // Method 2: Check if SaveFile was injected globally
+          else if ((window as any).SaveFile) {
+            saveFileFunc = (window as any).SaveFile;
+            console.info('Found SaveFile via window.SaveFile');
+          }
+          
+          if (saveFileFunc) {
+            // Use Wails SaveFile API
+            const format = imageOpts.format;
+            const filename = opts.filename || 'pca-plot';
+            const fullFilename = `${filename}.${format}`;
+            
+            console.info(`Calling Wails SaveFile with filename: ${fullFilename}`);
+            await saveFileFunc(fullFilename, dataUrl);
+            console.info(`Plot saved via Wails: ${fullFilename}`);
+            
+            // Return without calling original to prevent double download
+            return;
+          } else {
+            console.info('Wails SaveFile not found, falling back to browser download');
+            // Fall back to original browser download
+            return originalDownloadImage(gd, opts);
+          }
         } catch (error) {
-          console.error('Failed to copy to clipboard:', error);
+          console.error('Failed to save plot:', error);
+          // Fall back to original on error
+          return originalDownloadImage(gd, opts);
+        }
+      };
+      
+      console.info('Plotly-Wails integration setup complete');
+    } else {
+      // Retry after a short delay
+      setTimeout(checkPlotly, 100);
+    }
+  };
+  
+  // Start checking for Plotly
+  checkPlotly();
+}
+
+/**
+ * Setup keyboard shortcuts for plot export
+ * Ctrl/Cmd+C for copy to clipboard
+ * Returns a cleanup function to remove the event listener
+ */
+export function setupExportShortcuts(plotElement: PlotlyHTMLElement): () => void {
+  const handleKeyDown = async (e: KeyboardEvent) => {
+    // Check if plot element is visible and focused area
+    if (!plotElement || !document.contains(plotElement)) return;
+    
+    // Ctrl/Cmd + C for copy (when not in text input)
+    if ((e.ctrlKey || e.metaKey) && e.key === 'c') {
+      const activeElement = document.activeElement;
+      const isTextInput = activeElement && (
+        activeElement.tagName === 'INPUT' ||
+        activeElement.tagName === 'TEXTAREA' ||
+        (activeElement as HTMLElement).contentEditable === 'true'
+      );
+      
+      if (!isTextInput) {
+        e.preventDefault();
+        try {
+          await copyToClipboard(plotElement);
+          // Optional: Show success feedback
+          console.info('Plot copied to clipboard');
+        } catch (error) {
+          console.error('Failed to copy plot:', error);
         }
       }
     }
-  ];
+  };
+  
+  // Add event listener
+  document.addEventListener('keydown', handleKeyDown);
+  
+  // Return cleanup function
+  return () => {
+    document.removeEventListener('keydown', handleKeyDown);
+  };
 }

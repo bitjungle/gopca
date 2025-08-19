@@ -10,8 +10,8 @@ import {
   generateEllipsePath,
   Point2D
 } from '../utils/plotlyMath';
-import { getExportMenuItems } from '../utils/plotlyExport';
 import { getPlotlyTheme, mergeLayouts, ThemeMode } from '../utils/plotlyTheme';
+import { getExportMenuItems } from '../utils/plotlyExport';
 
 export interface BiplotData {
   scores: number[][];  // [n_samples][n_components]
@@ -366,7 +366,7 @@ export class PlotlyBiplot {
       displaylogo: false,
       modeBarButtonsToAdd: getExportMenuItems() as any,
       toImageButtonOptions: {
-        format: 'svg',
+        format: 'png',
         filename: 'biplot',
         height: 1600,
         width: 1600,

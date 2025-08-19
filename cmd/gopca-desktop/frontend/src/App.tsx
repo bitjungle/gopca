@@ -6,10 +6,11 @@
 
 import React, { useState, useRef, useEffect, lazy, Suspense } from 'react';
 import './App.css';
-import { ParseCSV, RunPCA, LoadIrisDataset, LoadDatasetFile, GetVersion, CalculateEllipses, GetGUIConfig, LoadCSVFile, CheckGoCSVStatus, OpenInGoCSV, LaunchGoCSV, DownloadGoCSV } from "../wailsjs/go/main/App";
+import { ParseCSV, RunPCA, LoadIrisDataset, LoadDatasetFile, GetVersion, CalculateEllipses, GetGUIConfig, LoadCSVFile, CheckGoCSVStatus, OpenInGoCSV, LaunchGoCSV, DownloadGoCSV, SaveFile } from "../wailsjs/go/main/App";
 import { Copy, Check } from 'lucide-react';
 import { EventsOn } from '../wailsjs/runtime/runtime';
 import { DataTable, SelectionTable, MatrixIllustration, HelpWrapper, DocumentationViewer } from './components';
+import { setupPlotlyWailsIntegration } from '@gopca/ui-components';
 
 // Lazy load visualization components for better performance
 const ScoresPlot = lazy(() => import('./components/visualizations/ScoresPlot').then(m => ({ default: m.ScoresPlot })));
@@ -97,6 +98,15 @@ function AppContent() {
     
     // Fetch version and GUI config on mount
     useEffect(() => {
+        // Make SaveFile available globally for Plotly integration
+        if (typeof SaveFile !== 'undefined') {
+            (window as any).SaveFile = SaveFile;
+            console.info('SaveFile made available globally');
+        }
+        
+        // Setup Plotly-Wails integration for export functionality
+        setupPlotlyWailsIntegration();
+        
         GetVersion().then((v) => {
             setVersion(v);
         }).catch((err) => {

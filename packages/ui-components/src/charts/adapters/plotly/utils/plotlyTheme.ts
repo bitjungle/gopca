@@ -64,12 +64,21 @@ export const getPlotlyTheme = (mode: ThemeMode): PlotlyTheme => {
     config: {
       displayModeBar: true,
       displaylogo: false,
-      modeBarButtonsToRemove: ['sendDataToCloud', 'select2d', 'lasso2d'],
+      modeBarButtonsToRemove: [
+        'sendDataToCloud',
+        'select2d',
+        'lasso2d',
+        'hoverClosestCartesian',
+        'hoverCompareCartesian',
+        'toggleSpikelines',
+        'autoScale2d'
+      ],
+      modeBarButtonsToAdd: [],
       toImageButtonOptions: {
         format: 'png',
-        filename: 'gopca-plot',
-        height: 800,
-        width: 1200,
+        filename: 'pca-plot',
+        height: 1600,
+        width: 1600,
         scale: 2
       }
     }
