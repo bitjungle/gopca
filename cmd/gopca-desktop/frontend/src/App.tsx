@@ -1243,14 +1243,13 @@ function AppContent() {
                                                 <div className="w-px h-5 bg-gray-300 dark:bg-gray-600 mx-1" />
                                                 <label className="text-sm text-gray-600 dark:text-gray-400">Plot type:</label>
                                                 <select
-                                                    value={loadingsPlotType || 'auto'}
+                                                    value={loadingsPlotType || (pcaResponse.result?.loadings[0]?.length > (guiConfig?.visualization?.loadings_variable_threshold || 100) ? 'line' : 'bar')}
                                                     onChange={(e) => {
-                                                        const value = e.target.value;
-                                                        setLoadingsPlotType(value === 'auto' ? null : value as 'bar' | 'line');
+                                                        const value = e.target.value as 'bar' | 'line';
+                                                        setLoadingsPlotType(value);
                                                     }}
                                                     className="px-2 py-1 bg-gray-100 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded text-sm text-gray-900 dark:text-white"
                                                 >
-                                                    <option value="auto">Auto</option>
                                                     <option value="bar">Bar Chart</option>
                                                     <option value="line">Line Chart</option>
                                                 </select>

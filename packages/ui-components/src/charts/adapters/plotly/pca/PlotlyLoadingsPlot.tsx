@@ -21,6 +21,7 @@ export interface LoadingsPlotConfig {
   maxVariables?: number;
   sortByMagnitude?: boolean;
   showGrid?: boolean;
+  showMarkers?: boolean; // For line mode: whether to show markers (false for many variables)
   theme?: ThemeMode;
 }
 
@@ -41,6 +42,7 @@ export class PlotlyLoadingsPlot {
       thresholdValue: 0.3,
       sortByMagnitude: false,
       showGrid: true,
+      showMarkers: true, // Default to showing markers
       ...config
     };
   }
@@ -95,9 +97,9 @@ export class PlotlyLoadingsPlot {
       const colors = this.config.colorScheme || ['#3b82f6', '#ef4444'];
       const xValues = Array.from({ length: sortedVariableNames.length }, (_, i) => i);
       
-      traces.push({
+      const trace: any = {
         type: 'scatter',
-        mode: 'lines+markers',
+        mode: this.config.showMarkers ? 'lines+markers' : 'lines',
         x: xValues,
         y: componentLoadings,
         text: sortedVariableNames,
@@ -106,12 +108,18 @@ export class PlotlyLoadingsPlot {
           color: colors[0],
           width: 2
         },
-        marker: {
+        hovertemplate: '<b>%{text}</b><br>Loading: %{y:.3f}<br>Index: %{x}<extra></extra>'
+      };
+      
+      // Only add marker property if we're showing markers
+      if (this.config.showMarkers) {
+        trace.marker = {
           size: 8,
           color: componentLoadings.map(v => v >= 0 ? colors[0] : colors[1])
-        },
-        hovertemplate: '<b>%{text}</b><br>Loading: %{y:.3f}<br>Index: %{x}<extra></extra>'
-      });
+        };
+      }
+      
+      traces.push(trace);
     } else if (this.config.mode === 'grouped') {
       // Grouped bar chart for multiple components
       const numComponents = Math.min(3, this.data.loadings.length);

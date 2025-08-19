@@ -31,7 +31,7 @@ export const LoadingsPlot: React.FC<LoadingsPlotProps> = ({
   const colorScheme = getQualitativePalette(qualitativePalette);
   
   // Determine plot type based on number of variables
-  const numVariables = pcaResult.loadings[0]?.length || 0;
+  const numVariables = pcaResult.loadings.length || 0;
   const autoPlotType = useMemo(() => {
     return numVariables > variableThreshold ? 'line' : 'bar';
   }, [numVariables, variableThreshold]);
@@ -50,7 +50,9 @@ export const LoadingsPlot: React.FC<LoadingsPlotProps> = ({
     plotType,
     false, // sortByMagnitude - could be made configurable
     theme,
-    colorScheme
+    colorScheme,
+    numVariables,
+    variableThreshold
   );
 
   return (

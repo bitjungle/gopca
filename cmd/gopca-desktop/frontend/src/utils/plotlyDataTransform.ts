@@ -139,13 +139,23 @@ export function createLoadingsPlotConfig(
   plotType: 'bar' | 'line' = 'bar',
   sortByMagnitude: boolean = false,
   theme?: 'light' | 'dark',
-  colorScheme?: string[]
+  colorScheme?: string[],
+  numVariables?: number,
+  variableThreshold?: number
 ): LoadingsPlotConfig {
+  // Determine whether to show markers in line mode
+  // When we have many variables (above threshold), don't show markers for cleaner visualization
+  let showMarkers = true; // Default to showing markers
+  if (plotType === 'line' && numVariables !== undefined && variableThreshold !== undefined) {
+    showMarkers = numVariables <= variableThreshold;
+  }
+  
   return {
     mode: plotType,
     sortByMagnitude,
     showThreshold: true,
     thresholdValue: 0.3,
+    showMarkers,
     // Don't set maxVariables - show all by default
     theme,
     colorScheme
