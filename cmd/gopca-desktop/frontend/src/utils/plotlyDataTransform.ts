@@ -272,12 +272,17 @@ export function transformToDiagnosticPlotData(
 
 /**
  * Create Diagnostic Plot config
+ * Uses backend-calculated thresholds based on proper statistical distributions:
+ * - T² limit: Hotelling's T-squared distribution (leverage in model space)
+ * - Q limit: Jackson & Mudholkar SPE distribution (residuals orthogonal to model)
  */
 export function createDiagnosticPlotConfig(
   showThresholds: boolean = true,
-  confidenceLevel: number = 0.975,
+  confidenceLevel: number = 0.95,
   theme?: 'light' | 'dark',
-  colorScheme?: string[]
+  colorScheme?: string[],
+  mahalanobisThreshold?: number,
+  rssThreshold?: number
 ): DiagnosticPlotConfig {
   return {
     showThresholds,
@@ -285,7 +290,9 @@ export function createDiagnosticPlotConfig(
     showLabels: false,  // Changed to false by default
     labelThreshold: 10,
     theme,
-    colorScheme
+    colorScheme,
+    mahalanobisThreshold,
+    rssThreshold
   };
 }
 

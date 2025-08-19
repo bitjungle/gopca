@@ -28,7 +28,7 @@ export const DiagnosticScatterPlot: React.FC<DiagnosticScatterPlotProps> = ({
   groupColumn,
   groupLabels,
   showThresholds = true,
-  confidenceLevel = 0.975,
+  confidenceLevel = 0.95,
   showRowLabels = false,
   maxLabelsToShow = 10
 }) => {
@@ -45,13 +45,23 @@ export const DiagnosticScatterPlot: React.FC<DiagnosticScatterPlotProps> = ({
     groupLabels
   );
 
+  // Select appropriate thresholds based on confidence level
+  // T² limit represents Hotelling's T-squared (leverage in model space)
+  // Q limit represents Squared Prediction Error (residuals orthogonal to model)
+  const mahalanobisThreshold = confidenceLevel === 0.99 ? 
+    pcaResult.t2_limit_99 : pcaResult.t2_limit_95;
+  const rssThreshold = confidenceLevel === 0.99 ? 
+    pcaResult.q_limit_99 : pcaResult.q_limit_95;
+
   // Create config for Plotly component with label settings
   const plotlyConfig = {
     ...createDiagnosticPlotConfig(
       showThresholds,
       confidenceLevel,
       theme,
-      colorScheme
+      colorScheme,
+      mahalanobisThreshold,
+      rssThreshold
     ),
     showLabels: showRowLabels,
     labelThreshold: maxLabelsToShow

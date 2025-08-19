@@ -1157,6 +1157,24 @@ function AppContent() {
                                                         />
                                                     </div>
                                                 )}
+                                                {/* Confidence Level for Diagnostic Plot Thresholds */}
+                                                {selectedPlot === 'diagnostics' && (
+                                                    <div className="flex items-center gap-2 ml-3">
+                                                        <HelpWrapper helpKey="diagnostic-threshold">
+                                                            <label className="text-sm text-gray-600 dark:text-gray-400">
+                                                                Threshold:
+                                                            </label>
+                                                        </HelpWrapper>
+                                                        <select
+                                                            value={confidenceLevel}
+                                                            onChange={(e) => setConfidenceLevel(parseFloat(e.target.value) as 0.90 | 0.95 | 0.99)}
+                                                            className="px-2 py-0.5 bg-gray-100 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded text-sm text-gray-900 dark:text-white"
+                                                        >
+                                                            <option value="0.95">95%</option>
+                                                            <option value="0.99">99%</option>
+                                                        </select>
+                                                    </div>
+                                                )}
                                                 {fileData?.categoricalColumns && 
                                                  Object.keys(fileData.categoricalColumns).length > 0 && 
                                                  selectedGroupColumn && 
@@ -1330,6 +1348,7 @@ function AppContent() {
                                                 rowNames={fileData?.rowNames || []}
                                                 showRowLabels={showRowLabels}
                                                 maxLabelsToShow={maxLabelsToShow}
+                                                confidenceLevel={confidenceLevel === 0.90 ? 0.95 : confidenceLevel}
                                             />
                                         ) : selectedPlot === 'eigencorrelation' ? (
                                             <EigencorrelationPlot

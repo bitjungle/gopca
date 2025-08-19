@@ -29,7 +29,16 @@ export interface DiagnosticPlotConfig {
 /**
  * Diagnostic Plot for identifying outliers in PCA
  * Combines Mahalanobis distance (leverage) and Residual Sum of Squares (RSS)
- * Reference: Hubert et al. (2005), "ROBPCA: A new approach to robust principal component analysis"
+ * 
+ * Statistical basis:
+ * - X-axis: Mahalanobis distance (Hotelling's T²) - measures leverage in model space
+ * - Y-axis: Residual Sum of Squares (Q-statistic/SPE) - measures distance from model space
+ * 
+ * Threshold calculations (performed in backend):
+ * - T² limit: Based on F-distribution: T² = p(n-1)/(n-p) * F_{p,n-p}(α)
+ *   Reference: Hotelling, H. (1931). The generalization of Student's ratio.
+ * - Q limit: Based on Jackson & Mudholkar approximation for SPE distribution
+ *   Reference: Jackson & Mudholkar (1979). Control procedures for residuals in PCA.
  */
 export class PlotlyDiagnosticPlot {
   private data: DiagnosticPlotData;
@@ -39,7 +48,7 @@ export class PlotlyDiagnosticPlot {
     this.data = data;
     this.config = {
       showThresholds: true,
-      confidenceLevel: 0.975,
+      confidenceLevel: 0.95,
       showLabels: false,  // Default to false as user prefers
       labelThreshold: 10,
       pointSize: 8,
@@ -47,37 +56,12 @@ export class PlotlyDiagnosticPlot {
       ...config
     };
     
-    // Calculate default thresholds if not provided
-    if (!this.config.mahalanobisThreshold) {
-      // Use chi-square distribution with appropriate degrees of freedom
-      // For 97.5% confidence level with 2 PCs: ~7.38
-      this.config.mahalanobisThreshold = this.calculateMahalanobisThreshold();
+    // Validate that thresholds are provided when needed
+    if (this.config.showThresholds && 
+        (!this.config.mahalanobisThreshold || !this.config.rssThreshold)) {
+      console.warn('Diagnostic plot: Thresholds not provided from backend, hiding threshold lines');
+      this.config.showThresholds = false;
     }
-    
-    if (!this.config.rssThreshold) {
-      // Use median + 3*MAD as robust threshold
-      this.config.rssThreshold = this.calculateRSSThreshold();
-    }
-  }
-  
-  private calculateMahalanobisThreshold(): number {
-    // Chi-square quantile for given confidence level
-    // Approximation for 2 degrees of freedom
-    const alpha = 1 - (this.config.confidenceLevel || 0.975);
-    return -2 * Math.log(alpha);  // Simplified approximation
-  }
-  
-  private calculateRSSThreshold(): number {
-    const { residualSumOfSquares } = this.data;
-    const sorted = [...residualSumOfSquares].sort((a, b) => a - b);
-    const median = sorted[Math.floor(sorted.length / 2)];
-    
-    // Calculate MAD (Median Absolute Deviation)
-    const deviations = residualSumOfSquares.map(v => Math.abs(v - median));
-    const sortedDev = [...deviations].sort((a, b) => a - b);
-    const mad = sortedDev[Math.floor(sortedDev.length / 2)];
-    
-    return median + 3 * mad * 1.4826;  // 1.4826 is consistency constant
   }
   
   private identifyOutliers() {
@@ -204,7 +188,7 @@ export class PlotlyDiagnosticPlot {
       },
       xaxis: {
         title: {
-          text: 'Mahalanobis Distance (Leverage)'
+          text: 'Mahalanobis Distance (Hotelling\'s T²)'
         },
         zeroline: false,
         showgrid: true,
@@ -213,7 +197,7 @@ export class PlotlyDiagnosticPlot {
       },
       yaxis: {
         title: {
-          text: 'Residual Sum of Squares (RSS)'
+          text: 'Residual Sum of Squares (Q-statistic)'
         },
         zeroline: false,
         showgrid: true,
@@ -233,9 +217,9 @@ export class PlotlyDiagnosticPlot {
       annotations: []
     };
     
-    // Add threshold lines
-    if (this.config.showThresholds) {
-      // Mahalanobis threshold (vertical line)
+    // Add threshold lines with proper labels
+    if (this.config.showThresholds && this.config.mahalanobisThreshold && this.config.rssThreshold) {
+      // T² threshold (vertical line) - represents Hotelling's T-squared limit
       layout.shapes!.push({
         type: 'line',
         x0: this.config.mahalanobisThreshold,
@@ -250,7 +234,7 @@ export class PlotlyDiagnosticPlot {
         }
       });
       
-      // RSS threshold (horizontal line)
+      // Q threshold (horizontal line) - represents SPE/Q-statistic limit
       layout.shapes!.push({
         type: 'line',
         x0: 0,
@@ -269,7 +253,30 @@ export class PlotlyDiagnosticPlot {
       const maxMD = Math.max(...mahalanobisDistances) * 1.1;
       const maxRSS = Math.max(...residualSumOfSquares) * 1.1;
       
+      // Calculate confidence percentage for labels
+      const confidencePercent = Math.round((this.config.confidenceLevel || 0.95) * 100);
+      
       layout.annotations = [
+        // Threshold labels
+        {
+          text: `T²-limit (${confidencePercent}%)`,
+          x: this.config.mahalanobisThreshold,
+          y: maxRSS * 0.95,  // Position near top of plot
+          xanchor: 'left',
+          yanchor: 'bottom',
+          showarrow: false,
+          font: { size: 11, color: this.config.colorScheme?.[3] || '#C44E52' },
+          textangle: '-90'
+        },
+        {
+          text: `Q-limit (${confidencePercent}%)`,
+          x: maxMD * 0.95,  // Position near right of plot
+          y: this.config.rssThreshold,
+          xanchor: 'right',
+          yanchor: 'bottom',
+          showarrow: false,
+          font: { size: 11, color: this.config.colorScheme?.[3] || '#C44E52' }
+        },
         {
           text: 'Regular',
           x: this.config.mahalanobisThreshold! / 2,
