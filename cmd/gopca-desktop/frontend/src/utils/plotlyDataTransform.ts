@@ -182,7 +182,9 @@ export function createBiplotConfig(
   yComponent: number = 1,
   showLabels: boolean = true,
   theme?: 'light' | 'dark',
-  colorScheme?: string[]
+  colorScheme?: string[],
+  showEllipses: boolean = false,
+  ellipseConfidence: number = 0.95
 ): BiplotConfig {
   return {
     pcX: xComponent + 1,
@@ -194,7 +196,9 @@ export function createBiplotConfig(
     labelThreshold: 20,
     vectorScale: 1.0,
     theme,
-    colorScheme
+    colorScheme,
+    showEllipses,
+    ellipseConfidence
   };
 }
 

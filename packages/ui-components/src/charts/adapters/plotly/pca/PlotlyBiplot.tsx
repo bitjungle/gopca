@@ -5,7 +5,10 @@ import React, { useMemo } from 'react';
 import Plot from 'react-plotly.js';
 import { Data, Layout } from 'plotly.js';
 import { 
-  selectSmartLabels
+  selectSmartLabels,
+  calculateConfidenceEllipse,
+  generateEllipsePath,
+  Point2D
 } from '../utils/plotlyMath';
 import { getExportMenuItems } from '../utils/plotlyExport';
 import { getPlotlyTheme, mergeLayouts, ThemeMode } from '../utils/plotlyTheme';
@@ -32,6 +35,8 @@ export interface BiplotConfig {
   pointSize?: number;
   arrowWidth?: number;
   theme?: ThemeMode;
+  showEllipses?: boolean;
+  ellipseConfidence?: number;
 }
 
 /**
@@ -56,6 +61,8 @@ export class PlotlyBiplot {
       pointSize: 8,
       arrowWidth: 2,
       theme: 'light',
+      showEllipses: false,
+      ellipseConfidence: 0.95,
       ...config
     };
   }
@@ -113,11 +120,14 @@ export class PlotlyBiplot {
         uniqueGroups.forEach((group, i) => {
           const indices = groups.map((g, idx) => g === group ? idx : -1).filter(idx => idx >= 0);
           
+          const groupX = indices.map((idx: number) => scoresX[idx]);
+          const groupY = indices.map((idx: number) => scoresY[idx]);
+          
           traces.push({
             type: 'scatter',
             mode: 'markers',
-            x: indices.map((idx: number) => scoresX[idx]),
-            y: indices.map((idx: number) => scoresY[idx]),
+            x: groupX,
+            y: groupY,
             name: group,
             marker: {
               color: this.config.colorScheme
@@ -130,6 +140,34 @@ export class PlotlyBiplot {
             hovertemplate: '<b>%{text}</b><br>PC' + (pcX + 1) + ': %{x:.2f}<br>PC' + 
                           (pcY + 1) + ': %{y:.2f}<extra></extra>'
           });
+          
+          // Add confidence ellipse if enabled
+          if (this.config.showEllipses && groupX.length > 2) {
+            const points: Point2D[] = groupX.map((x, idx) => ({ x, y: groupY[idx] }));
+            try {
+              const ellipseParams = calculateConfidenceEllipse(points, this.config.ellipseConfidence || 0.95);
+              const ellipsePath = generateEllipsePath(ellipseParams);
+              
+              traces.push({
+                type: 'scatter',
+                mode: 'lines',
+                x: ellipsePath.map(p => p.x),
+                y: ellipsePath.map(p => p.y),
+                line: {
+                  color: this.config.colorScheme
+                    ? this.config.colorScheme[i % this.config.colorScheme.length]
+                    : ['#3b82f6', '#ef4444', '#10b981', '#f59e0b', '#8b5cf6'][i % 5],
+                  width: 2,
+                  dash: 'dash'
+                },
+                showlegend: false,
+                hoverinfo: 'skip',
+                name: `${group} (${(this.config.ellipseConfidence! * 100).toFixed(0)}% CI)`
+              });
+            } catch (error) {
+              console.warn(`Failed to calculate ellipse for group ${group}:`, error);
+            }
+          }
         });
       } else {
         // Single group

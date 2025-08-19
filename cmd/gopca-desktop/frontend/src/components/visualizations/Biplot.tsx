@@ -57,7 +57,15 @@ export const Biplot: React.FC<BiplotProps> = ({
 
   // Create config for Plotly component with additional settings
   const plotlyConfig = {
-    ...createBiplotConfig(xComponent, yComponent, showRowLabels, theme, colorScheme),
+    ...createBiplotConfig(
+      xComponent, 
+      yComponent, 
+      showRowLabels, 
+      theme, 
+      colorScheme,
+      showEllipses,
+      confidenceLevel
+    ),
     showLoadings,
     vectorScale,
     labelThreshold: maxLabelsToShow
