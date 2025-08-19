@@ -1328,6 +1328,8 @@ function AppContent() {
                                                 maxLabelsToShow={maxLabelsToShow}
                                                 groupColumn={selectedGroupColumn}
                                                 groupLabels={getColumnData(selectedGroupColumn).type === 'categorical' ? getColumnData(selectedGroupColumn).values as string[] : undefined}
+                                                groupValues={getColumnData(selectedGroupColumn).type === 'continuous' ? getColumnData(selectedGroupColumn).values as number[] : undefined}
+                                                groupType={getColumnData(selectedGroupColumn).type}
                                                 groupEllipses={
                                                     confidenceLevel === 0.90 ? pcaResponse.groupEllipses90 :
                                                     confidenceLevel === 0.95 ? pcaResponse.groupEllipses95 :
