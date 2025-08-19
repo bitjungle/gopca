@@ -1330,6 +1330,7 @@ function AppContent() {
                                                 groupLabels={getColumnData(selectedGroupColumn).type === 'categorical' ? getColumnData(selectedGroupColumn).values as string[] : undefined}
                                                 groupValues={getColumnData(selectedGroupColumn).type === 'continuous' ? getColumnData(selectedGroupColumn).values as number[] : undefined}
                                                 groupType={getColumnData(selectedGroupColumn).type}
+                                                maxVariables={guiConfig?.visualization?.biplot_max_variables || 100}
                                                 groupEllipses={
                                                     confidenceLevel === 0.90 ? pcaResponse.groupEllipses90 :
                                                     confidenceLevel === 0.95 ? pcaResponse.groupEllipses95 :

@@ -27,6 +27,7 @@ interface BiplotProps {
   maxLabelsToShow?: number;
   showLoadings?: boolean;
   vectorScale?: number;
+  maxVariables?: number; // Maximum number of loading vectors to display
 }
 
 export const Biplot: React.FC<BiplotProps> = ({
@@ -44,7 +45,8 @@ export const Biplot: React.FC<BiplotProps> = ({
   showRowLabels = false,
   maxLabelsToShow = 10,
   showLoadings = true,
-  vectorScale = 1.0
+  vectorScale = 1.0,
+  maxVariables = 100
 }) => {
   const { theme } = useTheme();
   const { qualitativePalette, sequentialPalette } = usePalette();
@@ -76,7 +78,8 @@ export const Biplot: React.FC<BiplotProps> = ({
     ),
     showLoadings,
     vectorScale,
-    labelThreshold: maxLabelsToShow
+    labelThreshold: maxLabelsToShow,
+    maxVariables
   };
 
   return (

@@ -39,6 +39,7 @@ export interface BiplotConfig {
   theme?: ThemeMode;
   showEllipses?: boolean;
   ellipseConfidence?: number;
+  maxVariables?: number;  // Maximum number of loading vectors to display
 }
 
 /**
@@ -65,6 +66,7 @@ export class PlotlyBiplot {
       theme: 'light',
       showEllipses: false,
       ellipseConfidence: 0.95,
+      maxVariables: 100,
       ...config
     };
   }
@@ -266,12 +268,31 @@ export class PlotlyBiplot {
     
     // Add loading vectors
     if (this.config.showLoadings) {
-      // Filter out small vectors
-      const minMagnitude = 0.01;
-      const validVectors = variableNames.map((name, i) => {
+      // Calculate magnitude for all vectors
+      const allVectors = variableNames.map((name, i) => {
         const magnitude = Math.sqrt(loadingsX[i]**2 + loadingsY[i]**2);
-        return magnitude >= minMagnitude ? { name, i, magnitude } : null;
-      }).filter(v => v !== null);
+        return { name, i, magnitude };
+      });
+      
+      // Check if we need to filter based on maxVariables
+      const needsFiltering = allVectors.length > (this.config.maxVariables || 100);
+      
+      // Filter to top N vectors by magnitude if needed
+      let validVectors = allVectors;
+      if (needsFiltering) {
+        validVectors = [...allVectors]
+          .sort((a, b) => b.magnitude - a.magnitude)
+          .slice(0, this.config.maxVariables || 100);
+      }
+      
+      // Filter out very small vectors
+      const minMagnitude = 0.01;
+      validVectors = validVectors.filter(v => v.magnitude >= minMagnitude);
+      
+      // Store for later use in title
+      (this as any)._needsFiltering = needsFiltering;
+      (this as any)._totalVariables = allVectors.length;
+      (this as any)._displayedVariables = validVectors.length;
       
       // Add all loading vectors as a single trace for better performance
       if (validVectors.length > 0) {
@@ -368,9 +389,15 @@ export class PlotlyBiplot {
     const xRange = [Math.min(...allX) * 1.2, Math.max(...allX) * 1.2];
     const yRange = [Math.min(...allY) * 1.2, Math.max(...allY) * 1.2];
     
+    // Create title with filtering indicator if needed
+    let titleText = `Biplot (${this.config.scalingType} scaling)`;
+    if ((this as any)._needsFiltering) {
+      titleText += `<br><span style="font-size: 12px; color: #f59e0b;">Showing top ${(this as any)._displayedVariables} of ${(this as any)._totalVariables} variables</span>`;
+    }
+    
     const layout: Partial<Layout> = {
       title: {
-        text: `Biplot (${this.config.scalingType} scaling)`
+        text: titleText
       },
       xaxis: {
         title: {
