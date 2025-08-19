@@ -132,42 +132,43 @@ export class PlotlyDiagnosticPlot {
       });
     });
     
-    // Add labels for outliers
+    // Add labels for samples
     if (this.config.showLabels && sampleNames) {
-      // Combine all potential outliers
-      const outlierIndices = [...outliers, ...goodLeverage, ...orthogonal];
+      // Calculate normalized distance for all points to determine which to label
+      // Use thresholds if available, otherwise use max values for normalization
+      const maxMahalanobis = this.config.mahalanobisThreshold || Math.max(...mahalanobisDistances) || 1;
+      const maxRSS = this.config.rssThreshold || Math.max(...residualSumOfSquares) || 1;
       
-      if (outlierIndices.length > 0) {
-        // Sort by combined distance from origin
-        const outlierPoints = outlierIndices.map(i => ({
-          index: i,
-          x: mahalanobisDistances[i],
-          y: residualSumOfSquares[i],
-          distance: Math.sqrt(
-            Math.pow(mahalanobisDistances[i] / this.config.mahalanobisThreshold!, 2) +
-            Math.pow(residualSumOfSquares[i] / this.config.rssThreshold!, 2)
-          )
-        }));
-        
-        // Sort by distance and take top N
-        outlierPoints.sort((a, b) => b.distance - a.distance);
-        const topOutliers = outlierPoints.slice(0, this.config.labelThreshold);
-        
-        traces.push({
-          type: 'scatter',
-          mode: 'text',
-          x: topOutliers.map(p => p.x),
-          y: topOutliers.map(p => p.y),
-          text: topOutliers.map(p => sampleNames[p.index]),
-          textposition: 'top center',
-          textfont: {
-            size: 10,
-            color: this.config.theme === 'dark' ? '#e5e7eb' : '#374151'
-          },
-          showlegend: false,
-          hoverinfo: 'skip'
-        });
-      }
+      // Map all points with their distances
+      const allPoints = mahalanobisDistances.map((md, i) => ({
+        index: i,
+        x: md,
+        y: residualSumOfSquares[i],
+        // Calculate normalized distance from origin
+        distance: Math.sqrt(
+          Math.pow(md / maxMahalanobis, 2) +
+          Math.pow(residualSumOfSquares[i] / maxRSS, 2)
+        )
+      }));
+      
+      // Sort by distance (furthest from origin first) and take top N
+      allPoints.sort((a, b) => b.distance - a.distance);
+      const topPoints = allPoints.slice(0, this.config.labelThreshold || 10);
+      
+      traces.push({
+        type: 'scatter',
+        mode: 'text',
+        x: topPoints.map(p => p.x),
+        y: topPoints.map(p => p.y),
+        text: topPoints.map(p => sampleNames[p.index]),
+        textposition: 'top center',
+        textfont: {
+          size: 10,
+          color: this.config.theme === 'dark' ? '#e5e7eb' : '#374151'
+        },
+        showlegend: false,
+        hoverinfo: 'skip'
+      });
     }
     
     return traces;
