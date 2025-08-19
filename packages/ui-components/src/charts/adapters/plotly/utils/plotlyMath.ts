@@ -155,12 +155,9 @@ export function scaleBiplotVectors(
   variableNames: string[]
 ): VectorTrace[] {
   const nObservations = scores.length;
-  // const nVariables = loadings.length;
   
   // Gabriel (1971), Equation 2
   const alpha = Math.pow(nObservations, scale);
-  // Beta is used for score scaling in the full biplot implementation
-  // const beta = Math.pow(nVariables, 1 - scale);
   
   // Find maximum score value for scaling
   let maxScore = 0;

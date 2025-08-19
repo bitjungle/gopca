@@ -118,7 +118,6 @@ function AppContent() {
         
         // Listen for file to load on startup
         const unsubscribe = EventsOn('load-file-on-startup', async (filePath: string) => {
-            console.log('Loading file on startup:', filePath);
             setLoading(true);
             setFileError(null);
             setPcaError(null);

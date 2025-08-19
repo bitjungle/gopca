@@ -247,7 +247,6 @@ export function getExportMenuItems(): any[] {
       click: async (gd: PlotlyHTMLElement) => {
         try {
           await copyToClipboard(gd);
-          console.log('Copied to clipboard');
         } catch (error) {
           console.error('Failed to copy to clipboard:', error);
         }

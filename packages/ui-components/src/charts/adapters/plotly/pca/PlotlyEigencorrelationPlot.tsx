@@ -250,14 +250,6 @@ export class PlotlyEigencorrelationPlot {
       font: { size: 10, color: 'gray' }
     });
     
-    // Adjust layout dimensions based on data size
-    // Commenting out fixed dimensions to let Plotly handle sizing
-    // const height = Math.max(400, variableNames.length * 25 + 200);
-    // const width = Math.max(600, componentLabels.length * 80 + 200);
-    
-    // layout.height = height;
-    // layout.width = width;
-    
     // Adjust margins to accommodate labels
     layout.margin = {
       l: Math.max(...variableNames.map(n => n.length)) * 6 + 50,
