@@ -244,23 +244,121 @@ export function getExportMenuItems(): any[] {
 
 /**
  * Setup Plotly to work with Wails SaveFile API
- * This patches Plotly's downloadImage function to use Wails when available
+ * This intercepts all Plotly export mechanisms to use Wails when available
  */
 export function setupPlotlyWailsIntegration(): void {
   console.info('Starting Plotly-Wails integration setup...');
+
+  // Track blob URLs and their associated blobs
+  const blobUrlMap = new Map<string, Blob>();
+
+  // Intercept URL.createObjectURL to track blob URLs
+  const originalCreateObjectURL = URL.createObjectURL;
+  URL.createObjectURL = function(blob: Blob | MediaSource): string {
+    const url = originalCreateObjectURL.call(URL, blob);
+    if (blob instanceof Blob) {
+      blobUrlMap.set(url, blob);
+      console.info('Tracked blob URL:', url);
+    }
+    return url;
+  };
+
+  // Intercept URL.revokeObjectURL to clean up tracking
+  const originalRevokeObjectURL = URL.revokeObjectURL;
+  URL.revokeObjectURL = function(url: string): void {
+    blobUrlMap.delete(url);
+    originalRevokeObjectURL.call(URL, url);
+  };
+
+  // Helper function to convert blob to data URL
+  const blobToDataURL = (blob: Blob): Promise<string> => {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = () => resolve(reader.result as string);
+      reader.onerror = reject;
+      reader.readAsDataURL(blob);
+    });
+  };
+
+  // Intercept anchor element clicks to catch downloads
+  const originalAnchorClick = HTMLAnchorElement.prototype.click;
+  HTMLAnchorElement.prototype.click = function() {
+    const anchor = this;
+    
+    // Check if this is a download link
+    if (anchor.download && anchor.href) {
+      const saveFileFunc = (window as any).go?.main?.App?.SaveFile;
+      
+      if (saveFileFunc) {
+        console.info('Intercepting anchor download click');
+        console.info('Download attribute:', anchor.download);
+        console.info('Href:', anchor.href.substring(0, 100) + '...');
+        
+        // Handle the download through Wails
+        (async () => {
+          try {
+            let dataUrl = anchor.href;
+            
+            // If it's a blob URL, convert to data URL
+            if (dataUrl.startsWith('blob:')) {
+              const blob = blobUrlMap.get(dataUrl);
+              if (blob) {
+                console.info('Converting blob URL to data URL');
+                dataUrl = await blobToDataURL(blob);
+              } else {
+                console.warn('Blob not found for URL:', dataUrl);
+                // Try to fetch the blob
+                try {
+                  const response = await fetch(dataUrl);
+                  const fetchedBlob = await response.blob();
+                  dataUrl = await blobToDataURL(fetchedBlob);
+                } catch (fetchError) {
+                  console.error('Failed to fetch blob:', fetchError);
+                  // Fall back to original behavior
+                  originalAnchorClick.call(anchor);
+                  return;
+                }
+              }
+            }
+            
+            // Use Wails SaveFile
+            console.info('Calling Wails SaveFile with filename:', anchor.download);
+            await saveFileFunc(anchor.download, dataUrl);
+            console.info('File saved via Wails:', anchor.download);
+            
+            // Clean up blob URL if needed
+            if (anchor.href.startsWith('blob:')) {
+              URL.revokeObjectURL(anchor.href);
+            }
+          } catch (error) {
+            console.error('Failed to save via Wails:', error);
+            // Fall back to original behavior
+            originalAnchorClick.call(anchor);
+          }
+        })();
+        
+        // Don't call the original click to prevent browser download
+        return;
+      }
+    }
+    
+    // For non-download clicks, use original behavior
+    originalAnchorClick.call(anchor);
+  };
 
   // Wait for Plotly to be available
   const checkPlotly = () => {
     const Plotly = (window as any).Plotly;
     if (Plotly && Plotly.downloadImage) {
-      console.info('Plotly found, patching downloadImage...');
+      console.info('Plotly found, patching export functions...');
 
-      // Store original downloadImage function
+      // Store original functions
       const originalDownloadImage = Plotly.downloadImage.bind(Plotly);
+      const originalToImage = Plotly.toImage ? Plotly.toImage.bind(Plotly) : null;
 
-      // Replace with our version that uses Wails SaveFile
-      Plotly.downloadImage = async function(gd: any, opts: any = {}) {
-        console.info('Plotly.downloadImage called with opts:', opts);
+      // Custom download handler that uses Wails
+      const handlePlotlyExport = async (gd: any, opts: any = {}) => {
+        console.info('Handling Plotly export with opts:', opts);
 
         try {
           // Generate the image data URL
@@ -272,10 +370,9 @@ export function setupPlotlyWailsIntegration(): void {
           };
 
           console.info('Generating image with options:', imageOpts);
-          const dataUrl = await Plotly.toImage(gd, imageOpts);
+          const dataUrl = await (originalToImage || Plotly.toImage)(gd, imageOpts);
 
           // Check if we're in Wails environment and have SaveFile available
-          // Try multiple ways to access the SaveFile function
           let saveFileFunc = null;
 
           // Method 1: Direct window.go access
@@ -312,6 +409,10 @@ export function setupPlotlyWailsIntegration(): void {
           return originalDownloadImage(gd, opts);
         }
       };
+
+      // Replace downloadImage
+      Plotly.downloadImage = handlePlotlyExport;
+
 
       console.info('Plotly-Wails integration setup complete');
     } else {
