@@ -193,7 +193,7 @@ export function scaleBiplotVectors(
 
 /**
  * Calculate smart labels - select points furthest from origin
- * This preserves the beloved smart label selection feature from Recharts
+ * This preserves the smart label selection feature from the previous implementation
  * 
  * @param points - Data points
  * @param maxLabels - Maximum number of labels to show

@@ -98,7 +98,7 @@ export class PlotlyBiplot {
     const plotMax = Math.max(maxAbsScore * 1.2, 1.0);
     
     // Scale factor to make the largest loading vector reach 70% of plot bounds
-    // This is the same approach as the working Recharts implementation
+    // This maintains consistency with the previous implementation
     const scaleFactor = maxLoadingMagnitude > 0 ? (plotMax * 0.7) / maxLoadingMagnitude : 1;
     
     // Apply scaling to loadings with optional manual adjustment

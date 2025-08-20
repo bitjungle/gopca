@@ -34,7 +34,7 @@ export const ExportButton: React.FC<ExportButtonProps> = ({ chartRef, fileName, 
         // Wait for fonts to be fully loaded
         await document.fonts.ready;
         
-        // Give Recharts time to fully render all text elements
+        // Give Plotly time to fully render all text elements
         await new Promise(resolve => setTimeout(resolve, 300));
         
         // Get the chart element and its bounds
