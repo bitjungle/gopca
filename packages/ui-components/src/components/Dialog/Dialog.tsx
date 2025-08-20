@@ -33,17 +33,19 @@ export const Dialog: React.FC<DialogProps> = ({
     width = 'w-96',
     showCloseButton = false,
     closeOnBackdropClick = true,
-    closeOnEscape = true,
+    closeOnEscape = true
 }) => {
     const dialogRef = useRef<HTMLDivElement>(null);
     const { trapFocus, focusFirst } = useFocusManagement();
-    
+
     // Save and restore focus when dialog opens/closes
     useFocusRestore();
-    
+
     // Handle Escape key
     useEscapeKey(() => {
-        if (closeOnEscape) onClose();
+        if (closeOnEscape) {
+onClose();
+}
     }, isOpen && closeOnEscape);
 
     useEffect(() => {
@@ -51,10 +53,10 @@ export const Dialog: React.FC<DialogProps> = ({
             // Focus the dialog and trap focus within it
             focusFirst(dialogRef.current);
             const cleanup = trapFocus(dialogRef.current);
-            
+
             // Prevent body scroll when dialog is open
             document.body.style.overflow = 'hidden';
-            
+
             return () => {
                 cleanup();
                 document.body.style.overflow = 'unset';
@@ -62,19 +64,21 @@ export const Dialog: React.FC<DialogProps> = ({
         }
     }, [isOpen, trapFocus, focusFirst]);
 
-    if (!isOpen) return null;
+    if (!isOpen) {
+return null;
+}
 
     return (
         <div className="fixed inset-0 z-50 flex items-center justify-center">
             {/* Backdrop */}
-            <div 
+            <div
                 className="absolute inset-0 bg-black bg-opacity-50"
                 onClick={closeOnBackdropClick ? onClose : undefined}
                 aria-hidden="true"
             />
-            
+
             {/* Dialog */}
-            <div 
+            <div
                 ref={dialogRef}
                 className={`relative bg-white dark:bg-gray-800 rounded-lg shadow-xl p-6 ${width} max-w-[90vw] ${className}`}
                 role="dialog"
@@ -102,7 +106,7 @@ export const Dialog: React.FC<DialogProps> = ({
                         )}
                     </div>
                 )}
-                
+
                 {/* Content */}
                 {children}
             </div>
@@ -113,9 +117,9 @@ export const Dialog: React.FC<DialogProps> = ({
 /**
  * Dialog footer component for action buttons
  */
-export const DialogFooter: React.FC<{ children: React.ReactNode; className?: string }> = ({ 
-    children, 
-    className = '' 
+export const DialogFooter: React.FC<{ children: React.ReactNode; className?: string }> = ({
+    children,
+    className = ''
 }) => {
     return (
         <div className={`flex justify-end gap-2 mt-4 ${className}`}>
@@ -127,9 +131,9 @@ export const DialogFooter: React.FC<{ children: React.ReactNode; className?: str
 /**
  * Dialog body component for main content
  */
-export const DialogBody: React.FC<{ children: React.ReactNode; className?: string }> = ({ 
-    children, 
-    className = '' 
+export const DialogBody: React.FC<{ children: React.ReactNode; className?: string }> = ({
+    children,
+    className = ''
 }) => {
     return (
         <div className={`text-gray-700 dark:text-gray-300 ${className}`}>

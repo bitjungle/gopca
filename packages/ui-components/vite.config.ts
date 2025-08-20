@@ -14,26 +14,26 @@ export default defineConfig({
     react(),
     dts({
       insertTypesEntry: true,
-      rollupTypes: true,
-    }),
+      rollupTypes: true
+    })
   ],
   build: {
     lib: {
       entry: resolve(__dirname, 'src/index.ts'),
       name: 'GoPCAUIComponents',
       formats: ['es', 'cjs'],
-      fileName: (format) => `index.${format === 'es' ? 'es' : ''}js`,
+      fileName: (format) => `index.${format === 'es' ? 'es' : ''}js`
     },
     rollupOptions: {
       external: ['react', 'react-dom'],
       output: {
         globals: {
           react: 'React',
-          'react-dom': 'ReactDOM',
-        },
-      },
+          'react-dom': 'ReactDOM'
+        }
+      }
     },
     sourcemap: true,
-    minify: false,
-  },
+    minify: false
+  }
 });

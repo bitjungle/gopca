@@ -14,15 +14,17 @@ export interface KeyboardHelpProps {
 export const KeyboardHelp: React.FC<KeyboardHelpProps> = ({
   shortcuts,
   isVisible,
-  onClose,
+  onClose
 }) => {
-  if (!isVisible) return null;
+  if (!isVisible) {
+return null;
+}
 
   // Group shortcuts by category (based on description patterns)
   const groupedShortcuts = shortcuts.reduce((groups, shortcut) => {
     let category = 'General';
-    
-    if (shortcut.description.toLowerCase().includes('file') || 
+
+    if (shortcut.description.toLowerCase().includes('file') ||
         shortcut.description.toLowerCase().includes('open') ||
         shortcut.description.toLowerCase().includes('save')) {
       category = 'File Operations';
@@ -49,13 +51,13 @@ export const KeyboardHelp: React.FC<KeyboardHelpProps> = ({
   return (
     <>
       {/* Backdrop */}
-      <div 
-        className="keyboard-help-backdrop" 
+      <div
+        className="keyboard-help-backdrop"
         onClick={onClose}
         role="presentation"
         aria-hidden="true"
       />
-      
+
       {/* Modal */}
       <div
         className="keyboard-help-modal"

@@ -44,12 +44,12 @@ export const ScoresPlot: React.FC<ScoresPlotProps> = ({
 }) => {
   const { theme } = useTheme();
   const { qualitativePalette, sequentialPalette, mode } = usePalette();
-  
+
   // Get the appropriate color scheme based on palette mode
-  const colorScheme = groupType === 'continuous' 
+  const colorScheme = groupType === 'continuous'
     ? getSequentialPalette(sequentialPalette)
     : getQualitativePalette(qualitativePalette);
-  
+
   // Transform data to Plotly format
   const plotlyData = transformToScoresPlotData(
     pcaResult,
@@ -75,9 +75,9 @@ export const ScoresPlot: React.FC<ScoresPlotProps> = ({
 
   return (
     <div style={{ width: '100%', height: '100%' }}>
-      <PCAScoresPlot 
-        data={plotlyData} 
-        config={plotlyConfig} 
+      <PCAScoresPlot
+        data={plotlyData}
+        config={plotlyConfig}
       />
     </div>
   );

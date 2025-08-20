@@ -41,7 +41,7 @@ export interface ScoresPlotConfig extends PlotlyVisualizationConfig {
  */
 export class PlotlyScoresPlot extends PlotlyVisualization<ScoresPlotData> {
   protected scoresConfig: ScoresPlotConfig;
-  
+
   constructor(data: ScoresPlotData, config?: ScoresPlotConfig) {
     super(data, config);
     this.scoresConfig = {
@@ -57,52 +57,52 @@ export class PlotlyScoresPlot extends PlotlyVisualization<ScoresPlotData> {
       ...config
     };
   }
-  
+
   protected getDataSize(): number {
     return this.data.scores.length;
   }
-  
+
   protected getTraces(): Data[] {
     const { scores, groups, groupValues, groupType = 'categorical', sampleNames, pc1 = 0, pc2 = 1 } = this.data;
     const traces: Data[] = [];
-    
+
     // Handle continuous vs categorical data
     if (groupType === 'continuous' && groupValues) {
       return this.getContinuousTraces();
     }
-    
+
     // Handle empty groups - default to single group
     const effectiveGroups = groups && groups.length > 0 ? groups : scores.map(() => 'All Samples');
-    
+
     // Get unique groups
     const uniqueGroups = Array.from(new Set(effectiveGroups));
-    
+
     // Calculate smart labels globally
     const allPoints: Point2D[] = scores.map(s => ({ x: s[pc1], y: s[pc2] }));
     const smartLabelIndices = this.scoresConfig.showSmartLabels
       ? calculateSmartLabels(allPoints, this.scoresConfig.maxLabels!)
       : [];
-    
+
     // Add density overlay if enabled
     if (this.scoresConfig.showDensity && scores.length > 20) {
       traces.push(...this.getDensityTraces(uniqueGroups, pc1, pc2));
     }
-    
+
     // Create traces for each group
     uniqueGroups.forEach((group, groupIndex) => {
       const groupIndices = effectiveGroups.map((g, i) => g === group ? i : -1).filter(i => i >= 0);
       const groupScores = groupIndices.map(i => scores[i]);
       const groupPoints = groupScores.map(s => ({ x: s[pc1], y: s[pc2] }));
-      
+
       // Prepare hover text
       const hovertext = groupIndices.map(i => {
         const label = sampleNames?.[i] || `Sample ${i}`;
         return `<b>${label}</b><br>Group: ${group}<br>PC${pc1 + 1}: ${scores[i][pc1].toFixed(2)}<br>PC${pc2 + 1}: ${scores[i][pc2].toFixed(2)}`;
       });
-      
+
       // Determine trace type based on performance
       const traceType = optimizeTraceType(groupScores, this.config.dataThreshold!);
-      
+
       // Main scatter trace - markers only (WebGL compatible)
       traces.push({
         type: traceType as any,
@@ -130,7 +130,7 @@ export class PlotlyScoresPlot extends PlotlyVisualization<ScoresPlotData> {
           }
         } as any
       });
-      
+
       // Add confidence ellipse if enabled
       if (this.scoresConfig.showEllipses && groupScores.length > 2) {
         const ellipseTrace = this.getEllipseTrace(groupPoints, group, groupIndex);
@@ -139,20 +139,20 @@ export class PlotlyScoresPlot extends PlotlyVisualization<ScoresPlotData> {
         }
       }
     });
-    
+
     // Add text labels as a separate trace (if enabled)
     // This ensures text renders properly with both scatter and scattergl
     if (this.scoresConfig.showSmartLabels && smartLabelIndices.length > 0) {
       const labelX: number[] = [];
       const labelY: number[] = [];
       const labelText: string[] = [];
-      
+
       smartLabelIndices.forEach(i => {
         labelX.push(scores[i][pc1]);
         labelY.push(scores[i][pc2]);
         labelText.push(sampleNames?.[i] || `Sample ${i}`);
       });
-      
+
       traces.push({
         type: 'scatter',
         mode: 'text',
@@ -168,14 +168,14 @@ export class PlotlyScoresPlot extends PlotlyVisualization<ScoresPlotData> {
         hoverinfo: 'skip'
       });
     }
-    
+
     return traces;
   }
-  
+
   protected getStandardTraces(): Data[] {
     return this.getTraces();
   }
-  
+
   protected getWebGLTraces(): Data[] {
     const traces = this.getTraces();
     return traces.map(trace => {
@@ -185,33 +185,33 @@ export class PlotlyScoresPlot extends PlotlyVisualization<ScoresPlotData> {
       return trace;
     });
   }
-  
+
   private getContinuousTraces(): Data[] {
     const { scores, groupValues, sampleNames, pc1 = 0, pc2 = 1 } = this.data;
     const traces: Data[] = [];
-    
+
     if (!groupValues || groupValues.length === 0) {
       return this.getTraces(); // Fall back to categorical
     }
-    
+
     // Calculate min/max for continuous values
     const validValues = groupValues.filter(v => v !== null && v !== undefined && !isNaN(v) && isFinite(v));
     const min = Math.min(...validValues);
     const max = Math.max(...validValues);
-    
+
     // Calculate smart labels globally
     const allPoints: Point2D[] = scores.map(s => ({ x: s[pc1], y: s[pc2] }));
     const smartLabelIndices = this.scoresConfig.showSmartLabels
       ? calculateSmartLabels(allPoints, this.scoresConfig.maxLabels!)
       : [];
-    
+
     // Create a custom colorscale from the palette
     const palette = this.scoresConfig.colorScheme || ['#440154', '#31688e', '#35b779', '#fde725'];
     const colorscale: [number, string][] = palette.map((color, i) => [
       i / (palette.length - 1),
       color
     ]);
-    
+
     // Prepare hover text
     const hovertext = scores.map((score, i) => {
       const label = sampleNames?.[i] || `Sample ${i}`;
@@ -221,13 +221,13 @@ export class PlotlyScoresPlot extends PlotlyVisualization<ScoresPlotData> {
         : 'Missing';
       return `<b>${label}</b><br>Value: ${valueStr}<br>PC${pc1 + 1}: ${score[pc1].toFixed(2)}<br>PC${pc2 + 1}: ${score[pc2].toFixed(2)}`;
     });
-    
+
     // Prepare text labels
     const text = scores.map((_, i) => {
       const label = sampleNames?.[i] || `Sample ${i}`;
       return smartLabelIndices.includes(i) ? label : '';
     });
-    
+
     // Create single trace with gradient colors
     // Use the actual numeric values for colors, not interpolated hex colors
     traces.push({
@@ -261,17 +261,19 @@ export class PlotlyScoresPlot extends PlotlyVisualization<ScoresPlotData> {
         opacity: 0.8
       }
     });
-    
+
     return traces;
   }
-  
+
   private getEllipseTrace(points: Point2D[], groupName: string, groupIndex: number): Data | null {
-    if (points.length < 3) return null;
-    
+    if (points.length < 3) {
+return null;
+}
+
     try {
       const ellipseParams = calculateConfidenceEllipse(points, this.scoresConfig.ellipseConfidence!);
       const ellipsePath = generateEllipsePath(ellipseParams);
-      
+
       return {
         type: 'scatter',
         mode: 'lines',
@@ -291,23 +293,25 @@ export class PlotlyScoresPlot extends PlotlyVisualization<ScoresPlotData> {
       return null;
     }
   }
-  
+
   private getDensityTraces(groups: string[], pc1: number, pc2: number): Data[] {
     const traces: Data[] = [];
     const uniqueGroups = Array.from(new Set(groups));
-    
+
     uniqueGroups.forEach((group, groupIndex) => {
       const groupIndices = groups.map((g, i) => g === group ? i : -1).filter(i => i >= 0);
       const groupPoints: Point2D[] = groupIndices.map(i => ({
         x: this.data.scores[i][pc1],
         y: this.data.scores[i][pc2]
       }));
-      
-      if (groupPoints.length < 5) return; // Need enough points for KDE
-      
+
+      if (groupPoints.length < 5) {
+return;
+} // Need enough points for KDE
+
       try {
         const kde = kernelDensityEstimate2D(groupPoints, 'scott', 30);
-        
+
         traces.push({
           type: 'contour',
           x: kde.x,
@@ -330,13 +334,13 @@ export class PlotlyScoresPlot extends PlotlyVisualization<ScoresPlotData> {
         console.warn(`Failed to calculate density for group ${group}:`, error);
       }
     });
-    
+
     return traces;
   }
-  
+
   protected getLayout(): Partial<Layout> {
     const { explainedVariance, pc1 = 0, pc2 = 1 } = this.data;
-    
+
     return {
       title: {
         text: 'PCA Scores Plot'
@@ -363,7 +367,7 @@ export class PlotlyScoresPlot extends PlotlyVisualization<ScoresPlotData> {
       dragmode: this.config.enableLasso ? 'lasso' : 'zoom'
     };
   }
-  
+
   /**
    * Public method to get optimized traces based on data size
    */
@@ -374,17 +378,17 @@ export class PlotlyScoresPlot extends PlotlyVisualization<ScoresPlotData> {
       Array.from(new Set(this.data.groups)).length > 1,
       true
     );
-    
+
     return perfConfig.useWebGL ? this.getWebGLTraces() : this.getStandardTraces();
   }
-  
+
   /**
    * Public method to get the layout
    */
   public getPlotLayout(): Partial<Layout> {
     return this.getEnhancedLayout();
   }
-  
+
   /**
    * Public method to get the config
    */
@@ -406,14 +410,14 @@ export const PCAScoresPlot: React.FC<{
   onSelection?: (indices: number[]) => void;
 }> = ({ data, config, onSelection }) => {
   const plot = useMemo(() => new PlotlyScoresPlot(data, config), [data, config]);
-  
+
   const handleSelected = (event: any) => {
     if (onSelection && event?.points) {
       const indices = event.points.map((p: any) => p.pointIndex);
       onSelection(indices);
     }
   };
-  
+
   return (
     <Plot
       data={plot.getOptimizedTraces()}

@@ -21,13 +21,13 @@ export function useFileOperations() {
   const [fileName, setFileName] = useState<string | null>(null);
   const [fileData, setFileData] = useState<FileData | null>(null);
   const { isLoading, withLoading } = useLoadingState();
-  
+
   const resetFileState = useCallback(() => {
     setFileLoaded(false);
     setFileName(null);
     setFileData(null);
   }, []);
-  
+
   const loadFile = useCallback(async (filePath: string) => {
     return withLoading(async () => {
       const result = await handleAsync(
@@ -37,7 +37,7 @@ export function useFileOperations() {
           showUserError: true
         }
       );
-      
+
       if (result && result.data && result.data.length > 0) {
         setFileData(result);
         setFileLoaded(true);
@@ -49,7 +49,7 @@ export function useFileOperations() {
       }
     });
   }, [withLoading]);
-  
+
   const updateData = useCallback((
     updater: (data: FileData) => FileData
   ) => {
@@ -57,7 +57,7 @@ export function useFileOperations() {
       setFileData(updater(fileData));
     }
   }, [fileData]);
-  
+
   return {
     fileLoaded,
     fileName,

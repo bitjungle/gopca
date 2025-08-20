@@ -34,10 +34,10 @@ export const DiagnosticScatterPlot: React.FC<DiagnosticScatterPlotProps> = ({
 }) => {
   const { theme } = useTheme();
   const { qualitativePalette } = usePalette();
-  
+
   // Get the color scheme from the current palette
   const colorScheme = getQualitativePalette(qualitativePalette);
-  
+
   // Transform data to Plotly format
   const plotlyData = transformToDiagnosticPlotData(
     pcaResult,
@@ -48,9 +48,9 @@ export const DiagnosticScatterPlot: React.FC<DiagnosticScatterPlotProps> = ({
   // Select appropriate thresholds based on confidence level
   // T² limit represents Hotelling's T-squared (leverage in model space)
   // Q limit represents Squared Prediction Error (residuals orthogonal to model)
-  const mahalanobisThreshold = confidenceLevel === 0.99 ? 
+  const mahalanobisThreshold = confidenceLevel === 0.99 ?
     pcaResult.t2_limit_99 : pcaResult.t2_limit_95;
-  const rssThreshold = confidenceLevel === 0.99 ? 
+  const rssThreshold = confidenceLevel === 0.99 ?
     pcaResult.q_limit_99 : pcaResult.q_limit_95;
 
   // Create config for Plotly component with label settings
@@ -69,9 +69,9 @@ export const DiagnosticScatterPlot: React.FC<DiagnosticScatterPlotProps> = ({
 
   return (
     <div style={{ width: '100%', height: '100%' }}>
-      <PCADiagnosticPlot 
-        data={plotlyData} 
-        config={plotlyConfig} 
+      <PCADiagnosticPlot
+        data={plotlyData}
+        config={plotlyConfig}
       />
     </div>
   );

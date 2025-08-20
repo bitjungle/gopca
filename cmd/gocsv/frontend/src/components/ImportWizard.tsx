@@ -64,14 +64,14 @@ export const ImportWizard: React.FC<ImportWizardProps> = ({ isOpen, onClose, onI
             const info = await GetFileInfo(filePath);
             setSelectedFile(filePath);
             setFileInfo(info);
-            
+
             // Update format based on file info
             setImportOptions(prev => ({
                 ...prev,
                 format: info.fileFormat,
                 delimiter: info.fileFormat === 'tsv' ? '\t' : ','
             }));
-            
+
             setCurrentStep('format-options');
         } catch (err) {
             setError(`Failed to get file info: ${err}`);
@@ -81,8 +81,10 @@ export const ImportWizard: React.FC<ImportWizardProps> = ({ isOpen, onClose, onI
     };
 
     const handleOptionsNext = async () => {
-        if (!selectedFile) return;
-        
+        if (!selectedFile) {
+return;
+}
+
         setIsLoading(true);
         setError(null);
         try {
@@ -97,23 +99,25 @@ export const ImportWizard: React.FC<ImportWizardProps> = ({ isOpen, onClose, onI
     };
 
     const handleImport = async () => {
-        if (!selectedFile) return;
-        
+        if (!selectedFile) {
+return;
+}
+
         setCurrentStep('importing');
         setError(null);
         setImportProgress(0);
-        
+
         try {
             // Simulate progress updates
             const progressInterval = setInterval(() => {
                 setImportProgress(prev => Math.min(prev + 10, 90));
             }, 200);
-            
+
             const data = await ImportFile(selectedFile, importOptions);
-            
+
             clearInterval(progressInterval);
             setImportProgress(100);
-            
+
             // Small delay to show 100% progress
             setTimeout(() => {
                 onImportComplete(data);
@@ -139,13 +143,15 @@ export const ImportWizard: React.FC<ImportWizardProps> = ({ isOpen, onClose, onI
         }
     };
 
-    if (!isOpen) return null;
+    if (!isOpen) {
+return null;
+}
 
     return (
         <div className="fixed inset-0 z-50 overflow-y-auto">
             <div className="flex items-center justify-center min-h-screen px-4 pt-4 pb-20 text-center sm:block sm:p-0">
                 {/* Background overlay */}
-                <div 
+                <div
                     className="fixed inset-0 transition-opacity bg-gray-500 bg-opacity-75 dark:bg-gray-900 dark:bg-opacity-75"
                     onClick={currentStep !== 'importing' ? onClose : undefined}
                 />
@@ -169,31 +175,31 @@ export const ImportWizard: React.FC<ImportWizardProps> = ({ isOpen, onClose, onI
                                 </button>
                             )}
                         </div>
-                        
+
                         {/* Progress indicator */}
                         <div className="mt-4">
                             <div className="flex items-center justify-between">
                                 <div className={`flex items-center ${currentStep === 'file-selection' ? 'text-blue-600 dark:text-blue-400' : 'text-gray-600 dark:text-gray-400'}`}>
                                     <div className={`w-8 h-8 rounded-full flex items-center justify-center border-2 ${
-                                        currentStep === 'file-selection' 
-                                            ? 'border-blue-600 bg-blue-600 text-white dark:border-blue-400 dark:bg-blue-400' 
+                                        currentStep === 'file-selection'
+                                            ? 'border-blue-600 bg-blue-600 text-white dark:border-blue-400 dark:bg-blue-400'
                                             : 'border-gray-300 dark:border-gray-600'
                                     }`}>
                                         1
                                     </div>
                                     <span className="ml-2 text-sm font-medium">Select File</span>
                                 </div>
-                                
+
                                 <div className="flex-1 h-0.5 mx-4 bg-gray-200 dark:bg-gray-700" />
-                                
+
                                 <div className={`flex items-center ${
-                                    currentStep === 'format-options' ? 'text-blue-600 dark:text-blue-400' : 
-                                    currentStep === 'data-preview' || currentStep === 'importing' ? 'text-gray-600 dark:text-gray-400' : 
+                                    currentStep === 'format-options' ? 'text-blue-600 dark:text-blue-400' :
+                                    currentStep === 'data-preview' || currentStep === 'importing' ? 'text-gray-600 dark:text-gray-400' :
                                     'text-gray-400 dark:text-gray-500'
                                 }`}>
                                     <div className={`w-8 h-8 rounded-full flex items-center justify-center border-2 ${
-                                        currentStep === 'format-options' 
-                                            ? 'border-blue-600 bg-blue-600 text-white dark:border-blue-400 dark:bg-blue-400' 
+                                        currentStep === 'format-options'
+                                            ? 'border-blue-600 bg-blue-600 text-white dark:border-blue-400 dark:bg-blue-400'
                                             : currentStep === 'data-preview' || currentStep === 'importing'
                                             ? 'border-gray-300 dark:border-gray-600'
                                             : 'border-gray-300 dark:border-gray-600'
@@ -202,16 +208,16 @@ export const ImportWizard: React.FC<ImportWizardProps> = ({ isOpen, onClose, onI
                                     </div>
                                     <span className="ml-2 text-sm font-medium">Configure Options</span>
                                 </div>
-                                
+
                                 <div className="flex-1 h-0.5 mx-4 bg-gray-200 dark:bg-gray-700" />
-                                
+
                                 <div className={`flex items-center ${
-                                    currentStep === 'data-preview' || currentStep === 'importing' ? 'text-blue-600 dark:text-blue-400' : 
+                                    currentStep === 'data-preview' || currentStep === 'importing' ? 'text-blue-600 dark:text-blue-400' :
                                     'text-gray-400 dark:text-gray-500'
                                 }`}>
                                     <div className={`w-8 h-8 rounded-full flex items-center justify-center border-2 ${
                                         currentStep === 'data-preview' || currentStep === 'importing'
-                                            ? 'border-blue-600 bg-blue-600 text-white dark:border-blue-400 dark:bg-blue-400' 
+                                            ? 'border-blue-600 bg-blue-600 text-white dark:border-blue-400 dark:bg-blue-400'
                                             : 'border-gray-300 dark:border-gray-600'
                                     }`}>
                                         3
@@ -231,7 +237,7 @@ export const ImportWizard: React.FC<ImportWizardProps> = ({ isOpen, onClose, onI
                         )}
 
                         {currentStep === 'file-selection' && (
-                            <FileSelector 
+                            <FileSelector
                                 onFileSelect={handleFileSelect}
                                 isLoading={isLoading}
                                 onBrowseClick={async () => {
@@ -263,18 +269,28 @@ export const ImportWizard: React.FC<ImportWizardProps> = ({ isOpen, onClose, onI
                         )}
 
                         {currentStep === 'importing' && (
-                            <ProgressIndicator 
+                            <ProgressIndicator
                                 progress={importProgress}
                                 title="Importing Data..."
                                 subtitle="Please wait while we import your file"
                                 showPercentage={true}
                                 getStatusMessage={(progress) => {
-                                    if (progress < 20) return "Reading file...";
-                                    if (progress < 40) return "Parsing data...";
-                                    if (progress < 60) return "Validating columns...";
-                                    if (progress < 80) return "Processing rows...";
-                                    if (progress < 100) return "Finalizing import...";
-                                    return "Import complete!";
+                                    if (progress < 20) {
+return 'Reading file...';
+}
+                                    if (progress < 40) {
+return 'Parsing data...';
+}
+                                    if (progress < 60) {
+return 'Validating columns...';
+}
+                                    if (progress < 80) {
+return 'Processing rows...';
+}
+                                    if (progress < 100) {
+return 'Finalizing import...';
+}
+                                    return 'Import complete!';
                                 }}
                             />
                         )}
@@ -291,7 +307,7 @@ export const ImportWizard: React.FC<ImportWizardProps> = ({ isOpen, onClose, onI
                                 >
                                     Back
                                 </button>
-                                
+
                                 <div className="flex gap-2">
                                     <button
                                         onClick={onClose}
@@ -299,7 +315,7 @@ export const ImportWizard: React.FC<ImportWizardProps> = ({ isOpen, onClose, onI
                                     >
                                         Cancel
                                     </button>
-                                    
+
                                     {currentStep === 'format-options' && (
                                         <button
                                             onClick={handleOptionsNext}
@@ -309,7 +325,7 @@ export const ImportWizard: React.FC<ImportWizardProps> = ({ isOpen, onClose, onI
                                             {isLoading ? 'Loading...' : 'Next'}
                                         </button>
                                     )}
-                                    
+
                                     {currentStep === 'data-preview' && (
                                         <button
                                             onClick={handleImport}

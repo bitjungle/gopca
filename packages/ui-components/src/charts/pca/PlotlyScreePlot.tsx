@@ -29,7 +29,7 @@ export interface ScreePlotConfig {
 export class PlotlyScreePlot {
   private data: ScreePlotData;
   private config: ScreePlotConfig;
-  
+
   constructor(data: ScreePlotData, config?: ScreePlotConfig) {
     this.data = data;
     this.config = {
@@ -40,19 +40,19 @@ export class PlotlyScreePlot {
       ...config
     };
   }
-  
+
   getTraces(): Data[] {
     const traces: Data[] = [];
     const { explainedVariance, cumulativeVariance } = this.data;
-    
+
     // Limit components if specified
-    const numComponents = this.config.maxComponents 
+    const numComponents = this.config.maxComponents
       ? Math.min(this.config.maxComponents, explainedVariance.length)
       : explainedVariance.length;
-    
+
     const componentIndices = Array.from({ length: numComponents }, (_, i) => i + 1);
     const componentLabels = componentIndices.map(i => `PC${i}`);
-    
+
     // Bar chart for explained variance
     traces.push({
       type: 'bar',
@@ -69,7 +69,7 @@ export class PlotlyScreePlot {
       yaxis: 'y',
       hovertemplate: '<b>%{x}</b><br>Explained: %{y:.1f}%<extra></extra>'
     });
-    
+
     // Line chart for cumulative variance
     if (this.config.showCumulativeLine) {
       traces.push({
@@ -90,22 +90,22 @@ export class PlotlyScreePlot {
         hovertemplate: '<b>%{x}</b><br>Cumulative: %{y:.1f}%<extra></extra>'
       });
     }
-    
+
     return traces;
   }
-  
+
   getEnhancedLayout(): Partial<Layout> {
     const baseLayout = this.getLayout();
     const themeLayout = getPlotlyTheme(this.config.theme || 'light').layout;
     return mergeLayouts(themeLayout, baseLayout);
   }
-  
+
   getLayout(): Partial<Layout> {
     const { explainedVariance } = this.data;
-    const numComponents = this.config.maxComponents 
+    const numComponents = this.config.maxComponents
       ? Math.min(this.config.maxComponents, explainedVariance.length)
       : explainedVariance.length;
-    
+
     const layout: Partial<Layout> = {
       title: {
         text: 'Scree Plot'
@@ -150,7 +150,7 @@ export class PlotlyScreePlot {
       shapes: [],
       annotations: []
     };
-    
+
     // Add threshold line if enabled
     if (this.config.showThresholdLine && this.config.showCumulativeLine) {
       layout.shapes = [
@@ -169,7 +169,7 @@ export class PlotlyScreePlot {
           }
         }
       ];
-      
+
       layout.annotations = [
         {
           text: `${this.config.thresholdValue}%`,
@@ -190,10 +190,10 @@ export class PlotlyScreePlot {
         }
       ];
     }
-    
+
     return layout;
   }
-  
+
   getConfig(): Partial<any> {
     return {
       responsive: true,
@@ -218,7 +218,7 @@ export const PCAScreePlot: React.FC<{
   config?: ScreePlotConfig;
 }> = ({ data, config }) => {
   const plot = useMemo(() => new PlotlyScreePlot(data, config), [data, config]);
-  
+
   return (
     <Plot
       data={plot.getTraces()}

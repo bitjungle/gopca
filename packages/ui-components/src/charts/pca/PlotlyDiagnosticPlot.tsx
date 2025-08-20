@@ -29,11 +29,11 @@ export interface DiagnosticPlotConfig {
 /**
  * Diagnostic Plot for identifying outliers in PCA
  * Combines Mahalanobis distance (leverage) and Residual Sum of Squares (RSS)
- * 
+ *
  * Statistical basis:
  * - X-axis: Mahalanobis distance (Hotelling's T²) - measures leverage in model space
  * - Y-axis: Residual Sum of Squares (Q-statistic/SPE) - measures distance from model space
- * 
+ *
  * Threshold calculations (performed in backend):
  * - T² limit: Based on F-distribution: T² = p(n-1)/(n-p) * F_{p,n-p}(α)
  *   Reference: Hotelling, H. (1931). The generalization of Student's ratio.
@@ -43,7 +43,7 @@ export interface DiagnosticPlotConfig {
 export class PlotlyDiagnosticPlot {
   private data: DiagnosticPlotData;
   private config: DiagnosticPlotConfig;
-  
+
   constructor(data: DiagnosticPlotData, config?: DiagnosticPlotConfig) {
     this.data = data;
     this.config = {
@@ -55,27 +55,27 @@ export class PlotlyDiagnosticPlot {
       theme: 'light',
       ...config
     };
-    
+
     // Validate that thresholds are provided when needed
-    if (this.config.showThresholds && 
+    if (this.config.showThresholds &&
         (!this.config.mahalanobisThreshold || !this.config.rssThreshold)) {
       console.warn('Diagnostic plot: Thresholds not provided from backend, hiding threshold lines');
       this.config.showThresholds = false;
     }
   }
-  
+
   private identifyOutliers() {
     const { mahalanobisDistances, residualSumOfSquares } = this.data;
     const outliers: number[] = [];
     const goodLeverage: number[] = [];
     const orthogonal: number[] = [];
     const regular: number[] = [];
-    
+
     mahalanobisDistances.forEach((md, i) => {
       const rss = residualSumOfSquares[i];
       const isMahalanobisOutlier = md > this.config.mahalanobisThreshold!;
       const isRSSOutlier = rss > this.config.rssThreshold!;
-      
+
       if (isMahalanobisOutlier && isRSSOutlier) {
         outliers.push(i);
       } else if (isMahalanobisOutlier && !isRSSOutlier) {
@@ -86,21 +86,21 @@ export class PlotlyDiagnosticPlot {
         regular.push(i);
       }
     });
-    
+
     return { outliers, goodLeverage, orthogonal, regular };
   }
-  
+
   getTraces(): Data[] {
     const traces: Data[] = [];
     const { mahalanobisDistances, residualSumOfSquares, sampleNames } = this.data;
     const { outliers, goodLeverage, orthogonal, regular } = this.identifyOutliers();
-    
+
     // Use colorScheme from config, fallback to defaults if not provided
     const colors = this.config.colorScheme || [
       '#10b981', '#3b82f6', '#f59e0b', '#ef4444', '#8b5cf6',
       '#ec4899', '#14b8a6', '#f97316', '#6366f1', '#84cc16'
     ];
-    
+
     // Define point categories and their properties
     const categories = [
       { name: 'Regular', indices: regular, color: colors[0] || '#10b981', symbol: 'circle' },
@@ -108,11 +108,13 @@ export class PlotlyDiagnosticPlot {
       { name: 'Orthogonal Outliers', indices: orthogonal, color: colors[2] || '#f59e0b', symbol: 'diamond' },
       { name: 'Bad Outliers', indices: outliers, color: colors[3] || '#ef4444', symbol: 'x' }
     ];
-    
+
     // Add traces for each category
     categories.forEach(cat => {
-      if (cat.indices.length === 0) return;
-      
+      if (cat.indices.length === 0) {
+return;
+}
+
       traces.push({
         type: 'scatter',
         mode: 'markers',
@@ -131,14 +133,14 @@ export class PlotlyDiagnosticPlot {
                       'RSS: %{y:.2f}<extra></extra>'
       });
     });
-    
+
     // Add labels for samples
     if (this.config.showLabels && sampleNames) {
       // Calculate normalized distance for all points to determine which to label
       // Use thresholds if available, otherwise use max values for normalization
       const maxMahalanobis = this.config.mahalanobisThreshold || Math.max(...mahalanobisDistances) || 1;
       const maxRSS = this.config.rssThreshold || Math.max(...residualSumOfSquares) || 1;
-      
+
       // Map all points with their distances
       const allPoints = mahalanobisDistances.map((md, i) => ({
         index: i,
@@ -150,11 +152,11 @@ export class PlotlyDiagnosticPlot {
           Math.pow(residualSumOfSquares[i] / maxRSS, 2)
         )
       }));
-      
+
       // Sort by distance (furthest from origin first) and take top N
       allPoints.sort((a, b) => b.distance - a.distance);
       const topPoints = allPoints.slice(0, this.config.labelThreshold || 10);
-      
+
       traces.push({
         type: 'scatter',
         mode: 'text',
@@ -170,19 +172,19 @@ export class PlotlyDiagnosticPlot {
         hoverinfo: 'skip'
       });
     }
-    
+
     return traces;
   }
-  
+
   getEnhancedLayout(): Partial<Layout> {
     const baseLayout = this.getLayout();
     const themeLayout = getPlotlyTheme(this.config.theme || 'light').layout;
     return mergeLayouts(themeLayout, baseLayout);
   }
-  
+
   getLayout(): Partial<Layout> {
     const { mahalanobisDistances, residualSumOfSquares } = this.data;
-    
+
     const layout: Partial<Layout> = {
       title: {
         text: 'PCA Diagnostic Plot'
@@ -217,7 +219,7 @@ export class PlotlyDiagnosticPlot {
       shapes: [],
       annotations: []
     };
-    
+
     // Add threshold lines with proper labels
     if (this.config.showThresholds && this.config.mahalanobisThreshold && this.config.rssThreshold) {
       // T² threshold (vertical line) - represents Hotelling's T-squared limit
@@ -234,7 +236,7 @@ export class PlotlyDiagnosticPlot {
           dash: 'dash'
         }
       });
-      
+
       // Q threshold (horizontal line) - represents SPE/Q-statistic limit
       layout.shapes!.push({
         type: 'line',
@@ -249,14 +251,14 @@ export class PlotlyDiagnosticPlot {
           dash: 'dash'
         }
       });
-      
+
       // Add quadrant labels
       const maxMD = Math.max(...mahalanobisDistances) * 1.1;
       const maxRSS = Math.max(...residualSumOfSquares) * 1.1;
-      
+
       // Calculate confidence percentage for labels
       const confidencePercent = Math.round((this.config.confidenceLevel || 0.95) * 100);
-      
+
       layout.annotations = [
         // Threshold labels
         {
@@ -312,10 +314,10 @@ export class PlotlyDiagnosticPlot {
         }
       ];
     }
-    
+
     return layout;
   }
-  
+
   getConfig(): Partial<any> {
     return {
       responsive: true,
@@ -340,7 +342,7 @@ export const PCADiagnosticPlot: React.FC<{
   config?: DiagnosticPlotConfig;
 }> = ({ data, config }) => {
   const plot = useMemo(() => new PlotlyDiagnosticPlot(data, config), [data, config]);
-  
+
   return (
     <Plot
       data={plot.getTraces()}

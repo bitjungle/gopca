@@ -28,16 +28,18 @@ export const PlotlyLineChart: React.FC<LineChartProps> = ({
 }) => {
   const containerRef = useRef<HTMLDivElement>(null);
   const { theme } = useChartTheme();
-  
+
   useEffect(() => {
-    if (!containerRef.current) return;
-    
+    if (!containerRef.current) {
+return;
+}
+
     const baseTheme = getPlotlyTheme(theme);
-    
+
     // Prepare data
     const xValues = data.map(d => d[xDataKey]);
     const yValues = data.map(d => d[dataKey]);
-    
+
     // Create trace
     const traces = [{
       x: xValues,
@@ -54,7 +56,7 @@ export const PlotlyLineChart: React.FC<LineChartProps> = ({
       } : undefined,
       hovertemplate: '%{x}<br>%{y:.3f}<extra></extra>'
     }];
-    
+
     // Add zero reference line
     traces.push({
       x: [Math.min(...(xValues as number[])), Math.max(...(xValues as number[]))],
@@ -69,7 +71,7 @@ export const PlotlyLineChart: React.FC<LineChartProps> = ({
       showlegend: false,
       hoverinfo: 'skip'
     } as any);
-    
+
     // Prepare layout
     const layout = mergeLayouts(
       baseTheme.layout,
@@ -101,30 +103,30 @@ export const PlotlyLineChart: React.FC<LineChartProps> = ({
         autosize: typeof width === 'string'
       }
     );
-    
+
     // Create or update plot
     Plotly.react(containerRef.current, traces, layout, baseTheme.config);
-    
+
     // Handle resize
     const handleResize = () => {
       if (containerRef.current) {
         Plotly.Plots.resize(containerRef.current);
       }
     };
-    
+
     window.addEventListener('resize', handleResize);
-    
+
     return () => {
       window.removeEventListener('resize', handleResize);
       if (containerRef.current) {
         Plotly.purge(containerRef.current);
       }
     };
-  }, [data, dataKey, xDataKey, xLabel, yLabel, domain, margin, width, height, 
+  }, [data, dataKey, xDataKey, xLabel, yLabel, domain, margin, width, height,
       theme, showGrid, stroke, strokeWidth, dot]);
-  
+
   return (
-    <div 
+    <div
       ref={containerRef}
       className={className}
       style={{ width, height }}

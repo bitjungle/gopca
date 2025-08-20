@@ -13,7 +13,7 @@ export interface PlotlyTheme {
 
 export const getPlotlyTheme = (mode: ThemeMode): PlotlyTheme => {
   const isDark = mode === 'dark';
-  
+
   return {
     layout: {
       paper_bgcolor: isDark ? '#1f2937' : '#ffffff',
@@ -91,18 +91,18 @@ export const mergeLayouts = (
 ): Partial<Layout> => {
   return overrides.reduce((acc, override) => {
     const merged = { ...acc, ...override };
-    
+
     // Handle axis titles properly
     if (override.xaxis) {
       merged.xaxis = {
         ...acc.xaxis,
         ...override.xaxis,
-        title: typeof override.xaxis.title === 'string' 
+        title: typeof override.xaxis.title === 'string'
           ? { text: override.xaxis.title }
           : override.xaxis.title
       };
     }
-    
+
     if (override.yaxis) {
       merged.yaxis = {
         ...acc.yaxis,
@@ -112,31 +112,31 @@ export const mergeLayouts = (
           : override.yaxis.title
       };
     }
-    
+
     if (override.xaxis2) {
       merged.xaxis2 = { ...acc.xaxis2, ...override.xaxis2 };
     }
-    
+
     if (override.yaxis2) {
       merged.yaxis2 = { ...acc.yaxis2, ...override.yaxis2 };
     }
-    
+
     if (override.font) {
       merged.font = { ...acc.font, ...override.font };
     }
-    
+
     if (override.hoverlabel) {
       merged.hoverlabel = { ...acc.hoverlabel, ...override.hoverlabel };
     }
-    
+
     if (override.legend) {
       merged.legend = { ...acc.legend, ...override.legend };
     }
-    
+
     if (override.margin) {
       merged.margin = { ...acc.margin, ...override.margin };
     }
-    
+
     return merged;
   }, base);
 };

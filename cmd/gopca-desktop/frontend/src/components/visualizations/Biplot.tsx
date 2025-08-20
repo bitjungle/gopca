@@ -50,12 +50,12 @@ export const Biplot: React.FC<BiplotProps> = ({
 }) => {
   const { theme } = useTheme();
   const { qualitativePalette, sequentialPalette } = usePalette();
-  
+
   // Get the appropriate color scheme based on palette mode
-  const colorScheme = groupType === 'continuous' 
+  const colorScheme = groupType === 'continuous'
     ? getSequentialPalette(sequentialPalette)
     : getQualitativePalette(qualitativePalette);
-  
+
   // Transform data to Plotly format
   const plotlyData = transformToBiplotData(
     pcaResult,
@@ -68,10 +68,10 @@ export const Biplot: React.FC<BiplotProps> = ({
   // Create config for Plotly component with additional settings
   const plotlyConfig = {
     ...createBiplotConfig(
-      xComponent, 
-      yComponent, 
-      showRowLabels, 
-      theme, 
+      xComponent,
+      yComponent,
+      showRowLabels,
+      theme,
       colorScheme,
       showEllipses,
       confidenceLevel
@@ -84,9 +84,9 @@ export const Biplot: React.FC<BiplotProps> = ({
 
   return (
     <div style={{ width: '100%', height: '100%' }}>
-      <PCABiplot 
-        data={plotlyData} 
-        config={plotlyConfig} 
+      <PCABiplot
+        data={plotlyData}
+        config={plotlyConfig}
       />
     </div>
   );

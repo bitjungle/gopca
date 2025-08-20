@@ -25,26 +25,32 @@ export const PlotlyComposedChart: React.FC<ComposedChartProps> = ({
 }) => {
   const containerRef = useRef<HTMLDivElement>(null);
   const { theme } = useChartTheme();
-  
+
   useEffect(() => {
-    if (!containerRef.current) return;
-    
+    if (!containerRef.current) {
+return;
+}
+
     const baseTheme = getPlotlyTheme(theme);
     const traces: any[] = [];
     let hasSecondaryAxis = false;
-    
+
     // Process children to extract chart configurations
     Children.forEach(children, (child) => {
-      if (!isValidElement(child)) return;
-      
+      if (!isValidElement(child)) {
+return;
+}
+
       const childProps = child.props as any;
       const dataKey = childProps.dataKey;
-      
-      if (!dataKey) return;
-      
+
+      if (!dataKey) {
+return;
+}
+
       const xValues = data.map(d => d[xDataKey]);
       const yValues = data.map(d => d[dataKey]);
-      
+
       if (child.type && (child.type as any).displayName === 'Bar') {
         // Bar chart trace
         const colors = data.map((_, i) => getColorFromPalette('default', i));
@@ -59,7 +65,7 @@ export const PlotlyComposedChart: React.FC<ComposedChartProps> = ({
           yaxis: childProps.yAxisId === 'right' ? 'y2' : 'y',
           hovertemplate: '%{x}<br>%{y:.1f}%<extra></extra>'
         });
-        
+
         if (childProps.yAxisId === 'right') {
           hasSecondaryAxis = true;
         }
@@ -82,17 +88,17 @@ export const PlotlyComposedChart: React.FC<ComposedChartProps> = ({
           yaxis: childProps.yAxisId === 'right' ? 'y2' : 'y',
           hovertemplate: '%{x}<br>%{y:.1f}%<extra></extra>'
         });
-        
+
         if (childProps.yAxisId === 'right') {
           hasSecondaryAxis = true;
         }
       }
     });
-    
+
     // Add threshold line at 80% for scree plots
     const hasExplainedVariance = data.some(d => 'explainedVariance' in d);
     const hasCumulativeVariance = data.some(d => 'cumulativeVariance' in d);
-    
+
     if (hasExplainedVariance && hasCumulativeVariance) {
       // This is likely a scree plot, add 80% threshold line
       const xRange = [data[0][xDataKey], data[data.length - 1][xDataKey]];
@@ -110,7 +116,7 @@ export const PlotlyComposedChart: React.FC<ComposedChartProps> = ({
         hoverinfo: 'skip',
         yaxis: 'y2'
       });
-      
+
       // Add text annotation for the threshold
       traces.push({
         x: [xRange[1]],
@@ -128,7 +134,7 @@ export const PlotlyComposedChart: React.FC<ComposedChartProps> = ({
         yaxis: 'y2'
       });
     }
-    
+
     // Prepare layout
     const layout = mergeLayouts(
       baseTheme.layout,
@@ -166,7 +172,7 @@ export const PlotlyComposedChart: React.FC<ComposedChartProps> = ({
         autosize: typeof width === 'string'
       }
     );
-    
+
     // Add secondary y-axis if needed
     if (hasSecondaryAxis) {
       (layout as any).yaxis2 = {
@@ -184,30 +190,30 @@ export const PlotlyComposedChart: React.FC<ComposedChartProps> = ({
         }
       };
     }
-    
+
     // Create or update plot
     Plotly.react(containerRef.current, traces, layout, baseTheme.config);
-    
+
     // Handle resize
     const handleResize = () => {
       if (containerRef.current) {
         Plotly.Plots.resize(containerRef.current);
       }
     };
-    
+
     window.addEventListener('resize', handleResize);
-    
+
     return () => {
       window.removeEventListener('resize', handleResize);
       if (containerRef.current) {
         Plotly.purge(containerRef.current);
       }
     };
-  }, [data, xDataKey, xLabel, yLabel, domain, margin, width, height, 
+  }, [data, xDataKey, xLabel, yLabel, domain, margin, width, height,
       theme, showGrid, children]);
-  
+
   return (
-    <div 
+    <div
       ref={containerRef}
       className={className}
       style={{ width, height }}

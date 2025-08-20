@@ -22,12 +22,12 @@ export const EigencorrelationPlot: React.FC<EigencorrelationPlotProps> = ({
 }) => {
   const { theme } = useTheme();
   const { sequentialPalette } = usePalette();
-  
+
   // Get the color scheme from the current sequential palette
   // Note: EigencorrelationPlot uses RdBu colorscale for correlation heatmap,
   // but we include this for consistency
   const colorScheme = getSequentialPalette(sequentialPalette);
-  
+
   // Transform data to Plotly format
   const plotlyData = transformToEigencorrelationPlotData(pcaResult);
 
@@ -47,9 +47,9 @@ export const EigencorrelationPlot: React.FC<EigencorrelationPlotProps> = ({
 
   return (
     <div style={{ width: '100%', height: '100%' }}>
-      <PCAEigencorrelationPlot 
-        data={plotlyData} 
-        config={plotlyConfig} 
+      <PCAEigencorrelationPlot
+        data={plotlyData}
+        config={plotlyConfig}
       />
     </div>
   );

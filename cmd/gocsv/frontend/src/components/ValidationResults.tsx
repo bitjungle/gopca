@@ -23,7 +23,7 @@ export const ValidationResults: React.FC<ValidationResultsProps> = ({ isValid, m
         }
         return 'text-gray-600 dark:text-gray-400';
     };
-    
+
     const getMessageIcon = (message: string) => {
         if (message.startsWith('ERROR:')) {
             return (
@@ -46,12 +46,12 @@ export const ValidationResults: React.FC<ValidationResultsProps> = ({ isValid, m
         }
         return null;
     };
-    
+
     const formatMessage = (message: string) => {
         // Remove the prefix for display
         return message.replace(/^(ERROR:|WARNING:|INFO:)\s*/, '');
     };
-    
+
     return (
         <div className="mt-4 bg-gray-50 dark:bg-gray-700/50 rounded-lg p-4">
             <div className="flex items-center justify-between mb-3">
@@ -67,7 +67,7 @@ export const ValidationResults: React.FC<ValidationResultsProps> = ({ isValid, m
                     </svg>
                 </button>
             </div>
-            
+
             {isValid ? (
                 <div className="flex items-center gap-2 text-green-600 dark:text-green-400">
                     <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -83,7 +83,7 @@ export const ValidationResults: React.FC<ValidationResultsProps> = ({ isValid, m
                     <span className="text-sm font-medium">Data has validation errors that must be fixed before PCA analysis</span>
                 </div>
             )}
-            
+
             {messages.length > 0 && (
                 <div className="space-y-2 mt-3 max-h-64 overflow-y-auto">
                     {messages.map((message, index) => (

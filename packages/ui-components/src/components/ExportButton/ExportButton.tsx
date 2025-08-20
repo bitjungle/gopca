@@ -33,11 +33,13 @@ export const ExportButton: React.FC<ExportButtonProps> = ({
   const [showMenu, setShowMenu] = useState(false);
 
   const handleExport = useCallback(async (config: ExportConfig) => {
-    if (isExporting || disabled) return;
-    
+    if (isExporting || disabled) {
+return;
+}
+
     setIsExporting(true);
     setShowMenu(false);
-    
+
     try {
       await config.handler(config.format);
     } catch (error) {
@@ -81,8 +83,8 @@ export const ExportButton: React.FC<ExportButtonProps> = ({
         disabled={isDisabled}
         className={`
           ${sizeClasses[size]} rounded-lg transition-colors inline-flex items-center gap-2
-          ${isDisabled 
-            ? 'bg-gray-400 dark:bg-gray-600 text-gray-200 dark:text-gray-400 cursor-not-allowed' 
+          ${isDisabled
+            ? 'bg-gray-400 dark:bg-gray-600 text-gray-200 dark:text-gray-400 cursor-not-allowed'
             : 'bg-gray-200 dark:bg-gray-700 hover:bg-gray-300 dark:hover:bg-gray-600 text-gray-700 dark:text-gray-300'
           }
           ${className}
@@ -115,8 +117,8 @@ export const ExportButton: React.FC<ExportButtonProps> = ({
         disabled={isDisabled}
         className={`
           ${sizeClasses[size]} rounded-lg transition-colors inline-flex items-center gap-2
-          ${isDisabled 
-            ? 'bg-gray-400 dark:bg-gray-600 text-gray-200 dark:text-gray-400 cursor-not-allowed' 
+          ${isDisabled
+            ? 'bg-gray-400 dark:bg-gray-600 text-gray-200 dark:text-gray-400 cursor-not-allowed'
             : 'bg-gray-200 dark:bg-gray-700 hover:bg-gray-300 dark:hover:bg-gray-600 text-gray-700 dark:text-gray-300'
           }
         `}
@@ -138,7 +140,7 @@ export const ExportButton: React.FC<ExportButtonProps> = ({
           </>
         )}
       </button>
-      
+
       {showMenu && !isExporting && (
         <div className="absolute right-0 mt-2 w-40 bg-white dark:bg-gray-800 rounded-lg shadow-lg border border-gray-200 dark:border-gray-700 z-10">
           {formats.map((config, index) => (

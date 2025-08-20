@@ -33,7 +33,7 @@ export interface LoadingsPlotConfig {
 export class PlotlyLoadingsPlot {
   private data: LoadingsPlotData;
   private config: LoadingsPlotConfig;
-  
+
   constructor(data: LoadingsPlotData, config?: LoadingsPlotConfig) {
     this.data = data;
     this.config = {
@@ -46,38 +46,38 @@ export class PlotlyLoadingsPlot {
       ...config
     };
   }
-  
+
   private prepareData() {
     const { loadings, variableNames } = this.data;
     const componentIndex = this.data.componentIndex || 0;
-    
+
     // Get loadings for selected component
     let componentLoadings = loadings[componentIndex];
     let sortedVariableNames = [...variableNames];
-    
+
     // Sort by magnitude if requested
     if (this.config.sortByMagnitude) {
       const indices = Array.from({ length: variableNames.length }, (_, i) => i);
       indices.sort((a, b) => Math.abs(componentLoadings[b]) - Math.abs(componentLoadings[a]));
-      
+
       componentLoadings = indices.map(i => componentLoadings[i]);
       sortedVariableNames = indices.map(i => variableNames[i]);
     }
-    
+
     // Limit variables if specified
     if (this.config.maxVariables && this.config.maxVariables < variableNames.length) {
       componentLoadings = componentLoadings.slice(0, this.config.maxVariables);
       sortedVariableNames = sortedVariableNames.slice(0, this.config.maxVariables);
     }
-    
+
     return { componentLoadings, sortedVariableNames };
   }
-  
+
   getTraces(): Data[] {
     const traces: Data[] = [];
     const { componentLoadings, sortedVariableNames } = this.prepareData();
     const componentIndex = this.data.componentIndex || 0;
-    
+
     if (this.config.mode === 'bar') {
       // Bar chart mode
       const colors = this.config.colorScheme || ['#3b82f6', '#ef4444'];
@@ -96,7 +96,7 @@ export class PlotlyLoadingsPlot {
       // Line chart mode - use indices for x-axis
       const colors = this.config.colorScheme || ['#3b82f6', '#ef4444'];
       const xValues = Array.from({ length: sortedVariableNames.length }, (_, i) => i);
-      
+
       const trace: any = {
         type: 'scatter',
         mode: this.config.showMarkers ? 'lines+markers' : 'lines',
@@ -110,7 +110,7 @@ export class PlotlyLoadingsPlot {
         },
         hovertemplate: '<b>%{text}</b><br>Loading: %{y:.3f}<br>Index: %{x}<extra></extra>'
       };
-      
+
       // Only add marker property if we're showing markers
       if (this.config.showMarkers) {
         trace.marker = {
@@ -118,15 +118,15 @@ export class PlotlyLoadingsPlot {
           color: componentLoadings.map(v => v >= 0 ? colors[0] : colors[1])
         };
       }
-      
+
       traces.push(trace);
     } else if (this.config.mode === 'grouped') {
       // Grouped bar chart for multiple components
       const numComponents = Math.min(3, this.data.loadings.length);
       for (let i = 0; i < numComponents; i++) {
-        const { componentLoadings: loadings, sortedVariableNames: names } = 
+        const { componentLoadings: loadings, sortedVariableNames: names } =
           this.prepareDataForComponent(i);
-        
+
         traces.push({
           type: 'bar',
           x: names,
@@ -140,44 +140,44 @@ export class PlotlyLoadingsPlot {
         });
       }
     }
-    
+
     return traces;
   }
-  
+
   private prepareDataForComponent(componentIndex: number) {
     const { loadings, variableNames } = this.data;
     let componentLoadings = loadings[componentIndex];
     let sortedVariableNames = [...variableNames];
-    
+
     if (this.config.sortByMagnitude) {
       const indices = Array.from({ length: variableNames.length }, (_, i) => i);
       indices.sort((a, b) => Math.abs(componentLoadings[b]) - Math.abs(componentLoadings[a]));
-      
+
       componentLoadings = indices.map(i => componentLoadings[i]);
       sortedVariableNames = indices.map(i => variableNames[i]);
     }
-    
+
     if (this.config.maxVariables && this.config.maxVariables < variableNames.length) {
       componentLoadings = componentLoadings.slice(0, this.config.maxVariables);
       sortedVariableNames = sortedVariableNames.slice(0, this.config.maxVariables);
     }
-    
+
     return { componentLoadings, sortedVariableNames };
   }
-  
+
   getEnhancedLayout(): Partial<Layout> {
     const baseLayout = this.getLayout();
     const themeLayout = getPlotlyTheme(this.config.theme || 'light').layout;
     return mergeLayouts(themeLayout, baseLayout);
   }
-  
+
   getLayout(): Partial<Layout> {
     const { sortedVariableNames } = this.prepareData();
     const componentIndex = this.data.componentIndex || 0;
-    
+
     const layout: Partial<Layout> = {
       title: {
-        text: this.config.mode === 'grouped' 
+        text: this.config.mode === 'grouped'
           ? 'Loadings Comparison'
           : `Loadings Plot - PC${componentIndex + 1}`
       },
@@ -210,7 +210,7 @@ export class PlotlyLoadingsPlot {
       shapes: [],
       annotations: []
     };
-    
+
     // Add threshold lines if enabled
     if (this.config.showThreshold) {
       layout.shapes = [
@@ -243,7 +243,7 @@ export class PlotlyLoadingsPlot {
           }
         }
       ];
-      
+
       layout.annotations = [
         {
           text: `Threshold: ±${this.config.thresholdValue}`,
@@ -261,10 +261,10 @@ export class PlotlyLoadingsPlot {
         }
       ];
     }
-    
+
     return layout;
   }
-  
+
   getConfig(): Partial<any> {
     return {
       responsive: true,
@@ -289,7 +289,7 @@ export const PCALoadingsPlot: React.FC<{
   config?: LoadingsPlotConfig;
 }> = ({ data, config }) => {
   const plot = useMemo(() => new PlotlyLoadingsPlot(data, config), [data, config]);
-  
+
   return (
     <Plot
       data={plot.getTraces()}

@@ -16,7 +16,7 @@ import type {
   DiagnosticPlotData,
   DiagnosticPlotConfig,
   EigencorrelationPlotData,
-  EigencorrelationPlotConfig,
+  EigencorrelationPlotConfig
 } from '@gopca/ui-components';
 
 /**
@@ -24,17 +24,19 @@ import type {
  * Converts [rows][cols] to [cols][rows]
  */
 function transposeMatrix(matrix: number[][]): number[][] {
-  if (!matrix || matrix.length === 0) return [];
+  if (!matrix || matrix.length === 0) {
+return [];
+}
   const rows = matrix.length;
   const cols = matrix[0].length;
   const transposed: number[][] = Array(cols).fill(null).map(() => Array(rows));
-  
+
   for (let i = 0; i < rows; i++) {
     for (let j = 0; j < cols; j++) {
       transposed[j][i] = matrix[i][j];
     }
   }
-  
+
   return transposed;
 }
 
@@ -91,7 +93,7 @@ export function createScoresPlotConfig(
 export function transformToScreePlotData(pcaResult: PCAResult): ScreePlotData {
   return {
     explainedVariance: pcaResult.explained_variance_ratio, // Already in percentages from backend
-    cumulativeVariance: pcaResult.cumulative_variance,
+    cumulativeVariance: pcaResult.cumulative_variance
     // eigenvalues could be calculated if needed
   };
 }
@@ -123,10 +125,10 @@ export function transformToLoadingsPlotData(
 ): LoadingsPlotData {
   // Backend stores loadings as [variables][components], but frontend expects [components][variables]
   const transposedLoadings = transposeMatrix(pcaResult.loadings);
-  
+
   return {
     loadings: transposedLoadings,
-    variableNames: pcaResult.variable_labels || 
+    variableNames: pcaResult.variable_labels ||
       Array.from({ length: pcaResult.loadings.length }, (_, i) => `Var${i + 1}`), // Use loadings.length for number of variables
     componentIndex: selectedComponent
   };
@@ -149,7 +151,7 @@ export function createLoadingsPlotConfig(
   if (plotType === 'line' && numVariables !== undefined && variableThreshold !== undefined) {
     showMarkers = numVariables <= variableThreshold;
   }
-  
+
   return {
     mode: plotType,
     sortByMagnitude,
@@ -174,13 +176,13 @@ export function transformToBiplotData(
 ): BiplotData {
   // Backend stores loadings as [variables][components], but frontend expects [components][variables]
   const transposedLoadings = transposeMatrix(pcaResult.loadings);
-  
+
   return {
     scores: pcaResult.scores,
     loadings: transposedLoadings,
     explainedVariance: pcaResult.explained_variance_ratio, // Already in percentages from backend
     sampleNames: rowNames,
-    variableNames: pcaResult.variable_labels || 
+    variableNames: pcaResult.variable_labels ||
       Array.from({ length: pcaResult.loadings.length }, (_, i) => `Var${i + 1}`), // Use loadings.length for number of variables
     groups: groupLabels,
     groupValues,
@@ -224,10 +226,10 @@ export function transformToCircleOfCorrelationsData(
 ): CircleOfCorrelationsData {
   // Backend stores loadings as [variables][components], but frontend expects [components][variables]
   const transposedLoadings = transposeMatrix(pcaResult.loadings);
-  
+
   return {
     loadings: transposedLoadings,
-    variableNames: pcaResult.variable_labels || 
+    variableNames: pcaResult.variable_labels ||
       Array.from({ length: pcaResult.loadings.length }, (_, i) => `Var${i + 1}`), // Use loadings.length for number of variables
     explainedVariance: pcaResult.explained_variance_ratio // Already in percentages from backend
   };
@@ -265,7 +267,7 @@ export function transformToDiagnosticPlotData(
 ): DiagnosticPlotData {
   // Extract Mahalanobis distances and RSS from metrics if available
   const metrics = pcaResult.metrics || [];
-  
+
   return {
     mahalanobisDistances: metrics.map(m => m.mahalanobis || 0),
     residualSumOfSquares: metrics.map(m => m.rss || 0),
@@ -312,15 +314,15 @@ export function transformToEigencorrelationPlotData(
   }
 
   const eigencorr = pcaResult.eigencorrelations;
-  
+
   // Transform from map format to 2D array format [components][variables]
   // Backend format: {variable: [correlations per component]}
   // Frontend expects: [[correlations per component for all variables]]
   const numComponents = eigencorr.components.length;
   const numVariables = eigencorr.variables.length;
-  
+
   const correlationMatrix: number[][] = [];
-  
+
   // Build the matrix with components as rows and variables as columns
   for (let compIdx = 0; compIdx < numComponents; compIdx++) {
     const row: number[] = [];
@@ -329,7 +331,7 @@ export function transformToEigencorrelationPlotData(
     }
     correlationMatrix.push(row);
   }
-  
+
   return {
     correlations: correlationMatrix,
     variableNames: eigencorr.variables, // Metadata variable names

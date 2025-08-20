@@ -18,17 +18,17 @@ export interface PlotlyLabelConfig {
  */
 export function calculatePlotlyLabels(config: PlotlyLabelConfig): string[] {
   const { showLabels, maxLabels, labels, data } = config;
-  
+
   if (!showLabels || !labels || labels.length === 0) {
     return data.map(() => '');
   }
-  
+
   // Calculate distances and sort to find extreme points
   const pointsWithDistance = data.map((point, idx) => ({
     index: point.index ?? idx,
     distance: Math.sqrt(point.x ** 2 + point.y ** 2)
   }));
-  
+
   // Sort by distance and get top N
   const topIndices = new Set(
     pointsWithDistance
@@ -36,9 +36,9 @@ export function calculatePlotlyLabels(config: PlotlyLabelConfig): string[] {
       .slice(0, maxLabels)
       .map(p => p.index)
   );
-  
+
   // Return labels for top points only
-  return data.map((_, idx) => 
+  return data.map((_, idx) =>
     topIndices.has(idx) && labels[idx] ? labels[idx] : ''
   );
 }
@@ -47,9 +47,15 @@ export function calculatePlotlyLabels(config: PlotlyLabelConfig): string[] {
  * Get text position based on point quadrant to avoid overlaps
  */
 export function getPlotlyTextPosition(x: number, y: number): string {
-  if (x >= 0 && y >= 0) return 'top right';
-  if (x < 0 && y >= 0) return 'top left';
-  if (x < 0 && y < 0) return 'bottom left';
+  if (x >= 0 && y >= 0) {
+return 'top right';
+}
+  if (x < 0 && y >= 0) {
+return 'top left';
+}
+  if (x < 0 && y < 0) {
+return 'bottom left';
+}
   return 'bottom right';
 }
 
@@ -64,22 +70,22 @@ export function generateEllipseTrace(
   const { centerX, centerY, majorAxis, minorAxis, angle } = params;
   const steps = 50;
   const points: { x: number[]; y: number[] } = { x: [], y: [] };
-  
+
   for (let i = 0; i <= steps; i++) {
     const t = (i / steps) * 2 * Math.PI;
     // Ellipse in local coordinates
     const localX = majorAxis * Math.cos(t);
     const localY = minorAxis * Math.sin(t);
-    
+
     // Apply rotation
     const rotatedX = localX * Math.cos(angle) - localY * Math.sin(angle);
     const rotatedY = localX * Math.sin(angle) + localY * Math.cos(angle);
-    
+
     // Translate to center
     points.x.push(centerX + rotatedX);
     points.y.push(centerY + rotatedY);
   }
-  
+
   return {
     x: points.x,
     y: points.y,
@@ -101,12 +107,14 @@ export function generateEllipseTrace(
  */
 export function hexToRgba(hex: string, opacity: number = 1): string {
   const result = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex);
-  if (!result) return hex;
-  
+  if (!result) {
+return hex;
+}
+
   const r = parseInt(result[1], 16);
   const g = parseInt(result[2], 16);
   const b = parseInt(result[3], 16);
-  
+
   return `rgba(${r}, ${g}, ${b}, ${opacity})`;
 }
 
@@ -153,13 +161,13 @@ export function createUnitCircle(color: string = '#666666'): Partial<Data> {
   const steps = 100;
   const x: number[] = [];
   const y: number[] = [];
-  
+
   for (let i = 0; i <= steps; i++) {
     const angle = (i / steps) * 2 * Math.PI;
     x.push(Math.cos(angle));
     y.push(Math.sin(angle));
   }
-  
+
   return {
     x,
     y,
@@ -182,31 +190,35 @@ export function createUnitCircle(color: string = '#666666'): Partial<Data> {
  * @returns Interpolated color string
  */
 export function interpolateColor(value: number, palette: string[]): string {
-  if (!palette || palette.length === 0) return '#808080';
-  if (palette.length === 1) return palette[0];
-  
+  if (!palette || palette.length === 0) {
+return '#808080';
+}
+  if (palette.length === 1) {
+return palette[0];
+}
+
   // Clamp value between 0 and 1
   const normalizedValue = Math.max(0, Math.min(1, value));
-  
+
   // Calculate position in palette
   const scaledValue = normalizedValue * (palette.length - 1);
   const lowerIndex = Math.floor(scaledValue);
   const upperIndex = Math.ceil(scaledValue);
   const fraction = scaledValue - lowerIndex;
-  
+
   // If exact match, return the color
   if (lowerIndex === upperIndex) {
     return palette[lowerIndex];
   }
-  
+
   // Parse colors and interpolate
   const lowerColor = parseColor(palette[lowerIndex]);
   const upperColor = parseColor(palette[upperIndex]);
-  
+
   const r = Math.round(lowerColor.r + (upperColor.r - lowerColor.r) * fraction);
   const g = Math.round(lowerColor.g + (upperColor.g - lowerColor.g) * fraction);
   const b = Math.round(lowerColor.b + (upperColor.b - lowerColor.b) * fraction);
-  
+
   return `rgb(${r}, ${g}, ${b})`;
 }
 
@@ -224,7 +236,7 @@ function parseColor(color: string): { r: number; g: number; b: number } {
       b: bigint & 255
     };
   }
-  
+
   // Handle rgb/rgba colors
   const match = color.match(/rgba?\((\d+),\s*(\d+),\s*(\d+)/);
   if (match) {
@@ -234,7 +246,7 @@ function parseColor(color: string): { r: number; g: number; b: number } {
       b: parseInt(match[3])
     };
   }
-  
+
   // Default gray if parsing fails
   return { r: 128, g: 128, b: 128 };
 }
@@ -257,12 +269,12 @@ export function getSequentialColor(
   if (value === null || value === undefined || !isFinite(value)) {
     return '#9CA3AF'; // Gray for missing values
   }
-  
+
   // Handle edge case where min equals max
   if (min === max) {
     return interpolateColor(0.5, palette);
   }
-  
+
   // Normalize value to 0-1 range
   const normalized = (value - min) / (max - min);
   return interpolateColor(normalized, palette);
@@ -280,13 +292,13 @@ export function createColorMap(
 ): Map<string, string> {
   const uniqueGroups = Array.from(new Set(groups));
   const colorMap = new Map<string, string>();
-  
+
   uniqueGroups.forEach((group, index) => {
     colorMap.set(group, palette[index % palette.length]);
   });
-  
+
   // Add special color for missing values
   colorMap.set('Missing', '#9CA3AF');
-  
+
   return colorMap;
 }

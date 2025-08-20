@@ -21,12 +21,12 @@ export interface ErrorConfig {
 
 // Default error display function (can be overridden)
 let defaultShowError = (error: ErrorInfo | string): void => {
-  const errorMessage = typeof error === 'string' 
-    ? error 
-    : error.context 
+  const errorMessage = typeof error === 'string'
+    ? error
+    : error.context
       ? `${error.context}: ${error.message}`
       : error.message;
-  
+
   alert(errorMessage);
 };
 
@@ -62,18 +62,18 @@ export async function handleAsync<T>(
   } catch (error) {
     const errorMessage = error instanceof Error ? error.message : String(error);
     console.error(`${options.errorPrefix || 'Error'}:`, error);
-    
+
     if (options.showUserError !== false) {
       showError({
         message: errorMessage,
         context: options.errorPrefix
       });
     }
-    
+
     if (options.onError) {
       options.onError(error);
     }
-    
+
     return null;
   }
 }

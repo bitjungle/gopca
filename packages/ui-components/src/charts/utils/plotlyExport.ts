@@ -37,7 +37,7 @@ export const WEB_EXPORT_CONFIG: ExportConfig = {
 
 /**
  * Export plot to high-quality image
- * 
+ *
  * @param plotElement - Plotly element to export
  * @param config - Export configuration
  * @returns Promise resolving to blob URL
@@ -50,13 +50,13 @@ export async function exportPlot(
     ...WEB_EXPORT_CONFIG,
     ...config
   };
-  
+
   // Use Plotly's built-in export
   const Plotly = (window as any).Plotly;
   if (!Plotly) {
     throw new Error('Plotly not loaded');
   }
-  
+
   return Plotly.toImage(plotElement, {
     format: finalConfig.format,
     width: finalConfig.width,
@@ -67,7 +67,7 @@ export async function exportPlot(
 
 /**
  * Download plot as image
- * 
+ *
  * @param plotElement - Plotly element to export
  * @param config - Export configuration
  */
@@ -79,12 +79,12 @@ export async function downloadPlot(
     ...WEB_EXPORT_CONFIG,
     ...config
   };
-  
+
   const Plotly = (window as any).Plotly;
   if (!Plotly) {
     throw new Error('Plotly not loaded');
   }
-  
+
   return Plotly.downloadImage(plotElement, {
     format: finalConfig.format,
     width: finalConfig.width,
@@ -96,7 +96,7 @@ export async function downloadPlot(
 
 /**
  * Export plot data to CSV
- * 
+ *
  * @param data - Plot data
  * @param filename - Output filename
  */
@@ -105,35 +105,55 @@ export function exportToCSV(data: any[], filename: string = 'plot-data.csv'): vo
     console.warn('No data to export');
     return;
   }
-  
+
   // Extract headers from first trace
   const headers = new Set<string>();
   data.forEach(trace => {
-    if (trace.x) headers.add('x');
-    if (trace.y) headers.add('y');
-    if (trace.z) headers.add('z');
-    if (trace.text) headers.add('label');
-    if (trace.name) headers.add('group');
+    if (trace.x) {
+headers.add('x');
+}
+    if (trace.y) {
+headers.add('y');
+}
+    if (trace.z) {
+headers.add('z');
+}
+    if (trace.text) {
+headers.add('label');
+}
+    if (trace.name) {
+headers.add('group');
+}
   });
-  
+
   // Build CSV content
   const rows: string[] = [];
   rows.push(Array.from(headers).join(','));
-  
+
   // Combine all traces
   data.forEach(trace => {
     const length = trace.x?.length || trace.y?.length || 0;
     for (let i = 0; i < length; i++) {
       const row: string[] = [];
-      if (headers.has('x')) row.push(trace.x?.[i] ?? '');
-      if (headers.has('y')) row.push(trace.y?.[i] ?? '');
-      if (headers.has('z')) row.push(trace.z?.[i] ?? '');
-      if (headers.has('label')) row.push(trace.text?.[i] ?? '');
-      if (headers.has('group')) row.push(trace.name ?? '');
+      if (headers.has('x')) {
+row.push(trace.x?.[i] ?? '');
+}
+      if (headers.has('y')) {
+row.push(trace.y?.[i] ?? '');
+}
+      if (headers.has('z')) {
+row.push(trace.z?.[i] ?? '');
+}
+      if (headers.has('label')) {
+row.push(trace.text?.[i] ?? '');
+}
+      if (headers.has('group')) {
+row.push(trace.name ?? '');
+}
       rows.push(row.join(','));
     }
   });
-  
+
   // Create and download file
   const csvContent = rows.join('\n');
   const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
@@ -146,7 +166,7 @@ export function exportToCSV(data: any[], filename: string = 'plot-data.csv'): vo
 
 /**
  * Export plot configuration to JSON
- * 
+ *
  * @param layout - Plot layout
  * @param config - Plot config
  * @param filename - Output filename
@@ -162,7 +182,7 @@ export function exportConfig(
     timestamp: new Date().toISOString(),
     version: '2.0.0'
   };
-  
+
   const jsonContent = JSON.stringify(exportData, null, 2);
   const blob = new Blob([jsonContent], { type: 'application/json' });
   const link = document.createElement('a');
@@ -174,7 +194,7 @@ export function exportConfig(
 
 /**
  * Copy plot to clipboard as image
- * 
+ *
  * @param plotElement - Plotly element to copy
  * @param config - Export configuration
  */
@@ -187,12 +207,12 @@ export async function copyToClipboard(
     format: 'png' as const,
     ...config
   };
-  
+
   const Plotly = (window as any).Plotly;
   if (!Plotly) {
     throw new Error('Plotly not loaded');
   }
-  
+
   // Convert to blob
   const dataUrl = await Plotly.toImage(plotElement, {
     format: 'png',
@@ -200,11 +220,11 @@ export async function copyToClipboard(
     height: finalConfig.height,
     scale: finalConfig.scale
   });
-  
+
   // Convert data URL to blob
   const response = await fetch(dataUrl);
   const blob = await response.blob();
-  
+
   // Copy to clipboard using Clipboard API
   if (navigator.clipboard && (navigator.clipboard as any).write) {
     const item = new ClipboardItem({ 'image/png': blob });
@@ -228,20 +248,20 @@ export function getExportMenuItems(): any[] {
  */
 export function setupPlotlyWailsIntegration(): void {
   console.info('Starting Plotly-Wails integration setup...');
-  
+
   // Wait for Plotly to be available
   const checkPlotly = () => {
     const Plotly = (window as any).Plotly;
     if (Plotly && Plotly.downloadImage) {
       console.info('Plotly found, patching downloadImage...');
-      
+
       // Store original downloadImage function
       const originalDownloadImage = Plotly.downloadImage.bind(Plotly);
-      
+
       // Replace with our version that uses Wails SaveFile
       Plotly.downloadImage = async function(gd: any, opts: any = {}) {
         console.info('Plotly.downloadImage called with opts:', opts);
-        
+
         try {
           // Generate the image data URL
           const imageOpts = {
@@ -250,14 +270,14 @@ export function setupPlotlyWailsIntegration(): void {
             height: opts.height || 1200,
             scale: opts.scale || 2
           };
-          
+
           console.info('Generating image with options:', imageOpts);
           const dataUrl = await Plotly.toImage(gd, imageOpts);
-          
+
           // Check if we're in Wails environment and have SaveFile available
           // Try multiple ways to access the SaveFile function
           let saveFileFunc = null;
-          
+
           // Method 1: Direct window.go access
           if ((window as any).go?.main?.App?.SaveFile) {
             saveFileFunc = (window as any).go.main.App.SaveFile;
@@ -268,17 +288,17 @@ export function setupPlotlyWailsIntegration(): void {
             saveFileFunc = (window as any).SaveFile;
             console.info('Found SaveFile via window.SaveFile');
           }
-          
+
           if (saveFileFunc) {
             // Use Wails SaveFile API
             const format = imageOpts.format;
             const filename = opts.filename || 'pca-plot';
             const fullFilename = `${filename}.${format}`;
-            
+
             console.info(`Calling Wails SaveFile with filename: ${fullFilename}`);
             await saveFileFunc(fullFilename, dataUrl);
             console.info(`Plot saved via Wails: ${fullFilename}`);
-            
+
             // Return without calling original to prevent double download
             return;
           } else {
@@ -292,14 +312,14 @@ export function setupPlotlyWailsIntegration(): void {
           return originalDownloadImage(gd, opts);
         }
       };
-      
+
       console.info('Plotly-Wails integration setup complete');
     } else {
       // Retry after a short delay
       setTimeout(checkPlotly, 100);
     }
   };
-  
+
   // Start checking for Plotly
   checkPlotly();
 }
@@ -312,8 +332,10 @@ export function setupPlotlyWailsIntegration(): void {
 export function setupExportShortcuts(plotElement: PlotlyHTMLElement): () => void {
   const handleKeyDown = async (e: KeyboardEvent) => {
     // Check if plot element is visible and focused area
-    if (!plotElement || !document.contains(plotElement)) return;
-    
+    if (!plotElement || !document.contains(plotElement)) {
+return;
+}
+
     // Ctrl/Cmd + C for copy (when not in text input)
     if ((e.ctrlKey || e.metaKey) && e.key === 'c') {
       const activeElement = document.activeElement;
@@ -322,7 +344,7 @@ export function setupExportShortcuts(plotElement: PlotlyHTMLElement): () => void
         activeElement.tagName === 'TEXTAREA' ||
         (activeElement as HTMLElement).contentEditable === 'true'
       );
-      
+
       if (!isTextInput) {
         e.preventDefault();
         try {
@@ -335,10 +357,10 @@ export function setupExportShortcuts(plotElement: PlotlyHTMLElement): () => void
       }
     }
   };
-  
+
   // Add event listener
   document.addEventListener('keydown', handleKeyDown);
-  
+
   // Return cleanup function
   return () => {
     document.removeEventListener('keydown', handleKeyDown);

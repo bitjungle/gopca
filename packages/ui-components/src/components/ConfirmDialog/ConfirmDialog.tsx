@@ -20,14 +20,14 @@ export interface ConfirmDialogProps {
   containerClassName?: string;
 }
 
-export const ConfirmDialog: React.FC<ConfirmDialogProps> = ({ 
-  isOpen, 
-  onClose, 
+export const ConfirmDialog: React.FC<ConfirmDialogProps> = ({
+  isOpen,
+  onClose,
   onConfirm,
-  title = "Confirm",
+  title = 'Confirm',
   message,
-  confirmText = "Confirm",
-  cancelText = "Cancel",
+  confirmText = 'Confirm',
+  cancelText = 'Cancel',
   destructive = false,
   confirmButtonClassName,
   cancelButtonClassName,
@@ -39,8 +39,10 @@ export const ConfirmDialog: React.FC<ConfirmDialogProps> = ({
   }, [onConfirm, onClose]);
 
   const handleKeyDown = useCallback((e: KeyboardEvent) => {
-    if (!isOpen) return;
-    
+    if (!isOpen) {
+return;
+}
+
     if (e.key === 'Escape') {
       onClose();
     } else if (e.key === 'Enter' && (e.metaKey || e.ctrlKey)) {
@@ -55,7 +57,9 @@ export const ConfirmDialog: React.FC<ConfirmDialogProps> = ({
     };
   }, [handleKeyDown]);
 
-  if (!isOpen) return null;
+  if (!isOpen) {
+return null;
+}
 
   const defaultConfirmClass = destructive
     ? 'bg-red-600 hover:bg-red-700 text-white'
@@ -65,21 +69,21 @@ export const ConfirmDialog: React.FC<ConfirmDialogProps> = ({
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center" role="dialog" aria-modal="true">
-      <div 
+      <div
         className="absolute inset-0 bg-black bg-opacity-50"
         onClick={onClose}
         aria-hidden="true"
       />
-      
-      <div className={containerClassName || "relative bg-white dark:bg-gray-800 rounded-lg shadow-xl p-6 w-96 max-w-[90vw]"}>
+
+      <div className={containerClassName || 'relative bg-white dark:bg-gray-800 rounded-lg shadow-xl p-6 w-96 max-w-[90vw]'}>
         <h3 className="text-lg font-semibold mb-4 text-gray-900 dark:text-gray-100">
           {title}
         </h3>
-        
+
         <p className="text-gray-700 dark:text-gray-300 mb-6">
           {message}
         </p>
-        
+
         <div className="flex justify-end gap-2">
           <button
             type="button"
@@ -98,7 +102,7 @@ export const ConfirmDialog: React.FC<ConfirmDialogProps> = ({
             {confirmText}
           </button>
         </div>
-        
+
         <div className="mt-4 text-xs text-gray-500 dark:text-gray-400">
           <kbd className="px-1 py-0.5 bg-gray-100 dark:bg-gray-700 rounded">Esc</kbd> to cancel,{' '}
           <kbd className="px-1 py-0.5 bg-gray-100 dark:bg-gray-700 rounded">⌘</kbd>+

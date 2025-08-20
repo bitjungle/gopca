@@ -31,33 +31,33 @@ export { ThemeProvider, useTheme } from './contexts/ThemeContext';
 // Hooks
 export { useLoadingState, useMultipleLoadingStates } from './hooks/useLoadingState';
 export { useChartTheme } from './hooks/useChartTheme';
-export { 
-  useFocusManagement, 
-  useFocusRestore, 
-  useFocusTrap 
+export {
+  useFocusManagement,
+  useFocusRestore,
+  useFocusTrap
 } from './hooks/useFocusManagement';
-export { 
-  useKeyboardShortcuts, 
+export {
+  useKeyboardShortcuts,
   useKeyboardShortcut,
   useEscapeKey,
   getModifierKey,
   formatShortcut,
   commonShortcuts,
-  type KeyboardShortcut 
+  type KeyboardShortcut
 } from './hooks/useKeyboardShortcuts';
 
 // Utils
-export { 
-  showError, 
-  handleAsync, 
-  getErrorMessage, 
+export {
+  showError,
+  handleAsync,
+  getErrorMessage,
   configureErrorHandling,
   type ErrorInfo,
-  type ErrorConfig 
+  type ErrorConfig
 } from './utils/errorHandling';
-export { 
+export {
   getChartTheme,
-  type ChartTheme 
+  type ChartTheme
 } from './utils/chartTheme';
 export {
   ErrorTemplates,
@@ -114,7 +114,7 @@ export {
   type DiagnosticPlotData,
   type DiagnosticPlotConfig,
   type EigencorrelationPlotData,
-  type EigencorrelationPlotConfig,
+  type EigencorrelationPlotConfig
 } from './charts/pca';
 
 // Plotly Export Utils

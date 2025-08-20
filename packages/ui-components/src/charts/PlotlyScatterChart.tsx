@@ -28,7 +28,7 @@ export const PlotlyScatterChart: React.FC<ScatterChartProps> = ({
 }) => {
   const containerRef = useRef<HTMLDivElement>(null);
   const { theme } = useChartTheme();
-  
+
   // Extract data points
   const plotData = useMemo(() => {
     return data.map(d => ({
@@ -38,12 +38,14 @@ export const PlotlyScatterChart: React.FC<ScatterChartProps> = ({
       index: d.index as number | undefined
     }));
   }, [data, xDataKey, yDataKey]);
-  
+
   // Calculate smart labels if labels are provided
   const labels = useMemo(() => {
     const hasLabels = plotData.some(d => d.label);
-    if (!hasLabels) return plotData.map(() => '');
-    
+    if (!hasLabels) {
+return plotData.map(() => '');
+}
+
     return calculatePlotlyLabels({
       showLabels: true,
       maxLabels: 10, // Default max labels
@@ -51,17 +53,19 @@ export const PlotlyScatterChart: React.FC<ScatterChartProps> = ({
       data: plotData
     });
   }, [plotData]);
-  
+
   // Calculate text positions for labels
   const textPositions = useMemo(() => {
     return plotData.map(d => getPlotlyTextPosition(d.x, d.y));
   }, [plotData]);
-  
+
   useEffect(() => {
-    if (!containerRef.current) return;
-    
+    if (!containerRef.current) {
+return;
+}
+
     const baseTheme = getPlotlyTheme(theme);
-    
+
     // Prepare traces
     const traces = [{
       x: plotData.map(d => d.x),
@@ -84,7 +88,7 @@ export const PlotlyScatterChart: React.FC<ScatterChartProps> = ({
       },
       hovertemplate: '%{text}<br>X: %{x:.2f}<br>Y: %{y:.2f}<extra></extra>'
     }];
-    
+
     // Add reference lines if requested
     if (showReferenceLines) {
       // Vertical line at x=0
@@ -101,7 +105,7 @@ export const PlotlyScatterChart: React.FC<ScatterChartProps> = ({
         showlegend: false,
         hoverinfo: 'skip'
       } as any);
-      
+
       // Horizontal line at y=0
       traces.push({
         x: [domain?.x?.[0] ?? -10, domain?.x?.[1] ?? 10],
@@ -117,7 +121,7 @@ export const PlotlyScatterChart: React.FC<ScatterChartProps> = ({
         hoverinfo: 'skip'
       } as any);
     }
-    
+
     // Prepare layout
     const layout = mergeLayouts(
       baseTheme.layout,
@@ -147,30 +151,30 @@ export const PlotlyScatterChart: React.FC<ScatterChartProps> = ({
         autosize: typeof width === 'string'
       }
     );
-    
+
     // Create or update plot
     Plotly.react(containerRef.current, traces, layout, baseTheme.config);
-    
+
     // Handle resize
     const handleResize = () => {
       if (containerRef.current) {
         Plotly.Plots.resize(containerRef.current);
       }
     };
-    
+
     window.addEventListener('resize', handleResize);
-    
+
     return () => {
       window.removeEventListener('resize', handleResize);
       if (containerRef.current) {
         Plotly.purge(containerRef.current);
       }
     };
-  }, [data, plotData, labels, textPositions, theme, domain, margin, width, height, 
+  }, [data, plotData, labels, textPositions, theme, domain, margin, width, height,
       xLabel, yLabel, showGrid, showReferenceLines, fill, stroke]);
-  
+
   return (
-    <div 
+    <div
       ref={containerRef}
       className={className}
       style={{ width, height }}

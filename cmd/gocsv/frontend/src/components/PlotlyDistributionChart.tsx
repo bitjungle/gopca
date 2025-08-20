@@ -13,18 +13,18 @@ interface PlotlyDistributionChartProps {
     columnName: string;
 }
 
-export const PlotlyDistributionChart: React.FC<PlotlyDistributionChartProps> = ({ 
-    distribution, 
-    columnName 
+export const PlotlyDistributionChart: React.FC<PlotlyDistributionChartProps> = ({
+    distribution,
+    columnName
 }) => {
     const { theme } = useTheme();
-    
+
     // Transform histogram data for PlotlyBarChart
     const chartData = useMemo(() => {
         if (!distribution.histogram || distribution.histogram.length === 0) {
             return [];
         }
-        
+
         return distribution.histogram.map((bin, index) => ({
             x: index, // x as numeric index
             y: bin.count, // y is required by ChartDataPoint interface
@@ -35,7 +35,7 @@ export const PlotlyDistributionChart: React.FC<PlotlyDistributionChartProps> = (
             max: bin.max
         }));
     }, [distribution.histogram]);
-    
+
     if (chartData.length === 0) {
         return (
             <div className="text-center py-8 text-gray-500 dark:text-gray-400">
@@ -43,7 +43,7 @@ export const PlotlyDistributionChart: React.FC<PlotlyDistributionChartProps> = (
             </div>
         );
     }
-    
+
     return (
         <div className="w-full h-64">
             <PlotlyBarChart

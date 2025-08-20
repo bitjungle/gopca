@@ -19,7 +19,7 @@ export type {
   ScatterChartProps,
   BarChartProps,
   LineChartProps,
-  ComposedChartProps,
+  ComposedChartProps
 } from './types';
 
 // Export PCA visualizations

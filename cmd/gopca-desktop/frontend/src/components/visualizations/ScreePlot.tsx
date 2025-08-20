@@ -17,17 +17,17 @@ interface ScreePlotProps {
   elbowThreshold?: number; // Optional: highlight components explaining this % variance
 }
 
-export const ScreePlot: React.FC<ScreePlotProps> = ({ 
-  pcaResult, 
+export const ScreePlot: React.FC<ScreePlotProps> = ({
+  pcaResult,
   showCumulative = true,
-  elbowThreshold = 80 
+  elbowThreshold = 80
 }) => {
   const { theme } = useTheme();
   const { qualitativePalette } = usePalette();
-  
+
   // Get the color scheme from the current palette
   const colorScheme = getQualitativePalette(qualitativePalette);
-  
+
   // Transform data to Plotly format
   const plotlyData = transformToScreePlotData(pcaResult);
 
@@ -41,9 +41,9 @@ export const ScreePlot: React.FC<ScreePlotProps> = ({
 
   return (
     <div style={{ width: '100%', height: '100%' }}>
-      <PCAScreePlot 
-        data={plotlyData} 
-        config={plotlyConfig} 
+      <PCAScreePlot
+        data={plotlyData}
+        config={plotlyConfig}
       />
     </div>
   );

@@ -29,10 +29,10 @@ interface ThemeProviderProps {
   defaultTheme?: Theme;
 }
 
-export const ThemeProvider: React.FC<ThemeProviderProps> = ({ 
-  children, 
+export const ThemeProvider: React.FC<ThemeProviderProps> = ({
+  children,
   storageKey = 'gopca-theme',
-  defaultTheme = 'dark' 
+  defaultTheme = 'dark'
 }) => {
   const [theme, setTheme] = useState<Theme>(() => {
     // Get saved theme from localStorage or default to provided defaultTheme
@@ -48,7 +48,7 @@ export const ThemeProvider: React.FC<ThemeProviderProps> = ({
     } else {
       root.classList.remove('dark');
     }
-    
+
     // Save theme preference
     localStorage.setItem(storageKey, theme);
   }, [theme, storageKey]);

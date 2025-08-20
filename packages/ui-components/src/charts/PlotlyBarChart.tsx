@@ -26,16 +26,18 @@ export const PlotlyBarChart: React.FC<BarChartProps> = ({
 }) => {
   const containerRef = useRef<HTMLDivElement>(null);
   const { theme } = useChartTheme();
-  
+
   useEffect(() => {
-    if (!containerRef.current) return;
-    
+    if (!containerRef.current) {
+return;
+}
+
     const baseTheme = getPlotlyTheme(theme);
-    
+
     // Prepare data
     const xValues = data.map(d => d[xDataKey]);
     const yValues = data.map(d => d[dataKey]);
-    
+
     // Determine colors based on positive/negative values for loadings-style plots
     const colors = yValues.map(v => {
       if (typeof v === 'number') {
@@ -43,7 +45,7 @@ export const PlotlyBarChart: React.FC<BarChartProps> = ({
       }
       return fill;
     });
-    
+
     // Create trace
     const traces = [{
       x: xValues,
@@ -54,7 +56,7 @@ export const PlotlyBarChart: React.FC<BarChartProps> = ({
       },
       hovertemplate: '%{x}<br>%{y:.3f}<extra></extra>'
     }];
-    
+
     // Prepare layout
     const layout = mergeLayouts(
       baseTheme.layout,
@@ -86,30 +88,30 @@ export const PlotlyBarChart: React.FC<BarChartProps> = ({
         autosize: typeof width === 'string'
       }
     );
-    
+
     // Create or update plot
     Plotly.react(containerRef.current, traces, layout, baseTheme.config);
-    
+
     // Handle resize
     const handleResize = () => {
       if (containerRef.current) {
         Plotly.Plots.resize(containerRef.current);
       }
     };
-    
+
     window.addEventListener('resize', handleResize);
-    
+
     return () => {
       window.removeEventListener('resize', handleResize);
       if (containerRef.current) {
         Plotly.purge(containerRef.current);
       }
     };
-  }, [data, dataKey, xDataKey, xLabel, yLabel, domain, margin, width, height, 
+  }, [data, dataKey, xDataKey, xLabel, yLabel, domain, margin, width, height,
       theme, showGrid, fill]);
-  
+
   return (
-    <div 
+    <div
       ref={containerRef}
       className={className}
       style={{ width, height }}

@@ -18,24 +18,24 @@ interface LoadingsPlotProps {
   plotType?: 'bar' | 'line'; // Optional plot type override from parent
 }
 
-export const LoadingsPlot: React.FC<LoadingsPlotProps> = ({ 
-  pcaResult, 
+export const LoadingsPlot: React.FC<LoadingsPlotProps> = ({
+  pcaResult,
   selectedComponent = 0,
   variableThreshold = 100,
   plotType: plotTypeProp
 }) => {
   const { theme } = useTheme();
   const { qualitativePalette } = usePalette();
-  
+
   // Get the color scheme from the current palette
   const colorScheme = getQualitativePalette(qualitativePalette);
-  
+
   // Determine plot type based on number of variables
   const numVariables = pcaResult.loadings.length || 0;
   const autoPlotType = useMemo(() => {
     return numVariables > variableThreshold ? 'line' : 'bar';
   }, [numVariables, variableThreshold]);
-  
+
   // Use plot type from prop or auto-determine
   const plotType = plotTypeProp || autoPlotType;
 
@@ -57,9 +57,9 @@ export const LoadingsPlot: React.FC<LoadingsPlotProps> = ({
 
   return (
     <div style={{ width: '100%', height: '100%' }}>
-      <PCALoadingsPlot 
-        data={plotlyData} 
-        config={plotlyConfig} 
+      <PCALoadingsPlot
+        data={plotlyData}
+        config={plotlyConfig}
       />
     </div>
   );

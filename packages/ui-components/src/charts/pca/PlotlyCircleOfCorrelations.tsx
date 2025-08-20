@@ -35,7 +35,7 @@ export interface CircleOfCorrelationsConfig {
 export class PlotlyCircleOfCorrelations {
   private data: CircleOfCorrelationsData;
   private config: CircleOfCorrelationsConfig;
-  
+
   constructor(data: CircleOfCorrelationsData, config?: CircleOfCorrelationsConfig) {
     this.data = data;
     this.config = {
@@ -51,26 +51,26 @@ export class PlotlyCircleOfCorrelations {
       ...config
     };
   }
-  
+
   private prepareData() {
     const { loadings, variableNames } = this.data;
     const pcX = (this.config.pcX || 1) - 1;
     const pcY = (this.config.pcY || 2) - 1;
-    
+
     // Extract correlations (loadings) for selected PCs
     const correlationsX = loadings[pcX];
     const correlationsY = loadings[pcY];
-    
+
     // Calculate vector magnitudes
-    const magnitudes = correlationsX.map((x, i) => 
+    const magnitudes = correlationsX.map((x, i) =>
       Math.sqrt(x * x + correlationsY[i] * correlationsY[i])
     );
-    
+
     // Filter by minimum vector length
     const filteredIndices = magnitudes
       .map((mag, i) => mag >= this.config.minVectorLength! ? i : -1)
       .filter(i => i >= 0);
-    
+
     return {
       correlationsX: filteredIndices.map(i => correlationsX[i]),
       correlationsY: filteredIndices.map(i => correlationsY[i]),
@@ -80,11 +80,11 @@ export class PlotlyCircleOfCorrelations {
       pcY
     };
   }
-  
+
   getTraces(): Data[] {
     const traces: Data[] = [];
     const { correlationsX, correlationsY, filteredNames, magnitudes } = this.prepareData();
-    
+
     // Add unit circle
     if (this.config.showCircle) {
       const theta = Array.from({ length: 101 }, (_, i) => (i * 2 * Math.PI) / 100);
@@ -101,7 +101,7 @@ export class PlotlyCircleOfCorrelations {
         showlegend: false,
         hoverinfo: 'skip'
       });
-      
+
       // Add inner circles at 0.5
       traces.push({
         type: 'scatter',
@@ -117,13 +117,13 @@ export class PlotlyCircleOfCorrelations {
         hoverinfo: 'skip'
       });
     }
-    
+
     // Add correlation vectors - use same color as Biplot (colorScheme[1])
     filteredNames.forEach((name, i) => {
       const color = this.config.colorByMagnitude
         ? `hsl(${240 - magnitudes[i] * 240}, 70%, 50%)`  // Blue to red gradient
         : (this.config.colorScheme?.[1] || '#ef4444');  // Use index 1 like Biplot
-      
+
       // Vector line
       traces.push({
         type: 'scatter',
@@ -140,7 +140,7 @@ export class PlotlyCircleOfCorrelations {
                        `PC${(this.config.pcY || 2)}: ${correlationsY[i].toFixed(3)}<br>` +
                        `Magnitude: ${magnitudes[i].toFixed(3)}<extra></extra>`
       });
-      
+
       // Arrowhead marker
       traces.push({
         type: 'scatter',
@@ -156,7 +156,7 @@ export class PlotlyCircleOfCorrelations {
         hoverinfo: 'skip'
       });
     });
-    
+
     // Add labels
     if (this.config.showLabels) {
       traces.push({
@@ -174,7 +174,7 @@ export class PlotlyCircleOfCorrelations {
         hoverinfo: 'skip'
       });
     }
-    
+
     // Add axes through origin
     traces.push({
       type: 'scatter',
@@ -188,7 +188,7 @@ export class PlotlyCircleOfCorrelations {
       showlegend: false,
       hoverinfo: 'skip'
     });
-    
+
     traces.push({
       type: 'scatter',
       mode: 'lines',
@@ -201,20 +201,20 @@ export class PlotlyCircleOfCorrelations {
       showlegend: false,
       hoverinfo: 'skip'
     });
-    
+
     return traces;
   }
-  
+
   getEnhancedLayout(): Partial<Layout> {
     const baseLayout = this.getLayout();
     const themeLayout = getPlotlyTheme(this.config.theme || 'light').layout;
     return mergeLayouts(themeLayout, baseLayout);
   }
-  
+
   getLayout(): Partial<Layout> {
     const { explainedVariance } = this.data;
     const { pcX, pcY } = this.prepareData();
-    
+
     const layout: Partial<Layout> = {
       title: {
         text: 'Circle of Correlations'
@@ -281,7 +281,7 @@ export class PlotlyCircleOfCorrelations {
         }
       ]
     };
-    
+
     // Add arrow annotations for vectors
     const { correlationsX, correlationsY, magnitudes } = this.prepareData();
     const arrowAnnotations = correlationsX.map((_x, i) => ({
@@ -301,12 +301,12 @@ export class PlotlyCircleOfCorrelations {
         ? `hsl(${240 - magnitudes[i] * 240}, 70%, 50%)`
         : '#3b82f6'
     }));
-    
+
     layout.annotations = [...(layout.annotations || []), ...arrowAnnotations];
-    
+
     return layout;
   }
-  
+
   getConfig(): Partial<any> {
     return {
       responsive: true,
@@ -331,7 +331,7 @@ export const PCACircleOfCorrelations: React.FC<{
   config?: CircleOfCorrelationsConfig;
 }> = ({ data, config }) => {
   const plot = useMemo(() => new PlotlyCircleOfCorrelations(data, config), [data, config]);
-  
+
   return (
     <Plot
       data={plot.getTraces()}

@@ -12,14 +12,16 @@ export const useChartCommon = () => {
   const chartRef = useRef<HTMLDivElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
   const fullscreenRef = useRef<HTMLDivElement>(null);
-  
+
   const [isFullscreen, setIsFullscreen] = useState(false);
   const chartTheme = useChartTheme();
   const { mode, qualitativePalette, sequentialPalette } = usePalette();
-  
+
   const handleToggleFullscreen = useCallback(() => {
-    if (!fullscreenRef.current) return;
-    
+    if (!fullscreenRef.current) {
+return;
+}
+
     if (!isFullscreen) {
       if (fullscreenRef.current.requestFullscreen) {
         fullscreenRef.current.requestFullscreen();
@@ -29,10 +31,10 @@ export const useChartCommon = () => {
         document.exitFullscreen();
       }
     }
-    
+
     setIsFullscreen(!isFullscreen);
   }, [isFullscreen]);
-  
+
   return {
     chartRef,
     containerRef,

@@ -18,7 +18,9 @@ interface FormatOptionsProps {
 
 export const FormatOptions: React.FC<FormatOptionsProps> = ({ fileInfo, options, onChange }) => {
     const formatBytes = (bytes: number) => {
-        if (bytes === 0) return '0 Bytes';
+        if (bytes === 0) {
+return '0 Bytes';
+}
         const k = 1024;
         const sizes = ['Bytes', 'KB', 'MB', 'GB'];
         const i = Math.floor(Math.log(bytes) / Math.log(k));
@@ -58,7 +60,7 @@ export const FormatOptions: React.FC<FormatOptionsProps> = ({ fileInfo, options,
                     <h3 className="text-sm font-medium text-gray-700 dark:text-gray-300">
                         CSV/TSV Options
                     </h3>
-                    
+
                     {/* Delimiter */}
                     <div>
                         <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
@@ -83,7 +85,7 @@ export const FormatOptions: React.FC<FormatOptionsProps> = ({ fileInfo, options,
                     <h3 className="text-sm font-medium text-gray-700 dark:text-gray-300">
                         Excel Options
                     </h3>
-                    
+
                     {/* Sheet selection */}
                     <div>
                         <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">

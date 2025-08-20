@@ -103,7 +103,7 @@ export const DataTransformDialog: React.FC<DataTransformDialogProps> = ({
     const [isLoading, setIsLoading] = useState(false);
     const [error, setError] = useState<string | null>(null);
     const [result, setResult] = useState<TransformationResult | null>(null);
-    
+
     // Transform-specific options
     const [binCount, setBinCount] = useState(5);
     const [minValue, setMinValue] = useState(0);
@@ -147,7 +147,7 @@ export const DataTransformDialog: React.FC<DataTransformDialogProps> = ({
             };
 
             const transformResult = await ApplyTransformation(fileData, options);
-            
+
             if (transformResult.success && transformResult.data) {
                 setResult(transformResult);
                 onTransformComplete(transformResult.data);
@@ -177,7 +177,9 @@ export const DataTransformDialog: React.FC<DataTransformDialogProps> = ({
         setSelectedColumns([]);
     };
 
-    if (!isOpen) return null;
+    if (!isOpen) {
+return null;
+}
 
     const currentTransform = transformations.find(t => t.type === selectedTransform);
 
@@ -185,7 +187,7 @@ export const DataTransformDialog: React.FC<DataTransformDialogProps> = ({
         <div className="fixed inset-0 z-50 overflow-y-auto">
             <div className="flex items-center justify-center min-h-screen px-4 pt-4 pb-20 text-center sm:block sm:p-0">
                 {/* Background overlay */}
-                <div 
+                <div
                     className="fixed inset-0 transition-opacity bg-gray-500 bg-opacity-75 dark:bg-gray-900 dark:bg-opacity-75"
                     onClick={onClose}
                 />
@@ -318,7 +320,7 @@ export const DataTransformDialog: React.FC<DataTransformDialogProps> = ({
                                     </button>
                                 </div>
                             </div>
-                            
+
                             {availableColumns.length === 0 ? (
                                 <div className="text-sm text-gray-500 dark:text-gray-400 text-center py-4">
                                     No columns available for this transformation

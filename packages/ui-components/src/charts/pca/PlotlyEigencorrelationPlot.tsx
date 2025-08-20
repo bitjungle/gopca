@@ -34,7 +34,7 @@ export interface EigencorrelationPlotConfig {
 export class PlotlyEigencorrelationPlot {
   private data: EigencorrelationPlotData;
   private config: EigencorrelationPlotConfig;
-  
+
   constructor(data: EigencorrelationPlotData, config?: EigencorrelationPlotConfig) {
     this.data = data;
     this.config = {
@@ -48,49 +48,49 @@ export class PlotlyEigencorrelationPlot {
       ...config
     };
   }
-  
+
   private prepareData() {
     const { correlations, variableNames, explainedVariance } = this.data;
-    
+
     // Ensure we have valid data
     if (!correlations || correlations.length === 0 || !variableNames) {
       return { matrix: [], componentLabels: [], variableNames: [], numComponents: 0 };
     }
-    
+
     // Limit components based on available data
     const maxAvailableComponents = Math.min(
       correlations.length,
       explainedVariance?.length || correlations.length
     );
-    
-    const numComponents = this.config.maxComponents 
+
+    const numComponents = this.config.maxComponents
       ? Math.min(this.config.maxComponents, maxAvailableComponents)
       : maxAvailableComponents;
-    
+
     // Prepare correlation matrix for heatmap
     const matrix = correlations.slice(0, numComponents);
-    
+
     // Create component labels with safe access to explainedVariance
     const componentLabels = Array.from({ length: numComponents }, (_, i) => {
-      const variance = explainedVariance && i < explainedVariance.length 
-        ? explainedVariance[i].toFixed(1) 
+      const variance = explainedVariance && i < explainedVariance.length
+        ? explainedVariance[i].toFixed(1)
         : '0.0';
       return `PC${i + 1} (${variance}%)`;
     });
-    
+
     // Optionally cluster variables by similarity
     let orderedVariableNames = [...variableNames];
     let orderedMatrix = matrix.map(row => [...row]);
-    
+
     if (this.config.clusterVariables) {
       // Simple clustering by first PC loading
       const indices = Array.from({ length: variableNames.length }, (_, i) => i);
       indices.sort((a, b) => Math.abs(matrix[0][b]) - Math.abs(matrix[0][a]));
-      
+
       orderedVariableNames = indices.map(i => variableNames[i]);
       orderedMatrix = matrix.map(row => indices.map(i => row[i]));
     }
-    
+
     return {
       matrix: orderedMatrix,
       componentLabels,
@@ -98,11 +98,11 @@ export class PlotlyEigencorrelationPlot {
       numComponents
     };
   }
-  
+
   getTraces(): Data[] {
     const traces: Data[] = [];
     const { matrix, componentLabels, variableNames } = this.prepareData();
-    
+
     // Transpose matrix for heatmap (plotly expects [y][x])
     const transposedMatrix: number[][] = [];
     for (let i = 0; i < variableNames.length; i++) {
@@ -111,7 +111,7 @@ export class PlotlyEigencorrelationPlot {
         transposedMatrix[i][j] = matrix[j][i];
       }
     }
-    
+
     // Main heatmap
     traces.push({
       type: 'heatmap',
@@ -134,15 +134,15 @@ export class PlotlyEigencorrelationPlot {
       hoverongaps: false,
       hovertemplate: '<b>%{y}</b><br>%{x}<br>Correlation: %{z:.3f}<extra></extra>'
     });
-    
+
     // Add text annotations if enabled
     if (this.config.showValues) {
       const annotations: any[] = [];
-      
+
       for (let i = 0; i < variableNames.length; i++) {
         for (let j = 0; j < componentLabels.length; j++) {
           const value = transposedMatrix[i][j];
-          
+
           // Only show annotations for significant correlations
           if (Math.abs(value) >= this.config.annotationThreshold!) {
             annotations.push({
@@ -158,7 +158,7 @@ export class PlotlyEigencorrelationPlot {
           }
         }
       }
-      
+
       // We'll add these annotations to the layout
       traces.push({
         type: 'scatter',
@@ -169,19 +169,19 @@ export class PlotlyEigencorrelationPlot {
         hoverinfo: 'skip'
       });
     }
-    
+
     return traces;
   }
-  
+
   getEnhancedLayout(): Partial<Layout> {
     const baseLayout = this.getLayout();
     const themeLayout = getPlotlyTheme(this.config.theme || 'light').layout;
     return mergeLayouts(themeLayout, baseLayout);
   }
-  
+
   getLayout(): Partial<Layout> {
     const { variableNames, componentLabels } = this.prepareData();
-    
+
     const layout: Partial<Layout> = {
       title: {
         text: 'Eigencorrelation Plot: Component-Metadata Correlations'
@@ -211,15 +211,15 @@ export class PlotlyEigencorrelationPlot {
       showlegend: false,
       annotations: []
     };
-    
+
     // Add value annotations if enabled
     if (this.config.showValues) {
       const { matrix } = this.prepareData();
-      
+
       for (let i = 0; i < variableNames.length; i++) {
         for (let j = 0; j < componentLabels.length; j++) {
           const value = matrix[j][i];
-          
+
           if (Math.abs(value) >= this.config.annotationThreshold!) {
             layout.annotations!.push({
               x: j,
@@ -237,7 +237,7 @@ export class PlotlyEigencorrelationPlot {
         }
       }
     }
-    
+
     // Add interpretation guide
     layout.annotations!.push({
       text: 'Strong correlations (|r| > 0.7) indicate metadata variables that are associated with PC variance',
@@ -249,7 +249,7 @@ export class PlotlyEigencorrelationPlot {
       showarrow: false,
       font: { size: 10, color: 'gray' }
     });
-    
+
     // Adjust margins to accommodate labels
     layout.margin = {
       l: Math.max(...variableNames.map(n => n.length)) * 6 + 50,
@@ -257,10 +257,10 @@ export class PlotlyEigencorrelationPlot {
       t: 50,
       b: 120
     };
-    
+
     return layout;
   }
-  
+
   getConfig(): Partial<any> {
     return {
       responsive: true,
@@ -285,7 +285,7 @@ export const PCAEigencorrelationPlot: React.FC<{
   config?: EigencorrelationPlotConfig;
 }> = ({ data, config }) => {
   const plot = useMemo(() => new PlotlyEigencorrelationPlot(data, config), [data, config]);
-  
+
   return (
     <Plot
       data={plot.getTraces()}

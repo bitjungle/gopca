@@ -37,7 +37,7 @@ export interface Scores3DPlotConfig {
 export class Plotly3DScoresPlot {
   private data: Scores3DPlotData;
   private config: Scores3DPlotConfig;
-  
+
   constructor(data: Scores3DPlotData, config?: Scores3DPlotConfig) {
     this.data = data;
     this.config = {
@@ -55,25 +55,25 @@ export class Plotly3DScoresPlot {
       ...config
     };
   }
-  
+
   getTraces(): Data[] {
     const { scores, groups, sampleNames, pc1 = 0, pc2 = 1, pc3 = 2 } = this.data;
     const traces: Data[] = [];
-    
+
     // Get unique groups
     const uniqueGroups = Array.from(new Set(groups));
-    
+
     // Create 3D scatter trace for each group
     uniqueGroups.forEach((group, groupIndex) => {
       const groupIndices = groups.map((g, i) => g === group ? i : -1).filter(i => i >= 0);
       const groupScores = groupIndices.map(i => scores[i]);
-      
+
       // Prepare hover text
       const hovertext = groupIndices.map(i => {
         const label = sampleNames?.[i] || `Sample ${i}`;
         return `<b>${label}</b><br>Group: ${group}<br>PC${pc1 + 1}: ${scores[i][pc1].toFixed(2)}<br>PC${pc2 + 1}: ${scores[i][pc2].toFixed(2)}<br>PC${pc3 + 1}: ${scores[i][pc3].toFixed(2)}`;
       });
-      
+
       traces.push({
         type: 'scatter3d',
         mode: 'markers',
@@ -90,26 +90,26 @@ export class Plotly3DScoresPlot {
         }
       });
     });
-    
+
     // Add projection traces if enabled
     if (this.config.showProjections) {
       traces.push(...this.getProjectionTraces());
     }
-    
+
     return traces;
   }
-  
+
   private getProjectionTraces(): Data[] {
     const { scores, groups, pc1 = 0, pc2 = 1, pc3 = 2 } = this.data;
     const projectionTraces: Data[] = [];
     const uniqueGroups = Array.from(new Set(groups));
-    
+
     uniqueGroups.forEach((group, groupIndex) => {
       const groupIndices = groups.map((g, i) => g === group ? i : -1).filter(i => i >= 0);
       const groupScores = groupIndices.map(i => scores[i]);
-      
+
       const color = this.config.colorScheme![groupIndex % this.config.colorScheme!.length];
-      
+
       // XY plane projection (z=min)
       const minZ = Math.min(...scores.map(s => s[pc3]));
       projectionTraces.push({
@@ -126,7 +126,7 @@ export class Plotly3DScoresPlot {
         showlegend: false,
         hoverinfo: 'skip'
       });
-      
+
       // XZ plane projection (y=min)
       const minY = Math.min(...scores.map(s => s[pc2]));
       projectionTraces.push({
@@ -143,7 +143,7 @@ export class Plotly3DScoresPlot {
         showlegend: false,
         hoverinfo: 'skip'
       });
-      
+
       // YZ plane projection (x=min)
       const minX = Math.min(...scores.map(s => s[pc1]));
       projectionTraces.push({
@@ -161,19 +161,19 @@ export class Plotly3DScoresPlot {
         hoverinfo: 'skip'
       });
     });
-    
+
     return projectionTraces;
   }
-  
+
   getEnhancedLayout(): Partial<Layout> {
     const baseLayout = this.getLayout();
     const themeLayout = getPlotlyTheme(this.config.theme || 'light').layout;
     return mergeLayouts(themeLayout, baseLayout);
   }
-  
+
   getLayout(): Partial<Layout> {
     const { explainedVariance, pc1 = 0, pc2 = 1, pc3 = 2 } = this.data;
-    
+
     return {
       title: {
         text: '3D PCA Scores Plot'
@@ -232,7 +232,7 @@ export class Plotly3DScoresPlot {
       ]
     };
   }
-  
+
   getConfig(): Partial<Config> {
     return {
       responsive: true,
@@ -257,7 +257,7 @@ export const PCA3DScoresPlot: React.FC<{
   config?: Scores3DPlotConfig;
 }> = ({ data, config }) => {
   const plot = useMemo(() => new Plotly3DScoresPlot(data, config), [data, config]);
-  
+
   return (
     <Plot
       data={plot.getTraces()}

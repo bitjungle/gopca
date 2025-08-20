@@ -12,24 +12,44 @@ interface QualityScoreCardProps {
 
 export const QualityScoreCard: React.FC<QualityScoreCardProps> = ({ score }) => {
     const getScoreColor = () => {
-        if (score >= 80) return 'text-green-600 dark:text-green-400';
-        if (score >= 60) return 'text-yellow-600 dark:text-yellow-400';
+        if (score >= 80) {
+return 'text-green-600 dark:text-green-400';
+}
+        if (score >= 60) {
+return 'text-yellow-600 dark:text-yellow-400';
+}
         return 'text-red-600 dark:text-red-400';
     };
 
     const getScoreGrade = () => {
-        if (score >= 90) return 'Excellent';
-        if (score >= 80) return 'Good';
-        if (score >= 70) return 'Fair';
-        if (score >= 60) return 'Poor';
+        if (score >= 90) {
+return 'Excellent';
+}
+        if (score >= 80) {
+return 'Good';
+}
+        if (score >= 70) {
+return 'Fair';
+}
+        if (score >= 60) {
+return 'Poor';
+}
         return 'Critical';
     };
 
     const getScoreDescription = () => {
-        if (score >= 90) return 'Your data is in excellent condition for PCA analysis.';
-        if (score >= 80) return 'Your data is in good condition with minor issues.';
-        if (score >= 70) return 'Your data has some quality issues that should be addressed.';
-        if (score >= 60) return 'Your data has significant quality issues that will affect analysis.';
+        if (score >= 90) {
+return 'Your data is in excellent condition for PCA analysis.';
+}
+        if (score >= 80) {
+return 'Your data is in good condition with minor issues.';
+}
+        if (score >= 70) {
+return 'Your data has some quality issues that should be addressed.';
+}
+        if (score >= 60) {
+return 'Your data has significant quality issues that will affect analysis.';
+}
         return 'Your data has critical quality issues that must be resolved.';
     };
 
@@ -53,11 +73,11 @@ export const QualityScoreCard: React.FC<QualityScoreCardProps> = ({ score }) => 
                     </div>
                 </div>
             </div>
-            
+
             {/* Score Breakdown Bar */}
             <div className="mt-4">
                 <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-3">
-                    <div 
+                    <div
                         className={`h-3 rounded-full transition-all duration-500 ${
                             score >= 80 ? 'bg-green-500' :
                             score >= 60 ? 'bg-yellow-500' :

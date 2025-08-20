@@ -168,7 +168,7 @@ export const DataQualityDashboard: React.FC<DataQualityDashboardProps> = ({ repo
                                 <td className="px-4 py-3 text-sm">
                                     <div className="flex items-center">
                                         <div className="w-16 bg-gray-200 dark:bg-gray-700 rounded-full h-2 mr-2">
-                                            <div 
+                                            <div
                                                 className={`h-2 rounded-full ${
                                                     col.qualityScore >= 80 ? 'bg-green-500' :
                                                     col.qualityScore >= 60 ? 'bg-yellow-500' :

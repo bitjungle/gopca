@@ -26,11 +26,11 @@ export interface VectorTrace {
 /**
  * Calculate confidence ellipse parameters using chi-square distribution
  * Reference: Johnson & Wichern (2007), Applied Multivariate Statistical Analysis, Ch. 4
- * 
+ *
  * @param points - Bivariate data points
  * @param confidence - Confidence level (0.90, 0.95, 0.99)
  * @returns Ellipse parameters (center, axes, angle)
- * 
+ *
  * Algorithm complexity: O(n) where n is the number of data points
  */
 export function calculateConfidenceEllipse(
@@ -41,7 +41,7 @@ export function calculateConfidenceEllipse(
   const n = points.length;
   const meanX = points.reduce((sum, p) => sum + p.x, 0) / n;
   const meanY = points.reduce((sum, p) => sum + p.y, 0) / n;
-  
+
   // Calculate covariance matrix elements
   let cov_xx = 0, cov_yy = 0, cov_xy = 0;
   for (const point of points) {
@@ -54,26 +54,26 @@ export function calculateConfidenceEllipse(
   cov_xx /= (n - 1);
   cov_yy /= (n - 1);
   cov_xy /= (n - 1);
-  
+
   // Eigendecomposition of 2x2 covariance matrix
   // Reference: Johnson & Wichern (2007), Equation 4.8
   const trace = cov_xx + cov_yy;
   const det = cov_xx * cov_yy - cov_xy * cov_xy;
   const discriminant = Math.sqrt(Math.max(0, trace * trace - 4 * det));
-  
+
   const eigenvalue1 = (trace + discriminant) / 2;
   const eigenvalue2 = (trace - discriminant) / 2;
-  
+
   // Angle of rotation (principal axis)
   const angle = Math.atan2(2 * cov_xy, cov_xx - cov_yy) / 2;
-  
+
   // Chi-square critical value for 2 degrees of freedom
   const chiSquare = getChiSquareCritical(confidence, 2);
-  
+
   // Ellipse axes lengths
   const majorAxis = 2 * Math.sqrt(chiSquare * Math.max(eigenvalue1, eigenvalue2));
   const minorAxis = 2 * Math.sqrt(chiSquare * Math.min(eigenvalue1, eigenvalue2));
-  
+
   return {
     centerX: meanX,
     centerY: meanY,
@@ -94,11 +94,11 @@ export function getChiSquareCritical(confidence: number, df: number): number {
     0.95: 5.991,
     0.99: 9.210
   };
-  
+
   if (df !== 2) {
     console.warn('Chi-square values only implemented for df=2');
   }
-  
+
   return chiSquareTable[confidence] || chiSquareTable[0.95];
 }
 
@@ -114,36 +114,36 @@ export function generateEllipsePath(
 ): Point2D[] {
   const points: Point2D[] = [];
   const angleStep = (2 * Math.PI) / numPoints;
-  
+
   for (let i = 0; i <= numPoints; i++) {
     const theta = i * angleStep;
-    
+
     // Point on standard ellipse
     const x0 = (params.majorAxis / 2) * Math.cos(theta);
     const y0 = (params.minorAxis / 2) * Math.sin(theta);
-    
+
     // Rotate by angle
     const cos_a = Math.cos(params.angle);
     const sin_a = Math.sin(params.angle);
     const x = x0 * cos_a - y0 * sin_a + params.centerX;
     const y = x0 * sin_a + y0 * cos_a + params.centerY;
-    
+
     points.push({ x, y });
   }
-  
+
   return points;
 }
 
 /**
  * Scale loading vectors for biplot visualization
  * Reference: Gabriel (1971), "The biplot graphic display", Biometrika 58(3), 453-467
- * 
+ *
  * @param loadings - Loading matrix (variables x components)
  * @param scores - Score matrix (observations x components)
  * @param scale - Scaling factor (0-1, where 0.5 is symmetric)
  * @param variableNames - Names of variables
  * @returns Scaled vector traces for plotting
- * 
+ *
  * scale=0: row-metric preserving (emphasis on observations)
  * scale=1: column-metric preserving (emphasis on variables)
  * scale=0.5: symmetric (default, balanced emphasis)
@@ -155,10 +155,10 @@ export function scaleBiplotVectors(
   variableNames: string[]
 ): VectorTrace[] {
   const nObservations = scores.length;
-  
+
   // Gabriel (1971), Equation 2
   const alpha = Math.pow(nObservations, scale);
-  
+
   // Find maximum score value for scaling
   let maxScore = 0;
   for (const score of scores) {
@@ -166,12 +166,12 @@ export function scaleBiplotVectors(
       maxScore = Math.max(maxScore, Math.abs(val));
     }
   }
-  
+
   // Scale loadings
-  const scaledLoadings = loadings.map(loading => 
+  const scaledLoadings = loadings.map(loading =>
     loading.map(val => val * alpha)
   );
-  
+
   // Find maximum loading for additional scaling
   let maxLoading = 0;
   for (const loading of scaledLoadings) {
@@ -179,10 +179,10 @@ export function scaleBiplotVectors(
       maxLoading = Math.max(maxLoading, Math.abs(val));
     }
   }
-  
+
   // Additional scaling to fit within plot
   const plotScale = (maxScore * 0.8) / maxLoading;
-  
+
   return scaledLoadings.map((loading, i) => ({
     x: [0, loading[0] * plotScale],
     y: [0, loading[1] * plotScale],
@@ -194,7 +194,7 @@ export function scaleBiplotVectors(
 /**
  * Calculate smart labels - select points furthest from origin
  * This preserves the smart label selection feature from the previous implementation
- * 
+ *
  * @param points - Data points
  * @param maxLabels - Maximum number of labels to show
  * @returns Indices of points to label
@@ -208,10 +208,10 @@ export function calculateSmartLabels(
     index: i,
     distance: Math.sqrt(p.x * p.x + p.y * p.y)
   }));
-  
+
   // Sort by distance and take top N
   distances.sort((a, b) => b.distance - a.distance);
-  
+
   return distances
     .slice(0, maxLabels)
     .map(d => d.index);
@@ -223,7 +223,7 @@ export const selectSmartLabels = calculateSmartLabels;
 /**
  * Calculate biplot scaling for loading vectors with adaptive visual scaling
  * Reference: Gabriel (1971), "The biplot graphic display of matrices with application to principal component analysis"
- * 
+ *
  * @param loadings - Loading matrix [n_components][n_variables]
  * @param explainedVariance - Explained variance per component
  * @param scalingType - Type of scaling to apply
@@ -239,7 +239,7 @@ export function calculateBiplotScaling(
   // First apply mathematical scaling based on biplot type
   const mathScaledLoadings = loadings.map((componentLoadings, i) => {
     let scale = 1;
-    
+
     switch (scalingType) {
       case 'correlation':
         // Scale by sqrt of explained variance (preserves correlations)
@@ -257,44 +257,44 @@ export function calculateBiplotScaling(
         scale = 1;
         break;
     }
-    
+
     return componentLoadings.map(loading => loading * scale);
   });
-  
+
   // Apply adaptive visual scaling if scores are provided
   let adaptiveScale = 1;
   if (scores && scores.length > 0) {
     // Calculate the range of scores
     const scoreValues = scores.flat();
     const scoreRange = Math.max(...scoreValues.map(Math.abs));
-    
+
     // Calculate the range of mathematically scaled loadings
     const loadingValues = mathScaledLoadings.flat();
     const loadingRange = Math.max(...loadingValues.map(Math.abs));
-    
+
     // Ensure loadings are not too small
     if (loadingRange > 0 && scoreRange > 0) {
       // Scale loadings to use 60-70% of the score range for good visibility
       // This ensures arrows are clearly visible without dominating the plot
       adaptiveScale = (scoreRange * 0.65) / loadingRange;
-      
+
       // Apply reasonable limits to prevent extreme scaling
       adaptiveScale = Math.max(0.1, Math.min(adaptiveScale, 100));
     }
   }
-  
+
   // Apply adaptive scaling to all loadings
   const scaledLoadings = mathScaledLoadings.map(componentLoadings =>
     componentLoadings.map(loading => loading * adaptiveScale)
   );
-  
+
   return { scaledLoadings, adaptiveScale };
 }
 
 /**
  * 2D Kernel Density Estimation using Gaussian kernel
  * Reference: Scott (1992), "Multivariate Density Estimation", Wiley
- * 
+ *
  * @param points - Data points
  * @param bandwidth - Bandwidth parameter ('scott', 'silverman', or numeric)
  * @param gridSize - Grid resolution (default 50x50)
@@ -306,7 +306,7 @@ export function kernelDensityEstimate2D(
   gridSize: number = 50
 ): { x: number[], y: number[], z: number[][] } {
   const n = points.length;
-  
+
   // Calculate bandwidth using Scott's or Silverman's rule
   let h: number;
   if (bandwidth === 'scott') {
@@ -322,23 +322,23 @@ export function kernelDensityEstimate2D(
   } else {
     h = bandwidth;
   }
-  
+
   // Create grid
   const xMin = Math.min(...points.map(p => p.x)) - 3 * h;
   const xMax = Math.max(...points.map(p => p.x)) + 3 * h;
   const yMin = Math.min(...points.map(p => p.y)) - 3 * h;
   const yMax = Math.max(...points.map(p => p.y)) + 3 * h;
-  
+
   const xStep = (xMax - xMin) / gridSize;
   const yStep = (yMax - yMin) / gridSize;
-  
+
   const x = Array.from({ length: gridSize }, (_, i) => xMin + i * xStep);
   const y = Array.from({ length: gridSize }, (_, i) => yMin + i * yStep);
   const z: number[][] = Array(gridSize).fill(0).map(() => Array(gridSize).fill(0));
-  
+
   // Calculate density at each grid point
   const norm = 1 / (2 * Math.PI * h * h * n);
-  
+
   for (let i = 0; i < gridSize; i++) {
     for (let j = 0; j < gridSize; j++) {
       let density = 0;
@@ -351,7 +351,7 @@ export function kernelDensityEstimate2D(
       z[i][j] = density * norm;
     }
   }
-  
+
   return { x, y, z };
 }
 

@@ -24,10 +24,10 @@ export const CircleOfCorrelations: React.FC<CircleOfCorrelationsProps> = ({
 }) => {
   const { theme } = useTheme();
   const { qualitativePalette } = usePalette();
-  
+
   // Get the color scheme from the current palette
   const colorScheme = getQualitativePalette(qualitativePalette);
-  
+
   // Transform data to Plotly format
   const plotlyData = transformToCircleOfCorrelationsData(pcaResult);
 
@@ -41,9 +41,9 @@ export const CircleOfCorrelations: React.FC<CircleOfCorrelationsProps> = ({
 
   return (
     <div style={{ width: '100%', height: '100%' }}>
-      <PCACircleOfCorrelations 
-        data={plotlyData} 
-        config={plotlyConfig} 
+      <PCACircleOfCorrelations
+        data={plotlyData}
+        config={plotlyConfig}
       />
     </div>
   );
