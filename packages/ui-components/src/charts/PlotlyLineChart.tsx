@@ -6,9 +6,9 @@
 
 import React, { useEffect, useRef } from 'react';
 import Plotly from 'plotly.js-basic-dist-min';
-import { LineChartProps } from '../../types';
+import { LineChartProps } from './types';
 import { getPlotlyTheme, mergeLayouts } from './utils';
-import { useChartTheme } from '../../../hooks/useChartTheme';
+import { useChartTheme } from '../hooks/useChartTheme';
 
 export const PlotlyLineChart: React.FC<LineChartProps> = ({
   data,

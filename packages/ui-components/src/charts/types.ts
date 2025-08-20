@@ -4,6 +4,9 @@
 // The author respectfully requests that it not be used for
 // military, warfare, or surveillance applications.
 
+// Type definitions for Plotly chart components
+// These are the minimal types needed for the chart components
+
 import { ReactNode } from 'react';
 
 export interface ChartDataPoint {
@@ -79,11 +82,4 @@ export interface ComposedChartProps extends BaseChartProps {
   yLabel?: string;
   showGrid?: boolean;
   children?: ReactNode;
-}
-
-export interface ChartAdapter {
-  ScatterChart: React.FC<ScatterChartProps>;
-  BarChart: React.FC<BarChartProps>;
-  LineChart: React.FC<LineChartProps>;
-  ComposedChart: React.FC<ComposedChartProps>;
 }

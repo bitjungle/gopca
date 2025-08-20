@@ -6,9 +6,9 @@
 
 import React, { useEffect, useRef, Children, isValidElement } from 'react';
 import Plotly from 'plotly.js-basic-dist-min';
-import { ComposedChartProps } from '../../types';
+import { ComposedChartProps } from './types';
 import { getPlotlyTheme, mergeLayouts, getColorFromPalette } from './utils';
-import { useChartTheme } from '../../../hooks/useChartTheme';
+import { useChartTheme } from '../hooks/useChartTheme';
 
 export const PlotlyComposedChart: React.FC<ComposedChartProps> = ({
   data,

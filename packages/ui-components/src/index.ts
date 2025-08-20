@@ -76,7 +76,7 @@ export {
 // Plotly General Charts
 export {
   PlotlyBarChart
-} from './charts/adapters/plotly/PlotlyBarChart';
+} from './charts/PlotlyBarChart';
 
 // Plotly PCA Visualizations
 export {
@@ -115,9 +115,9 @@ export {
   type DiagnosticPlotConfig,
   type EigencorrelationPlotData,
   type EigencorrelationPlotConfig,
-} from './charts/adapters/plotly/pca';
+} from './charts/pca';
 
 // Plotly Export Utils
 export {
   setupPlotlyWailsIntegration
-} from './charts/adapters/plotly/utils/plotlyExport';
+} from './charts/utils/plotlyExport';
