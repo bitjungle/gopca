@@ -5,7 +5,7 @@
 // military, warfare, or surveillance applications.
 
 import React, { useEffect, useRef } from 'react';
-import Plotly from 'plotly.js-basic-dist-min';
+import Plotly from 'plotly.js-dist-min';
 import { LineChartProps } from './types';
 import { getPlotlyTheme, mergeLayouts } from './utils';
 import { useChartTheme } from '../hooks/useChartTheme';

@@ -37,7 +37,6 @@
     "exactOptionalPropertyTypes": false,
     "noImplicitOverride": true,
     "noPropertyAccessFromIndexSignature": false,
-    "noUncheckedIndexedAccess": false,
 
     /* Path Mapping */
     "baseUrl": ".",

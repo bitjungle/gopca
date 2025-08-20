@@ -25,11 +25,20 @@ export default defineConfig({
       fileName: (format) => `index.${format === 'es' ? 'es' : ''}js`
     },
     rollupOptions: {
-      external: ['react', 'react-dom'],
+      external: [
+        'react', 
+        'react-dom',
+        'react-plotly.js',
+        'plotly.js-dist-min',
+        'plotly.js',
+        /^plotly\.js.*/
+      ],
       output: {
         globals: {
           react: 'React',
-          'react-dom': 'ReactDOM'
+          'react-dom': 'ReactDOM',
+          'react-plotly.js': 'createPlotlyComponent',
+          'plotly.js-dist-min': 'Plotly'
         }
       }
     },

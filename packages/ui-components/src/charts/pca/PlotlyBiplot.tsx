@@ -12,7 +12,7 @@ import {
 } from '../utils/plotlyMath';
 import { getPlotlyTheme, mergeLayouts, ThemeMode } from '../utils/plotlyTheme';
 import { getExportMenuItems } from '../utils/plotlyExport';
-import { optimizeTraceType, getOptimalConfig } from '../utils/plotlyPerformance';
+import { optimizeTraceType } from '../utils/plotlyPerformance';
 
 export interface BiplotData {
   scores: number[][];  // [n_samples][n_components]
