@@ -4,15 +4,24 @@
 // The author respectfully requests that it not be used for
 // military, warfare, or surveillance applications.
 
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef, useEffect, lazy, Suspense } from 'react';
 import './App.css';
-import { ParseCSV, RunPCA, LoadIrisDataset, LoadDatasetFile, GetVersion, CalculateEllipses, GetGUIConfig, LoadCSVFile, CheckGoCSVStatus, OpenInGoCSV, LaunchGoCSV, DownloadGoCSV } from "../wailsjs/go/main/App";
+import { ParseCSV, RunPCA, LoadIrisDataset, LoadDatasetFile, GetVersion, CalculateEllipses, GetGUIConfig, LoadCSVFile, CheckGoCSVStatus, OpenInGoCSV, LaunchGoCSV, DownloadGoCSV, SaveFile } from '../wailsjs/go/main/App';
 import { Copy, Check } from 'lucide-react';
 import { EventsOn } from '../wailsjs/runtime/runtime';
 import { DataTable, SelectionTable, MatrixIllustration, HelpWrapper, DocumentationViewer } from './components';
-import { ScoresPlot, ScreePlot, LoadingsPlot, Biplot, CircleOfCorrelations, DiagnosticScatterPlot, EigencorrelationPlot } from './components/visualizations';
+import { setupPlotlyWailsIntegration } from '@gopca/ui-components';
+
+// Lazy load visualization components for better performance
+const ScoresPlot = lazy(() => import('./components/visualizations/ScoresPlot').then(m => ({ default: m.ScoresPlot })));
+const ScreePlot = lazy(() => import('./components/visualizations/ScreePlot').then(m => ({ default: m.ScreePlot })));
+const LoadingsPlot = lazy(() => import('./components/visualizations/LoadingsPlot').then(m => ({ default: m.LoadingsPlot })));
+const Biplot = lazy(() => import('./components/visualizations/Biplot').then(m => ({ default: m.Biplot })));
+const CircleOfCorrelations = lazy(() => import('./components/visualizations/CircleOfCorrelations').then(m => ({ default: m.CircleOfCorrelations })));
+const DiagnosticScatterPlot = lazy(() => import('./components/visualizations/DiagnosticScatterPlot').then(m => ({ default: m.DiagnosticScatterPlot })));
+const EigencorrelationPlot = lazy(() => import('./components/visualizations/EigencorrelationPlot').then(m => ({ default: m.EigencorrelationPlot })));
 import { FileData, PCARequest, PCAResponse } from './types';
-import { ThemeProvider, ThemeToggle, ConfirmDialog, ChartProvider } from '@gopca/ui-components';
+import { ThemeProvider, ThemeToggle, ConfirmDialog } from '@gopca/ui-components';
 import { HelpProvider, useHelp } from './contexts/HelpContext';
 import { PaletteProvider, usePalette } from './contexts/PaletteContext';
 import { HelpDisplay } from './components/HelpDisplay';
@@ -31,7 +40,7 @@ function AppContent() {
     const [pcaError, setPcaError] = useState<string | null>(null);
     const [version, setVersion] = useState<string>('');
     const [guiConfig, setGuiConfig] = useState<config.GUIConfig | null>(null);
-    
+
     // Selection state
     const [excludedRows, setExcludedRows] = useState<number[]>([]);
     const [excludedColumns, setExcludedColumns] = useState<number[]>([]);
@@ -47,12 +56,13 @@ function AppContent() {
     const [showDocumentation, setShowDocumentation] = useState(false);
     const [datasetId, setDatasetId] = useState(0); // Force DataTable re-render on dataset change
     const [showCopied, setShowCopied] = useState(false);
-    
+    const [loadingsPlotType, setLoadingsPlotType] = useState<'bar' | 'line' | null>(null); // null means auto
+
     // Refs for smooth scrolling
     const pcaErrorRef = useRef<HTMLDivElement>(null);
     const pcaResultsRef = useRef<HTMLDivElement>(null);
     const mainScrollRef = useRef<HTMLDivElement>(null);
-    
+
     // PCA configuration
     const [config, setConfig] = useState({
         components: 2,
@@ -68,15 +78,15 @@ function AppContent() {
         kernelType: 'rbf',
         kernelGamma: 1.0,
         kernelDegree: 3,
-        kernelCoef0: 0.0,
+        kernelCoef0: 0.0
         // Confidence ellipse parameters
     });
-    
+
     // GoCSV integration state
     const [goCSVStatus, setGoCSVStatus] = useState<{installed: boolean, path?: string, error?: string} | null>(null);
     const [isCheckingGoCSV, setIsCheckingGoCSV] = useState(false);
     const [showGoCSVDownloadDialog, setShowGoCSVDownloadDialog] = useState(false);
-    
+
     const updateGammaForData = (data: FileData) => {
         if (data && data.data && data.data[0]) {
             const numFeatures = data.data[0].length;
@@ -86,35 +96,43 @@ function AppContent() {
             }));
         }
     };
-    
+
     // Fetch version and GUI config on mount
     useEffect(() => {
+        // Make SaveFile available globally for Plotly integration
+        if (typeof SaveFile !== 'undefined') {
+            (window as any).SaveFile = SaveFile;
+            console.info('SaveFile made available globally');
+        }
+
+        // Setup Plotly-Wails integration for export functionality
+        setupPlotlyWailsIntegration();
+
         GetVersion().then((v) => {
             setVersion(v);
         }).catch((err) => {
             console.error('Failed to get version:', err);
         });
-        
+
         GetGUIConfig().then((config) => {
             setGuiConfig(config);
         }).catch((err) => {
             console.error('Failed to get GUI config:', err);
         });
-        
+
         // Check GoCSV installation status on startup
         CheckGoCSVStatus().then((status) => {
             setGoCSVStatus(status);
         }).catch((err) => {
             console.error('Failed to check GoCSV status:', err);
         });
-        
+
         // Listen for file to load on startup
         const unsubscribe = EventsOn('load-file-on-startup', async (filePath: string) => {
-            console.log('Loading file on startup:', filePath);
             setLoading(true);
             setFileError(null);
             setPcaError(null);
-            
+
             try {
                 const result = await LoadCSVFile(filePath);
                 setFileData(result);
@@ -131,34 +149,36 @@ function AppContent() {
                 setLoading(false);
             }
         });
-        
+
         // Cleanup event listener on unmount
         return () => {
             unsubscribe();
         };
     }, []);
-    
+
     // Helper function to get column data and type
     const getColumnData = (columnName: string | null): { values?: string[] | number[], type?: 'categorical' | 'continuous' } => {
-        if (!columnName || !fileData) return {};
-        
+        if (!columnName || !fileData) {
+return {};
+}
+
         if (fileData.categoricalColumns && columnName in fileData.categoricalColumns) {
             return { values: fileData.categoricalColumns[columnName], type: 'categorical' };
         }
-        
+
         if (fileData.numericTargetColumns && columnName in fileData.numericTargetColumns) {
             return { values: fileData.numericTargetColumns[columnName], type: 'continuous' };
         }
-        
+
         return {};
     };
-    
+
     // Centralized dataset loading function
     const loadDataset = async (filename: string, defaultGroupColumn?: string) => {
         setLoading(true);
         setFileError(null);
         setPcaError(null);
-        
+
         try {
             const result = await LoadDatasetFile(filename);
             setFileData(result);
@@ -167,13 +187,13 @@ function AppContent() {
             setExcludedRows([]);
             setExcludedColumns([]);
             setDatasetId(prev => prev + 1); // Force DataTable re-render
-            
+
             // Validate group column exists before setting
             if (defaultGroupColumn && result) {
                 const isCategorical = result.categoricalColumns && defaultGroupColumn in result.categoricalColumns;
                 const isContinuous = result.numericTargetColumns && defaultGroupColumn in result.numericTargetColumns;
                 const isValid = isCategorical || isContinuous;
-                
+
                 if (isValid) {
                     setSelectedGroupColumn(defaultGroupColumn);
                     // Set the appropriate palette mode based on column type
@@ -191,7 +211,7 @@ function AppContent() {
                 setSelectedGroupColumn(null);
                 setMode('none');
             }
-            
+
             updateGammaForData(result);
         } catch (err) {
             setFileError(`Failed to load ${filename}: ${err}`);
@@ -202,13 +222,15 @@ function AppContent() {
 
     const handleFileUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
         const file = event.target.files?.[0];
-        if (!file) return;
-        
+        if (!file) {
+return;
+}
+
         setLoading(true);
         setFileError(null);
         setPcaError(null); // Clear any previous PCA errors
         setFileName(file.name); // Store the file name
-        
+
         try {
             const content = await file.text();
             const result = await ParseCSV(content);
@@ -220,7 +242,7 @@ function AppContent() {
             setSelectedGroupColumn(null);
             setMode('none'); // Reset palette mode
             setDatasetId(prev => prev + 1); // Force DataTable re-render
-            
+
             // Calculate and set default gamma for kernel PCA
             updateGammaForData(result);
         } catch (err) {
@@ -229,15 +251,15 @@ function AppContent() {
             setLoading(false);
         }
     };
-    
+
     const handleGoCSVAction = async () => {
         setIsCheckingGoCSV(true);
-        
+
         try {
             // Check if GoCSV is installed
             const status = await CheckGoCSVStatus();
             setGoCSVStatus(status);
-            
+
             if (status.installed) {
                 // If installed and we have data, open it in GoCSV
                 if (fileData) {
@@ -257,7 +279,7 @@ function AppContent() {
             setIsCheckingGoCSV(false);
         }
     };
-    
+
     const handleRowSelectionChange = React.useCallback((selectedRows: number[]) => {
         // Convert selected indices to excluded indices
         if (fileData) {
@@ -266,7 +288,7 @@ function AppContent() {
             setExcludedRows(excluded);
         }
     }, [fileData]);
-    
+
     const handleColumnSelectionChange = React.useCallback((selectedColumns: number[]) => {
         // Convert selected indices to excluded indices
         if (fileData) {
@@ -275,7 +297,7 @@ function AppContent() {
             setExcludedColumns(excluded);
         }
     }, [fileData]);
-    
+
     const scrollToTop = () => {
         if (mainScrollRef.current) {
             mainScrollRef.current.scrollTo({
@@ -287,7 +309,7 @@ function AppContent() {
 
     const generateCLICommand = (): string => {
         let cmd = 'pca analyze';
-        
+
         // Add file path (with quotes if it contains spaces)
         if (fileName) {
             if (fileName.includes(' ')) {
@@ -296,13 +318,13 @@ function AppContent() {
                 cmd += ` ${fileName}`;
             }
         }
-        
+
         // Add number of components
         cmd += ` --components ${config.components}`;
-        
+
         // Add method
         cmd += ` --method ${config.method.toLowerCase()}`;
-        
+
         // Add kernel parameters if using kernel PCA
         if (config.method === 'Kernel') {
             cmd += ` --kernel-type ${config.kernelType}`;
@@ -314,52 +336,52 @@ function AppContent() {
                 cmd += ` --kernel-coef0 ${config.kernelCoef0}`;
             }
         }
-        
+
         // Add row preprocessing (Step 1)
         if (config.snv) {
-            cmd += ` --snv`;
+            cmd += ' --snv';
         } else if (config.vectorNorm) {
-            cmd += ` --vector-norm`;
+            cmd += ' --vector-norm';
         }
-        
+
         // Add column preprocessing (Step 2)
         if (config.standardScale) {
-            cmd += ` --scale standard`;
+            cmd += ' --scale standard';
         } else if (config.robustScale) {
-            cmd += ` --scale robust`;
+            cmd += ' --scale robust';
         } else if (!config.meanCenter) {
             // Mean centering is on by default in CLI, so we need to explicitly disable it
-            cmd += ` --no-mean-centering`;
+            cmd += ' --no-mean-centering';
         }
         // Note: if only meanCenter is true, we don't need any flag (it's the default)
-        
+
         // Add scale-only flag if needed
         if (config.scaleOnly) {
-            cmd += ` --scale-only`;
+            cmd += ' --scale-only';
         }
-        
+
         // Add missing data strategy
         if (config.missingStrategy && config.missingStrategy !== 'error') {
             cmd += ` --missing-strategy ${config.missingStrategy}`;
         }
-        
+
         // Add excluded columns if any
         if (excludedColumns.length > 0) {
             // Convert 0-indexed to 1-indexed for CLI
             const columnIndices = excludedColumns.map(c => c + 1).join(',');
             cmd += ` --exclude-cols ${columnIndices}`;
         }
-        
+
         // Add excluded rows if any
         if (excludedRows.length > 0) {
             // Convert 0-indexed to 1-indexed for CLI
             const rowIndices = excludedRows.map(r => r + 1).join(',');
             cmd += ` --exclude-rows ${rowIndices}`;
         }
-        
+
         return cmd;
     };
-    
+
     const copyToClipboard = async (text: string) => {
         try {
             await navigator.clipboard.writeText(text);
@@ -371,11 +393,13 @@ function AppContent() {
     };
 
     const runPCA = async () => {
-        if (!fileData) return;
-        
+        if (!fileData) {
+return;
+}
+
         setLoading(true);
         setPcaError(null);
-        
+
         try {
             const request: PCARequest = {
                 data: fileData.data,
@@ -393,7 +417,7 @@ function AppContent() {
                 // Add metadata for eigencorrelations if available
                 metadataNumeric: fileData.numericTargetColumns || {},
                 metadataCategorical: fileData.categoricalColumns || {},
-                calculateEigencorrelations: (fileData.numericTargetColumns && Object.keys(fileData.numericTargetColumns).length > 0) || 
+                calculateEigencorrelations: (fileData.numericTargetColumns && Object.keys(fileData.numericTargetColumns).length > 0) ||
                                           (fileData.categoricalColumns && Object.keys(fileData.categoricalColumns).length > 0)
             };
             const result = await RunPCA(request);
@@ -404,21 +428,21 @@ function AppContent() {
                 setSelectedYComponent(1);
                 // Clear any previous errors
                 setPcaError(null);
-                
+
                 // Check if Kernel PCA is selected with unsupported visualization
-                if (config.method === 'kernel' && 
+                if (config.method === 'kernel' &&
                     (selectedPlot === 'correlations' || selectedPlot === 'biplot')) {
                     // Switch to scores plot
                     setSelectedPlot('scores');
                     // Alert user about the automatic switch
                     alert('The selected visualization is not supported for Kernel PCA. Switching to Scores Plot.');
                 }
-                
+
                 // Smooth scroll to results
                 setTimeout(() => {
-                    pcaResultsRef.current?.scrollIntoView({ 
-                        behavior: 'smooth', 
-                        block: 'start' 
+                    pcaResultsRef.current?.scrollIntoView({
+                        behavior: 'smooth',
+                        block: 'start'
                     });
                 }, 100);
             } else {
@@ -426,9 +450,9 @@ function AppContent() {
                 setPcaResponse(null);
                 // Smooth scroll to error
                 setTimeout(() => {
-                    pcaErrorRef.current?.scrollIntoView({ 
-                        behavior: 'smooth', 
-                        block: 'start' 
+                    pcaErrorRef.current?.scrollIntoView({
+                        behavior: 'smooth',
+                        block: 'start'
                     });
                 }, 100);
             }
@@ -438,14 +462,16 @@ function AppContent() {
             setLoading(false);
         }
     };
-    
+
     const handleExportModel = async () => {
-        if (!pcaResponse?.success || !pcaResponse.result || !fileData) return;
-        
+        if (!pcaResponse?.success || !pcaResponse.result || !fileData) {
+return;
+}
+
         try {
-            const { ExportPCAModel } = await import("../wailsjs/go/main/App");
-            const { ExportPCAModelRequest } = await import("../wailsjs/go/models").then(m => m.main);
-            
+            const { ExportPCAModel } = await import('../wailsjs/go/main/App');
+            const { ExportPCAModelRequest } = await import('../wailsjs/go/models').then(m => m.main);
+
             const request = new ExportPCAModelRequest({
                 data: fileData.data,
                 headers: fileData.headers,
@@ -455,22 +481,22 @@ function AppContent() {
                 excludedRows,
                 excludedColumns
             });
-            
+
             await ExportPCAModel(request);
         } catch (err) {
             console.error('Failed to export model:', err);
             alert(`Failed to export model: ${err}`);
         }
     };
-    
+
     return (
         <div className="flex flex-col h-screen bg-gray-50 dark:bg-gray-900 text-gray-900 dark:text-white transition-colors duration-200">
             <header className="sticky top-0 z-50 bg-white dark:bg-gray-800 shadow-lg backdrop-blur-sm bg-opacity-95 dark:bg-opacity-95">
                 <div className="flex items-center justify-between max-w-7xl mx-auto px-4 py-3 h-20">
                     <div className="flex items-center gap-4">
-                        <img 
-                            src={logo} 
-                            alt="GoPCA - Principal Component Analysis Tool" 
+                        <img
+                            src={logo}
+                            alt="GoPCA - Principal Component Analysis Tool"
                             className="h-12 cursor-pointer hover:opacity-90 transition-opacity flex-shrink-0"
                             onClick={scrollToTop}
                         />
@@ -481,7 +507,7 @@ function AppContent() {
                         )}
                     </div>
                     <div className="flex-1 mx-8 overflow-hidden">
-                        <HelpDisplay 
+                        <HelpDisplay
                             helpKey={currentHelpKey}
                             title={currentHelp?.title || ''}
                             text={currentHelp?.text || ''}
@@ -513,7 +539,7 @@ function AppContent() {
                     </div>
                 </div>
             </header>
-            
+
             <main ref={mainScrollRef} className="flex-1 overflow-auto p-6">
                 <div className="max-w-7xl mx-auto space-y-6">
                     {/* File Upload Section */}
@@ -542,7 +568,7 @@ function AppContent() {
                                 <p className="mt-2 text-xs text-gray-500 dark:text-gray-400">
                                     Accepts CSV files with headers
                                 </p>
-                                
+
                                 {/* GoCSV Integration Button */}
                                 <div className="mt-4">
                                     <p className="text-sm text-gray-600 dark:text-gray-400 mb-2">
@@ -613,14 +639,14 @@ function AppContent() {
                             </div>
                         </div>
                     </div>
-                    
+
                     {/* File Error Display */}
                     {fileError && (
                         <div className="bg-red-100 dark:bg-red-800 border border-red-300 dark:border-red-600 rounded-lg p-4">
                             <p className="text-red-700 dark:text-red-200">{fileError}</p>
                         </div>
                     )}
-                    
+
                     {/* Data Display */}
                     {fileData && (
                         <div className="bg-white dark:bg-gray-800 rounded-lg p-6 shadow-lg border border-gray-200 dark:border-gray-700">
@@ -651,12 +677,12 @@ function AppContent() {
                             )}
                         </div>
                     )}
-                    
+
                     {/* Configuration Section */}
                     {fileData && (
                         <div className="bg-white dark:bg-gray-800 rounded-lg p-6 shadow-lg border border-gray-200 dark:border-gray-700">
                             <h2 className="text-xl font-semibold mb-6">Step 2: Configure PCA</h2>
-                            
+
                             {/* Two-column layout */}
                             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
                                 {/* Left Column - Core PCA Configuration */}
@@ -670,11 +696,11 @@ function AppContent() {
                                             min="1"
                                             max={Math.min(fileData.headers.length, fileData.data.length)}
                                             value={config.components}
-                                            onChange={(e) => setConfig({...config, components: parseInt(e.target.value) || 2})}
+                                            onChange={(e) => setConfig({ ...config, components: parseInt(e.target.value) || 2 })}
                                             className="w-full px-3 py-2 bg-gray-100 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg text-gray-900 dark:text-white"
                                         />
                                     </HelpWrapper>
-                                    
+
                                     <HelpWrapper helpKey="pca-method">
                                         <label className="block text-sm font-medium mb-2">
                                             Method
@@ -683,8 +709,8 @@ function AppContent() {
                                             value={config.method}
                                             onChange={(e) => {
                                                 const newMethod = e.target.value;
-                                                const newConfig = {...config, method: newMethod};
-                                                
+                                                const newConfig = { ...config, method: newMethod };
+
                                                 // If switching to kernel PCA and current preprocessing is invalid
                                                 if (newMethod === 'kernel') {
                                                     // Check if current preprocessing is invalid for kernel PCA
@@ -698,7 +724,7 @@ function AppContent() {
                                                     }
                                                     // scaleOnly is valid, so we keep it as-is
                                                 }
-                                                
+
                                                 setConfig(newConfig);
                                             }}
                                             className="w-full px-3 py-2 bg-gray-100 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg text-gray-900 dark:text-white"
@@ -708,7 +734,7 @@ function AppContent() {
                                             <option value="kernel">Kernel PCA</option>
                                         </select>
                                     </HelpWrapper>
-                                    
+
                                     {/* Method-specific information */}
                                     {config.method === 'SVD' && (
                                         <div className="p-4 bg-blue-50 dark:bg-blue-900/20 rounded-lg space-y-3">
@@ -733,7 +759,7 @@ function AppContent() {
                                             </div>
                                         </div>
                                     )}
-                                    
+
                                     {config.method === 'NIPALS' && (
                                         <div className="p-4 bg-green-50 dark:bg-green-900/20 rounded-lg space-y-3">
                                             <h4 className="font-medium text-sm text-green-900 dark:text-green-100">NIPALS Method</h4>
@@ -757,7 +783,7 @@ function AppContent() {
                                             </div>
                                         </div>
                                     )}
-                                    
+
                                     {/* Kernel PCA Options */}
                                     {config.method === 'kernel' && (
                                         <div className="p-4 bg-gray-50 dark:bg-gray-700/50 rounded-lg space-y-4">
@@ -769,7 +795,7 @@ function AppContent() {
                                                     </label>
                                                     <select
                                                         value={config.kernelType}
-                                                        onChange={(e) => setConfig({...config, kernelType: e.target.value})}
+                                                        onChange={(e) => setConfig({ ...config, kernelType: e.target.value })}
                                                         className="w-full px-3 py-2 bg-gray-100 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg text-gray-900 dark:text-white"
                                                     >
                                                         <option value="rbf">RBF (Gaussian)</option>
@@ -788,7 +814,7 @@ function AppContent() {
                                                         min="0.001"
                                                         onChange={(e) => {
                                                             const value = parseFloat(e.target.value);
-                                                            setConfig({...config, kernelGamma: isNaN(value) ? 1.0 : value});
+                                                            setConfig({ ...config, kernelGamma: isNaN(value) ? 1.0 : value });
                                                         }}
                                                         className="w-full px-3 py-2 bg-gray-100 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg text-gray-900 dark:text-white"
                                                     />
@@ -804,7 +830,7 @@ function AppContent() {
                                                                 value={config.kernelDegree}
                                                                 min="1"
                                                                 max="10"
-                                                                onChange={(e) => setConfig({...config, kernelDegree: parseInt(e.target.value) || 3})}
+                                                                onChange={(e) => setConfig({ ...config, kernelDegree: parseInt(e.target.value) || 3 })}
                                                                 className="w-full px-3 py-2 bg-gray-100 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg text-gray-900 dark:text-white"
                                                             />
                                                         </HelpWrapper>
@@ -818,7 +844,7 @@ function AppContent() {
                                                                 step="0.1"
                                                                 onChange={(e) => {
                                                                     const value = parseFloat(e.target.value);
-                                                                    setConfig({...config, kernelCoef0: isNaN(value) ? 0.0 : value});
+                                                                    setConfig({ ...config, kernelCoef0: isNaN(value) ? 0.0 : value });
                                                                 }}
                                                                 className="w-full px-3 py-2 bg-gray-100 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg text-gray-900 dark:text-white"
                                                             />
@@ -832,11 +858,11 @@ function AppContent() {
                                         </div>
                                     )}
                                 </div>
-                                
+
                                 {/* Right Column - Preprocessing Options */}
                                 <div className="space-y-4">
                                     <h3 className="text-sm font-semibold text-gray-700 dark:text-gray-300">Preprocessing Options</h3>
-                                    
+
                                     {/* Step 1: Row-wise preprocessing */}
                                     <HelpWrapper helpKey="row-preprocessing" className="p-3 bg-gray-50 dark:bg-gray-700/50 rounded-lg">
                                         <label className="block text-sm font-medium mb-2">
@@ -866,7 +892,7 @@ function AppContent() {
                                             Normalizes each row/sample independently (useful for spectral data)
                                         </p>
                                     </HelpWrapper>
-                                    
+
                                     {/* Step 2: Column-wise preprocessing */}
                                     <HelpWrapper helpKey="column-preprocessing" className="p-3 bg-gray-50 dark:bg-gray-700/50 rounded-lg">
                                         <label className="block text-sm font-medium mb-2">
@@ -902,14 +928,14 @@ function AppContent() {
                                             <option value="scale-only">Variance Scale (Std Dev Only)</option>
                                         </select>
                                         <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
-                                            {config.method === 'kernel' 
-                                                ? config.scaleOnly 
+                                            {config.method === 'kernel'
+                                                ? config.scaleOnly
                                                     ? 'Variance scaling divides by standard deviation without centering - suitable for Kernel PCA'
                                                     : 'Kernel PCA performs centering in kernel space. Consider Variance Scale if features have different scales.'
                                                 : 'Normalizes each column/feature across all samples'}
                                         </p>
                                     </HelpWrapper>
-                                    
+
                                     {/* Missing Data Strategy */}
                                     <HelpWrapper helpKey="missing-strategy">
                                         <label className="block text-sm font-medium mb-2">
@@ -917,7 +943,7 @@ function AppContent() {
                                         </label>
                                         <select
                                             value={config.missingStrategy}
-                                            onChange={(e) => setConfig({...config, missingStrategy: e.target.value})}
+                                            onChange={(e) => setConfig({ ...config, missingStrategy: e.target.value })}
                                             className="w-full px-3 py-2 bg-gray-100 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg text-gray-900 dark:text-white"
                                         >
                                             <option value="error">Show Error (default)</option>
@@ -930,11 +956,11 @@ function AppContent() {
                                             Choose how to handle missing values (NaN) in your data
                                         </p>
                                     </HelpWrapper>
-                                    
+
                                     {/* Diagnostic Metrics Option */}
                                 </div>
                             </div>
-                            
+
                             {/* Go PCA! button - centered and spanning both columns */}
                             <div className="mt-6 flex justify-center">
                                 <HelpWrapper helpKey="go-pca-button">
@@ -947,7 +973,7 @@ function AppContent() {
                                     </button>
                                 </HelpWrapper>
                             </div>
-                            
+
                             {/* CLI Command Preview */}
                             {fileData && fileName && (
                                 <div className="mt-4 bg-gray-900 dark:bg-gray-950 rounded-lg p-4 border border-gray-700">
@@ -972,19 +998,19 @@ function AppContent() {
                             )}
                         </div>
                     )}
-                    
+
                     {/* PCA Error Display - shown between Step 2 and Results */}
                     {pcaError && fileData && (
                         <div ref={pcaErrorRef} className="bg-red-100 dark:bg-red-800 border border-red-300 dark:border-red-600 rounded-lg p-4">
                             <p className="text-red-700 dark:text-red-200">{pcaError}</p>
                         </div>
                     )}
-                    
+
                     {/* PCA Results */}
                     {pcaResponse?.success && pcaResponse.result && (
                         <div ref={pcaResultsRef} className="bg-white dark:bg-gray-800 rounded-lg p-6 shadow-lg border border-gray-200 dark:border-gray-700">
                             <h2 className="text-xl font-semibold mb-4">Step 3: Interpret PCA Model</h2>
-                            
+
                             {/* Info message about missing data handling */}
                             {pcaResponse.info && (
                                 <div className="mb-4 p-3 bg-blue-100 dark:bg-blue-800 border border-blue-300 dark:border-blue-600 rounded-lg">
@@ -993,7 +1019,7 @@ function AppContent() {
                                     </p>
                                 </div>
                             )}
-                            
+
                             {/* Explained Variance */}
                             <HelpWrapper helpKey="explained-variance">
                                 <div className="bg-gray-100 dark:bg-gray-700 rounded-lg p-4">
@@ -1020,7 +1046,7 @@ function AppContent() {
                                     </div>
                                 </div>
                             </HelpWrapper>
-                            
+
                             {/* Plot Selector and Visualization */}
                             <div className="mt-6">
                                 {/* Tier 1: Primary Controls */}
@@ -1049,20 +1075,18 @@ function AppContent() {
                                             </select>
                                         </HelpWrapper>
                                     </div>
-                                    {selectedGroupColumn && (
-                                        <div className="flex-shrink-0">
-                                            <HelpWrapper helpKey="palette-selector">
-                                                <PaletteSelector />
-                                            </HelpWrapper>
-                                        </div>
-                                    )}
+                                    <div className="flex-shrink-0">
+                                        <HelpWrapper helpKey="palette-selector">
+                                            <PaletteSelector />
+                                        </HelpWrapper>
+                                    </div>
                                 </div>
-                                
+
                                 {/* Tier 2: Context-Sensitive Controls */}
                                 <div className="mb-4">
                                     <div className="flex flex-wrap items-center gap-4">
                                         {/* Data Display Group */}
-                                        {(selectedPlot === 'scores' || selectedPlot === 'biplot') && fileData && 
+                                        {(selectedPlot === 'scores' || selectedPlot === 'biplot') && fileData &&
                                          ((fileData.categoricalColumns && Object.keys(fileData.categoricalColumns).length > 0) ||
                                           (fileData.numericTargetColumns && Object.keys(fileData.numericTargetColumns).length > 0)) && (
                                             <div className="flex items-center gap-3 px-3 py-2 bg-gray-50 dark:bg-gray-800 rounded-lg">
@@ -1073,7 +1097,7 @@ function AppContent() {
                                                         onChange={(e) => {
                                                             const value = e.target.value || null;
                                                             setSelectedGroupColumn(value);
-                                                            
+
                                                             // Auto-switch palette mode based on column type
                                                             if (!value) {
                                                                 setMode('none');
@@ -1113,7 +1137,7 @@ function AppContent() {
                                                 </HelpWrapper>
                                             </div>
                                         )}
-                                        
+
                                         {/* Plot Options Group - For Scores Plot, Biplot, and Diagnostic Plot */}
                                         {(selectedPlot === 'scores' || selectedPlot === 'biplot' || selectedPlot === 'diagnostics') && (
                                             <div className="flex items-center gap-3 px-3 py-2 bg-gray-50 dark:bg-gray-800 rounded-lg">
@@ -1141,10 +1165,28 @@ function AppContent() {
                                                         />
                                                     </div>
                                                 )}
-                                                {fileData?.categoricalColumns && 
-                                                 Object.keys(fileData.categoricalColumns).length > 0 && 
-                                                 selectedGroupColumn && 
-                                                 getColumnData(selectedGroupColumn).type === 'categorical' && 
+                                                {/* Confidence Level for Diagnostic Plot Thresholds */}
+                                                {selectedPlot === 'diagnostics' && (
+                                                    <div className="flex items-center gap-2 ml-3">
+                                                        <HelpWrapper helpKey="diagnostic-threshold">
+                                                            <label className="text-sm text-gray-600 dark:text-gray-400">
+                                                                Threshold:
+                                                            </label>
+                                                        </HelpWrapper>
+                                                        <select
+                                                            value={confidenceLevel}
+                                                            onChange={(e) => setConfidenceLevel(parseFloat(e.target.value) as 0.90 | 0.95 | 0.99)}
+                                                            className="px-2 py-0.5 bg-gray-100 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded text-sm text-gray-900 dark:text-white"
+                                                        >
+                                                            <option value="0.95">95%</option>
+                                                            <option value="0.99">99%</option>
+                                                        </select>
+                                                    </div>
+                                                )}
+                                                {fileData?.categoricalColumns &&
+                                                 Object.keys(fileData.categoricalColumns).length > 0 &&
+                                                 selectedGroupColumn &&
+                                                 getColumnData(selectedGroupColumn).type === 'categorical' &&
                                                  (selectedPlot === 'scores' || selectedPlot === 'biplot') && (
                                                     <>
                                                         <div className="w-px h-5 bg-gray-300 dark:bg-gray-600 mx-1" />
@@ -1174,7 +1216,7 @@ function AppContent() {
                                                 )}
                                             </div>
                                         )}
-                                        
+
                                         {/* Component Selectors Group */}
                                         {(selectedPlot === 'scores' || selectedPlot === 'biplot' || selectedPlot === 'correlations') && pcaResponse.result.scores[0]?.length > 2 && (
                                             <div className="flex items-center gap-3 px-3 py-2 bg-gray-50 dark:bg-gray-800 rounded-lg">
@@ -1208,7 +1250,7 @@ function AppContent() {
                                                 </div>
                                             </div>
                                         )}
-                                        
+
                                         {/* Loadings Plot Component Selector */}
                                         {selectedPlot === 'loadings' && (
                                             <div className="flex items-center gap-3 px-3 py-2 bg-gray-50 dark:bg-gray-800 rounded-lg">
@@ -1224,92 +1266,113 @@ function AppContent() {
                                                         </option>
                                                     ))}
                                                 </select>
+                                                <div className="w-px h-5 bg-gray-300 dark:bg-gray-600 mx-1" />
+                                                <label className="text-sm text-gray-600 dark:text-gray-400">Plot type:</label>
+                                                <select
+                                                    value={loadingsPlotType || (pcaResponse.result?.loadings[0]?.length > (guiConfig?.visualization?.loadings_variable_threshold || 100) ? 'line' : 'bar')}
+                                                    onChange={(e) => {
+                                                        const value = e.target.value as 'bar' | 'line';
+                                                        setLoadingsPlotType(value);
+                                                    }}
+                                                    className="px-2 py-1 bg-gray-100 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded text-sm text-gray-900 dark:text-white"
+                                                >
+                                                    <option value="bar">Bar Chart</option>
+                                                    <option value="line">Line Chart</option>
+                                                </select>
                                             </div>
                                         )}
                                     </div>
                                 </div>
-                                
-                                <div className="bg-gray-50 dark:bg-gray-700 rounded-lg p-4 border border-gray-200 dark:border-gray-600" style={{ height: '500px' }}>
-                                    {selectedPlot === 'scores' && pcaResponse.result.scores.length > 0 && pcaResponse.result.scores[0].length >= 2 ? (
-                                        <ScoresPlot
-                                            pcaResult={pcaResponse.result}
-                                            rowNames={fileData?.rowNames || []}
-                                            xComponent={selectedXComponent}
-                                            yComponent={selectedYComponent}
-                                            groupColumn={selectedGroupColumn}
-                                            groupLabels={getColumnData(selectedGroupColumn).type === 'categorical' ? getColumnData(selectedGroupColumn).values as string[] : undefined}
-                                            groupValues={getColumnData(selectedGroupColumn).type === 'continuous' ? getColumnData(selectedGroupColumn).values as number[] : undefined}
-                                            groupType={getColumnData(selectedGroupColumn).type}
-                                            groupEllipses={
-                                                confidenceLevel === 0.90 ? pcaResponse.groupEllipses90 :
-                                                confidenceLevel === 0.95 ? pcaResponse.groupEllipses95 :
-                                                pcaResponse.groupEllipses99
-                                            }
-                                            showEllipses={showEllipses && !!selectedGroupColumn && getColumnData(selectedGroupColumn).type === 'categorical'}
-                                            confidenceLevel={confidenceLevel}
-                                            showRowLabels={showRowLabels}
-                                            maxLabelsToShow={maxLabelsToShow}
-                                        />
-                                    ) : selectedPlot === 'scree' ? (
-                                        <ScreePlot
-                                            pcaResult={pcaResponse.result}
-                                            showCumulative={true}
-                                            elbowThreshold={80}
-                                        />
-                                    ) : selectedPlot === 'loadings' ? (
-                                        <LoadingsPlot
-                                            pcaResult={pcaResponse.result}
-                                            selectedComponent={selectedLoadingComponent}
-                                            variableThreshold={guiConfig?.visualization?.loadings_variable_threshold || 100}
-                                        />
-                                    ) : selectedPlot === 'biplot' ? (
-                                        <Biplot
-                                            pcaResult={pcaResponse.result}
-                                            rowNames={fileData?.rowNames || []}
-                                            xComponent={selectedXComponent}
-                                            yComponent={selectedYComponent}
-                                            showRowLabels={showRowLabels}
-                                            maxRowLabelsToShow={maxLabelsToShow}
-                                            groupColumn={selectedGroupColumn}
-                                            groupLabels={getColumnData(selectedGroupColumn).type === 'categorical' ? getColumnData(selectedGroupColumn).values as string[] : undefined}
-                                            groupValues={getColumnData(selectedGroupColumn).type === 'continuous' ? getColumnData(selectedGroupColumn).values as number[] : undefined}
-                                            groupType={getColumnData(selectedGroupColumn).type}
-                                            groupEllipses={
-                                                confidenceLevel === 0.90 ? pcaResponse.groupEllipses90 :
-                                                confidenceLevel === 0.95 ? pcaResponse.groupEllipses95 :
-                                                pcaResponse.groupEllipses99
-                                            }
-                                            showEllipses={showEllipses && !!selectedGroupColumn && getColumnData(selectedGroupColumn).type === 'categorical'}
-                                            confidenceLevel={confidenceLevel}
-                                            maxVariables={guiConfig?.visualization?.biplot_max_variables || 100}
-                                        />
-                                    ) : selectedPlot === 'correlations' ? (
-                                        <CircleOfCorrelations
-                                            pcaResult={pcaResponse.result}
-                                            xComponent={selectedXComponent}
-                                            yComponent={selectedYComponent}
-                                            threshold={guiConfig?.visualization?.correlation_threshold || 0.3}
-                                            maxVariables={guiConfig?.visualization?.circle_max_variables || 100}
-                                        />
-                                    ) : selectedPlot === 'diagnostics' ? (
-                                        <DiagnosticScatterPlot
-                                            pcaResult={pcaResponse.result}
-                                            rowNames={fileData?.rowNames || []}
-                                            showRowLabels={showRowLabels}
-                                            maxRowLabelsToShow={maxLabelsToShow}
-                                        />
-                                    ) : selectedPlot === 'eigencorrelation' ? (
-                                        <EigencorrelationPlot
-                                            pcaResult={pcaResponse.result}
-                                            fileData={fileData!}
-                                        />
-                                    ) : (
-                                        <div className="w-full h-full flex items-center justify-center text-gray-500 dark:text-gray-400">
-                                            <p>Not enough components for scores plot (minimum 2 required)</p>
+
+                                <div className="bg-gray-50 dark:bg-gray-700 rounded-lg" style={{ height: '500px' }}>
+                                    <Suspense fallback={
+                                        <div className="w-full h-full flex items-center justify-center">
+                                            <div className="flex flex-col items-center gap-4">
+                                                <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
+                                                <p className="text-gray-600 dark:text-gray-400">Loading visualization...</p>
+                                            </div>
                                         </div>
-                                    )}
+                                    }>
+                                        {selectedPlot === 'scores' && pcaResponse.result.scores.length > 0 && pcaResponse.result.scores[0].length >= 2 ? (
+                                            <ScoresPlot
+                                                pcaResult={pcaResponse.result}
+                                                rowNames={fileData?.rowNames || []}
+                                                xComponent={selectedXComponent}
+                                                yComponent={selectedYComponent}
+                                                groupColumn={selectedGroupColumn}
+                                                groupLabels={getColumnData(selectedGroupColumn).type === 'categorical' ? getColumnData(selectedGroupColumn).values as string[] : undefined}
+                                                groupValues={getColumnData(selectedGroupColumn).type === 'continuous' ? getColumnData(selectedGroupColumn).values as number[] : undefined}
+                                                groupType={getColumnData(selectedGroupColumn).type}
+                                                groupEllipses={
+                                                    confidenceLevel === 0.90 ? pcaResponse.groupEllipses90 :
+                                                    confidenceLevel === 0.95 ? pcaResponse.groupEllipses95 :
+                                                    pcaResponse.groupEllipses99
+                                                }
+                                                showEllipses={showEllipses && !!selectedGroupColumn && getColumnData(selectedGroupColumn).type === 'categorical'}
+                                                confidenceLevel={confidenceLevel}
+                                                showRowLabels={showRowLabels}
+                                                maxLabelsToShow={maxLabelsToShow}
+                                            />
+                                        ) : selectedPlot === 'scree' ? (
+                                            <ScreePlot
+                                                pcaResult={pcaResponse.result}
+                                                showCumulative={true}
+                                                elbowThreshold={80}
+                                            />
+                                        ) : selectedPlot === 'loadings' ? (
+                                            <LoadingsPlot
+                                                pcaResult={pcaResponse.result}
+                                                selectedComponent={selectedLoadingComponent}
+                                                variableThreshold={guiConfig?.visualization?.loadings_variable_threshold || 100}
+                                                plotType={loadingsPlotType || undefined}
+                                            />
+                                        ) : selectedPlot === 'biplot' ? (
+                                            <Biplot
+                                                pcaResult={pcaResponse.result}
+                                                rowNames={fileData?.rowNames || []}
+                                                xComponent={selectedXComponent}
+                                                yComponent={selectedYComponent}
+                                                showRowLabels={showRowLabels}
+                                                maxLabelsToShow={maxLabelsToShow}
+                                                groupColumn={selectedGroupColumn}
+                                                groupLabels={getColumnData(selectedGroupColumn).type === 'categorical' ? getColumnData(selectedGroupColumn).values as string[] : undefined}
+                                                groupValues={getColumnData(selectedGroupColumn).type === 'continuous' ? getColumnData(selectedGroupColumn).values as number[] : undefined}
+                                                groupType={getColumnData(selectedGroupColumn).type}
+                                                maxVariables={guiConfig?.visualization?.biplot_max_variables || 100}
+                                                groupEllipses={
+                                                    confidenceLevel === 0.90 ? pcaResponse.groupEllipses90 :
+                                                    confidenceLevel === 0.95 ? pcaResponse.groupEllipses95 :
+                                                    pcaResponse.groupEllipses99
+                                                }
+                                                showEllipses={showEllipses && !!selectedGroupColumn && getColumnData(selectedGroupColumn).type === 'categorical'}
+                                                confidenceLevel={confidenceLevel}
+                                            />
+                                        ) : selectedPlot === 'correlations' ? (
+                                            <CircleOfCorrelations
+                                                pcaResult={pcaResponse.result}
+                                                xComponent={selectedXComponent}
+                                                yComponent={selectedYComponent}
+                                            />
+                                        ) : selectedPlot === 'diagnostics' ? (
+                                            <DiagnosticScatterPlot
+                                                pcaResult={pcaResponse.result}
+                                                rowNames={fileData?.rowNames || []}
+                                                showRowLabels={showRowLabels}
+                                                maxLabelsToShow={maxLabelsToShow}
+                                                confidenceLevel={confidenceLevel === 0.90 ? 0.95 : confidenceLevel}
+                                            />
+                                        ) : selectedPlot === 'eigencorrelation' ? (
+                                            <EigencorrelationPlot
+                                                pcaResult={pcaResponse.result}
+                                            />
+                                        ) : (
+                                            <div className="w-full h-full flex items-center justify-center text-gray-500 dark:text-gray-400">
+                                                <p>Not enough components for scores plot (minimum 2 required)</p>
+                                            </div>
+                                        )}
+                                    </Suspense>
                                 </div>
-                                
+
                                 {/* Export Model button - centered below plot */}
                                 <div className="mt-6 flex justify-center">
                                     <HelpWrapper helpKey="export-model">
@@ -1322,18 +1385,18 @@ function AppContent() {
                                     </HelpWrapper>
                                 </div>
                             </div>
-                            
+
                         </div>
                     )}
                 </div>
             </main>
-            
+
             {/* Documentation Viewer */}
-            <DocumentationViewer 
+            <DocumentationViewer
                 isOpen={showDocumentation}
                 onClose={() => setShowDocumentation(false)}
             />
-            
+
             {/* GoCSV Download Confirmation Dialog */}
             <ConfirmDialog
                 isOpen={showGoCSVDownloadDialog}
@@ -1359,13 +1422,11 @@ function AppContent() {
 function App() {
     return (
         <ThemeProvider>
-            <ChartProvider>
-                <PaletteProvider>
-                    <HelpProvider>
-                        <AppContent />
-                    </HelpProvider>
-                </PaletteProvider>
-            </ChartProvider>
+            <PaletteProvider>
+                <HelpProvider>
+                    <AppContent />
+                </HelpProvider>
+            </PaletteProvider>
         </ThemeProvider>
     );
 }

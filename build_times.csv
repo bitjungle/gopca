@@ -1,6 +1,0 @@
-Target,Description,Time(s)
-build,CLI (current platform),.272592000
-pca-build,GoPCA Desktop GUI,5.823623000
-csv-build,GoCSV GUI,4.958717000
-build-all,CLI (all platforms),2.426572000
-build-all-parallel,CLI (all platforms) (parallel),.397755000

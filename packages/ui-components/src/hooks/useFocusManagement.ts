@@ -39,10 +39,14 @@ export const useFocusManagement = () => {
    */
   const trapFocus = useCallback((container: HTMLElement) => {
     const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.key !== 'Tab') return;
+      if (e.key !== 'Tab') {
+return;
+}
 
       const focusableElements = getFocusableElements(container);
-      if (focusableElements.length === 0) return;
+      if (focusableElements.length === 0) {
+return;
+}
 
       const firstElement = focusableElements[0] as HTMLElement;
       const lastElement = focusableElements[focusableElements.length - 1] as HTMLElement;
@@ -85,7 +89,9 @@ export const useFocusManagement = () => {
         document.activeElement as HTMLElement
       );
 
-      if (currentIndex === -1) return;
+      if (currentIndex === -1) {
+return;
+}
 
       let nextIndex = currentIndex;
 
@@ -135,7 +141,7 @@ export const useFocusManagement = () => {
     restoreFocus,
     focusFirst,
     trapFocus,
-    setupArrowNavigation,
+    setupArrowNavigation
   };
 };
 
@@ -177,7 +183,9 @@ export const useFocusTrap = (isActive: boolean) => {
   const { trapFocus, focusFirst } = useFocusManagement();
 
   useEffect(() => {
-    if (!isActive || !containerRef.current) return;
+    if (!isActive || !containerRef.current) {
+return;
+}
 
     // Focus first element when trap becomes active
     focusFirst(containerRef.current);

@@ -6,30 +6,30 @@
 
 import React from 'react';
 import { usePalette } from '../contexts/PaletteContext';
-import { 
-  QUALITATIVE_PALETTES, 
+import {
+  QUALITATIVE_PALETTES,
   SEQUENTIAL_PALETTES,
   QualitativePaletteName,
   SequentialPaletteName
 } from '../utils/colorPalettes';
 
 export const PaletteSelector: React.FC = () => {
-  const { 
-    mode, 
-    qualitativePalette, 
+  const {
+    mode,
+    qualitativePalette,
     setQualitativePalette,
-    sequentialPalette, 
-    setSequentialPalette 
+    sequentialPalette,
+    setSequentialPalette
   } = usePalette();
 
   const handleQualitativeChange = (event: React.ChangeEvent<HTMLSelectElement>) => {
     setQualitativePalette(event.target.value as QualitativePaletteName);
   };
-  
+
   const handleSequentialChange = (event: React.ChangeEvent<HTMLSelectElement>) => {
     setSequentialPalette(event.target.value as SequentialPaletteName);
   };
-  
+
   // Get display names for palettes
   const paletteDisplayNames = {
     // Qualitative
@@ -47,7 +47,7 @@ export const PaletteSelector: React.FC = () => {
     mako: 'Mako',
     flare: 'Flare'
   };
-  
+
   return (
     <div className="flex items-center gap-2">
       <label className="text-sm text-gray-600 dark:text-gray-400">Palette:</label>

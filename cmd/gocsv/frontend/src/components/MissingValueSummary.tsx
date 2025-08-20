@@ -20,7 +20,7 @@ export const MissingValueSummary: React.FC<MissingValueSummaryProps> = ({ stats,
 
     const sortedColumns = Object.entries(stats.columnStats || {})
         .sort(([, a], [, b]) => (b?.missingPercent || 0) - (a?.missingPercent || 0));
-    
+
     const sortedRows = Object.entries(stats.rowStats || {})
         .sort(([, a], [, b]) => (b?.missingPercent || 0) - (a?.missingPercent || 0))
         .slice(0, 10); // Show top 10 rows with missing values
@@ -105,7 +105,7 @@ export const MissingValueSummary: React.FC<MissingValueSummaryProps> = ({ stats,
                                             <td className="px-4 py-2 text-sm">
                                                 <div className="flex items-center">
                                                     <div className="w-24 bg-gray-200 dark:bg-gray-700 rounded-full h-2 mr-2">
-                                                        <div 
+                                                        <div
                                                             className="bg-red-500 h-2 rounded-full"
                                                             style={{ width: `${Math.min(colStats?.missingPercent || 0, 100)}%` }}
                                                         />
@@ -164,7 +164,7 @@ export const MissingValueSummary: React.FC<MissingValueSummaryProps> = ({ stats,
                                                 <td className="px-4 py-2 text-sm">
                                                     <div className="flex items-center">
                                                         <div className="w-24 bg-gray-200 dark:bg-gray-700 rounded-full h-2 mr-2">
-                                                            <div 
+                                                            <div
                                                                 className="bg-red-500 h-2 rounded-full"
                                                                 style={{ width: `${Math.min(rowStats?.missingPercent || 0, 100)}%` }}
                                                             />

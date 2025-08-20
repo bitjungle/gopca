@@ -16,7 +16,7 @@ import { useState, useCallback } from 'react';
  */
 export function useLoadingState(initialState = false) {
   const [isLoading, setIsLoading] = useState(initialState);
-  
+
   const withLoading = useCallback(async <T,>(
     operation: () => Promise<T>
   ): Promise<T | null> => {
@@ -28,7 +28,7 @@ export function useLoadingState(initialState = false) {
       setIsLoading(false);
     }
   }, []);
-  
+
   return { isLoading, setIsLoading, withLoading };
 }
 
@@ -37,13 +37,13 @@ export function useLoadingState(initialState = false) {
  */
 export function useMultipleLoadingStates() {
   const [loadingStates, setLoadingStates] = useState<Record<string, boolean>>({});
-  
+
   const setLoading = useCallback((key: string, value: boolean) => {
     setLoadingStates(prev => ({ ...prev, [key]: value }));
   }, []);
-  
+
   const isAnyLoading = Object.values(loadingStates).some(state => state);
-  
+
   const withLoading = useCallback(async <T,>(
     key: string,
     operation: () => Promise<T>
@@ -56,6 +56,6 @@ export function useMultipleLoadingStates() {
       setLoading(key, false);
     }
   }, [setLoading]);
-  
+
   return { loadingStates, isAnyLoading, setLoading, withLoading };
 }

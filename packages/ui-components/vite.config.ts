@@ -14,26 +14,35 @@ export default defineConfig({
     react(),
     dts({
       insertTypesEntry: true,
-      rollupTypes: true,
-    }),
+      rollupTypes: true
+    })
   ],
   build: {
     lib: {
       entry: resolve(__dirname, 'src/index.ts'),
       name: 'GoPCAUIComponents',
       formats: ['es', 'cjs'],
-      fileName: (format) => `index.${format === 'es' ? 'es' : ''}js`,
+      fileName: (format) => `index.${format === 'es' ? 'es' : ''}js`
     },
     rollupOptions: {
-      external: ['react', 'react-dom'],
+      external: [
+        'react', 
+        'react-dom',
+        'react-plotly.js',
+        'plotly.js-dist-min',
+        'plotly.js',
+        /^plotly\.js.*/
+      ],
       output: {
         globals: {
           react: 'React',
           'react-dom': 'ReactDOM',
-        },
-      },
+          'react-plotly.js': 'createPlotlyComponent',
+          'plotly.js-dist-min': 'Plotly'
+        }
+      }
     },
     sourcemap: true,
-    minify: false,
-  },
+    minify: false
+  }
 });

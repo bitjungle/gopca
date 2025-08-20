@@ -13,7 +13,7 @@ import React from 'react';
  */
 
 // Target column icon - Flag icon to indicate this is the target/goal column for analysis
-export const TargetColumnIcon: React.FC<{ className?: string }> = ({ className = "w-4 h-4 inline-block ml-1" }) => (
+export const TargetColumnIcon: React.FC<{ className?: string }> = ({ className = 'w-4 h-4 inline-block ml-1' }) => (
     <span title="Target column for analysis">
         <svg
             xmlns="http://www.w3.org/2000/svg"
@@ -34,7 +34,7 @@ export const TargetColumnIcon: React.FC<{ className?: string }> = ({ className =
 );
 
 // Category column icon - Tag icon to indicate categorical/grouping columns
-export const CategoryColumnIcon: React.FC<{ className?: string }> = ({ className = "w-4 h-4 inline-block ml-1" }) => (
+export const CategoryColumnIcon: React.FC<{ className?: string }> = ({ className = 'w-4 h-4 inline-block ml-1' }) => (
     <span title="Categorical/grouping column">
         <svg
             xmlns="http://www.w3.org/2000/svg"

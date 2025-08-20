@@ -13,13 +13,13 @@ interface HelpWrapperProps {
   className?: string;
 }
 
-export const HelpWrapper: React.FC<HelpWrapperProps> = ({ 
-  helpKey, 
-  children, 
+export const HelpWrapper: React.FC<HelpWrapperProps> = ({
+  helpKey,
+  children,
   className
 }) => {
   const helpRef = useHelpHover(helpKey);
-  
+
   return (
     <div ref={helpRef as React.RefObject<HTMLDivElement>} className={className}>
       {children}

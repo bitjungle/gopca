@@ -19,11 +19,15 @@
     "react-dom": "^18.2.0"
   },
   "dependencies": {
-    "lucide-react": "^0.539.0"
+    "@types/plotly.js": "^3.0.3",
+    "lucide-react": "^0.539.0",
+    "plotly.js-dist-min": "^2.35.3",
+    "react-plotly.js": "^2.6.0"
   },
   "devDependencies": {
     "@types/react": "^18.0.17",
     "@types/react-dom": "^18.0.6",
+    "@types/react-plotly.js": "^2.6.3",
     "@vitejs/plugin-react": "^5.0.0",
     "typescript": "^5.9.2",
     "vite": "^7.1.2",
@@ -31,9 +35,9 @@
   },
   "exports": {
     ".": {
+      "types": "./dist/index.d.ts",
       "import": "./dist/index.esjs",
-      "require": "./dist/index.js",
-      "types": "./dist/index.d.ts"
+      "require": "./dist/index.js"
     }
   }
 }

@@ -47,7 +47,6 @@ export interface PCARequest {
   calculateEigencorrelations?: boolean;
 }
 
-
 export interface PCAResult {
   scores: number[][];
   loadings: number[][];

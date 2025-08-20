@@ -24,7 +24,7 @@ export const ErrorTemplates = {
     message: `The file "${filename}" could not be found.`,
     suggestion: 'Please check the file path and try again.',
     code: 'E001',
-    timestamp: new Date(),
+    timestamp: new Date()
   }),
 
   FILE_READ_ERROR: (filename: string, error?: string): FormattedError => ({
@@ -33,7 +33,7 @@ export const ErrorTemplates = {
     message: `Failed to read file "${filename}".${error ? ` ${error}` : ''}`,
     suggestion: 'Ensure the file exists and you have permission to read it.',
     code: 'E002',
-    timestamp: new Date(),
+    timestamp: new Date()
   }),
 
   FILE_TOO_LARGE: (maxSize: string): FormattedError => ({
@@ -42,19 +42,19 @@ export const ErrorTemplates = {
     message: `The selected file exceeds the maximum size of ${maxSize}.`,
     suggestion: 'Please select a smaller file or split your data.',
     code: 'E003',
-    timestamp: new Date(),
+    timestamp: new Date()
   }),
 
   // CSV errors
   CSV_PARSE_ERROR: (line?: number, detail?: string): FormattedError => ({
     severity: 'error',
     title: 'CSV Parse Error',
-    message: line 
+    message: line
       ? `Error parsing CSV at line ${line}.${detail ? ` ${detail}` : ''}`
       : `Failed to parse CSV file.${detail ? ` ${detail}` : ''}`,
     suggestion: 'Check that your file is properly formatted CSV with consistent columns.',
     code: 'E010',
-    timestamp: new Date(),
+    timestamp: new Date()
   }),
 
   NO_NUMERIC_DATA: (): FormattedError => ({
@@ -63,7 +63,7 @@ export const ErrorTemplates = {
     message: 'The CSV file contains no numeric columns suitable for PCA.',
     suggestion: 'PCA requires at least 2 numeric columns. Check your data format.',
     code: 'E011',
-    timestamp: new Date(),
+    timestamp: new Date()
   }),
 
   INSUFFICIENT_DATA: (required: number, found: number): FormattedError => ({
@@ -72,7 +72,7 @@ export const ErrorTemplates = {
     message: `PCA requires at least ${required} samples, but only ${found} were found.`,
     suggestion: 'Add more data rows or check for excluded samples.',
     code: 'E012',
-    timestamp: new Date(),
+    timestamp: new Date()
   }),
 
   // PCA errors
@@ -82,7 +82,7 @@ export const ErrorTemplates = {
     message: `Failed to compute PCA.${detail ? ` ${detail}` : ''}`,
     suggestion: 'Try different preprocessing options or check for invalid data values.',
     code: 'E020',
-    timestamp: new Date(),
+    timestamp: new Date()
   }),
 
   INVALID_COMPONENTS: (requested: number, max: number): FormattedError => ({
@@ -91,7 +91,7 @@ export const ErrorTemplates = {
     message: `Cannot extract ${requested} components. Maximum available is ${max}.`,
     suggestion: `Choose a value between 1 and ${max}.`,
     code: 'E021',
-    timestamp: new Date(),
+    timestamp: new Date()
   }),
 
   SINGULAR_MATRIX: (): FormattedError => ({
@@ -100,7 +100,7 @@ export const ErrorTemplates = {
     message: 'The data matrix is singular or nearly singular.',
     suggestion: 'Remove constant columns or highly correlated features.',
     code: 'E022',
-    timestamp: new Date(),
+    timestamp: new Date()
   }),
 
   // Validation warnings
@@ -110,7 +110,7 @@ export const ErrorTemplates = {
     message: `Found ${count} missing values in the dataset.`,
     suggestion: 'Consider using NIPALS method or imputation strategy.',
     code: 'W001',
-    timestamp: new Date(),
+    timestamp: new Date()
   }),
 
   OUTLIERS_DETECTED: (count: number): FormattedError => ({
@@ -119,7 +119,7 @@ export const ErrorTemplates = {
     message: `Detected ${count} potential outlier${count > 1 ? 's' : ''} in the data.`,
     suggestion: 'Review the diagnostic plots to identify and handle outliers.',
     code: 'W002',
-    timestamp: new Date(),
+    timestamp: new Date()
   }),
 
   LOW_VARIANCE_FEATURES: (features: string[]): FormattedError => ({
@@ -128,7 +128,7 @@ export const ErrorTemplates = {
     message: `Features with very low variance: ${features.slice(0, 3).join(', ')}${features.length > 3 ? '...' : ''}`,
     suggestion: 'Consider removing constant or near-constant features.',
     code: 'W003',
-    timestamp: new Date(),
+    timestamp: new Date()
   }),
 
   // Info messages
@@ -136,14 +136,14 @@ export const ErrorTemplates = {
     severity: 'info',
     title: 'Analysis Complete',
     message: `PCA analysis completed successfully in ${time.toFixed(2)} seconds.`,
-    timestamp: new Date(),
+    timestamp: new Date()
   }),
 
   DATA_LOADED: (rows: number, cols: number): FormattedError => ({
     severity: 'info',
     title: 'Data Loaded',
     message: `Loaded ${rows} samples with ${cols} features.`,
-    timestamp: new Date(),
+    timestamp: new Date()
   }),
 
   // Network errors
@@ -153,7 +153,7 @@ export const ErrorTemplates = {
     message: 'Failed to connect to the server.',
     suggestion: 'Check your internet connection and try again.',
     code: 'E030',
-    timestamp: new Date(),
+    timestamp: new Date()
   }),
 
   // Export errors
@@ -163,8 +163,8 @@ export const ErrorTemplates = {
     message: `Failed to export data as ${format}.`,
     suggestion: 'Try a different format or check disk space.',
     code: 'E040',
-    timestamp: new Date(),
-  }),
+    timestamp: new Date()
+  })
 };
 
 /**
@@ -240,29 +240,29 @@ export function parseError(error: unknown): FormattedError {
       const filename = match ? match[1] : 'unknown';
       return ErrorTemplates.FILE_NOT_FOUND(filename);
     }
-    
+
     if (error.message.includes('CSV')) {
       return ErrorTemplates.CSV_PARSE_ERROR(undefined, error.message);
     }
-    
+
     if (error.message.includes('Network')) {
       return ErrorTemplates.NETWORK_ERROR();
     }
-    
+
     // Generic error
     return {
       severity: 'error',
       title: 'Error',
       message: error.message,
-      timestamp: new Date(),
+      timestamp: new Date()
     };
   }
-  
+
   // Unknown error type
   return {
     severity: 'error',
     title: 'Unknown Error',
     message: String(error),
-    timestamp: new Date(),
+    timestamp: new Date()
   };
 }

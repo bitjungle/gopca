@@ -19,19 +19,21 @@ export function calculateTopPoints(
   showLabels: boolean,
   maxLabels: number
 ): Set<number> {
-  if (!showLabels) return new Set<number>();
-  
+  if (!showLabels) {
+return new Set<number>();
+}
+
   const pointsWithDistance = data.map(point => ({
     index: point.index,
     distance: Math.sqrt(point.x ** 2 + point.y ** 2)
   }));
-  
+
   // Sort by distance and get top N
   const topIndices = pointsWithDistance
     .sort((a, b) => b.distance - a.distance)
     .slice(0, maxLabels)
     .map(p => p.index);
-  
+
   return new Set(topIndices);
 }
 
@@ -49,19 +51,19 @@ export function getLabelPosition(x: number, y: number): {
   let textAnchor: 'start' | 'end' | 'middle' = 'start';
   let dx = 8;
   let dy = 0;
-  
+
   // Adjust horizontal position based on x coordinate
   if (x < 0) {
     textAnchor = 'end';
     dx = -8;
   }
-  
+
   // Adjust vertical position based on y coordinate
   if (y < 0) {
     dy = 12;
   } else {
     dy = -5;
   }
-  
+
   return { textAnchor, dx, dy };
 }

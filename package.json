@@ -15,7 +15,17 @@
     "build-all": "npm run build-ui && npm run build-gopca && npm run build-gocsv",
     "dev-ui": "npm run dev -w @gopca/ui-components",
     "dev-gopca": "npm run dev -w frontend",
-    "dev-gocsv": "npm run dev -w gocsv-frontend"
+    "dev-gocsv": "npm run dev -w gocsv-frontend",
+    "lint": "eslint . --ext .ts,.tsx",
+    "lint:fix": "eslint . --ext .ts,.tsx --fix",
+    "typecheck": "tsc --noEmit"
   },
-  "devDependencies": {}
+  "devDependencies": {
+    "@typescript-eslint/eslint-plugin": "^8.20.0",
+    "@typescript-eslint/parser": "^8.20.0",
+    "eslint": "^8.57.0",
+    "eslint-plugin-react": "^7.34.2",
+    "eslint-plugin-react-hooks": "^4.6.2",
+    "typescript": "^5.9.2"
+  }
 }

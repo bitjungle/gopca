@@ -36,28 +36,28 @@ function AppContent() {
     const [showDocumentation, setShowDocumentation] = useState(false);
     const [showDownloadConfirm, setShowDownloadConfirm] = useState(false);
     const [version, setVersion] = useState<string>('');
-    
+
     // Ref for scrolling to Step 2
     const step2Ref = useRef<HTMLDivElement>(null);
     // Ref for the CSV grid component
     const gridRef = useRef<any>(null);
-    
+
     // Listen for file-loaded events from backend
     useEffect(() => {
         const unsubscribe = EventsOn('file-loaded', (filename: string) => {
             setFileName(filename);
         });
-        
+
         // Check GoPCA status on startup
         checkGoPCAInstallation();
-        
+
         // Fetch version on startup
         GetVersion().then((v) => {
             setVersion(v);
         }).catch((err) => {
             console.error('Failed to get version:', err);
         });
-        
+
         // Set up drag and drop listener
         OnFileDrop(async (x: number, y: number, paths: string[]) => {
             if (paths.length > 0) {
@@ -70,31 +70,31 @@ function AppContent() {
                 }
             }
         }, false);
-        
+
         return () => {
             unsubscribe();
             OnFileDropOff();
         };
     }, []);
-    
+
     // Auto-scroll to Step 2 when file is loaded
     useEffect(() => {
         if (fileLoaded && fileData && step2Ref.current) {
             // Small delay to ensure DOM is updated
             setTimeout(() => {
-                step2Ref.current?.scrollIntoView({ 
-                    behavior: 'smooth', 
-                    block: 'start' 
+                step2Ref.current?.scrollIntoView({
+                    behavior: 'smooth',
+                    block: 'start'
                 });
             }, 100);
         }
     }, [fileLoaded, fileData]);
-    
+
     // Scroll to top function
     const scrollToTop = () => {
         window.scrollTo({ top: 0, behavior: 'smooth' });
     };
-    
+
     // Check GoPCA installation status
     const checkGoPCAInstallation = async () => {
         setIsCheckingGoPCA(true);
@@ -113,7 +113,7 @@ function AppContent() {
             setIsCheckingGoPCA(false);
         }
     };
-    
+
     // Handle file selection
     // Handle files dropped via Wails drag and drop
     const handleDroppedFile = async (filePath: string) => {
@@ -139,7 +139,7 @@ function AppContent() {
             setIsLoading(false);
         }
     };
-    
+
     // Load file from dialog
     const handleLoadFromDialog = async () => {
         setIsLoading(true);
@@ -172,7 +172,7 @@ function AppContent() {
             setIsLoading(false);
         }
     };
-    
+
     // Handle data changes
     const handleDataChange = async (rowIndex: number, colIndex: number, newValue: string) => {
         if (fileData && fileData.data[rowIndex][colIndex] !== newValue) {
@@ -187,7 +187,7 @@ function AppContent() {
             }
         }
     };
-    
+
     // Handle header changes
     const handleHeaderChange = async (colIndex: number, newHeader: string) => {
         if (fileData && fileData.headers[colIndex] !== newHeader) {
@@ -201,11 +201,13 @@ function AppContent() {
             }
         }
     };
-    
+
     // Handle validation
     const handleValidate = async () => {
-        if (!fileData) return;
-        
+        if (!fileData) {
+return;
+}
+
         setIsValidating(true);
         try {
             const result = await ValidateForGoPCA(fileData);
@@ -225,11 +227,13 @@ function AppContent() {
             setIsValidating(false);
         }
     };
-    
+
     // Handle missing value analysis
     const handleAnalyzeMissingValues = async () => {
-        if (!fileData) return;
-        
+        if (!fileData) {
+return;
+}
+
         try {
             const stats = await AnalyzeMissingValues(fileData);
             setMissingValueStats(stats);
@@ -239,11 +243,13 @@ function AppContent() {
             alert('Error analyzing missing values: ' + error);
         }
     };
-    
+
     // Handle missing value fill
     const handleFillMissingValues = async (strategy: string, column: string, value?: string) => {
-        if (!fileData) return;
-        
+        if (!fileData) {
+return;
+}
+
         try {
             const request = {
                 strategy,
@@ -263,7 +269,7 @@ function AppContent() {
             alert('Error filling missing values: ' + error);
         }
     };
-    
+
     // Handle import completion from wizard
     const handleImportComplete = (data: FileData) => {
         setFileData(data);
@@ -273,24 +279,23 @@ function AppContent() {
         setMissingValueStats(null);
         // Filename will be set by the event from backend
     };
-    
+
     // Handle transform completion
     const handleTransformComplete = (data: FileData) => {
         setFileData(data);
         setValidationResult(null);
         setShowTransformDialog(false);
     };
-    
-    
+
     return (
         <div className="flex flex-col h-screen bg-gray-50 dark:bg-gray-900 text-gray-900 dark:text-white transition-colors duration-200">
             {/* Header - matching GoPCA Desktop exactly */}
             <header className="sticky top-0 z-50 bg-white dark:bg-gray-800 shadow-lg backdrop-blur-sm bg-opacity-95 dark:bg-opacity-95">
                 <div className="flex items-center justify-between max-w-7xl mx-auto px-4 py-3 h-20">
                     <div className="flex items-center gap-4">
-                        <img 
-                            src={logo} 
-                            alt="GoCSV - GoPCA CSV Editor" 
+                        <img
+                            src={logo}
+                            alt="GoCSV - GoPCA CSV Editor"
                             className="h-12 cursor-pointer hover:opacity-90 transition-opacity flex-shrink-0"
                             onClick={scrollToTop}
                         />
@@ -329,7 +334,7 @@ function AppContent() {
                     </div>
                 </div>
             </header>
-            
+
             {/* Main content area */}
             <main className="flex-1 overflow-y-auto p-4 md:p-6 max-w-7xl mx-auto w-full">
                 <div className="space-y-6">
@@ -338,9 +343,9 @@ function AppContent() {
                         <h2 className="text-lg font-semibold mb-4 text-gray-800 dark:text-gray-200">
                             Step 1: Load Data
                         </h2>
-                        
+
                         <div className="space-y-4">
-                            <div 
+                            <div
                                 className="border-2 border-dashed rounded-lg p-8 text-center transition-colors border-gray-300 dark:border-gray-600 hover:border-gray-400 dark:hover:border-gray-500"
                             >
                                 <svg className="mx-auto h-12 w-12 text-gray-400 transition-colors" stroke="currentColor" fill="none" viewBox="0 0 48 48" aria-hidden="true">
@@ -354,11 +359,11 @@ function AppContent() {
                                     <span className="text-xs">CSV, TSV, or Excel files</span>
                                 </p>
                             </div>
-                            
+
                             <div className="text-center">
                                 <span className="text-gray-500 dark:text-gray-400 text-sm">or</span>
                             </div>
-                            
+
                             <div className="space-y-3">
                                 <div className="grid grid-cols-2 gap-2">
                                     <button
@@ -381,7 +386,7 @@ function AppContent() {
                                     <p><span className="font-medium">Import with Wizard:</span> Advanced options for Excel sheets, custom delimiters, header rows, and column selection</p>
                                 </div>
                             </div>
-                            
+
                             {fileName && (
                                 <div className="bg-gray-50 dark:bg-gray-700/50 rounded-lg p-3 flex items-center justify-between">
                                     <span className="text-sm font-medium text-gray-700 dark:text-gray-300">
@@ -404,7 +409,7 @@ function AppContent() {
                             )}
                         </div>
                     </div>
-                    
+
                     {/* Step 2: Edit Data */}
                     {fileLoaded && fileData && (
                         <div ref={step2Ref} className="bg-white dark:bg-gray-800 rounded-xl shadow-md p-6 animate-fadeIn">
@@ -416,7 +421,7 @@ function AppContent() {
                                     {fileData.rows} rows × {fileData.columns} columns
                                 </div>
                             </div>
-                            
+
                             {/* Data Quality Toolbar */}
                             <div className="flex items-center justify-between mb-4 p-3 bg-gray-50 dark:bg-gray-700 rounded-lg">
                                 <div className="flex items-center gap-4">
@@ -424,7 +429,9 @@ function AppContent() {
                                     <div className="w-px h-6 bg-gray-300 dark:bg-gray-600" />
                                     <button
                                         onClick={async () => {
-                                            if (!fileData) return;
+                                            if (!fileData) {
+return;
+}
                                             setIsAnalyzingQuality(true);
                                             try {
                                                 const report = await AnalyzeDataQuality(fileData);
@@ -504,9 +511,9 @@ function AppContent() {
                                     </div>
                                 )}
                             </div>
-                            
+
                             <div className="h-[600px] w-full">
-                                <CSVGrid 
+                                <CSVGrid
                                     ref={gridRef}
                                     data={fileData.data}
                                     headers={fileData.headers}
@@ -541,33 +548,35 @@ function AppContent() {
                             </div>
                         </div>
                     )}
-                    
+
                     {/* Step 3: Validate & Export */}
                     {fileLoaded && (
                         <div className="bg-white dark:bg-gray-800 rounded-xl shadow-md p-6 animate-fadeIn">
                             <h2 className="text-lg font-semibold mb-4 text-gray-800 dark:text-gray-200">
                                 Step 3: Validate & Export
                             </h2>
-                            
+
                             <div className="space-y-4">
                                 <div className="flex gap-4">
-                                    <button 
+                                    <button
                                         onClick={handleValidate}
                                         disabled={isValidating}
                                         className="flex-1 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
                                     >
                                         {isValidating ? 'Validating...' : 'Validate for GoPCA'}
                                     </button>
-                                    <button 
+                                    <button
                                         onClick={async () => {
-                                            if (!fileData) return;
-                                            
+                                            if (!fileData) {
+return;
+}
+
                                             // Check if GoPCA is installed
                                             if (!gopcaStatus?.installed) {
                                                 setShowDownloadConfirm(true);
                                                 return;
                                             }
-                                            
+
                                             try {
                                                 await OpenInGoPCA(fileData);
                                             } catch (error) {
@@ -578,26 +587,26 @@ function AppContent() {
                                         disabled={!gopcaStatus || isCheckingGoPCA}
                                         className="flex-1 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
                                     >
-                                        {isCheckingGoPCA ? 'Checking...' : 
-                                         !gopcaStatus?.installed ? 'Install GoPCA' : 
+                                        {isCheckingGoPCA ? 'Checking...' :
+                                         !gopcaStatus?.installed ? 'Install GoPCA' :
                                          'Open in GoPCA'}
                                     </button>
                                 </div>
-                                
+
                                 {validationResult && (
-                                    <ValidationResults 
+                                    <ValidationResults
                                         isValid={validationResult.isValid}
                                         messages={validationResult.messages}
                                         onClose={() => setValidationResult(null)}
                                     />
                                 )}
-                                
+
                                 <div className="border-t border-gray-200 dark:border-gray-700 pt-4">
                                     <h3 className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                                         Export Options
                                     </h3>
                                     <div className="grid grid-cols-2 gap-2">
-                                        <button 
+                                        <button
                                             onClick={async () => {
                                                 if (fileData) {
                                                     try {
@@ -612,7 +621,7 @@ function AppContent() {
                                         >
                                             Export as CSV
                                         </button>
-                                        <button 
+                                        <button
                                             onClick={async () => {
                                                 if (fileData) {
                                                     try {
@@ -634,14 +643,14 @@ function AppContent() {
                     )}
                 </div>
             </main>
-            
+
             {/* Missing Value Summary Dialog */}
-            <MissingValueSummary 
+            <MissingValueSummary
                 stats={missingValueStats}
                 isOpen={showMissingValueSummary}
                 onClose={() => setShowMissingValueSummary(false)}
             />
-            
+
             {/* Missing Value Fill Dialog */}
             <MissingValueDialog
                 isOpen={showMissingValueDialog}
@@ -650,21 +659,21 @@ function AppContent() {
                 columns={fileData?.headers || []}
                 columnTypes={fileData?.columnTypes || {}}
             />
-            
+
             {/* Data Quality Report Dashboard */}
             <DataQualityDashboard
                 report={dataQualityReport}
                 isOpen={showDataQualityReport}
                 onClose={() => setShowDataQualityReport(false)}
             />
-            
+
             {/* Import Wizard */}
             <ImportWizard
                 isOpen={showImportWizard}
                 onClose={() => setShowImportWizard(false)}
                 onImportComplete={handleImportComplete}
             />
-            
+
             {/* Data Transform Dialog */}
             {fileData && (
                 <DataTransformDialog
@@ -674,13 +683,13 @@ function AppContent() {
                     onTransformComplete={handleTransformComplete}
                 />
             )}
-            
+
             {/* Documentation Viewer */}
-            <DocumentationViewer 
+            <DocumentationViewer
                 isOpen={showDocumentation}
                 onClose={() => setShowDocumentation(false)}
             />
-            
+
             {/* Download GoPCA Confirmation */}
             <ConfirmDialog
                 isOpen={showDownloadConfirm}

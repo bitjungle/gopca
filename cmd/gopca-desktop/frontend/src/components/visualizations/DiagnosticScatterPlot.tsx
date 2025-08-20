@@ -1,340 +1,78 @@
 // Copyright 2025 bitjungle - Rune Mathisen. All rights reserved.
-// Use of this source code is governed by the MIT license
-// that can be found in the LICENSE file.
-// The author respectfully requests that it not be used for
-// military, warfare, or surveillance applications.
+// Plotly-based PCA Diagnostic Plot
 
-import React, { useRef, useState, useMemo, useCallback } from 'react';
-import { 
-  ScatterChart, 
-  Scatter, 
-  XAxis, 
-  YAxis, 
-  CartesianGrid, 
-  Tooltip, 
-  ResponsiveContainer,
-  ReferenceLine,
-  Cell,
-  Label
-} from 'recharts';
+import React from 'react';
+import { PCADiagnosticPlot, useTheme } from '@gopca/ui-components';
 import { PCAResult } from '../../types';
-import { TooltipProps } from '../../types/recharts';
-import { ExportButton } from '../ExportButton';
-import { PlotControls } from '../PlotControls';
-import { CustomPointWithLabel } from '../CustomPointWithLabel';
-import { calculateTopPoints } from '../../utils/labelUtils';
-import { useZoomPan } from '../../hooks/useZoomPan';
-import { useChartTheme } from '../../hooks/useChartTheme';
+import {
+  transformToDiagnosticPlotData,
+  createDiagnosticPlotConfig
+} from '../../utils/plotlyDataTransform';
 import { usePalette } from '../../contexts/PaletteContext';
-import { getQualitativeColor } from '../../utils/colorPalettes';
+import { getQualitativePalette } from '../../utils/colorPalettes';
 
 interface DiagnosticScatterPlotProps {
   pcaResult: PCAResult;
-  rowNames?: string[];
+  rowNames: string[];
+  groupColumn?: string | null;
+  groupLabels?: string[];
+  showThresholds?: boolean;
+  confidenceLevel?: number;
   showRowLabels?: boolean;
-  maxRowLabelsToShow?: number;
-  confidenceLevel?: '95' | '99';
+  maxLabelsToShow?: number;
 }
 
-export const DiagnosticScatterPlot: React.FC<DiagnosticScatterPlotProps> = ({ 
+export const DiagnosticScatterPlot: React.FC<DiagnosticScatterPlotProps> = ({
   pcaResult,
-  rowNames = [],
+  rowNames,
+  groupColumn,
+  groupLabels,
+  showThresholds = true,
+  confidenceLevel = 0.95,
   showRowLabels = false,
-  maxRowLabelsToShow = 10,
-  confidenceLevel: initialConfidenceLevel = '95'
+  maxLabelsToShow = 10
 }) => {
-  const chartRef = useRef<HTMLDivElement>(null);
-  const containerRef = useRef<HTMLDivElement>(null);
-  const [isFullscreen, setIsFullscreen] = useState(false);
-  const [hoveredPoint, setHoveredPoint] = useState<number | null>(null);
-  const [confidenceLevel, setConfidenceLevel] = useState<'95' | '99'>(initialConfidenceLevel);
-  const chartTheme = useChartTheme();
+  const { theme } = useTheme();
   const { qualitativePalette } = usePalette();
-  
-  // Check if metrics are available
-  if (!pcaResult.metrics || pcaResult.metrics.length === 0) {
-    return (
-      <div className="w-full h-full flex items-center justify-center text-gray-400">
-        <p>Diagnostic metrics are not available for Kernel PCA.</p>
-      </div>
-    );
-  }
 
-  // Use calculated confidence limits from PCA result, or fallback to defaults
-  const mahalanobisThreshold = confidenceLevel === '95' 
-    ? (pcaResult.t2_limit_95 || 3.0) 
-    : (pcaResult.t2_limit_99 || 3.0);
-  
-  const rssThreshold = confidenceLevel === '95'
-    ? (pcaResult.q_limit_95 || 0.03)
-    : (pcaResult.q_limit_99 || 0.03);
-  
-  // Color mapping for outlier types
-  const getColor = (outlierType: string) => {
-    // Map outlier types to palette colors for consistency
-    switch (outlierType) {
-      case 'normal':
-        return getQualitativeColor(2, qualitativePalette); // Third color (typically green)
-      case 'leverage':
-        return getQualitativeColor(1, qualitativePalette); // Second color (typically orange)
-      case 'poor-fit':
-        return getQualitativeColor(0, qualitativePalette); // First color (typically blue)
-      case 'strong-outlier':
-        return getQualitativeColor(3, qualitativePalette); // Fourth color (typically red)
-      default:
-        return getQualitativeColor(7, qualitativePalette); // Eighth color (typically gray)
-    }
-  };
+  // Get the color scheme from the current palette
+  const colorScheme = getQualitativePalette(qualitativePalette);
 
-  // Prepare data for scatter plot with x and y fields for shared utilities
-  const data = pcaResult.metrics.map((metric, index) => {
-    const mahalanobis = metric.mahalanobis || 0;
-    const rss = metric.rss || 0;
-    
-    // Determine outlier type based on thresholds
-    let outlierType = 'normal';
-    if (mahalanobis > mahalanobisThreshold && rss > rssThreshold) {
-      outlierType = 'strong-outlier';
-    } else if (mahalanobis > mahalanobisThreshold) {
-      outlierType = 'leverage';
-    } else if (rss > rssThreshold) {
-      outlierType = 'poor-fit';
-    }
-    
-    return {
-      index,
-      name: rowNames[index] || `Sample ${index + 1}`,
-      mahalanobis,
-      rss,
-      x: rss,  // X-axis is RSS
-      y: mahalanobis,  // Y-axis is Mahalanobis
-      outlierType,
-      color: getColor(outlierType)  // Pre-calculate color for consistency
-    };
-  });
-
-  // Calculate axis domains with padding
-  const mahalanobisValues = data.map(d => d.mahalanobis);
-  const rssValues = data.map(d => d.rss);
-  const maxMahalanobis = Math.max(...mahalanobisValues, mahalanobisThreshold * 1.2);
-  const maxRSS = Math.max(...rssValues, rssThreshold * 1.2);
-
-  // Initialize zoom/pan with calculated domains
-  const {
-    zoomDomain,
-    isPanning,
-    handleZoomIn,
-    handleZoomOut,
-    handleResetView,
-    handlePanStart,
-    handlePanMove,
-    handlePanEnd,
-    isZoomed
-  } = useZoomPan({
-    defaultXDomain: [0, maxRSS],       // X-axis is RSS
-    defaultYDomain: [0, maxMahalanobis], // Y-axis is Mahalanobis
-    maintainAspectRatio: false
-  });
-
-  const xDomain = zoomDomain.x || [0, maxRSS];
-  const yDomain = zoomDomain.y || [0, maxMahalanobis];
-  
-  // Calculate top points for labeling using shared utility
-  const topPoints = useMemo(() => 
-    calculateTopPoints(data as Array<{ x: number; y: number; index: number }>, showRowLabels, maxRowLabelsToShow),
-    [data, showRowLabels, maxRowLabelsToShow]
+  // Transform data to Plotly format
+  const plotlyData = transformToDiagnosticPlotData(
+    pcaResult,
+    rowNames,
+    groupLabels
   );
 
+  // Select appropriate thresholds based on confidence level
+  // T² limit represents Hotelling's T-squared (leverage in model space)
+  // Q limit represents Squared Prediction Error (residuals orthogonal to model)
+  const mahalanobisThreshold = confidenceLevel === 0.99 ?
+    pcaResult.t2_limit_99 : pcaResult.t2_limit_95;
+  const rssThreshold = confidenceLevel === 0.99 ?
+    pcaResult.q_limit_99 : pcaResult.q_limit_95;
 
-  // Create custom dot using shared component
-  const CustomDot = useCallback((props: any) => (
-    <CustomPointWithLabel
-      {...props}
-      topPoints={topPoints}
-      hoveredPoint={hoveredPoint}
-      showLabels={showRowLabels}
-      onMouseEnter={setHoveredPoint}
-      onMouseLeave={() => setHoveredPoint(null)}
-      chartTheme={chartTheme}
-      fontSize={10}
-    />
-  ), [topPoints, hoveredPoint, showRowLabels, chartTheme]);
-  
-  // Custom tooltip
-  const CustomTooltip = ({ active, payload }: TooltipProps) => {
-    if (active && payload && payload.length) {
-      const data = payload[0].payload;
-      return (
-        <div 
-          className="p-3 rounded shadow-lg border"
-          style={{ 
-            backgroundColor: chartTheme.tooltipBackgroundColor,
-            borderColor: chartTheme.tooltipBorderColor
-          }}
-        >
-          <p className="font-semibold" style={{ color: chartTheme.tooltipTextColor }}>{data.name}</p>
-          <p className="text-sm" style={{ color: chartTheme.tooltipTextColor }}>
-            RSS: {data.rss.toFixed(3)}
-          </p>
-          <p className="text-sm" style={{ color: chartTheme.tooltipTextColor }}>
-            Mahalanobis: {data.mahalanobis.toFixed(3)}
-          </p>
-          <p className="text-sm font-medium" style={{ color: getColor(data.outlierType) }}>
-            Type: {data.outlierType.replace('-', ' ')}
-          </p>
-        </div>
-      );
-    }
-    return null;
+  // Create config for Plotly component with label settings
+  const plotlyConfig = {
+    ...createDiagnosticPlotConfig(
+      showThresholds,
+      confidenceLevel,
+      theme,
+      colorScheme,
+      mahalanobisThreshold,
+      rssThreshold
+    ),
+    showLabels: showRowLabels,
+    labelThreshold: maxLabelsToShow
   };
 
   return (
-    <div className={`w-full h-full ${isFullscreen ? 'fixed inset-0 z-50 bg-white dark:bg-gray-900 p-4' : ''}`} ref={containerRef}>
-      <div className="h-full flex flex-col">
-        {/* Header */}
-        <div className="flex items-center justify-between mb-4">
-          <h4 className="text-md font-medium text-gray-700 dark:text-gray-300">
-            Diagnostic Plot: Mahalanobis Distance vs Residual Sum of Squares
-          </h4>
-          <div className="flex items-center gap-4">
-            {/* Confidence Level Selector */}
-            <div className="flex items-center gap-2">
-              <label className="text-sm text-gray-600 dark:text-gray-400">Confidence Level:</label>
-              <select
-                value={confidenceLevel}
-                onChange={(e) => setConfidenceLevel(e.target.value as '95' | '99')}
-                className="px-2 py-1 text-sm border rounded focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white dark:bg-gray-800 border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300"
-              >
-                <option value="95">95%</option>
-                <option value="99">99%</option>
-              </select>
-            </div>
-            <div className="flex items-center gap-2">
-            <PlotControls
-              onZoomIn={handleZoomIn}
-              onZoomOut={handleZoomOut}
-              onResetView={handleResetView}
-              onToggleFullscreen={() => setIsFullscreen(!isFullscreen)}
-              isFullscreen={isFullscreen}
-            />
-            <ExportButton 
-              chartRef={chartRef} 
-              fileName="diagnostic-plot-mahalanobis-rss"
-            />
-            </div>
-          </div>
-        </div>
-
-        {/* Chart */}
-        <div className="flex-1" ref={chartRef}>
-          <ResponsiveContainer width="100%" height="100%">
-            <ScatterChart
-              margin={{ top: 20, right: 20, bottom: 60, left: 80 }}
-            >
-              <CartesianGrid strokeDasharray="3 3" stroke={chartTheme.gridColor} />
-              
-              <XAxis 
-                type="number"
-                dataKey="rss"
-                domain={xDomain}
-                stroke={chartTheme.axisColor}
-                tickFormatter={(value) => value.toFixed(2)}
-                label={{ 
-                  value: 'Residual Sum of Squares (RSS)', 
-                  position: 'insideBottom', 
-                  offset: -10,
-                  style: { fill: chartTheme.textColor }
-                }}
-              />
-              
-              <YAxis 
-                type="number"
-                dataKey="mahalanobis"
-                domain={yDomain}
-                stroke={chartTheme.axisColor}
-                tickFormatter={(value) => value.toFixed(2)}
-                label={{ 
-                  value: 'Mahalanobis Distance', 
-                  angle: -90, 
-                  position: 'insideLeft',
-                  style: { fill: chartTheme.textColor }
-                }}
-              />
-              
-              {/* Reference lines for thresholds */}
-              <ReferenceLine 
-                x={rssThreshold} 
-                stroke="#EF4444" 
-                strokeDasharray="5 5"
-                strokeWidth={2}
-              >
-                <Label 
-                  value={`Q-limit (${confidenceLevel}%)`} 
-                  position="top"
-                  style={{ fill: '#EF4444', fontSize: 12 }}
-                />
-              </ReferenceLine>
-              
-              <ReferenceLine 
-                y={mahalanobisThreshold} 
-                stroke="#EF4444" 
-                strokeDasharray="5 5"
-                strokeWidth={2}
-              >
-                <Label 
-                  value={`T² limit (${confidenceLevel}%)`} 
-                  position="right"
-                  angle={-90}
-                  style={{ fill: '#EF4444', fontSize: 12 }}
-                />
-              </ReferenceLine>
-              
-              <Tooltip content={<CustomTooltip />} />
-              
-              <Scatter 
-                data={data} 
-                fill="#8884d8"
-                shape={showRowLabels ? <CustomDot /> : 'circle'}
-              >
-                {!showRowLabels ? (
-                  data.map((entry, index) => (
-                    <Cell key={`cell-${index}`} fill={entry.color} />
-                  ))
-                ) : null}
-              </Scatter>
-            </ScatterChart>
-          </ResponsiveContainer>
-        </div>
-
-        {/* Legend */}
-        <div className="mt-4 flex justify-center gap-6 text-sm">
-          <div className="flex items-center gap-2">
-            <div className="w-3 h-3 rounded-full" style={{ backgroundColor: '#10B981' }}></div>
-            <span className="text-gray-600 dark:text-gray-400">Normal</span>
-          </div>
-          <div className="flex items-center gap-2">
-            <div className="w-3 h-3 rounded-full" style={{ backgroundColor: '#F59E0B' }}></div>
-            <span className="text-gray-600 dark:text-gray-400">Leverage Point</span>
-          </div>
-          <div className="flex items-center gap-2">
-            <div className="w-3 h-3 rounded-full" style={{ backgroundColor: '#3B82F6' }}></div>
-            <span className="text-gray-600 dark:text-gray-400">Poor Model Fit</span>
-          </div>
-          <div className="flex items-center gap-2">
-            <div className="w-3 h-3 rounded-full" style={{ backgroundColor: '#EF4444' }}></div>
-            <span className="text-gray-600 dark:text-gray-400">Strong Outlier</span>
-          </div>
-        </div>
-
-        {/* Info text */}
-        <div className="mt-2 text-xs text-gray-500 dark:text-gray-400 text-center">
-          Points in different quadrants indicate different types of outliers. 
-          Top-right quadrant contains samples that are both outliers in the model space and have poor reconstruction.
-          {(pcaResult.t2_limit_95 || pcaResult.q_limit_95) && (
-            <span> Confidence limits are statistically calculated based on the F and χ² distributions.</span>
-          )}
-        </div>
-      </div>
+    <div style={{ width: '100%', height: '100%' }}>
+      <PCADiagnosticPlot
+        data={plotlyData}
+        config={plotlyConfig}
+      />
     </div>
   );
 };

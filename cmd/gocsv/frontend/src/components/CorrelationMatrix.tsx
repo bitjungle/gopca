@@ -12,7 +12,7 @@ interface CorrelationMatrixProps {
 
 export const CorrelationMatrix: React.FC<CorrelationMatrixProps> = ({ correlations }) => {
     const columns = Object.keys(correlations);
-    
+
     if (columns.length === 0) {
         return (
             <div className="text-center py-8 text-gray-500 dark:text-gray-400">
@@ -23,10 +23,18 @@ export const CorrelationMatrix: React.FC<CorrelationMatrixProps> = ({ correlatio
 
     const getColorForCorrelation = (value: number) => {
         const absValue = Math.abs(value);
-        if (absValue > 0.8) return value > 0 ? 'bg-red-500' : 'bg-blue-500';
-        if (absValue > 0.6) return value > 0 ? 'bg-red-400' : 'bg-blue-400';
-        if (absValue > 0.4) return value > 0 ? 'bg-red-300' : 'bg-blue-300';
-        if (absValue > 0.2) return value > 0 ? 'bg-red-200' : 'bg-blue-200';
+        if (absValue > 0.8) {
+return value > 0 ? 'bg-red-500' : 'bg-blue-500';
+}
+        if (absValue > 0.6) {
+return value > 0 ? 'bg-red-400' : 'bg-blue-400';
+}
+        if (absValue > 0.4) {
+return value > 0 ? 'bg-red-300' : 'bg-blue-300';
+}
+        if (absValue > 0.2) {
+return value > 0 ? 'bg-red-200' : 'bg-blue-200';
+}
         return 'bg-gray-200 dark:bg-gray-700';
     };
 
@@ -73,7 +81,7 @@ export const CorrelationMatrix: React.FC<CorrelationMatrixProps> = ({ correlatio
                     ))}
                 </tbody>
             </table>
-            
+
             {/* Legend */}
             <div className="mt-4 flex items-center justify-center gap-4 text-xs">
                 <div className="flex items-center gap-2">

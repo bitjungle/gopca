@@ -45,20 +45,20 @@ export const ChartContainer: React.FC<ChartContainerProps> = ({
           </h4>
           <div className="flex items-center gap-2">
             {additionalControls}
-            <PlotControls 
+            <PlotControls
               onResetView={onResetView || (() => {})}
               onToggleFullscreen={onToggleFullscreen}
               isFullscreen={isFullscreen}
               onZoomIn={onZoomIn}
               onZoomOut={onZoomOut}
             />
-            <ExportButton 
-              chartRef={chartRef} 
+            <ExportButton
+              chartRef={chartRef}
               fileName={exportFileName}
             />
           </div>
         </div>
-        
+
         {/* Chart content */}
         <div style={{ height: isFullscreen ? 'calc(100vh - 80px)' : 'calc(100% - 40px)' }}>
           {children}

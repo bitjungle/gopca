@@ -31,33 +31,33 @@ export { ThemeProvider, useTheme } from './contexts/ThemeContext';
 // Hooks
 export { useLoadingState, useMultipleLoadingStates } from './hooks/useLoadingState';
 export { useChartTheme } from './hooks/useChartTheme';
-export { 
-  useFocusManagement, 
-  useFocusRestore, 
-  useFocusTrap 
+export {
+  useFocusManagement,
+  useFocusRestore,
+  useFocusTrap
 } from './hooks/useFocusManagement';
-export { 
-  useKeyboardShortcuts, 
+export {
+  useKeyboardShortcuts,
   useKeyboardShortcut,
   useEscapeKey,
   getModifierKey,
   formatShortcut,
   commonShortcuts,
-  type KeyboardShortcut 
+  type KeyboardShortcut
 } from './hooks/useKeyboardShortcuts';
 
 // Utils
-export { 
-  showError, 
-  handleAsync, 
-  getErrorMessage, 
+export {
+  showError,
+  handleAsync,
+  getErrorMessage,
   configureErrorHandling,
   type ErrorInfo,
-  type ErrorConfig 
+  type ErrorConfig
 } from './utils/errorHandling';
-export { 
+export {
   getChartTheme,
-  type ChartTheme 
+  type ChartTheme
 } from './utils/chartTheme';
 export {
   ErrorTemplates,
@@ -70,30 +70,54 @@ export {
   type ErrorSeverity
 } from './utils/errorMessages';
 
-// Charts
+// Charts - Removed as part of Plotly migration
+// Chart components have been replaced with Plotly visualizations below
+
+// Plotly General Charts
 export {
-  ChartProvider,
-  useChartConfig,
-  ScatterChart,
-  BarChart,
-  LineChart,
-  ComposedChart,
-  // Native Recharts components for composition
-  Scatter,
-  Bar,
-  Line,
-  Cell,
-  Legend,
-  ReferenceLine,
-  RechartsTooltip,
+  PlotlyBarChart
+} from './charts/PlotlyBarChart';
+
+// Plotly PCA Visualizations
+export {
+  // Components
+  PCAScoresPlot,
+  PCA3DScoresPlot,
+  PCAScreePlot,
+  PCALoadingsPlot,
+  PCABiplot,
+  PCACircleOfCorrelations,
+  PCADiagnosticPlot,
+  PCAEigencorrelationPlot,
+  // Classes for advanced usage
+  PlotlyScoresPlot,
+  Plotly3DScoresPlot,
+  PlotlyScreePlot,
+  PlotlyLoadingsPlot,
+  PlotlyBiplot,
+  PlotlyCircleOfCorrelations,
+  PlotlyDiagnosticPlot,
+  PlotlyEigencorrelationPlot,
   // Types
-  type ChartLibrary,
-  type ChartDataPoint,
-  type ChartDomain,
-  type ChartMargin,
-  type BaseChartProps,
-  type ScatterChartProps,
-  type BarChartProps,
-  type LineChartProps,
-  type ComposedChartProps,
-} from './charts';
+  type ScoresPlotData,
+  type ScoresPlotConfig,
+  type Scores3DPlotData,
+  type Scores3DPlotConfig,
+  type ScreePlotData,
+  type ScreePlotConfig,
+  type LoadingsPlotData,
+  type LoadingsPlotConfig,
+  type BiplotData,
+  type BiplotConfig,
+  type CircleOfCorrelationsData,
+  type CircleOfCorrelationsConfig,
+  type DiagnosticPlotData,
+  type DiagnosticPlotConfig,
+  type EigencorrelationPlotData,
+  type EigencorrelationPlotConfig
+} from './charts/pca';
+
+// Plotly Export Utils
+export {
+  setupPlotlyWailsIntegration
+} from './charts/utils/plotlyExport';

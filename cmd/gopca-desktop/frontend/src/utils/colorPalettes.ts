@@ -16,7 +16,7 @@ export const QUALITATIVE_PALETTES: Record<QualitativePaletteName, string[]> = {
   // Seaborn deep/default palette
   deep: [
     '#4C72B0', // blue
-    '#DD8452', // orange  
+    '#DD8452', // orange
     '#55A868', // green
     '#C44E52', // red
     '#8172B3', // purple
@@ -24,9 +24,9 @@ export const QUALITATIVE_PALETTES: Record<QualitativePaletteName, string[]> = {
     '#DA8BC3', // pink
     '#8C8C8C', // gray
     '#CCB974', // tan
-    '#64B5CD', // light blue
+    '#64B5CD' // light blue
   ],
-  
+
   // Seaborn pastel palette (lighter version)
   pastel: [
     '#A1C9F4', // light blue
@@ -38,9 +38,9 @@ export const QUALITATIVE_PALETTES: Record<QualitativePaletteName, string[]> = {
     '#FAB0E4', // light pink
     '#CFCFCF', // light gray
     '#FFFEA3', // light yellow
-    '#B9F2F0', // light cyan
+    '#B9F2F0' // light cyan
   ],
-  
+
   // Seaborn dark palette (darker version)
   dark: [
     '#023EFF', // dark blue
@@ -52,9 +52,9 @@ export const QUALITATIVE_PALETTES: Record<QualitativePaletteName, string[]> = {
     '#F14CC1', // dark pink
     '#4D4D4D', // dark gray
     '#FFC400', // dark yellow
-    '#00D7FF', // dark cyan
+    '#00D7FF' // dark cyan
   ],
-  
+
   // Colorblind safe palette (Paul Tol's palette)
   colorblind: [
     '#0173B2', // blue
@@ -66,9 +66,9 @@ export const QUALITATIVE_PALETTES: Record<QualitativePaletteName, string[]> = {
     '#949494', // gray
     '#ECE133', // yellow
     '#56B4E9', // light blue
-    '#208B3A', // dark green
+    '#208B3A' // dark green
   ],
-  
+
   // HUSL palette - perceptually uniform colors
   husl: [
     '#F77189', // red
@@ -80,7 +80,7 @@ export const QUALITATIVE_PALETTES: Record<QualitativePaletteName, string[]> = {
     '#E85B7A', // pink
     '#9C9C9C', // gray
     '#C29D4F', // tan
-    '#5FBCD3', // light blue
+    '#5FBCD3' // light blue
   ]
 };
 
@@ -97,9 +97,9 @@ export const SEQUENTIAL_PALETTES: Record<SequentialPaletteName, string[]> = {
     '#eb9f7e', // orange-pink
     '#fdc086', // light orange
     '#fee8b6', // light yellow
-    '#ffffd4', // very light yellow
+    '#ffffd4' // very light yellow
   ],
-  
+
   // Viridis palette - scientific standard
   viridis: [
     '#440154', // dark purple
@@ -111,63 +111,63 @@ export const SEQUENTIAL_PALETTES: Record<SequentialPaletteName, string[]> = {
     '#35b779', // green
     '#6ece58', // light green
     '#b5de2b', // yellow-green
-    '#fde725', // yellow
+    '#fde725' // yellow
   ],
-  
+
   // Blues palette - single hue
   blues: [
     '#f7fbff', // very light blue
     '#deebf7', // light blue
-    '#c6dbef', // 
-    '#9ecae1', // 
-    '#6baed6', // 
+    '#c6dbef', //
+    '#9ecae1', //
+    '#6baed6', //
     '#4292c6', // medium blue
-    '#2171b5', // 
-    '#08519c', // 
-    '#08306b', // dark blue
+    '#2171b5', //
+    '#08519c', //
+    '#08306b' // dark blue
   ],
-  
+
   // Reds palette - single hue
   reds: [
     '#fff5f0', // very light red
     '#fee0d2', // light red
-    '#fcbba1', // 
-    '#fc9272', // 
-    '#fb6a4a', // 
+    '#fcbba1', //
+    '#fc9272', //
+    '#fb6a4a', //
     '#ef3b2c', // medium red
-    '#cb181d', // 
-    '#a50f15', // 
-    '#67000d', // dark red
+    '#cb181d', //
+    '#a50f15', //
+    '#67000d' // dark red
   ],
-  
+
   // Crest palette - blue to purple (seaborn's crest)
   crest: [
     '#f0f9ff', // very light blue
     '#d0e7f7', // light blue
-    '#a8d5e2', // 
-    '#7dc0d4', // 
-    '#4fa8c5', // 
+    '#a8d5e2', //
+    '#7dc0d4', //
+    '#4fa8c5', //
     '#2e8ab5', // medium blue
-    '#236ba3', // 
+    '#236ba3', //
     '#22508c', // blue-purple
     '#1e3670', // dark blue-purple
-    '#071e58', // very dark purple
+    '#071e58' // very dark purple
   ],
-  
+
   // Mako palette - blue to green (seaborn's mako)
   mako: [
     '#0B0405', // very dark
     '#1A1A2D', // dark blue
-    '#233447', // 
-    '#1F5061', // 
+    '#233447', //
+    '#1F5061', //
     '#166B7D', // blue-green
-    '#0C8B8C', // 
+    '#0C8B8C', //
     '#14A789', // green-blue
     '#3DBC74', // green
     '#85CE58', // light green
-    '#DEF5E5', // very light green
+    '#DEF5E5' // very light green
   ],
-  
+
   // Flare palette - yellow to purple (seaborn's flare)
   flare: [
     '#E3F2FD', // very light blue
@@ -179,10 +179,9 @@ export const SEQUENTIAL_PALETTES: Record<SequentialPaletteName, string[]> = {
     '#F8870E', // yellow-orange
     '#FA9B0E', // yellow
     '#FDB417', // bright yellow
-    '#FFD125', // light yellow
+    '#FFD125' // light yellow
   ]
 };
-
 
 // Helper function to get a qualitative palette
 export function getQualitativePalette(name: QualitativePaletteName = 'deep'): string[] {
@@ -215,17 +214,17 @@ export function getSequentialColor(value: number, paletteName: SequentialPalette
   // Clamp value between 0 and 1
   const normalizedValue = Math.max(0, Math.min(1, value));
   const palette = getSequentialPalette(paletteName);
-  
+
   // Calculate position in palette
   const paletteIndex = normalizedValue * (palette.length - 1);
   const lowerIndex = Math.floor(paletteIndex);
   const upperIndex = Math.ceil(paletteIndex);
-  
+
   // If we're exactly on a color, return it
   if (lowerIndex === upperIndex) {
     return palette[lowerIndex];
   }
-  
+
   // Otherwise, interpolate between two colors
   const ratio = paletteIndex - lowerIndex;
   return interpolateColors(
@@ -246,16 +245,16 @@ function interpolateColors(color1: string, color2: string, ratio: number): strin
   // Convert hex to RGB
   const rgb1 = hexToRgb(color1);
   const rgb2 = hexToRgb(color2);
-  
+
   if (!rgb1 || !rgb2) {
     return color1; // Fallback
   }
-  
+
   // Interpolate RGB values
   const r = Math.round(rgb1.r + (rgb2.r - rgb1.r) * ratio);
   const g = Math.round(rgb1.g + (rgb2.g - rgb1.g) * ratio);
   const b = Math.round(rgb1.b + (rgb2.b - rgb1.b) * ratio);
-  
+
   // Convert back to hex
   return rgbToHex(r, g, b);
 }
@@ -269,7 +268,7 @@ function hexToRgb(hex: string): { r: number; g: number; b: number } | null {
     ? {
         r: parseInt(result[1], 16),
         g: parseInt(result[2], 16),
-        b: parseInt(result[3], 16),
+        b: parseInt(result[3], 16)
       }
     : null;
 }
@@ -290,15 +289,15 @@ function rgbToHex(r: number, g: number, b: number): string {
  * @returns Hex color string
  */
 export function getSequentialColorScale(
-  value: number, 
-  min: number, 
+  value: number,
+  min: number,
   max: number,
   paletteName: SequentialPaletteName = 'rocket'
 ): string {
   if (max === min) {
     return getSequentialColor(0.5, paletteName); // Middle color if no range
   }
-  
+
   const normalized = (value - min) / (max - min);
   return getSequentialColor(normalized, paletteName);
 }
@@ -315,11 +314,11 @@ export function createQualitativeColorMap(
 ): Map<string, string> {
   const uniqueGroups = [...new Set(groupLabels)].sort();
   const colorMap = new Map<string, string>();
-  
+
   uniqueGroups.forEach((group, index) => {
     colorMap.set(group, getQualitativeColor(index, paletteName));
   });
-  
+
   return colorMap;
 }
 

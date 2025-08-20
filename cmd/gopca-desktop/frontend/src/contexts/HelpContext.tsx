@@ -62,20 +62,20 @@ export const HelpProvider: React.FC<HelpProviderProps> = ({ children }) => {
 
   const registerHelpElement = useCallback((element: HTMLElement, helpKey: string) => {
     helpElements.set(element, helpKey);
-    
+
     const handleMouseEnter = () => setHelpKey(helpKey);
     const handleMouseLeave = () => setHelpKey(null);
-    
+
     element.addEventListener('mouseenter', handleMouseEnter);
     element.addEventListener('mouseleave', handleMouseLeave);
-    
+
     // Store handlers for cleanup
     (element as HTMLElementWithHelpHandlers)._helpHandlers = { handleMouseEnter, handleMouseLeave };
   }, [helpElements, setHelpKey]);
 
   const unregisterHelpElement = useCallback((element: HTMLElement) => {
     helpElements.delete(element);
-    
+
     const handlers = (element as HTMLElementWithHelpHandlers)._helpHandlers;
     if (handlers) {
       element.removeEventListener('mouseenter', handlers.handleMouseEnter);
@@ -100,7 +100,7 @@ export const HelpProvider: React.FC<HelpProviderProps> = ({ children }) => {
         currentHelpKey,
         setHelpKey,
         registerHelpElement,
-        unregisterHelpElement,
+        unregisterHelpElement
       }}
     >
       {children}

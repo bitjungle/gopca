@@ -14,10 +14,10 @@ export interface SkipLinksProps {
  * SkipLinks component provides keyboard navigation shortcuts to jump to main content areas
  * These links are only visible when focused (for keyboard users)
  */
-export const SkipLinks: React.FC<SkipLinksProps> = ({ 
+export const SkipLinks: React.FC<SkipLinksProps> = ({
   links = [
     { href: '#main-content', label: 'Skip to main content' },
-    { href: '#navigation', label: 'Skip to navigation' },
+    { href: '#navigation', label: 'Skip to navigation' }
   ]
 }) => {
   return (

@@ -18,24 +18,24 @@ import { EllipseParams } from '../types';
 export function generateEllipsePoints(ellipse: EllipseParams, steps: number = 50): Array<{ x: number; y: number }> {
   const { centerX, centerY, majorAxis, minorAxis, angle } = ellipse;
   const points = [];
-  
+
   for (let i = 0; i <= steps; i++) {
     const t = (i / steps) * 2 * Math.PI;
     // Ellipse in local coordinates
     const x = majorAxis * Math.cos(t);
     const y = minorAxis * Math.sin(t);
-    
+
     // Apply rotation
     const rotatedX = x * Math.cos(angle) - y * Math.sin(angle);
     const rotatedY = x * Math.sin(angle) + y * Math.cos(angle);
-    
+
     // Translate to center
     points.push({
       x: centerX + rotatedX,
       y: centerY + rotatedY
     });
   }
-  
+
   return points;
 }
 

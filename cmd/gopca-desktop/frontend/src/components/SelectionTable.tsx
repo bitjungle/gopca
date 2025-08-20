@@ -22,7 +22,7 @@ export const SelectionTable: React.FC<SelectionTableProps> = ({
   data,
   title,
   onRowSelectionChange,
-  onColumnSelectionChange,
+  onColumnSelectionChange
 }) => {
   // Selection states
   const [rowSelection, setRowSelection] = React.useState<Record<number, boolean>>({});
@@ -49,8 +49,10 @@ export const SelectionTable: React.FC<SelectionTableProps> = ({
 
   // Notify parent of selection changes
   useEffect(() => {
-    if (Object.keys(rowSelection).length === 0) return;
-    
+    if (Object.keys(rowSelection).length === 0) {
+return;
+}
+
     if (onRowSelectionChange) {
       const selectedIndices = Object.keys(rowSelection)
         .filter(key => rowSelection[Number(key)])
@@ -60,8 +62,10 @@ export const SelectionTable: React.FC<SelectionTableProps> = ({
   }, [rowSelection, onRowSelectionChange]);
 
   useEffect(() => {
-    if (Object.keys(columnSelection).length === 0) return;
-    
+    if (Object.keys(columnSelection).length === 0) {
+return;
+}
+
     if (onColumnSelectionChange) {
       const selectedIndices = Object.keys(columnSelection)
         .filter(key => columnSelection[Number(key)])
@@ -79,7 +83,7 @@ export const SelectionTable: React.FC<SelectionTableProps> = ({
     count: rowNames.length,
     getScrollElement: () => rowListRef.current,
     estimateSize: () => 35,
-    overscan: 5,
+    overscan: 5
   });
 
   const colVirtualizer = useVirtualizer({
@@ -87,7 +91,7 @@ export const SelectionTable: React.FC<SelectionTableProps> = ({
     getScrollElement: () => colListRef.current,
     estimateSize: () => 120,
     horizontal: true,
-    overscan: 5,
+    overscan: 5
   });
 
   // Calculate selected counts
@@ -119,18 +123,18 @@ export const SelectionTable: React.FC<SelectionTableProps> = ({
     const maxRows = Math.min(10, data.length);
     const maxCols = Math.min(10, headers.length);
     const preview: number[][] = [];
-    
+
     for (let i = 0; i < maxRows; i++) {
       preview.push(data[i].slice(0, maxCols));
     }
-    
+
     return preview;
   }, [data, headers]);
 
   return (
     <div className="flex flex-col h-full">
       {title && <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">{title}</h3>}
-      
+
       {/* Info banner */}
       <div className="bg-blue-100 dark:bg-blue-900 border border-blue-300 dark:border-blue-700 rounded-lg p-3 mb-4">
         <p className="text-sm text-blue-800 dark:text-blue-200">
@@ -151,7 +155,7 @@ export const SelectionTable: React.FC<SelectionTableProps> = ({
               {selectedRowCount === rowNames.length ? 'Deselect All' : 'Select All'}
             </button>
           </div>
-          
+
           <div
             ref={rowListRef}
             className="h-[calc(100%-40px)] overflow-auto border border-gray-200 dark:border-gray-700 rounded"
@@ -160,7 +164,7 @@ export const SelectionTable: React.FC<SelectionTableProps> = ({
               style={{
                 height: `${rowVirtualizer.getTotalSize()}px`,
                 width: '100%',
-                position: 'relative',
+                position: 'relative'
               }}
             >
               {rowVirtualizer.getVirtualItems().map((virtualRow) => (
@@ -172,7 +176,7 @@ export const SelectionTable: React.FC<SelectionTableProps> = ({
                     left: 0,
                     width: '100%',
                     height: `${virtualRow.size}px`,
-                    transform: `translateY(${virtualRow.start}px)`,
+                    transform: `translateY(${virtualRow.start}px)`
                   }}
                   className="flex items-center px-2 hover:bg-gray-50 dark:hover:bg-gray-700"
                 >
@@ -209,11 +213,11 @@ export const SelectionTable: React.FC<SelectionTableProps> = ({
                 {selectedColCount === headers.length ? 'Deselect All' : 'Select All'}
               </button>
             </div>
-            
+
             <div
               ref={colListRef}
               className="h-20 overflow-x-auto overflow-y-hidden border border-gray-200 dark:border-gray-700 rounded"
-              style={{ 
+              style={{
                 overflowX: 'auto',
                 overflowY: 'hidden',
                 maxWidth: '100%'
@@ -223,7 +227,7 @@ export const SelectionTable: React.FC<SelectionTableProps> = ({
                 style={{
                   width: `${colVirtualizer.getTotalSize()}px`,
                   height: '100%',
-                  position: 'relative',
+                  position: 'relative'
                 }}
               >
                 {colVirtualizer.getVirtualItems().map((virtualCol) => (
@@ -235,7 +239,7 @@ export const SelectionTable: React.FC<SelectionTableProps> = ({
                       left: 0,
                       height: '100%',
                       width: `${virtualCol.size}px`,
-                      transform: `translateX(${virtualCol.start}px)`,
+                      transform: `translateX(${virtualCol.start}px)`
                     }}
                     className="flex flex-col items-center justify-center px-2 hover:bg-gray-50 dark:hover:bg-gray-700"
                   >

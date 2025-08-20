@@ -57,13 +57,13 @@ export function useEllipses({
       setError(null);
       return;
     }
-    
+
     // Validate inputs
     if (scores.length !== groupLabels.length) {
       setError(`Data mismatch: ${scores.length} scores but ${groupLabels.length} labels`);
       return;
     }
-    
+
     if (scores.length === 0 || !scores[0] || scores[0].length === 0) {
       setError('Invalid scores data');
       return;
@@ -74,7 +74,7 @@ export function useEllipses({
       const calculateEllipses = async () => {
         setIsLoading(true);
         setError(null);
-        
+
         // Create new abort controller for this request
         const abortController = new AbortController();
         abortControllerRef.current = abortController;
@@ -86,7 +86,7 @@ export function useEllipses({
             xComponent,
             yComponent
           });
-          
+
           // Check if this request was aborted
           if (abortController.signal.aborted) {
             return;
@@ -96,13 +96,13 @@ export function useEllipses({
             setEllipses90(response.groupEllipses90);
             setEllipses95(response.groupEllipses95);
             setEllipses99(response.groupEllipses99);
-            
+
             // Check if any ellipses were actually calculated
-            const hasAnyEllipses = 
+            const hasAnyEllipses =
               (response.groupEllipses90 && Object.keys(response.groupEllipses90).length > 0) ||
               (response.groupEllipses95 && Object.keys(response.groupEllipses95).length > 0) ||
               (response.groupEllipses99 && Object.keys(response.groupEllipses99).length > 0);
-              
+
             if (!hasAnyEllipses) {
               setError('No ellipses could be calculated. Groups may have too few points or singular distributions.');
             }
@@ -129,7 +129,7 @@ export function useEllipses({
 
       calculateEllipses();
     }, 100); // 100ms debounce
-    
+
     // Cleanup function
     return () => {
       if (timeoutRef.current) {

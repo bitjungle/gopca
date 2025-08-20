@@ -313,7 +313,7 @@ const {
 
 - **Zoom/Pan Support**: Use the `useZoomPan` hook if applicable
 - **Export Functionality**: Provide meaningful filenames (e.g., `scores-plot-PC1-vs-PC2`)
-- **Responsive Design**: Use `ResponsiveContainer` from Recharts
+- **Responsive Design**: Plots should automatically resize to fill their containers
 - **TypeScript Types**: Define clear prop interfaces
 - **Tooltips**: Use React Portals for consistent tooltips (never use native `title` attribute)
 - **Shared Components**: Prefer shared utilities (`labelUtils`, `ellipseUtils`) over duplicated code

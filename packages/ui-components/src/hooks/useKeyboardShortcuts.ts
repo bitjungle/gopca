@@ -33,21 +33,37 @@ export const useKeyboardShortcuts = (shortcuts: KeyboardShortcut[]) => {
 
       // Check each shortcut
       for (const shortcut of shortcuts) {
-        if (shortcut.enabled === false) continue;
+        if (shortcut.enabled === false) {
+continue;
+}
 
         // Check if the key matches
-        if (event.key.toLowerCase() !== shortcut.key.toLowerCase()) continue;
+        if (event.key.toLowerCase() !== shortcut.key.toLowerCase()) {
+continue;
+}
 
         // Check modifiers
         const ctrlOrCmd = navigator.platform.includes('Mac') ? event.metaKey : event.ctrlKey;
         const expectedCtrlOrCmd = shortcut.ctrl || shortcut.cmd;
 
-        if (expectedCtrlOrCmd && !ctrlOrCmd) continue;
-        if (!expectedCtrlOrCmd && ctrlOrCmd) continue;
-        if (shortcut.shift && !event.shiftKey) continue;
-        if (!shortcut.shift && event.shiftKey) continue;
-        if (shortcut.alt && !event.altKey) continue;
-        if (!shortcut.alt && event.altKey) continue;
+        if (expectedCtrlOrCmd && !ctrlOrCmd) {
+continue;
+}
+        if (!expectedCtrlOrCmd && ctrlOrCmd) {
+continue;
+}
+        if (shortcut.shift && !event.shiftKey) {
+continue;
+}
+        if (!shortcut.shift && event.shiftKey) {
+continue;
+}
+        if (shortcut.alt && !event.altKey) {
+continue;
+}
+        if (!shortcut.alt && event.altKey) {
+continue;
+}
 
         // Don't trigger shortcuts when typing in inputs (unless it's a global shortcut)
         const target = event.target as HTMLElement;
@@ -73,7 +89,7 @@ export const useKeyboardShortcuts = (shortcuts: KeyboardShortcut[]) => {
 
   return {
     isHelpVisible,
-    setIsHelpVisible,
+    setIsHelpVisible
   };
 };
 
@@ -89,7 +105,7 @@ export const getModifierKey = (): string => {
  */
 export const formatShortcut = (shortcut: KeyboardShortcut): string => {
   const parts: string[] = [];
-  
+
   if (shortcut.ctrl || shortcut.cmd) {
     parts.push(getModifierKey());
   }
@@ -99,14 +115,14 @@ export const formatShortcut = (shortcut: KeyboardShortcut): string => {
   if (shortcut.alt) {
     parts.push('Alt');
   }
-  
+
   // Format the key nicely
-  const key = shortcut.key.length === 1 
-    ? shortcut.key.toUpperCase() 
+  const key = shortcut.key.length === 1
+    ? shortcut.key.toUpperCase()
     : shortcut.key.charAt(0).toUpperCase() + shortcut.key.slice(1);
-  
+
   parts.push(key);
-  
+
   return parts.join('+');
 };
 
@@ -118,58 +134,58 @@ export const commonShortcuts = {
     key: 'o',
     ctrl: true,
     cmd: true,
-    description: 'Open file',
+    description: 'Open file'
   },
   saveResults: {
     key: 's',
     ctrl: true,
     cmd: true,
-    description: 'Save results',
+    description: 'Save results'
   },
   exportData: {
     key: 'e',
     ctrl: true,
     cmd: true,
-    description: 'Export data',
+    description: 'Export data'
   },
   settings: {
     key: ',',
     ctrl: true,
     cmd: true,
-    description: 'Open settings',
+    description: 'Open settings'
   },
   toggleTheme: {
     key: 't',
     alt: true,
-    description: 'Toggle theme',
+    description: 'Toggle theme'
   },
   closeDialog: {
     key: 'Escape',
-    description: 'Close dialog/modal',
+    description: 'Close dialog/modal'
   },
   help: {
     key: '?',
-    description: 'Show keyboard shortcuts',
+    description: 'Show keyboard shortcuts'
   },
   refresh: {
     key: 'r',
     ctrl: true,
     cmd: true,
-    description: 'Refresh data',
+    description: 'Refresh data'
   },
   undo: {
     key: 'z',
     ctrl: true,
     cmd: true,
-    description: 'Undo',
+    description: 'Undo'
   },
   redo: {
     key: 'z',
     ctrl: true,
     cmd: true,
     shift: true,
-    description: 'Redo',
-  },
+    description: 'Redo'
+  }
 };
 
 /**
@@ -190,7 +206,7 @@ export const useKeyboardShortcut = (
     key,
     ...options,
     description: '',
-    handler,
+    handler
   };
 
   useKeyboardShortcuts([shortcut]);

@@ -25,7 +25,7 @@ export const getChartTheme = (isDark: boolean): ChartTheme => {
       referenceLineColor: '#6B7280',
       tooltipBackgroundColor: '#1F2937',
       tooltipBorderColor: '#374151',
-      tooltipTextColor: '#E5E7EB',
+      tooltipTextColor: '#E5E7EB'
     };
   } else {
     return {
@@ -36,7 +36,7 @@ export const getChartTheme = (isDark: boolean): ChartTheme => {
       referenceLineColor: '#D1D5DB',
       tooltipBackgroundColor: '#FFFFFF',
       tooltipBorderColor: '#E5E7EB',
-      tooltipTextColor: '#374151',
+      tooltipTextColor: '#374151'
     };
   }
 };

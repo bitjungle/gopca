@@ -10,7 +10,7 @@ export { MissingValueSummary } from './MissingValueSummary';
 export { MissingValueDialog } from './MissingValueDialog';
 export { DataQualityDashboard } from './DataQualityDashboard';
 export { QualityScoreCard } from './QualityScoreCard';
-export { DistributionChart } from './DistributionChart';
+export { PlotlyDistributionChart } from './PlotlyDistributionChart';
 export { CorrelationMatrix } from './CorrelationMatrix';
 export { UndoRedoControls } from './UndoRedoControls';
 export { ImportWizard } from './ImportWizard';
@@ -19,10 +19,10 @@ export { DataPreview } from './DataPreview';
 export { DataTransformDialog } from './DataTransformDialog';
 export { DocumentationViewer } from './DocumentationViewer';
 export { RenameDialog } from './RenameDialog';
-export { 
-    TargetColumnIcon, 
-    CategoryColumnIcon, 
-    TargetColumnMenuIcon, 
+export {
+    TargetColumnIcon,
+    CategoryColumnIcon,
+    TargetColumnMenuIcon,
     CategoryColumnMenuIcon,
     PencilIcon,
     PlusCircleIcon,

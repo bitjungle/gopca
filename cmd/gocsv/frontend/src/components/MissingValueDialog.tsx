@@ -25,7 +25,9 @@ export const MissingValueDialog: React.FC<MissingValueDialogProps> = ({
     const [selectedColumn, setSelectedColumn] = useState('');
     const [customValue, setCustomValue] = useState('');
 
-    if (!isOpen) return null;
+    if (!isOpen) {
+return null;
+}
 
     const handleFill = () => {
         onFill(strategy, selectedColumn, strategy === 'custom' ? customValue : undefined);
@@ -38,7 +40,7 @@ export const MissingValueDialog: React.FC<MissingValueDialogProps> = ({
         }
 
         const colType = columnTypes[selectedColumn] || 'numeric';
-        
+
         if (colType === 'numeric') {
             return ['mean', 'median', 'mode', 'forward', 'backward', 'custom'];
         } else {
@@ -131,10 +133,10 @@ export const MissingValueDialog: React.FC<MissingValueDialogProps> = ({
                     <div className="bg-gray-50 dark:bg-gray-700 rounded-md p-3 text-sm text-gray-600 dark:text-gray-400">
                         {strategy === 'mean' && "Replace missing values with the column's average."}
                         {strategy === 'median' && "Replace missing values with the column's middle value."}
-                        {strategy === 'mode' && "Replace missing values with the most frequent value."}
-                        {strategy === 'forward' && "Replace missing values with the previous non-missing value."}
-                        {strategy === 'backward' && "Replace missing values with the next non-missing value."}
-                        {strategy === 'custom' && "Replace missing values with a specific value."}
+                        {strategy === 'mode' && 'Replace missing values with the most frequent value.'}
+                        {strategy === 'forward' && 'Replace missing values with the previous non-missing value.'}
+                        {strategy === 'backward' && 'Replace missing values with the next non-missing value.'}
+                        {strategy === 'custom' && 'Replace missing values with a specific value.'}
                     </div>
                 </div>
 

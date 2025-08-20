@@ -4,11 +4,11 @@
 // The author respectfully requests that it not be used for
 // military, warfare, or surveillance applications.
 
-import { 
-  createQualitativeColorMap, 
+import {
+  createQualitativeColorMap,
   getSequentialColorScale,
   QualitativePaletteName,
-  SequentialPaletteName 
+  SequentialPaletteName
 } from './colorPalettes';
 
 export interface ColorMappingResult {
@@ -28,7 +28,7 @@ export const getColorForDataPoint = (
   let color = '#3B82F6'; // Default color
   let group = 'Unknown';
   let value: number | undefined;
-  
+
   if (groupType === 'categorical' && groupLabels) {
     group = groupLabels[index] || 'Unknown';
     if (group && qualitativePalette) {
@@ -48,6 +48,6 @@ export const getColorForDataPoint = (
       }
     }
   }
-  
+
   return { color, group, value };
 };

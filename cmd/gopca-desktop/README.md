@@ -6,7 +6,7 @@ Professional PCA analysis application with interactive visualizations.
 
 - **Backend**: Go with Wails v2 bindings (`app.go`)
 - **Frontend**: React + TypeScript + Vite
-- **Visualizations**: Recharts for all plots (scores, loadings, biplot, scree)
+- **Visualizations**: Plotly.js for all plots (scores, loadings, biplot, scree)
 - **Shared**: Uses `@gopca/ui-components` via npm workspace
 - **Core**: Reuses PCA engine from `internal/core`
 

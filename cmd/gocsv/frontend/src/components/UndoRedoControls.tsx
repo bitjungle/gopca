@@ -43,7 +43,9 @@ export const UndoRedoControls: React.FC<UndoRedoControlsProps> = ({ className = 
     };
 
     const handleUndo = async () => {
-        if (!fileData) return;
+        if (!fileData) {
+return;
+}
         try {
             const updatedData = await Undo(fileData);
             if (updatedData && onDataUpdate) {
@@ -55,7 +57,9 @@ export const UndoRedoControls: React.FC<UndoRedoControlsProps> = ({ className = 
     };
 
     const handleRedo = async () => {
-        if (!fileData) return;
+        if (!fileData) {
+return;
+}
         try {
             const updatedData = await Redo(fileData);
             if (updatedData && onDataUpdate) {
@@ -110,7 +114,7 @@ export const UndoRedoControls: React.FC<UndoRedoControlsProps> = ({ className = 
                     Undo
                 </span>
             </button>
-            
+
             <button
                 onClick={handleRedo}
                 disabled={!undoRedoState.canRedo}

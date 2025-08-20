@@ -4,17 +4,13 @@
 // The author respectfully requests that it not be used for
 // military, warfare, or surveillance applications.
 
-// Provider
-export { ChartProvider, useChartConfig } from './ChartProvider';
-export type { ChartLibrary } from './ChartProvider';
+// Export Plotly chart components directly
+export { PlotlyBarChart } from './PlotlyBarChart';
+export { PlotlyScatterChart } from './PlotlyScatterChart';
+export { PlotlyLineChart } from './PlotlyLineChart';
+export { PlotlyComposedChart } from './PlotlyComposedChart';
 
-// Chart Components
-export { ScatterChart } from './components/ScatterChart';
-export { BarChart } from './components/BarChart';
-export { LineChart } from './components/LineChart';
-export { ComposedChart } from './components/ComposedChart';
-
-// Types
+// Export types for backward compatibility
 export type {
   ChartDataPoint,
   ChartDomain,
@@ -23,16 +19,11 @@ export type {
   ScatterChartProps,
   BarChartProps,
   LineChartProps,
-  ComposedChartProps,
+  ComposedChartProps
 } from './types';
 
-// Native components for use within ComposedChart
-export { 
-  Scatter,
-  Bar,
-  Line,
-  Cell,
-  Legend,
-  ReferenceLine,
-  Tooltip as RechartsTooltip,
-} from 'recharts';
+// Export PCA visualizations
+export * from './pca';
+
+// Export utilities
+export * from './utils';
