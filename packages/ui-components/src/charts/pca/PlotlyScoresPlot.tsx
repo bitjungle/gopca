@@ -228,22 +228,25 @@ export class PlotlyScoresPlot extends PlotlyVisualization<ScoresPlotData> {
       return smartLabelIndices.includes(i) ? label : '';
     });
 
+    // Check if we have any actual labels to display
+    const hasLabels = smartLabelIndices.length > 0;
+
     // Create single trace with gradient colors
     // Use the actual numeric values for colors, not interpolated hex colors
     traces.push({
       type: 'scatter',
-      mode: 'markers+text' as any,
+      mode: hasLabels ? ('markers+text' as any) : 'markers',
       name: 'Samples',
       x: scores.map(s => s[pc1]),
       y: scores.map(s => s[pc2]),
-      text: text,
+      text: hasLabels ? text : undefined,
       hovertext: hovertext,
       hovertemplate: '%{hovertext}<extra></extra>',
-      textposition: 'top center',
-      textfont: {
+      textposition: hasLabels ? 'top center' : undefined,
+      textfont: hasLabels ? {
         size: 10,
         color: this.config.theme === 'dark' ? '#e5e7eb' : '#374151'
-      },
+      } : undefined,
       marker: {
         size: 8,
         color: groupValues, // Use raw numeric values
