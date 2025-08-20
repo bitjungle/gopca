@@ -90,15 +90,21 @@ func (tc *TestConfig) BuildCLI(t *testing.T) {
 	}
 
 	// No pre-built CLI found, build it from source
-	// Use absolute path to ensure it works regardless of working directory
-	projectRoot := filepath.Join(filepath.Dir(tc.CLIPath), "..", "..")
+	// Find project root by looking for go.mod
+	// Start from current working directory, not from temp directory
+	cwd, err := os.Getwd()
+	if err != nil {
+		t.Fatalf("Failed to get current working directory: %v", err)
+	}
+
+	projectRoot := cwd
 	for {
 		if _, err := os.Stat(filepath.Join(projectRoot, "go.mod")); err == nil {
 			break
 		}
 		parent := filepath.Dir(projectRoot)
 		if parent == projectRoot {
-			t.Fatalf("Could not find project root (go.mod)")
+			t.Fatalf("Could not find project root (go.mod) starting from %s", cwd)
 		}
 		projectRoot = parent
 	}
