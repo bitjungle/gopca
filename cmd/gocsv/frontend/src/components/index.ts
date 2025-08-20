@@ -10,7 +10,7 @@ export { MissingValueSummary } from './MissingValueSummary';
 export { MissingValueDialog } from './MissingValueDialog';
 export { DataQualityDashboard } from './DataQualityDashboard';
 export { QualityScoreCard } from './QualityScoreCard';
-export { DistributionChart } from './DistributionChart';
+export { PlotlyDistributionChart } from './PlotlyDistributionChart';
 export { CorrelationMatrix } from './CorrelationMatrix';
 export { UndoRedoControls } from './UndoRedoControls';
 export { ImportWizard } from './ImportWizard';

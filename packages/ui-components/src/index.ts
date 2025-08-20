@@ -71,7 +71,12 @@ export {
 } from './utils/errorMessages';
 
 // Charts - Removed as part of Plotly migration
-// Chart components have been replaced with Plotly PCA visualizations below
+// Chart components have been replaced with Plotly visualizations below
+
+// Plotly General Charts
+export {
+  PlotlyBarChart
+} from './charts/adapters/plotly/PlotlyBarChart';
 
 // Plotly PCA Visualizations
 export {

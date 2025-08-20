@@ -6,7 +6,7 @@
 
 import React, { useState } from 'react';
 import { main } from '../../wailsjs/go/models';
-import { DistributionChart } from './DistributionChart';
+import { PlotlyDistributionChart } from './PlotlyDistributionChart';
 import { CorrelationMatrix } from './CorrelationMatrix';
 import { QualityScoreCard } from './QualityScoreCard';
 
@@ -435,7 +435,7 @@ const ColumnDetailsModal: React.FC<ColumnDetailsModalProps> = ({ column, onClose
                         <div className="mb-6">
                             <h4 className="text-md font-medium mb-3 text-gray-700 dark:text-gray-300">Distribution</h4>
                             <div className="bg-gray-50 dark:bg-gray-900 rounded-lg p-4">
-                                <DistributionChart distribution={column.distribution} columnName={column.name} />
+                                <PlotlyDistributionChart distribution={column.distribution} columnName={column.name} />
                                 <p className="text-sm text-gray-600 dark:text-gray-400 mt-2">
                                     Type: {column.distribution.distType}
                                     {column.distribution.isNormal && ' (Normal)'}
