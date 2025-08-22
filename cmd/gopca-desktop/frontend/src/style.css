@@ -30,3 +30,17 @@ body {
     display: flex;
     flex-direction: column;
 }
+
+/* Fix for Linux dark mode dropdown visibility */
+@media (prefers-color-scheme: dark) {
+    select option {
+        background-color: rgb(55 65 81); /* Tailwind gray-700 */
+        color: rgb(243 244 246); /* Tailwind gray-100 */
+    }
+}
+
+/* Also handle manual dark mode class */
+.dark select option {
+    background-color: rgb(55 65 81); /* Tailwind gray-700 */
+    color: rgb(243 244 246); /* Tailwind gray-100 */
+}
