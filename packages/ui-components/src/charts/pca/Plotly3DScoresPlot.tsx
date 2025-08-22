@@ -179,6 +179,14 @@ export class Plotly3DScoresPlot {
 
   getLayout(): Partial<Layout> {
     const { explainedVariance, pc1 = 0, pc2 = 1, pc3 = 2 } = this.data;
+    
+    // Theme-aware colors for 3D scene
+    const isDark = this.config.theme === 'dark';
+    const sceneColors = {
+      backgroundcolor: isDark ? 'rgba(31, 41, 55, 0.5)' : 'rgba(230, 230, 230, 0.5)',
+      gridcolor: isDark ? 'rgba(75, 85, 99, 0.5)' : 'rgba(200, 200, 200, 0.5)',
+      zerolinecolor: isDark ? 'rgba(107, 114, 128, 0.8)' : 'rgba(128, 128, 128, 0.8)'
+    };
 
     return {
       title: {
@@ -189,28 +197,28 @@ export class Plotly3DScoresPlot {
           title: {
             text: `PC${pc1 + 1} (${explainedVariance[pc1].toFixed(1)}%)`
           },
-          backgroundcolor: 'rgba(230, 230, 230, 0.5)',
-          gridcolor: 'white',
+          backgroundcolor: sceneColors.backgroundcolor,
+          gridcolor: sceneColors.gridcolor,
           showbackground: true,
-          zerolinecolor: 'gray'
+          zerolinecolor: sceneColors.zerolinecolor
         },
         yaxis: {
           title: {
             text: `PC${pc2 + 1} (${explainedVariance[pc2].toFixed(1)}%)`
           },
-          backgroundcolor: 'rgba(230, 230, 230, 0.5)',
-          gridcolor: 'white',
+          backgroundcolor: sceneColors.backgroundcolor,
+          gridcolor: sceneColors.gridcolor,
           showbackground: true,
-          zerolinecolor: 'gray'
+          zerolinecolor: sceneColors.zerolinecolor
         },
         zaxis: {
           title: {
             text: `PC${pc3 + 1} (${explainedVariance[pc3].toFixed(1)}%)`
           },
-          backgroundcolor: 'rgba(230, 230, 230, 0.5)',
-          gridcolor: 'white',
+          backgroundcolor: sceneColors.backgroundcolor,
+          gridcolor: sceneColors.gridcolor,
           showbackground: true,
-          zerolinecolor: 'gray'
+          zerolinecolor: sceneColors.zerolinecolor
         },
         camera: this.config.cameraPosition,
         aspectmode: 'cube',
