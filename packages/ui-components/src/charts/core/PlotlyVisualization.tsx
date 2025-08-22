@@ -11,6 +11,7 @@ import Plot from 'react-plotly.js';
 import { Data, Layout, Config, PlotlyHTMLElement } from 'plotly.js';
 import { getPlotlyTheme, mergeLayouts, ThemeMode } from '../utils/plotlyTheme';
 import { PLOT_CONFIG } from '../config/plotConfig';
+import { getWatermarkDataUrlSync } from '../assets/watermark';
 
 export interface MathReference {
   authors: string;
@@ -186,6 +187,26 @@ return trace;
   protected getEnhancedLayout(): Partial<Layout> {
     const baseLayout = this.getLayout();
     const themeLayout = getPlotlyTheme(this.theme).layout;
+    
+    // Add watermark if enabled
+    let watermarkImages: any[] = [];
+    if (PLOT_CONFIG.watermark.enabled) {
+      const watermarkUrl = getWatermarkDataUrlSync();
+      watermarkImages = [{
+        source: watermarkUrl,
+        xref: PLOT_CONFIG.watermark.position.xref,
+        yref: PLOT_CONFIG.watermark.position.yref,
+        x: PLOT_CONFIG.watermark.position.x,
+        y: PLOT_CONFIG.watermark.position.y,
+        sizex: PLOT_CONFIG.watermark.size.width / 400,  // Normalize to plot units
+        sizey: PLOT_CONFIG.watermark.size.height / 400, // Normalize to plot units
+        xanchor: PLOT_CONFIG.watermark.position.xanchor,
+        yanchor: PLOT_CONFIG.watermark.position.yanchor,
+        sizing: 'contain',
+        opacity: PLOT_CONFIG.watermark.opacity,
+        layer: 'above'
+      }];
+    }
 
     return mergeLayouts(
       themeLayout,
@@ -193,7 +214,8 @@ return trace;
       {
         dragmode: this.config.enableLasso ? 'lasso' : 'zoom',
         hovermode: this.config.enableCrosshair ? 'x unified' : 'closest',
-        showlegend: true
+        showlegend: true,
+        images: watermarkImages
       }
     );
   }
