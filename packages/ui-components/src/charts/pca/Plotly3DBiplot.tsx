@@ -284,32 +284,55 @@ export class Plotly3DBiplot {
 
     // Add loading vectors
     if (this.config.showLoadings && validVectors.length > 0) {
-      // Prepare cone data for 3D arrows
-      const coneX: number[] = [];
-      const coneY: number[] = [];
-      const coneZ: number[] = [];
-      const coneU: number[] = [];
-      const coneV: number[] = [];
-      const coneW: number[] = [];
-      const coneHovertext: string[] = [];
+      // Add origin point
+      traces.push({
+        type: 'scatter3d',
+        mode: 'markers',
+        x: [0],
+        y: [0],
+        z: [0],
+        marker: {
+          symbol: 'circle',
+          size: 8,
+          color: this.config.colorScheme![1] || '#ef4444',
+          opacity: 0.5
+        },
+        name: 'Origin',
+        showlegend: false,
+        hoverinfo: 'skip'
+      });
+
+      // Add loading vectors as individual lines for better coloring
+      validVectors.forEach(v => {
+        const vectorColor = this.config.colorScheme![1] || '#ef4444';
+        
+        traces.push({
+          type: 'scatter3d',
+          mode: 'lines',
+          x: [0, loadingsX[v.i]],
+          y: [0, loadingsY[v.i]],
+          z: [0, loadingsZ[v.i]],
+          line: {
+            color: vectorColor,
+            width: 4
+          },
+          showlegend: false,
+          hoverinfo: 'skip'
+        });
+      });
+
+      // Add endpoints as markers (arrowheads)
+      const endpointX: number[] = [];
+      const endpointY: number[] = [];
+      const endpointZ: number[] = [];
+      const hovertext: string[] = [];
 
       validVectors.forEach(v => {
-        const x = loadingsX[v.i];
-        const y = loadingsY[v.i];
-        const z = loadingsZ[v.i];
+        endpointX.push(loadingsX[v.i]);
+        endpointY.push(loadingsY[v.i]);
+        endpointZ.push(loadingsZ[v.i]);
         
-        // Position cone at 90% of the vector length
-        const scale = 0.9;
-        coneX.push(x * scale);
-        coneY.push(y * scale);
-        coneZ.push(z * scale);
-        
-        // Direction pointing to the end
-        coneU.push(x * 0.1);
-        coneV.push(y * 0.1);
-        coneW.push(z * 0.1);
-        
-        coneHovertext.push(
+        hovertext.push(
           `<b>${v.name}</b><br>` +
           `PC${pc1 + 1}: ${loadingsX[v.i].toFixed(3)}<br>` +
           `PC${pc2 + 1}: ${loadingsY[v.i].toFixed(3)}<br>` +
@@ -318,51 +341,23 @@ export class Plotly3DBiplot {
         );
       });
 
-      // Add loading vectors as lines
-      const lineX: number[] = [];
-      const lineY: number[] = [];
-      const lineZ: number[] = [];
-
-      validVectors.forEach(v => {
-        // Line from origin to loading point
-        lineX.push(0, loadingsX[v.i], null as any);
-        lineY.push(0, loadingsY[v.i], null as any);
-        lineZ.push(0, loadingsZ[v.i], null as any);
-      });
-
       traces.push({
         type: 'scatter3d',
-        mode: 'lines',
-        x: lineX,
-        y: lineY,
-        z: lineZ,
-        line: {
+        mode: 'markers',
+        x: endpointX,
+        y: endpointY,
+        z: endpointZ,
+        marker: {
+          symbol: 'diamond',
+          size: 6,
           color: this.config.colorScheme![1],
-          width: 2
+          opacity: 0.9
         },
-        name: 'Loadings',
+        name: 'Loading Vectors',
         showlegend: false,
-        hoverinfo: 'skip'
+        hovertext: hovertext,
+        hovertemplate: '%{hovertext}<extra></extra>'
       });
-
-      // Add cones for arrowheads
-      traces.push({
-        type: 'cone' as any,
-        x: coneX,
-        y: coneY,
-        z: coneZ,
-        u: coneU,
-        v: coneV,
-        w: coneW,
-        sizemode: 'absolute',
-        sizeref: this.config.arrowSize,
-        anchor: 'tail',
-        colorscale: [[0, this.config.colorScheme![1]], [1, this.config.colorScheme![1]]],
-        showscale: false,
-        hovertext: coneHovertext,
-        hovertemplate: '%{hovertext}<extra></extra>',
-        opacity: this.config.arrowOpacity
-      } as any);
 
       // Add text labels for variables
       const labelPositions = validVectors.map(v => {
