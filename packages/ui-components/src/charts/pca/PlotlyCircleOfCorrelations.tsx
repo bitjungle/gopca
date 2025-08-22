@@ -12,6 +12,7 @@ import { getPlotlyTheme, mergeLayouts, ThemeMode } from '../utils/plotlyTheme';
 import { getExportMenuItems } from '../utils/plotlyExport';
 import { PLOT_CONFIG } from '../config/plotConfig';
 import { PlotlyWithFullscreen } from '../utils/plotlyFullscreen';
+import { getWatermarkDataUrlSync } from '../assets/watermark';
 
 export interface CircleOfCorrelationsData {
   loadings: number[][];  // [n_components][n_variables]
@@ -214,7 +215,28 @@ export class PlotlyCircleOfCorrelations {
   getEnhancedLayout(): Partial<Layout> {
     const baseLayout = this.getLayout();
     const themeLayout = getPlotlyTheme(this.config.theme || 'light').layout;
-    return mergeLayouts(themeLayout, baseLayout);
+    
+    // Add watermark if enabled
+    let watermarkImages: any[] = [];
+    if (PLOT_CONFIG.watermark.enabled) {
+      const watermarkUrl = getWatermarkDataUrlSync();
+      watermarkImages = [{
+        source: watermarkUrl,
+        xref: PLOT_CONFIG.watermark.position.xref,
+        yref: PLOT_CONFIG.watermark.position.yref,
+        x: PLOT_CONFIG.watermark.position.x,
+        y: PLOT_CONFIG.watermark.position.y,
+        sizex: PLOT_CONFIG.watermark.size.width / 400,  // Normalize to plot units
+        sizey: PLOT_CONFIG.watermark.size.height / 400, // Normalize to plot units
+        xanchor: PLOT_CONFIG.watermark.position.xanchor,
+        yanchor: PLOT_CONFIG.watermark.position.yanchor,
+        sizing: 'contain',
+        opacity: PLOT_CONFIG.watermark.opacity,
+        layer: 'above'
+      }];
+    }
+    
+    return mergeLayouts(themeLayout, baseLayout, { images: watermarkImages });
   }
 
   getLayout(): Partial<Layout> {
