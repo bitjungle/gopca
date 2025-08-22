@@ -7,11 +7,11 @@
 // Loadings Plot with bar chart and line chart modes
 
 import React, { useMemo } from 'react';
-import Plot from 'react-plotly.js';
 import { Data, Layout } from 'plotly.js';
 import { getPlotlyTheme, mergeLayouts, ThemeMode } from '../utils/plotlyTheme';
 import { getExportMenuItems } from '../utils/plotlyExport';
 import { PLOT_CONFIG } from '../config/plotConfig';
+import { PlotlyWithFullscreen } from '../utils/plotlyFullscreen';
 
 export interface LoadingsPlotData {
   loadings: number[][];  // [components][variables]
@@ -294,12 +294,11 @@ export const PCALoadingsPlot: React.FC<{
   const plot = useMemo(() => new PlotlyLoadingsPlot(data, config), [data, config]);
 
   return (
-    <Plot
+    <PlotlyWithFullscreen
       data={plot.getTraces()}
       layout={plot.getEnhancedLayout()}
       config={plot.getConfig()}
       style={{ width: '100%', height: '100%' }}
-      useResizeHandler={true}
     />
   );
 };

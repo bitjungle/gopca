@@ -78,9 +78,8 @@ export {
   PlotlyBarChart
 } from './charts/PlotlyBarChart';
 
-// Plotly Core Components
-export { PlotlyContainer } from './charts/core/PlotlyContainer';
-export { PlotlyControls } from './charts/controls/PlotlyControls';
+// Plotly Fullscreen Support
+export { PlotlyWithFullscreen, PlotlyFullscreenModal, usePlotlyFullscreen, createFullscreenButton } from './charts/utils/plotlyFullscreen';
 
 // Plotly PCA Visualizations
 export {
