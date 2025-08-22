@@ -107,10 +107,10 @@ export const PLOT_CONFIG = {
       yanchor: 'bottom' as const
     },
     size: {
-      width: 40,                // Width in pixels
-      height: 40                // Height in pixels
+      width: 30,                // Width in pixels (smaller for subtlety)
+      height: 30                // Height in pixels (smaller for subtlety)
     },
-    opacity: 0.15               // Very subtle watermark
+    opacity: 0.2                // Subtle but visible watermark
   }
 };
 

@@ -6,28 +6,21 @@
 
 // GoPCA watermark logo data and utility
 
-// Base64 encoded GoPCA icon - placeholder SVG
-// This creates a simple text watermark until the actual logo can be properly encoded
-export const GOPCA_LOGO_BASE64 = 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNDAiIGhlaWdodD0iNDAiIHZpZXdCb3g9IjAgMCA0MCA0MCIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj4KPGNpcmNsZSBjeD0iMjAiIGN5PSIyMCIgcj0iMTgiIHN0cm9rZT0iIzNiODJmNiIgc3Ryb2tlLXdpZHRoPSIyIiBmaWxsPSJub25lIiBvcGFjaXR5PSIwLjMiLz4KPHRleHQgeD0iMjAiIHk9IjI2IiBmb250LWZhbWlseT0iQXJpYWwsIHNhbnMtc2VyaWYiIGZvbnQtc2l6ZT0iMTIiIGZpbGw9IiMzYjgyZjYiIHRleHQtYW5jaG9yPSJtaWRkbGUiIG9wYWNpdHk9IjAuNSI+R29QQ0E8L3RleHQ+Cjwvc3ZnPg==';
-
-let loader: Promise<string> | null = null;
+import logoUrl from './GoPCA-icon-64-transp.png';
 
 /**
- * Get the watermark image data URL
- * Caches the result to avoid repeated loading
+ * Get the watermark image URL
+ * Returns the URL to the GoPCA logo image
  */
-export async function getWatermarkDataUrl(): Promise<string> {
-  if (!loader) {
-    loader = Promise.resolve(GOPCA_LOGO_BASE64);
-  }
-  return loader;
+export function getWatermarkDataUrlSync(): string {
+  return logoUrl;
 }
 
 /**
- * Get the watermark image data URL (synchronous version)
+ * Get the watermark image URL (async version for compatibility)
  */
-export function getWatermarkDataUrlSync(): string {
-  return GOPCA_LOGO_BASE64;
+export async function getWatermarkDataUrl(): Promise<string> {
+  return logoUrl;
 }
 
 /**
