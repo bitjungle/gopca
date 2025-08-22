@@ -1,13 +1,18 @@
 // Copyright 2025 bitjungle - Rune Mathisen. All rights reserved.
+// Use of this source code is governed by the MIT license
+// that can be found in the LICENSE file.
+// The author respectfully requests that it not be used for
+// military, warfare, or surveillance applications.
+
 // 3D PCA Scores Plot with interactive rotation and group visualization
 
 import React, { useMemo } from 'react';
-import Plot from 'react-plotly.js';
 import { Data, Layout, Config } from 'plotly.js';
 import { PCA_REFERENCES } from '../utils/plotlyMath';
 import { getPlotlyTheme, mergeLayouts, ThemeMode } from '../utils/plotlyTheme';
 import { getExportMenuItems } from '../utils/plotlyExport';
 import { PLOT_CONFIG } from '../config/plotConfig';
+import { PlotlyWithFullscreen } from '../utils/plotlyFullscreen';
 
 export interface Scores3DPlotData {
   scores: number[][];
@@ -257,12 +262,11 @@ export const PCA3DScoresPlot: React.FC<{
   const plot = useMemo(() => new Plotly3DScoresPlot(data, config), [data, config]);
 
   return (
-    <Plot
+    <PlotlyWithFullscreen
       data={plot.getTraces()}
       layout={plot.getEnhancedLayout()}
       config={plot.getConfig()}
       style={{ width: '100%', height: '100%' }}
-      useResizeHandler={true}
     />
   );
 };

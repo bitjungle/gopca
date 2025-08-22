@@ -1,8 +1,12 @@
 // Copyright 2025 bitjungle - Rune Mathisen. All rights reserved.
+// Use of this source code is governed by the MIT license
+// that can be found in the LICENSE file.
+// The author respectfully requests that it not be used for
+// military, warfare, or surveillance applications.
+
 // Biplot combining scores and loading vectors
 
 import React, { useMemo } from 'react';
-import Plot from 'react-plotly.js';
 import { Data, Layout } from 'plotly.js';
 import {
   selectSmartLabels,
@@ -13,6 +17,7 @@ import {
 import { getPlotlyTheme, mergeLayouts, ThemeMode } from '../utils/plotlyTheme';
 import { getExportMenuItems } from '../utils/plotlyExport';
 import { PLOT_CONFIG } from '../config/plotConfig';
+import { PlotlyWithFullscreen } from '../utils/plotlyFullscreen';
 import { optimizeTraceType } from '../utils/plotlyPerformance';
 
 export interface BiplotData {
@@ -476,12 +481,11 @@ export const PCABiplot: React.FC<{
   const plot = useMemo(() => new PlotlyBiplot(data, config), [data, config]);
 
   return (
-    <Plot
+    <PlotlyWithFullscreen
       data={plot.getTraces()}
       layout={plot.getEnhancedLayout()}
       config={plot.getConfig()}
       style={{ width: '100%', height: '100%' }}
-      useResizeHandler={true}
     />
   );
 };

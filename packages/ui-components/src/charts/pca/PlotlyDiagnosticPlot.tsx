@@ -1,12 +1,17 @@
 // Copyright 2025 bitjungle - Rune Mathisen. All rights reserved.
+// Use of this source code is governed by the MIT license
+// that can be found in the LICENSE file.
+// The author respectfully requests that it not be used for
+// military, warfare, or surveillance applications.
+
 // Diagnostic Plot for PCA outlier detection
 
 import React, { useMemo } from 'react';
-import Plot from 'react-plotly.js';
 import { Data, Layout } from 'plotly.js';
 import { getPlotlyTheme, mergeLayouts, ThemeMode } from '../utils/plotlyTheme';
 import { getExportMenuItems } from '../utils/plotlyExport';
 import { PLOT_CONFIG } from '../config/plotConfig';
+import { PlotlyWithFullscreen } from '../utils/plotlyFullscreen';
 
 export interface DiagnosticPlotData {
   mahalanobisDistances: number[];
@@ -342,12 +347,11 @@ export const PCADiagnosticPlot: React.FC<{
   const plot = useMemo(() => new PlotlyDiagnosticPlot(data, config), [data, config]);
 
   return (
-    <Plot
+    <PlotlyWithFullscreen
       data={plot.getTraces()}
       layout={plot.getEnhancedLayout()}
       config={plot.getConfig()}
       style={{ width: '100%', height: '100%' }}
-      useResizeHandler={true}
     />
   );
 };
