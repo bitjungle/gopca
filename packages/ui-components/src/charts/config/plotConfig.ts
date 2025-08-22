@@ -1,4 +1,9 @@
 // Copyright 2025 bitjungle - Rune Mathisen. All rights reserved.
+// Use of this source code is governed by the MIT license
+// that can be found in the LICENSE file.
+// The author respectfully requests that it not be used for
+// military, warfare, or surveillance applications.
+
 // Central configuration for all Plotly visualizations
 
 /**
@@ -88,6 +93,24 @@ export const PLOT_CONFIG = {
     decimationThreshold: 10000, // Start decimating above this count
     densityThreshold: 100000,   // Use density plots above this count
     labelThreshold: 100         // Maximum labels to show by default
+  },
+  
+  // Watermark configuration
+  watermark: {
+    enabled: true,              // Enable watermark on all plots
+    position: {
+      xref: 'paper' as const,
+      yref: 'paper' as const,
+      x: 0.98,                  // Right side (0-1 range)
+      y: 0.02,                  // Bottom (0-1 range)
+      xanchor: 'right' as const,
+      yanchor: 'bottom' as const
+    },
+    size: {
+      width: 30,                // Width in pixels (smaller for subtlety)
+      height: 30                // Height in pixels (smaller for subtlety)
+    },
+    opacity: 0.2                // Subtle but visible watermark
   }
 };
 
