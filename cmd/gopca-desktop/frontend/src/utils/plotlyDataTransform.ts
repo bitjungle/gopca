@@ -18,6 +18,8 @@ import type {
   LoadingsPlotConfig,
   BiplotData,
   BiplotConfig,
+  Biplot3DData,
+  Biplot3DConfig,
   CircleOfCorrelationsData,
   CircleOfCorrelationsConfig,
   DiagnosticPlotData,
@@ -413,5 +415,79 @@ export function createEigencorrelationPlotConfig(
     annotationThreshold: 0.3,
     theme,
     colorScheme
+  };
+}
+
+/**
+ * Transform GoPCA results to 3D Biplot data format
+ */
+export function transformToBiplot3DData(
+  pcaResult: PCAResult,
+  rowNames: string[],
+  groupLabels?: string[],
+  groupValues?: number[],
+  groupType?: 'categorical' | 'continuous',
+  pc1?: number,
+  pc2?: number,
+  pc3?: number
+): Biplot3DData {
+  // Backend stores loadings as [variables][components], but frontend expects [components][variables]
+  const transposedLoadings = transposeMatrix(pcaResult.loadings);
+
+  return {
+    scores: pcaResult.scores,
+    loadings: transposedLoadings,
+    explainedVariance: pcaResult.explained_variance_ratio, // Already in percentages from backend
+    sampleNames: rowNames,
+    variableNames: pcaResult.variable_labels ||
+      Array.from({ length: pcaResult.loadings.length }, (_, i) => `Var${i + 1}`), // Use loadings.length for number of variables
+    groups: groupLabels,
+    groupValues,
+    groupType,
+    pc1,
+    pc2,
+    pc3
+  };
+}
+
+/**
+ * Create configuration for 3D Biplot
+ */
+export function createBiplot3DConfig(options: {
+  theme: 'light' | 'dark';
+  colorScheme?: string[];
+  showScores?: boolean;
+  showLoadings?: boolean;
+  showLabels?: boolean;
+  vectorScale?: number;
+  maxVariables?: number;
+}): Biplot3DConfig {
+  const {
+    theme,
+    colorScheme,
+    showScores = true,
+    showLoadings = true,
+    showLabels = false,
+    vectorScale = 1.0,
+    maxVariables = 50
+  } = options;
+
+  return {
+    scalingType: 'correlation',
+    showScores,
+    showLoadings,
+    maxVariables,
+    vectorScale,
+    colorScheme,
+    markerSize: 5,
+    opacity: 0.8,
+    arrowSize: 8,
+    arrowOpacity: 0.7,
+    showProjections: false,
+    cameraPosition: {
+      eye: { x: 1.5, y: 1.5, z: 1.5 },
+      center: { x: 0, y: 0, z: 0 }
+    },
+    theme
   };
 }

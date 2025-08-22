@@ -18,6 +18,7 @@ const Scores3DPlot = lazy(() => import('./components/visualizations/Scores3DPlot
 const ScreePlot = lazy(() => import('./components/visualizations/ScreePlot').then(m => ({ default: m.ScreePlot })));
 const LoadingsPlot = lazy(() => import('./components/visualizations/LoadingsPlot').then(m => ({ default: m.LoadingsPlot })));
 const Biplot = lazy(() => import('./components/visualizations/Biplot').then(m => ({ default: m.Biplot })));
+const Biplot3D = lazy(() => import('./components/visualizations/Biplot3D').then(m => ({ default: m.Biplot3D })));
 const CircleOfCorrelations = lazy(() => import('./components/visualizations/CircleOfCorrelations').then(m => ({ default: m.CircleOfCorrelations })));
 const DiagnosticScatterPlot = lazy(() => import('./components/visualizations/DiagnosticScatterPlot').then(m => ({ default: m.DiagnosticScatterPlot })));
 const EigencorrelationPlot = lazy(() => import('./components/visualizations/EigencorrelationPlot').then(m => ({ default: m.EigencorrelationPlot })));
@@ -45,7 +46,7 @@ function AppContent() {
     // Selection state
     const [excludedRows, setExcludedRows] = useState<number[]>([]);
     const [excludedColumns, setExcludedColumns] = useState<number[]>([]);
-    const [selectedPlot, setSelectedPlot] = useState<'scores' | 'scores3d' | 'scree' | 'loadings' | 'biplot' | 'correlations' | 'diagnostics' | 'eigencorrelation'>('scores');
+    const [selectedPlot, setSelectedPlot] = useState<'scores' | 'scores3d' | 'scree' | 'loadings' | 'biplot' | 'biplot3d' | 'correlations' | 'diagnostics' | 'eigencorrelation'>('scores');
     const [selectedXComponent, setSelectedXComponent] = useState(0);
     const [selectedYComponent, setSelectedYComponent] = useState(1);
     const [selectedZComponent, setSelectedZComponent] = useState(2);
@@ -433,7 +434,7 @@ return;
 
                 // Check if Kernel PCA is selected with unsupported visualization
                 if (config.method === 'kernel' &&
-                    (selectedPlot === 'correlations' || selectedPlot === 'biplot')) {
+                    (selectedPlot === 'correlations' || selectedPlot === 'biplot' || selectedPlot === 'biplot3d')) {
                     // Switch to scores plot
                     setSelectedPlot('scores');
                     // Alert user about the automatic switch
@@ -1058,7 +1059,7 @@ return;
                                         <HelpWrapper helpKey={`${selectedPlot}-plot`}>
                                             <select
                                                 value={selectedPlot}
-                                                onChange={(e) => setSelectedPlot(e.target.value as 'scores' | 'scores3d' | 'scree' | 'loadings' | 'biplot' | 'correlations' | 'diagnostics' | 'eigencorrelation')}
+                                                onChange={(e) => setSelectedPlot(e.target.value as 'scores' | 'scores3d' | 'scree' | 'loadings' | 'biplot' | 'biplot3d' | 'correlations' | 'diagnostics' | 'eigencorrelation')}
                                                 className="px-3 py-1.5 bg-gray-100 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg text-gray-900 dark:text-white font-medium"
                                             >
                                                 <option value="scores">Scores Plot</option>
@@ -1067,6 +1068,9 @@ return;
                                                 <option value="loadings">Loadings Plot</option>
                                                 {pcaResponse.result.preprocessing_applied && (
                                                     <option value="biplot">Biplot</option>
+                                                )}
+                                                {pcaResponse.result.preprocessing_applied && (
+                                                    <option value="biplot3d">3D Biplot</option>
                                                 )}
                                                 {pcaResponse.result.preprocessing_applied && (
                                                     <option value="correlations">Circle of Correlations</option>
@@ -1089,7 +1093,7 @@ return;
                                 <div className="mb-4">
                                     <div className="flex flex-wrap items-center gap-4">
                                         {/* Data Display Group */}
-                                        {(selectedPlot === 'scores' || selectedPlot === 'scores3d' || selectedPlot === 'biplot') && fileData &&
+                                        {(selectedPlot === 'scores' || selectedPlot === 'scores3d' || selectedPlot === 'biplot' || selectedPlot === 'biplot3d') && fileData &&
                                          ((fileData.categoricalColumns && Object.keys(fileData.categoricalColumns).length > 0) ||
                                           (fileData.numericTargetColumns && Object.keys(fileData.numericTargetColumns).length > 0)) && (
                                             <div className="flex items-center gap-3 px-3 py-2 bg-gray-50 dark:bg-gray-800 rounded-lg">
@@ -1142,7 +1146,7 @@ return;
                                         )}
 
                                         {/* Plot Options Group - For Scores Plot, 3D Scores Plot, Biplot, and Diagnostic Plot */}
-                                        {(selectedPlot === 'scores' || selectedPlot === 'scores3d' || selectedPlot === 'biplot' || selectedPlot === 'diagnostics') && (
+                                        {(selectedPlot === 'scores' || selectedPlot === 'scores3d' || selectedPlot === 'biplot' || selectedPlot === 'biplot3d' || selectedPlot === 'diagnostics') && (
                                             <div className="flex items-center gap-3 px-3 py-2 bg-gray-50 dark:bg-gray-800 rounded-lg">
                                                 <HelpWrapper helpKey="row-labels" className="flex items-center gap-2">
                                                     <label className="text-sm text-gray-600 dark:text-gray-400">
@@ -1190,7 +1194,7 @@ return;
                                                  Object.keys(fileData.categoricalColumns).length > 0 &&
                                                  selectedGroupColumn &&
                                                  getColumnData(selectedGroupColumn).type === 'categorical' &&
-                                                 (selectedPlot === 'scores' || selectedPlot === 'biplot') && (
+                                                 (selectedPlot === 'scores' || selectedPlot === 'biplot' || selectedPlot === 'biplot3d') && (
                                                     <>
                                                         <div className="w-px h-5 bg-gray-300 dark:bg-gray-600 mx-1" />
                                                         <HelpWrapper helpKey="confidence-ellipses" className="flex items-center gap-2">
@@ -1221,7 +1225,7 @@ return;
                                         )}
 
                                         {/* Component Selectors Group */}
-                                        {(selectedPlot === 'scores' || selectedPlot === 'scores3d' || selectedPlot === 'biplot' || selectedPlot === 'correlations') && pcaResponse.result.scores[0]?.length > 2 && (
+                                        {(selectedPlot === 'scores' || selectedPlot === 'scores3d' || selectedPlot === 'biplot' || selectedPlot === 'biplot3d' || selectedPlot === 'correlations') && pcaResponse.result.scores[0]?.length > 2 && (
                                             <div className="flex items-center gap-3 px-3 py-2 bg-gray-50 dark:bg-gray-800 rounded-lg">
                                                 <div className="flex items-center gap-2">
                                                     <label className="text-sm text-gray-600 dark:text-gray-400">X:</label>
@@ -1372,6 +1376,28 @@ return;
                                                 groupValues={getColumnData(selectedGroupColumn).type === 'continuous' ? getColumnData(selectedGroupColumn).values as number[] : undefined}
                                                 groupType={getColumnData(selectedGroupColumn).type}
                                                 maxVariables={guiConfig?.visualization?.biplot_max_variables || 100}
+                                                groupEllipses={
+                                                    confidenceLevel === 0.90 ? pcaResponse.groupEllipses90 :
+                                                    confidenceLevel === 0.95 ? pcaResponse.groupEllipses95 :
+                                                    pcaResponse.groupEllipses99
+                                                }
+                                                showEllipses={showEllipses && !!selectedGroupColumn && getColumnData(selectedGroupColumn).type === 'categorical'}
+                                                confidenceLevel={confidenceLevel}
+                                            />
+                                        ) : selectedPlot === 'biplot3d' ? (
+                                            <Biplot3D
+                                                pcaResult={pcaResponse.result}
+                                                rowNames={fileData?.rowNames || []}
+                                                xComponent={selectedXComponent}
+                                                yComponent={selectedYComponent}
+                                                zComponent={selectedZComponent}
+                                                showRowLabels={showRowLabels}
+                                                maxLabelsToShow={maxLabelsToShow}
+                                                groupColumn={selectedGroupColumn}
+                                                groupLabels={getColumnData(selectedGroupColumn).type === 'categorical' ? getColumnData(selectedGroupColumn).values as string[] : undefined}
+                                                groupValues={getColumnData(selectedGroupColumn).type === 'continuous' ? getColumnData(selectedGroupColumn).values as number[] : undefined}
+                                                groupType={getColumnData(selectedGroupColumn).type}
+                                                maxVariables={guiConfig?.visualization?.biplot_max_variables || 50}
                                                 groupEllipses={
                                                     confidenceLevel === 0.90 ? pcaResponse.groupEllipses90 :
                                                     confidenceLevel === 0.95 ? pcaResponse.groupEllipses95 :

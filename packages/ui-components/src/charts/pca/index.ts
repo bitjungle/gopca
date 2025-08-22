@@ -29,3 +29,6 @@ export type { DiagnosticPlotData, DiagnosticPlotConfig } from './PlotlyDiagnosti
 
 export { PlotlyEigencorrelationPlot, PCAEigencorrelationPlot } from './PlotlyEigencorrelationPlot';
 export type { EigencorrelationPlotData, EigencorrelationPlotConfig } from './PlotlyEigencorrelationPlot';
+
+export { Plotly3DBiplot, PCA3DBiplot } from './Plotly3DBiplot';
+export type { Biplot3DData, Biplot3DConfig } from './Plotly3DBiplot';
