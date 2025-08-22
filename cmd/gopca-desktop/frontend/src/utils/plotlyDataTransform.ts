@@ -107,10 +107,15 @@ export function transformToScores3DPlotData(
   yComponent: number = 1,
   zComponent: number = 2
 ): Scores3DPlotData {
+  // Ensure we always have groups - if none provided, create a single default group
+  const groups = groupLabels && groupLabels.length > 0 
+    ? groupLabels 
+    : Array(pcaResult.scores.length).fill('All samples');
+    
   return {
     scores: pcaResult.scores,
     sampleNames: rowNames,
-    groups: groupLabels || [],
+    groups: groups,
     explainedVariance: pcaResult.explained_variance_ratio,
     pc1: xComponent,
     pc2: yComponent,
