@@ -53,18 +53,32 @@ export const PlotlyFullscreenModal: React.FC<{
 
   if (!isOpen) return null;
 
+  // Enhanced config with exit fullscreen button
+  // Ensure modebar is visible and add the fullscreen toggle button
+  const enhancedConfig = {
+    ...plotConfig,
+    displayModeBar: true, // Ensure modebar is visible
+    displaylogo: false,
+    modeBarButtonsToAdd: [
+      ...(plotConfig.modeBarButtonsToAdd || []).filter(
+        (btn: any) => btn.name !== 'fullscreen' // Remove existing fullscreen button
+      ),
+      createFullscreenButton(onClose) // Add toggle button that exits fullscreen
+    ]
+  };
+
   return ReactDOM.createPortal(
-    <div className="fixed inset-0 z-[9999] bg-white dark:bg-gray-900">
-      {/* Plot container fills entire window */}
-      <div ref={modalRef} className="w-full h-full relative">
+    <div className="fixed inset-0 z-[999999] bg-white dark:bg-gray-900" style={{ zIndex: 999999 }}>
+      {/* Plot container with padding to ensure modebar is visible */}
+      <div ref={modalRef} className="w-full h-full relative pt-12">
         <Plot
           data={plotData}
           layout={{
             ...plotLayout,
             autosize: true,
           }}
-          config={plotConfig}
-          style={{ width: '100%', height: '100%' }}
+          config={enhancedConfig}
+          style={{ width: '100%', height: 'calc(100% - 3rem)' }}
           useResizeHandler={true}
         />
         
