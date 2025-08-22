@@ -5,6 +5,7 @@
 // military, warfare, or surveillance applications.
 
 export { ScoresPlot } from './ScoresPlot';
+export { Scores3DPlot } from './Scores3DPlot';
 export { ScreePlot } from './ScreePlot';
 export { LoadingsPlot } from './LoadingsPlot';
 export { Biplot } from './Biplot';

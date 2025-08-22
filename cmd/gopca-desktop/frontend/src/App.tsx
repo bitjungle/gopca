@@ -14,6 +14,7 @@ import { setupPlotlyWailsIntegration } from '@gopca/ui-components';
 
 // Lazy load visualization components for better performance
 const ScoresPlot = lazy(() => import('./components/visualizations/ScoresPlot').then(m => ({ default: m.ScoresPlot })));
+const Scores3DPlot = lazy(() => import('./components/visualizations/Scores3DPlot').then(m => ({ default: m.Scores3DPlot })));
 const ScreePlot = lazy(() => import('./components/visualizations/ScreePlot').then(m => ({ default: m.ScreePlot })));
 const LoadingsPlot = lazy(() => import('./components/visualizations/LoadingsPlot').then(m => ({ default: m.LoadingsPlot })));
 const Biplot = lazy(() => import('./components/visualizations/Biplot').then(m => ({ default: m.Biplot })));
@@ -44,9 +45,10 @@ function AppContent() {
     // Selection state
     const [excludedRows, setExcludedRows] = useState<number[]>([]);
     const [excludedColumns, setExcludedColumns] = useState<number[]>([]);
-    const [selectedPlot, setSelectedPlot] = useState<'scores' | 'scree' | 'loadings' | 'biplot' | 'correlations' | 'diagnostics' | 'eigencorrelation'>('scores');
+    const [selectedPlot, setSelectedPlot] = useState<'scores' | 'scores3d' | 'scree' | 'loadings' | 'biplot' | 'correlations' | 'diagnostics' | 'eigencorrelation'>('scores');
     const [selectedXComponent, setSelectedXComponent] = useState(0);
     const [selectedYComponent, setSelectedYComponent] = useState(1);
+    const [selectedZComponent, setSelectedZComponent] = useState(2);
     const [selectedLoadingComponent, setSelectedLoadingComponent] = useState(0);
     const [selectedGroupColumn, setSelectedGroupColumn] = useState<string | null>(null);
     const [showEllipses, setShowEllipses] = useState(false);
@@ -1056,10 +1058,11 @@ return;
                                         <HelpWrapper helpKey={`${selectedPlot}-plot`}>
                                             <select
                                                 value={selectedPlot}
-                                                onChange={(e) => setSelectedPlot(e.target.value as 'scores' | 'scree' | 'loadings' | 'biplot' | 'correlations' | 'diagnostics' | 'eigencorrelation')}
+                                                onChange={(e) => setSelectedPlot(e.target.value as 'scores' | 'scores3d' | 'scree' | 'loadings' | 'biplot' | 'correlations' | 'diagnostics' | 'eigencorrelation')}
                                                 className="px-3 py-1.5 bg-gray-100 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg text-gray-900 dark:text-white font-medium"
                                             >
                                                 <option value="scores">Scores Plot</option>
+                                                <option value="scores3d">3D Scores Plot</option>
                                                 <option value="scree">Scree Plot</option>
                                                 <option value="loadings">Loadings Plot</option>
                                                 {pcaResponse.result.preprocessing_applied && (
@@ -1086,7 +1089,7 @@ return;
                                 <div className="mb-4">
                                     <div className="flex flex-wrap items-center gap-4">
                                         {/* Data Display Group */}
-                                        {(selectedPlot === 'scores' || selectedPlot === 'biplot') && fileData &&
+                                        {(selectedPlot === 'scores' || selectedPlot === 'scores3d' || selectedPlot === 'biplot') && fileData &&
                                          ((fileData.categoricalColumns && Object.keys(fileData.categoricalColumns).length > 0) ||
                                           (fileData.numericTargetColumns && Object.keys(fileData.numericTargetColumns).length > 0)) && (
                                             <div className="flex items-center gap-3 px-3 py-2 bg-gray-50 dark:bg-gray-800 rounded-lg">
@@ -1138,8 +1141,8 @@ return;
                                             </div>
                                         )}
 
-                                        {/* Plot Options Group - For Scores Plot, Biplot, and Diagnostic Plot */}
-                                        {(selectedPlot === 'scores' || selectedPlot === 'biplot' || selectedPlot === 'diagnostics') && (
+                                        {/* Plot Options Group - For Scores Plot, 3D Scores Plot, Biplot, and Diagnostic Plot */}
+                                        {(selectedPlot === 'scores' || selectedPlot === 'scores3d' || selectedPlot === 'biplot' || selectedPlot === 'diagnostics') && (
                                             <div className="flex items-center gap-3 px-3 py-2 bg-gray-50 dark:bg-gray-800 rounded-lg">
                                                 <HelpWrapper helpKey="row-labels" className="flex items-center gap-2">
                                                     <label className="text-sm text-gray-600 dark:text-gray-400">
@@ -1218,7 +1221,7 @@ return;
                                         )}
 
                                         {/* Component Selectors Group */}
-                                        {(selectedPlot === 'scores' || selectedPlot === 'biplot' || selectedPlot === 'correlations') && pcaResponse.result.scores[0]?.length > 2 && (
+                                        {(selectedPlot === 'scores' || selectedPlot === 'scores3d' || selectedPlot === 'biplot' || selectedPlot === 'correlations') && pcaResponse.result.scores[0]?.length > 2 && (
                                             <div className="flex items-center gap-3 px-3 py-2 bg-gray-50 dark:bg-gray-800 rounded-lg">
                                                 <div className="flex items-center gap-2">
                                                     <label className="text-sm text-gray-600 dark:text-gray-400">X:</label>
@@ -1248,6 +1251,22 @@ return;
                                                         ))}
                                                     </select>
                                                 </div>
+                                                {selectedPlot === 'scores3d' && pcaResponse.result.scores[0]?.length > 2 && (
+                                                    <div className="flex items-center gap-2">
+                                                        <label className="text-sm text-gray-600 dark:text-gray-400">Z:</label>
+                                                        <select
+                                                            value={selectedZComponent}
+                                                            onChange={(e) => setSelectedZComponent(parseInt(e.target.value))}
+                                                            className="px-2 py-0.5 bg-gray-100 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded text-sm text-gray-900 dark:text-white"
+                                                        >
+                                                            {pcaResponse.result.component_labels?.map((label, i) => (
+                                                                <option key={i} value={i}>
+                                                                    {label} ({pcaResponse.result!.explained_variance_ratio[i].toFixed(1)}%)
+                                                                </option>
+                                                            ))}
+                                                        </select>
+                                                    </div>
+                                                )}
                                             </div>
                                         )}
 
@@ -1310,6 +1329,20 @@ return;
                                                 }
                                                 showEllipses={showEllipses && !!selectedGroupColumn && getColumnData(selectedGroupColumn).type === 'categorical'}
                                                 confidenceLevel={confidenceLevel}
+                                                showRowLabels={showRowLabels}
+                                                maxLabelsToShow={maxLabelsToShow}
+                                            />
+                                        ) : selectedPlot === 'scores3d' && pcaResponse.result.scores.length > 0 && pcaResponse.result.scores[0].length >= 3 ? (
+                                            <Scores3DPlot
+                                                pcaResult={pcaResponse.result}
+                                                rowNames={fileData?.rowNames || []}
+                                                xComponent={selectedXComponent}
+                                                yComponent={selectedYComponent}
+                                                zComponent={selectedZComponent}
+                                                groupColumn={selectedGroupColumn}
+                                                groupLabels={getColumnData(selectedGroupColumn).type === 'categorical' ? getColumnData(selectedGroupColumn).values as string[] : undefined}
+                                                groupValues={getColumnData(selectedGroupColumn).type === 'continuous' ? getColumnData(selectedGroupColumn).values as number[] : undefined}
+                                                groupType={getColumnData(selectedGroupColumn).type}
                                                 showRowLabels={showRowLabels}
                                                 maxLabelsToShow={maxLabelsToShow}
                                             />

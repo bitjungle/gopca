@@ -1,10 +1,17 @@
 // Copyright 2025 bitjungle - Rune Mathisen. All rights reserved.
+// Use of this source code is governed by the MIT license
+// that can be found in the LICENSE file.
+// The author respectfully requests that it not be used for
+// military, warfare, or surveillance applications.
+
 // Utility functions to transform GoPCA data to Plotly component formats
 
 import { PCAResult, EllipseParams, SampleMetrics } from '../types';
 import type {
   ScoresPlotData,
   ScoresPlotConfig,
+  Scores3DPlotData,
+  Scores3DPlotConfig,
   ScreePlotData,
   ScreePlotConfig,
   LoadingsPlotData,
@@ -84,6 +91,51 @@ export function createScoresPlotConfig(
     maxLabels: maxLabelsToShow,
     theme,
     colorScheme
+  };
+}
+
+/**
+ * Transform PCAResult to Plotly 3D ScoresPlot data format
+ */
+export function transformToScores3DPlotData(
+  pcaResult: PCAResult,
+  rowNames: string[],
+  groupLabels?: string[],
+  _groupValues?: number[],
+  _groupType?: 'categorical' | 'continuous',
+  xComponent: number = 0,
+  yComponent: number = 1,
+  zComponent: number = 2
+): Scores3DPlotData {
+  return {
+    scores: pcaResult.scores,
+    sampleNames: rowNames,
+    groups: groupLabels || [],
+    explainedVariance: pcaResult.explained_variance_ratio,
+    pc1: xComponent,
+    pc2: yComponent,
+    pc3: zComponent
+  };
+}
+
+/**
+ * Create 3D ScoresPlot config from GoPCA props
+ */
+export function createScores3DPlotConfig(
+  _xComponent: number = 0,
+  _yComponent: number = 1,
+  _zComponent: number = 2,
+  _showRowLabels?: boolean,
+  _maxLabelsToShow?: number,
+  theme?: 'light' | 'dark',
+  colorScheme?: string[]
+): Scores3DPlotConfig {
+  return {
+    colorScheme,
+    markerSize: 5,
+    opacity: 0.8,
+    showProjections: false,
+    theme
   };
 }
 
