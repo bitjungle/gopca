@@ -78,6 +78,10 @@ export {
   PlotlyBarChart
 } from './charts/PlotlyBarChart';
 
+// Plotly Core Components
+export { PlotlyContainer } from './charts/core/PlotlyContainer';
+export { PlotlyControls } from './charts/controls/PlotlyControls';
+
 // Plotly PCA Visualizations
 export {
   // Components

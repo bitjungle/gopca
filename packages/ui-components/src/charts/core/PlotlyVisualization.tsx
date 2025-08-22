@@ -1,4 +1,9 @@
 // Copyright 2025 bitjungle - Rune Mathisen. All rights reserved.
+// Use of this source code is governed by the MIT license
+// that can be found in the LICENSE file.
+// The author respectfully requests that it not be used for
+// military, warfare, or surveillance applications.
+
 // PlotlyVisualization Base Class - Foundation for all Plotly visualizations
 
 import React from 'react';
@@ -6,6 +11,7 @@ import Plot from 'react-plotly.js';
 import { Data, Layout, Config, PlotlyHTMLElement } from 'plotly.js';
 import { getPlotlyTheme, mergeLayouts, ThemeMode } from '../utils/plotlyTheme';
 import { PLOT_CONFIG } from '../config/plotConfig';
+import { PlotlyContainer } from './PlotlyContainer';
 
 export interface MathReference {
   authors: string;
@@ -25,6 +31,7 @@ export interface PlotlyVisualizationConfig {
   exportScale?: number;
   maintainAspectRatio?: boolean;
   theme?: ThemeMode;
+  enableFullscreen?: boolean;
 }
 
 export interface PlotlyButton {
@@ -61,6 +68,7 @@ export abstract class PlotlyVisualization<T = any> {
       exportScale: 2,
       maintainAspectRatio: false,
       theme: 'light',
+      enableFullscreen: true,
       ...config
     };
     this.theme = this.config.theme || 'light';
@@ -241,7 +249,7 @@ return trace;
     const themeConfig = getPlotlyTheme(this.theme).config;
     const config = { ...themeConfig, ...this.getAdvancedConfig() };
 
-    return (
+    const plotElement = (
       <Plot
         data={traces}
         layout={layout}
@@ -249,6 +257,12 @@ return trace;
         style={{ width: '100%', height: '100%' }}
         useResizeHandler={true}
       />
+    );
+
+    return (
+      <PlotlyContainer enableFullscreen={this.config.enableFullscreen}>
+        {plotElement}
+      </PlotlyContainer>
     );
   }
 }
