@@ -179,6 +179,87 @@ TypeScript has been configured with strict mode for better type safety:
 ### Component Consolidation
 The ExportButton component has been refactored to use the shared component from `ui-components`, reducing code duplication and improving maintainability.
 
+## Configuration Strategy
+
+### Centralized Configuration
+All Plotly visualizations use centralized configuration from `packages/ui-components/src/charts/config/plotConfig.ts`. This ensures consistency and maintainability across all charts.
+
+#### Configuration Categories
+
+1. **Export Settings**
+   - Standard aspect ratio: 16:9 (1920x1080) for presentations
+   - Publication format: SVG at 3200x2400 for high-quality prints
+   - Web format: PNG at 1200x800 for online sharing
+   - High-resolution scaling factor: 2x for presentation, 4x for publication
+   - Located in: `PLOT_CONFIG.export`
+
+2. **Color Palette**
+   - Primary colors use Tailwind palette (blue-500: #3b82f6)
+   - Categorical palette for multi-group visualizations
+   - Diagnostic plot specific colors for outlier categories
+   - Grid and axis colors adapt to light/dark themes
+   - Located in: `PLOT_CONFIG.colors`
+
+3. **Visual Properties**
+   - Standard marker size: 10px across all scatter plots
+   - Opacity levels: 0.8 (primary), 0.5 (secondary), 0.3 (overlays)
+   - Consistent font sizing: 10px (labels), 14px (titles), 12px (axes)
+   - Line properties: 2px width, standard dash pattern
+   - Located in: `PLOT_CONFIG.visual`
+
+4. **Performance Thresholds**
+   - WebGL activation: >1000 points (automatic optimization)
+   - Data decimation: >10000 points (preserves visual fidelity)
+   - Density plots: >100000 points (for massive datasets)
+   - Label display limit: 100 labels (prevents overcrowding)
+   - Located in: `PLOT_CONFIG.performance`
+
+#### Usage Example
+
+```typescript
+import { PLOT_CONFIG, getCategoricalColor } from '../config/plotConfig';
+
+// Use centralized colors
+const color = getCategoricalColor(groupIndex);
+
+// Use centralized export config
+toImageButtonOptions: {
+  ...PLOT_CONFIG.export.presentation,
+  filename: 'my-plot'
+}
+
+// Use centralized visual properties
+marker: {
+  size: PLOT_CONFIG.visual.markerSize,
+  opacity: PLOT_CONFIG.visual.opacity.primary
+}
+```
+
+#### Adding New Configuration
+
+When adding new configuration values:
+1. Check if the value is used in multiple places (DRY principle)
+2. Add to appropriate section in `plotConfig.ts`
+3. Update components to use centralized value
+4. Document the new configuration here
+
+#### Override Strategy
+
+Components can override defaults when needed:
+- Export filenames are overridden per visualization type
+- Color schemes can be customized via component props
+- Performance thresholds adjust based on visualization complexity
+- Visual properties can be modified for specific use cases
+
+### Benefits of Centralization
+
+1. **Single Source of Truth**: All configuration values in one location
+2. **Consistency**: Same colors, sizes, and settings across all visualizations
+3. **Maintainability**: Change once, update everywhere
+4. **Type Safety**: TypeScript ensures correct usage
+5. **Theme Support**: Easy to add dark/light mode variations
+6. **Future-proof**: Simple to add user preferences and customization
+
 ## Migration Notes
 
 ### From Recharts to Plotly

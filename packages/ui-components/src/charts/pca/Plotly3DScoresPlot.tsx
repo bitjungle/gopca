@@ -7,6 +7,7 @@ import { Data, Layout, Config } from 'plotly.js';
 import { PCA_REFERENCES } from '../utils/plotlyMath';
 import { getPlotlyTheme, mergeLayouts, ThemeMode } from '../utils/plotlyTheme';
 import { getExportMenuItems } from '../utils/plotlyExport';
+import { PLOT_CONFIG } from '../config/plotConfig';
 
 export interface Scores3DPlotData {
   scores: number[][];
@@ -239,11 +240,8 @@ export class Plotly3DScoresPlot {
       displaylogo: false,
       modeBarButtonsToAdd: getExportMenuItems() as any,
       toImageButtonOptions: {
-        format: 'png',
-        filename: 'pca-3d-scores',
-        height: 1200,
-        width: 1600,
-        scale: 2
+        ...PLOT_CONFIG.export.presentation,
+        filename: 'pca-3d-scores'
       }
     };
   }

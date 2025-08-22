@@ -5,6 +5,7 @@ import React from 'react';
 import Plot from 'react-plotly.js';
 import { Data, Layout, Config, PlotlyHTMLElement } from 'plotly.js';
 import { getPlotlyTheme, mergeLayouts, ThemeMode } from '../utils/plotlyTheme';
+import { PLOT_CONFIG } from '../config/plotConfig';
 
 export interface MathReference {
   authors: string;
@@ -43,10 +44,10 @@ export abstract class PlotlyVisualization<T = any> {
   protected config: PlotlyVisualizationConfig;
   protected theme: ThemeMode;
 
-  // Performance thresholds
-  protected readonly WEBGL_THRESHOLD = 1000;
-  protected readonly DECIMATION_THRESHOLD = 10000;
-  protected readonly DENSITY_THRESHOLD = 100000;
+  // Performance thresholds from centralized config
+  protected readonly WEBGL_THRESHOLD = PLOT_CONFIG.performance.webglThreshold;
+  protected readonly DECIMATION_THRESHOLD = PLOT_CONFIG.performance.decimationThreshold;
+  protected readonly DENSITY_THRESHOLD = PLOT_CONFIG.performance.densityThreshold;
 
   constructor(data: T, config?: PlotlyVisualizationConfig) {
     this.data = data;
@@ -201,15 +202,34 @@ return trace;
       displaylogo: false,
       modeBarButtonsToAdd: [],
       toImageButtonOptions: {
-        format: 'png',
-        filename: 'pca-plot',
-        height: 1600,
-        width: 1600,
-        scale: 2
+        ...PLOT_CONFIG.export.presentation,
+        filename: this.getExportFilename()
       }
     };
 
     return config;
+  }
+
+  /**
+   * Get export filename for this visualization
+   * Override in subclasses to provide specific filenames
+   */
+  protected getExportFilename(): string {
+    return 'pca-plot';
+  }
+
+  /**
+   * Get default colors from centralized config
+   */
+  protected getDefaultColors(): string[] {
+    return PLOT_CONFIG.colors.categorical;
+  }
+
+  /**
+   * Get standard marker size from centralized config
+   */
+  protected getMarkerSize(): number {
+    return PLOT_CONFIG.visual.markerSize;
   }
 
   /**

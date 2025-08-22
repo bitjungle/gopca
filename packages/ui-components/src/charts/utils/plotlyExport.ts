@@ -2,6 +2,7 @@
 // Export utilities for high-quality Plotly visualizations
 
 import { PlotlyHTMLElement } from 'plotly.js';
+import { PLOT_CONFIG } from '../config/plotConfig';
 
 export interface ExportConfig {
   format: 'png' | 'jpeg' | 'svg' | 'pdf';
@@ -12,27 +13,18 @@ export interface ExportConfig {
 }
 
 export const PUBLICATION_EXPORT_CONFIG: ExportConfig = {
-  format: 'svg',
-  filename: 'pca-publication',
-  width: 3200,
-  height: 2400,
-  scale: 4
+  ...PLOT_CONFIG.export.publication,
+  filename: 'pca-publication'
 };
 
 export const PRESENTATION_EXPORT_CONFIG: ExportConfig = {
-  format: 'png',
-  filename: 'pca-presentation',
-  width: 1920,
-  height: 1080,
-  scale: 2
+  ...PLOT_CONFIG.export.presentation,
+  filename: 'pca-presentation'
 };
 
 export const WEB_EXPORT_CONFIG: ExportConfig = {
-  format: 'png',
-  filename: 'pca-web',
-  width: 1200,
-  height: 800,
-  scale: 1
+  ...PLOT_CONFIG.export.web,
+  filename: 'pca-web'
 };
 
 /**

@@ -6,6 +6,7 @@ import Plot from 'react-plotly.js';
 import { Data, Layout } from 'plotly.js';
 import { getPlotlyTheme, mergeLayouts, ThemeMode } from '../utils/plotlyTheme';
 import { getExportMenuItems } from '../utils/plotlyExport';
+import { PLOT_CONFIG } from '../config/plotConfig';
 
 export interface ScreePlotData {
   explainedVariance: number[];
@@ -200,11 +201,8 @@ export class PlotlyScreePlot {
       displaylogo: false,
       modeBarButtonsToAdd: getExportMenuItems() as any,
       toImageButtonOptions: {
-        format: 'png',
-        filename: 'scree-plot',
-        height: 1200,
-        width: 1600,
-        scale: 2
+        ...PLOT_CONFIG.export.presentation,
+        filename: 'scree-plot'
       }
     };
   }
