@@ -6,6 +6,7 @@ import Plot from 'react-plotly.js';
 import { Data, Layout } from 'plotly.js';
 import { getPlotlyTheme, mergeLayouts, ThemeMode } from '../utils/plotlyTheme';
 import { getExportMenuItems } from '../utils/plotlyExport';
+import { PLOT_CONFIG } from '../config/plotConfig';
 
 export interface CircleOfCorrelationsData {
   loadings: number[][];  // [n_components][n_variables]
@@ -313,11 +314,8 @@ export class PlotlyCircleOfCorrelations {
       displaylogo: false,
       modeBarButtonsToAdd: getExportMenuItems() as any,
       toImageButtonOptions: {
-        format: 'png',
-        filename: 'circle-of-correlations',
-        height: 1600,
-        width: 1600,
-        scale: 2
+        ...PLOT_CONFIG.export.presentation,
+        filename: 'circle-of-correlations'
       }
     };
   }

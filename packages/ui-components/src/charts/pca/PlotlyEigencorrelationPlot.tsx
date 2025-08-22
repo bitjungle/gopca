@@ -6,6 +6,7 @@ import Plot from 'react-plotly.js';
 import { Data, Layout } from 'plotly.js';
 import { getPlotlyTheme, mergeLayouts, ThemeMode } from '../utils/plotlyTheme';
 import { getExportMenuItems } from '../utils/plotlyExport';
+import { PLOT_CONFIG } from '../config/plotConfig';
 
 export interface EigencorrelationPlotData {
   correlations: number[][];  // [n_components][n_variables]
@@ -267,11 +268,8 @@ export class PlotlyEigencorrelationPlot {
       displaylogo: false,
       modeBarButtonsToAdd: getExportMenuItems() as any,
       toImageButtonOptions: {
-        format: 'png',
-        filename: 'eigencorrelation-matrix',
-        height: 1600,
-        width: 1200,
-        scale: 2
+        ...PLOT_CONFIG.export.presentation,
+        filename: 'eigencorrelation-matrix'
       }
     };
   }

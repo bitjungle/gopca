@@ -12,6 +12,7 @@ import {
 } from '../utils/plotlyMath';
 import { getPlotlyTheme, mergeLayouts, ThemeMode } from '../utils/plotlyTheme';
 import { getExportMenuItems } from '../utils/plotlyExport';
+import { PLOT_CONFIG } from '../config/plotConfig';
 import { optimizeTraceType } from '../utils/plotlyPerformance';
 
 export interface BiplotData {
@@ -458,11 +459,8 @@ return { x: 0, y: 0 };
       displaylogo: false,
       modeBarButtonsToAdd: getExportMenuItems() as any,
       toImageButtonOptions: {
-        format: 'png',
-        filename: 'biplot',
-        height: 1600,
-        width: 1600,
-        scale: 2
+        ...PLOT_CONFIG.export.presentation,
+        filename: 'biplot'
       }
     };
   }
