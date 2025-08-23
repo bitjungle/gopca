@@ -8,7 +8,6 @@
 
 import React, { useMemo } from 'react';
 import { Data, Layout, Config } from 'plotly.js';
-import { PCA_REFERENCES } from '../utils/plotlyMath';
 import { getPlotlyTheme, mergeLayouts, ThemeMode } from '../utils/plotlyTheme';
 import { getExportMenuItems } from '../utils/plotlyExport';
 import { PLOT_CONFIG } from '../config/plotConfig';
@@ -254,18 +253,7 @@ export class Plotly3DScoresPlot {
         y: 1,
         xanchor: 'left',
         yanchor: 'top'
-      },
-      annotations: [
-        {
-          text: `References: ${PCA_REFERENCES.map(r => `${r.authors} (${r.year})`).join(', ')}`,
-          xref: 'paper',
-          yref: 'paper',
-          x: 0,
-          y: -0.1,
-          showarrow: false,
-          font: { size: 10, color: 'gray' }
-        }
-      ]
+      }
     };
   }
 

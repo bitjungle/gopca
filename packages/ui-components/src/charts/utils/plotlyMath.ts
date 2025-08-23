@@ -1,8 +1,6 @@
 // Copyright 2025 bitjungle - Rune Mathisen. All rights reserved.
 // Mathematical utilities for Plotly visualizations with academic references
 
-import { MathReference } from '../core/PlotlyVisualization';
-
 export interface Point2D {
   x: number;
   y: number;
@@ -364,32 +362,3 @@ function calculateStandardDeviation(values: number[]): number {
   const variance = values.reduce((sum, v) => sum + (v - mean) ** 2, 0) / (n - 1);
   return Math.sqrt(variance);
 }
-
-/**
- * Mathematical references for PCA visualizations
- */
-export const PCA_REFERENCES: MathReference[] = [
-  {
-    authors: 'Johnson, R. A., & Wichern, D. W.',
-    title: 'Applied Multivariate Statistical Analysis',
-    year: 2007,
-    page: 'Ch. 4'
-  },
-  {
-    authors: 'Gabriel, K. R.',
-    title: 'The biplot graphic display of matrices with application to principal component analysis',
-    year: 1971,
-    page: 'Biometrika 58(3), 453-467'
-  },
-  {
-    authors: 'Scott, D. W.',
-    title: 'Multivariate Density Estimation',
-    year: 1992
-  },
-  {
-    authors: 'Golub, G. H., & Van Loan, C. F.',
-    title: 'Matrix Computations',
-    year: 2013,
-    page: 'Ch. 8'
-  }
-];

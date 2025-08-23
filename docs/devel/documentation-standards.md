@@ -96,12 +96,7 @@ When documenting mathematical algorithms:
    - V: Right singular vectors (m×k)
    ```
 
-3. **Cite References**
-   ```
-   Reference: Golub & Van Loan (2013), Matrix Computations, Ch. 8
-   ```
-
-4. **Include Complexity**
+3. **Include Complexity**
    ```
    Time complexity: O(mn²) for m > n
    Space complexity: O(mn)

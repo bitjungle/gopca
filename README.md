@@ -4,7 +4,7 @@ Professional-grade PCA analysis made simple. Available as both a powerful comman
 
 ## What is GoPCA?
 
-GoPCA is **the** go-to application for Principal Component Analysis - a fundamental machine learning technique for understanding complex, multivariate data. Whether you're analyzing spectroscopic data, exploring gene expression patterns, or reducing dimensionality in machine learning pipelines, GoPCA provides the tools you need.
+GoPCA is **the** go-to application for Principal Component Analysis, a fundamental machine learning technique for understanding complex  multivariate data. Whether you're analyzing spectroscopic data, exploring gene expression patterns, or reducing dimensionality in machine learning pipelines, GoPCA provides the tools you need.
 
 ![GoPCA Overview](docs/images/gopca-overview.jpg)
 
