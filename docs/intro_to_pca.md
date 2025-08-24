@@ -4,7 +4,7 @@
 
 In today's world, vast amounts of data are collected across scientific fields, industry, and everyday life. Whether it's thousands of gene expression values from a microarray experiment, the spectral profile of wine samples, or dozens of environmental sensors monitoring an industrial process, the resulting datasets can be huge and unwieldy. 
 
-Analyzing such **multivariate data**—where each sample or observation is described by many variables—poses a challenge. As the number of variables grows, the data become not only more complex but also harder to visualize, interpret, and model. Patterns may be hidden by noise, relationships between variables may be obscure, and redundancy (overlapping information) is common.
+Analyzing such **multivariate data**, where each sample or observation is described by many variables, poses a challenge. As the number of variables grows, the data become not only more complex but also harder to visualize, interpret, and model. Patterns may be hidden by noise, relationships between variables may be obscure, and redundancy (overlapping information) is common.
 
 **Principal Component Analysis (PCA)** is a mathematical tool designed to tackle exactly this problem. Dating back to the early 20th century, PCA remains at the core of modern data science, chemometrics, bioinformatics, neuroscience, engineering, psychology, and many other fields. PCA offers a principled way to **reduce the dimensionality** of large datasets while retaining as much of the original information as possible. In doing so, PCA makes it easier to visualize, understand, and further analyze complex data.
 
@@ -58,7 +58,7 @@ Let’s denote our dataset as matrix **X**. Each row of **X** is a sample (e.g.,
 Before applying PCA, each variable is typically **centered** by subtracting its mean. This ensures that the analysis is not influenced by differences in baseline levels.
 
 **Scaling:**  
-If variables are measured in different units or have very different variances, it is common to also **scale** them—usually by dividing each variable by its standard deviation (a process called **autoscaling** or **standardization**). This ensures that all variables contribute equally, preventing those with larger numerical ranges from dominating the results.
+If variables are measured in different units or have very different variances, it is common to also **scale** them, usually by dividing each variable by its standard deviation (a process called **autoscaling** or **standardization**). This ensures that all variables contribute equally, preventing those with larger numerical ranges from dominating the results.
 
 > **Tip:** Centering is *essential* for PCA; scaling is *strongly recommended* when variables are on different scales.
 
@@ -250,7 +250,7 @@ Imagine data points arranged in a spiral pattern or lying on a curved surface li
 
 ### 9.2. How Kernel PCA Works
 
-Kernel PCA overcomes this limitation using the "kernel trick"—a mathematical technique that implicitly maps data into a higher-dimensional space where nonlinear patterns become linear. Instead of explicitly computing this transformation (which could be computationally prohibitive or even infinite-dimensional), Kernel PCA uses kernel functions to compute similarities between data points directly.
+Kernel PCA overcomes this limitation using the "kernel trick", a mathematical technique that implicitly maps data into a higher-dimensional space where nonlinear patterns become linear. Instead of explicitly computing this transformation (which could be computationally prohibitive or even infinite-dimensional), Kernel PCA uses kernel functions to compute similarities between data points directly.
 
 The key insight is that many algorithms, including PCA, only need to compute dot products between data points. Kernel functions provide a way to compute these dot products in the transformed space without ever explicitly performing the transformation.
 
