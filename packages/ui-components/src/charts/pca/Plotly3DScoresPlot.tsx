@@ -289,6 +289,42 @@ export const PCA3DScoresPlot: React.FC<{
   data: Scores3DPlotData;
   config?: Scores3DPlotConfig;
 }> = ({ data, config }) => {
+  // Check if we have enough components for 3D visualization
+  const pc3 = data.pc3 ?? 2;
+  const numComponents = data.scores[0]?.length || 0;
+  const numExplainedVariance = data.explainedVariance?.length || 0;
+  
+  // Validate that we have at least 3 components
+  if (numComponents < 3 || pc3 >= numComponents || numExplainedVariance < 3 || pc3 >= numExplainedVariance) {
+    const theme = config?.theme || 'light';
+    return (
+      <div style={{ 
+        width: '100%', 
+        height: '100%', 
+        display: 'flex', 
+        alignItems: 'center', 
+        justifyContent: 'center',
+        flexDirection: 'column'
+      }}>
+        <p style={{ 
+          color: theme === 'dark' ? '#9ca3af' : '#6b7280', 
+          textAlign: 'center',
+          marginBottom: '10px'
+        }}>
+          3D Scores Plot requires at least 3 principal components.
+        </p>
+        <p style={{ 
+          color: theme === 'dark' ? '#9ca3af' : '#6b7280', 
+          textAlign: 'center',
+          fontSize: '14px'
+        }}>
+          Current PCA has only {numComponents} component{numComponents === 1 ? '' : 's'}.
+          Please use the 2D Scores Plot visualization instead.
+        </p>
+      </div>
+    );
+  }
+  
   const plot = useMemo(() => new Plotly3DScoresPlot(data, config), [data, config]);
 
   return (
