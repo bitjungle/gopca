@@ -159,6 +159,16 @@ function AppContent() {
         };
     }, []);
 
+    // Auto-switch visualization when Kernel PCA is selected and incompatible plot is active
+    useEffect(() => {
+        if (pcaResponse && pcaResponse.result && pcaResponse.result.method === 'kernel') {
+            if (selectedPlot === 'loadings' || selectedPlot === 'diagnostics' || selectedPlot === 'eigencorrelation') {
+                // Switch to scores plot as a safe default
+                setSelectedPlot('scores');
+            }
+        }
+    }, [pcaResponse, selectedPlot]);
+
     // Helper function to get column data and type
     const getColumnData = (columnName: string | null): { values?: string[] | number[], type?: 'categorical' | 'continuous' } => {
         if (!columnName || !fileData) {
@@ -1065,7 +1075,9 @@ return;
                                                 <option value="scores">Scores Plot</option>
                                                 <option value="scores3d">3D Scores Plot</option>
                                                 <option value="scree">Scree Plot</option>
-                                                <option value="loadings">Loadings Plot</option>
+                                                {pcaResponse.result.method !== 'kernel' && (
+                                                    <option value="loadings">Loadings Plot</option>
+                                                )}
                                                 {pcaResponse.result.preprocessing_applied && (
                                                     <option value="biplot">Biplot</option>
                                                 )}
@@ -1075,8 +1087,10 @@ return;
                                                 {pcaResponse.result.preprocessing_applied && (
                                                     <option value="correlations">Circle of Correlations</option>
                                                 )}
-                                                <option value="diagnostics">Diagnostic Plot</option>
-                                                {pcaResponse.result.eigencorrelations && (
+                                                {pcaResponse.result.method !== 'kernel' && (
+                                                    <option value="diagnostics">Diagnostic Plot</option>
+                                                )}
+                                                {pcaResponse.result.eigencorrelations && pcaResponse.result.method !== 'kernel' && (
                                                     <option value="eigencorrelation">Eigencorrelation Plot</option>
                                                 )}
                                             </select>
@@ -1275,7 +1289,7 @@ return;
                                         )}
 
                                         {/* Loadings Plot Component Selector */}
-                                        {selectedPlot === 'loadings' && (
+                                        {selectedPlot === 'loadings' && pcaResponse.result?.method !== 'kernel' && (
                                             <div className="flex items-center gap-3 px-3 py-2 bg-gray-50 dark:bg-gray-800 rounded-lg">
                                                 <label className="text-sm text-gray-600 dark:text-gray-400">Component:</label>
                                                 <select
@@ -1356,7 +1370,7 @@ return;
                                                 showCumulative={true}
                                                 elbowThreshold={80}
                                             />
-                                        ) : selectedPlot === 'loadings' ? (
+                                        ) : selectedPlot === 'loadings' && pcaResponse.result.method !== 'kernel' ? (
                                             <LoadingsPlot
                                                 pcaResult={pcaResponse.result}
                                                 selectedComponent={selectedLoadingComponent}
@@ -1412,7 +1426,7 @@ return;
                                                 xComponent={selectedXComponent}
                                                 yComponent={selectedYComponent}
                                             />
-                                        ) : selectedPlot === 'diagnostics' ? (
+                                        ) : selectedPlot === 'diagnostics' && pcaResponse.result.method !== 'kernel' ? (
                                             <DiagnosticScatterPlot
                                                 pcaResult={pcaResponse.result}
                                                 rowNames={fileData?.rowNames || []}
