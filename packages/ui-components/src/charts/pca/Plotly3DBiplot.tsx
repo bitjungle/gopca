@@ -594,6 +594,42 @@ export const PCA3DBiplot: React.FC<{
   data: Biplot3DData;
   config?: Biplot3DConfig;
 }> = ({ data, config }) => {
+  // Check if we have enough components for 3D visualization
+  const pc3 = data.pc3 ?? 2;
+  const numComponents = data.scores[0]?.length || 0;
+  const numLoadingComponents = data.loadings?.length || 0;
+  
+  // Validate that we have at least 3 components in both scores and loadings
+  if (numComponents < 3 || pc3 >= numComponents || numLoadingComponents < 3 || pc3 >= numLoadingComponents) {
+    const theme = config?.theme || 'light';
+    return (
+      <div style={{ 
+        width: '100%', 
+        height: '100%', 
+        display: 'flex', 
+        alignItems: 'center', 
+        justifyContent: 'center',
+        flexDirection: 'column'
+      }}>
+        <p style={{ 
+          color: theme === 'dark' ? '#9ca3af' : '#6b7280', 
+          textAlign: 'center',
+          marginBottom: '10px'
+        }}>
+          3D Biplot requires at least 3 principal components.
+        </p>
+        <p style={{ 
+          color: theme === 'dark' ? '#9ca3af' : '#6b7280', 
+          textAlign: 'center',
+          fontSize: '14px'
+        }}>
+          Current PCA has only {numComponents} component{numComponents === 1 ? '' : 's'}.
+          Please use the 2D Biplot visualization instead.
+        </p>
+      </div>
+    );
+  }
+  
   const plot = useMemo(() => new Plotly3DBiplot(data, config), [data, config]);
 
   return (
