@@ -96,6 +96,7 @@ func TestValidateModel(t *testing.T) {
 			name: "Invalid metadata structure",
 			data: map[string]interface{}{
 				"metadata": map[string]interface{}{
+					"analysis_id":      "123e4567-e89b-12d3-a456-426614174000",
 					"software_version": "dev",
 					"software":         "wrong-software", // Should be "gopca"
 					"created_at":       time.Now().Format(time.RFC3339),
@@ -180,6 +181,7 @@ func TestValidateRealPCAOutputData(t *testing.T) {
 	outputData := &types.PCAOutputData{
 		Schema: "https://github.com/bitjungle/gopca/schemas/v1/pca-output.schema.json",
 		Metadata: types.ModelMetadata{
+			AnalysisID:      "123e4567-e89b-12d3-a456-426614174000",
 			SoftwareVersion: "dev",
 			CreatedAt:       time.Now().Format(time.RFC3339),
 			Software:        "gopca",
@@ -336,6 +338,7 @@ func TestValidateWithMetrics(t *testing.T) {
 
 func createValidMetadata() map[string]interface{} {
 	return map[string]interface{}{
+		"analysis_id":      "123e4567-e89b-12d3-a456-426614174000",
 		"software_version": "dev",
 		"created_at":       time.Now().Format(time.RFC3339),
 		"software":         "gopca",

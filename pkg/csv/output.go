@@ -12,23 +12,65 @@ import (
 	"github.com/bitjungle/gopca/internal/core"
 	"github.com/bitjungle/gopca/internal/version"
 	"github.com/bitjungle/gopca/pkg/types"
+	"github.com/google/uuid"
 )
+
+// ExportMetadata contains optional metadata for PCA export
+type ExportMetadata struct {
+	InputFilename string   // Original input file name
+	Description   string   // User-provided description
+	Tags          []string // User-defined tags
+}
 
 // ConvertToPCAOutputData converts PCAResult and Data to PCAOutputData for export
 // This function is shared between CLI and Desktop applications
 func ConvertToPCAOutputData(result *types.PCAResult, data *Data, includeMetrics bool,
 	config types.PCAConfig, preprocessor *core.Preprocessor,
 	categoricalData map[string][]string, targetData map[string][]float64) *types.PCAOutputData {
+	return ConvertToPCAOutputDataWithMetadata(result, data, includeMetrics, config,
+		preprocessor, categoricalData, targetData, nil)
+}
+
+// ConvertToPCAOutputDataWithMetadata converts PCAResult and Data to PCAOutputData with optional metadata
+func ConvertToPCAOutputDataWithMetadata(result *types.PCAResult, data *Data, includeMetrics bool,
+	config types.PCAConfig, preprocessor *core.Preprocessor,
+	categoricalData map[string][]string, targetData map[string][]float64,
+	exportMeta *ExportMetadata) *types.PCAOutputData {
 
 	// Create timestamp
 	createdAt := time.Now().Format(time.RFC3339)
 
+	// Generate unique analysis ID
+	analysisID := uuid.New().String()
+
+	// Create data source info if we have the data
+	var dataSource *types.DataSource
+	if exportMeta != nil && exportMeta.InputFilename != "" {
+		dataSource = &types.DataSource{
+			Filename:      exportMeta.InputFilename,
+			NRowsOriginal: data.Rows,
+			NColsOriginal: data.Columns,
+		}
+	}
+
+	// Add optional metadata if provided
+	var description string
+	var tags []string
+	if exportMeta != nil {
+		description = exportMeta.Description
+		tags = exportMeta.Tags
+	}
+
 	// Create model metadata
 	// Use the actual method from the result, not the config
 	metadata := types.ModelMetadata{
+		AnalysisID:      analysisID,
 		SoftwareVersion: version.Version, // Use actual GoPCA version
 		CreatedAt:       createdAt,
 		Software:        "gopca",
+		DataSource:      dataSource,
+		Description:     description,
+		Tags:            tags,
 		Config: types.ModelConfig{
 			Method:          result.Method,             // Use actual method from result
 			NComponents:     result.ComponentsComputed, // Use actual components computed

@@ -67,10 +67,18 @@ A valid PCA model contains four required sections and an optional schema referen
 {
   "$schema": "https://github.com/bitjungle/gopca/schemas/v1/pca-output.schema.json",
   "metadata": {
+    "analysis_id": "123e4567-e89b-12d3-a456-426614174000",
     "software_version": "0.9.0",
     "created_at": "2025-01-25T10:00:00Z",
     "software": "gopca",
-    "config": { ... }
+    "config": { ... },
+    "data_source": {
+      "filename": "experiment_data.csv",
+      "n_rows_original": 150,
+      "n_cols_original": 4
+    },
+    "description": "PCA analysis of experimental data",
+    "tags": ["experiment-1", "quality-control"]
   },
   "preprocessing": {
     "mean_center": true,
@@ -108,6 +116,19 @@ Example:
 "$schema": "https://github.com/bitjungle/gopca/schemas/v1/pca-output.schema.json"
 ```
 
+## Enhanced Metadata Fields
+
+The schema now includes enhanced metadata for better traceability:
+
+- **`analysis_id`** (required): UUID for unique identification
+- **`data_source`** (optional): Information about input data
+  - `filename`: Original data file name
+  - `hash`: SHA-256 hash for data integrity
+  - `n_rows_original`: Rows before exclusions
+  - `n_cols_original`: Columns before exclusions
+- **`description`** (optional): User notes about the analysis
+- **`tags`** (optional): Array of user-defined tags
+
 ## Validation Rules
 
 The schemas enforce:
@@ -116,6 +137,7 @@ The schemas enforce:
 - Value ranges (e.g., correlation coefficients between -1 and 1)
 - Enumerated values (e.g., PCA methods: "svd", "nipals", "kernel")
 - Array dimensions (e.g., loadings must be 2D array)
+- UUID format for `analysis_id`
 
 ## Version Management
 

@@ -127,7 +127,7 @@ func (v *ModelValidator) validateMetadata(data interface{}) error {
 	}
 
 	// Check required fields
-	requiredFields := []string{"software_version", "created_at", "software", "config"}
+	requiredFields := []string{"analysis_id", "software_version", "created_at", "software", "config"}
 	for _, field := range requiredFields {
 		if _, ok := metadata[field]; !ok {
 			return fmt.Errorf("missing required field: %s", field)

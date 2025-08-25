@@ -4,8 +4,13 @@
   "title": "PCA Model Metadata",
   "description": "Metadata about the PCA model and analysis configuration",
   "type": "object",
-  "required": ["software_version", "created_at", "software", "config"],
+  "required": ["analysis_id", "software_version", "created_at", "software", "config"],
   "properties": {
+    "analysis_id": {
+      "type": "string",
+      "description": "Unique identifier for this analysis (UUID)",
+      "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$"
+    },
     "software_version": {
       "type": "string",
       "description": "GoPCA software version (e.g., '0.9.0', 'dev')",
@@ -20,6 +25,42 @@
       "type": "string",
       "description": "Software used to create the model",
       "const": "gopca"
+    },
+    "data_source": {
+      "type": "object",
+      "description": "Information about the input data file",
+      "properties": {
+        "filename": {
+          "type": "string",
+          "description": "Original data file name"
+        },
+        "hash": {
+          "type": "string",
+          "description": "SHA-256 hash of input data",
+          "pattern": "^[a-f0-9]{64}$"
+        },
+        "n_rows_original": {
+          "type": "integer",
+          "description": "Number of rows before any exclusions",
+          "minimum": 0
+        },
+        "n_cols_original": {
+          "type": "integer",
+          "description": "Number of columns before any exclusions",
+          "minimum": 0
+        }
+      }
+    },
+    "description": {
+      "type": "string",
+      "description": "User-provided description or notes about the analysis"
+    },
+    "tags": {
+      "type": "array",
+      "description": "User-defined tags for categorization",
+      "items": {
+        "type": "string"
+      }
     },
     "config": {
       "type": "object",
