@@ -118,6 +118,20 @@ jobs:
           echo "ineffassign not found, skipping"
         fi
       shell: bash
+    
+    - name: Build CLI for integration tests
+      run: |
+        echo "Building CLI for integration tests..."
+        make build
+      shell: bash
+    
+    - name: Run integration tests
+      run: |
+        echo "Running integration tests..."
+        make test-e2e
+      shell: bash
+      env:
+        GOPCA_TEST_TIMEOUT: 60
 
   build-cli:
     name: Build CLI
