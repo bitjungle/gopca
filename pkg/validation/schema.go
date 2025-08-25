@@ -68,6 +68,26 @@ func (v *ModelValidator) ValidateModel(data []byte) error {
 		return fmt.Errorf("failed to parse model: %w", err)
 	}
 
+	// Check for optional $schema field and validate if present
+	if schema, ok := model["$schema"].(string); ok {
+		// Validate that it points to a known schema version
+		validSchemas := []string{
+			"https://github.com/bitjungle/gopca/schemas/v1/pca-output.schema.json",
+			"../schemas/v1/pca-output.schema.json",
+			"./schemas/v1/pca-output.schema.json",
+		}
+		schemaValid := false
+		for _, valid := range validSchemas {
+			if strings.HasSuffix(schema, valid) || schema == valid {
+				schemaValid = true
+				break
+			}
+		}
+		if !schemaValid {
+			return fmt.Errorf("unknown schema version: %s", schema)
+		}
+	}
+
 	// Check required top-level fields
 	requiredFields := []string{"metadata", "preprocessing", "model", "results"}
 	for _, field := range requiredFields {

@@ -6,6 +6,11 @@
   "type": "object",
   "required": ["metadata", "preprocessing", "model", "results"],
   "properties": {
+    "$schema": {
+      "type": "string",
+      "description": "Reference to the JSON schema for validation",
+      "pattern": "schemas/v[0-9]+/pca-output\\.schema\\.json$"
+    },
     "metadata": {
       "$ref": "model-metadata.schema.json",
       "description": "Model metadata and configuration"

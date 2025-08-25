@@ -178,6 +178,7 @@ func TestValidateRealPCAOutputData(t *testing.T) {
 
 	// Create a real PCAOutputData structure
 	outputData := &types.PCAOutputData{
+		Schema: "https://github.com/bitjungle/gopca/schemas/v1/pca-output.schema.json",
 		Metadata: types.ModelMetadata{
 			Version:   "1.0",
 			CreatedAt: time.Now().Format(time.RFC3339),
@@ -232,6 +233,62 @@ func TestValidateRealPCAOutputData(t *testing.T) {
 	// Validate
 	if err := validator.ValidateModel(jsonData); err != nil {
 		t.Errorf("ValidateModel() failed for valid PCAOutputData: %v", err)
+	}
+}
+
+// TestValidateSchemaField tests validation of the $schema field
+func TestValidateSchemaField(t *testing.T) {
+	validator, err := NewModelValidator("v1")
+	if err != nil {
+		t.Fatalf("Failed to create validator: %v", err)
+	}
+
+	tests := []struct {
+		name    string
+		schema  string
+		wantErr bool
+	}{
+		{
+			name:    "Valid GitHub URL schema",
+			schema:  "https://github.com/bitjungle/gopca/schemas/v1/pca-output.schema.json",
+			wantErr: false,
+		},
+		{
+			name:    "Valid relative schema",
+			schema:  "../schemas/v1/pca-output.schema.json",
+			wantErr: false,
+		},
+		{
+			name:    "Invalid schema version",
+			schema:  "https://github.com/bitjungle/gopca/schemas/v99/pca-output.schema.json",
+			wantErr: true,
+		},
+		{
+			name:    "No schema field",
+			schema:  "",
+			wantErr: false, // Schema field is optional
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			outputData := createValidPCAOutputData()
+			dataMap := outputData.(map[string]interface{})
+
+			if tt.schema != "" {
+				dataMap["$schema"] = tt.schema
+			}
+
+			jsonData, err := json.Marshal(dataMap)
+			if err != nil {
+				t.Fatalf("Failed to marshal test data: %v", err)
+			}
+
+			err = validator.ValidateModel(jsonData)
+			if (err != nil) != tt.wantErr {
+				t.Errorf("ValidateModel() error = %v, wantErr %v", err, tt.wantErr)
+			}
+		})
 	}
 }
 

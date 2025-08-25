@@ -146,6 +146,7 @@ func ConvertToPCAOutputData(result *types.PCAResult, data *Data, includeMetrics 
 	}
 
 	return &types.PCAOutputData{
+		Schema:            "https://github.com/bitjungle/gopca/schemas/v1/pca-output.schema.json",
 		Metadata:          metadata,
 		Preprocessing:     preprocessingInfo,
 		Model:             modelComponents,

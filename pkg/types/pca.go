@@ -92,6 +92,7 @@ type PCAEngine interface {
 
 // PCAOutputData represents complete PCA results for output
 type PCAOutputData struct {
+	Schema            string                  `json:"$schema,omitempty"`
 	Metadata          ModelMetadata           `json:"metadata"`
 	Preprocessing     PreprocessingInfo       `json:"preprocessing"`
 	Model             ModelComponents         `json:"model"`

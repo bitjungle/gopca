@@ -61,10 +61,11 @@ The schemas can be used to:
 
 ## Model Structure
 
-A valid PCA model contains four required sections:
+A valid PCA model contains four required sections and an optional schema reference:
 
 ```json
 {
+  "$schema": "https://github.com/bitjungle/gopca/schemas/v1/pca-output.schema.json",
   "metadata": {
     "version": "1.0",
     "created_at": "2025-01-25T10:00:00Z",
@@ -94,6 +95,18 @@ Optional sections include:
 - `diagnostics` - Statistical limits for outlier detection
 - `eigencorrelations` - Correlations with metadata variables
 - `preservedColumns` - Categorical/target data preserved from analysis
+
+## Schema Reference
+
+The `$schema` field is automatically included in exported models to indicate which schema version the document conforms to. This enables:
+- Automatic schema detection by validators
+- Version compatibility checking
+- Tool integration without manual schema selection
+
+Example:
+```json
+"$schema": "https://github.com/bitjungle/gopca/schemas/v1/pca-output.schema.json"
+```
 
 ## Validation Rules
 
