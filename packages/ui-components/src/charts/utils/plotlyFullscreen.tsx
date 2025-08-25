@@ -81,20 +81,6 @@ export const PlotlyFullscreenModal: React.FC<{
           style={{ width: '100%', height: 'calc(100% - 3rem)' }}
           useResizeHandler={true}
         />
-        
-        {/* Exit button overlaid on top-right */}
-        <button
-          onClick={onClose}
-          className="absolute top-4 right-4 p-2 rounded-lg bg-gray-200 dark:bg-gray-700 hover:bg-gray-300 dark:hover:bg-gray-600 transition-colors z-10"
-          aria-label="Exit fullscreen"
-          title="Exit fullscreen (ESC)"
-        >
-          <svg className="w-5 h-5 text-gray-700 dark:text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} 
-              d="M9 9V4.5M9 9H4.5M9 9L3.75 3.75M9 15v4.5M9 15H4.5M9 15l-5.25 5.25M15 9h4.5M15 9V4.5M15 9l5.25-5.25M15 15h4.5M15 15v4.5m0-4.5l5.25 5.25" 
-            />
-          </svg>
-        </button>
       </div>
     </div>,
     document.body
