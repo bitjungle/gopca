@@ -12,8 +12,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"strings"
-
-	"github.com/xeipuuv/gojsonschema"
 )
 
 //go:embed schemas/v1/*.json
@@ -255,9 +253,9 @@ func (v *ModelValidator) validateResults(data interface{}) error {
 // ValidateWithSchema validates JSON data against a specific schema file
 // This is a simplified version for basic validation
 func ValidateWithSchema(data []byte, schemaName string, version string) error {
-	if version == "" {
-		version = "v1"
-	}
+	// Note: version parameter is reserved for future schema versioning
+	// Currently only v1 schemas are supported
+	_ = version // Mark as intentionally unused
 
 	// For now, just ensure valid JSON
 	var temp interface{}
@@ -266,23 +264,4 @@ func ValidateWithSchema(data []byte, schemaName string, version string) error {
 	}
 
 	return nil
-}
-
-// formatValidationErrors formats validation errors into a readable message
-func formatValidationErrors(errors []gojsonschema.ResultError) error {
-	if len(errors) == 0 {
-		return nil
-	}
-
-	var msgs []string
-	for _, err := range errors {
-		// Format the error message with field context
-		field := err.Field()
-		if field == "(root)" {
-			field = "model"
-		}
-		msgs = append(msgs, fmt.Sprintf("  - %s: %s", field, err.Description()))
-	}
-
-	return fmt.Errorf("validation failed:\n%s", strings.Join(msgs, "\n"))
 }

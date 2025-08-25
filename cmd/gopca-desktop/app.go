@@ -1039,7 +1039,7 @@ func (a *App) ExportPCAModel(request ExportPCAModelRequest) error {
 
 	// Convert to PCAOutputData using the shared function from pkg/csv with metadata
 	// Note: We don't have categorical/target data in the export request, so pass nil
-	outputData := pkgcsv.ConvertToPCAOutputDataWithMetadata(request.PCAResult, csvData, true, 
+	outputData := pkgcsv.ConvertToPCAOutputDataWithMetadata(request.PCAResult, csvData, true,
 		pcaConfig, preprocessor, nil, nil, exportMeta)
 
 	// Marshal to JSON
