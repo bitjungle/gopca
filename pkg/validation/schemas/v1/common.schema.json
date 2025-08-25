@@ -1,0 +1,33 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://github.com/bitjungle/gopca/schemas/v1/common.schema.json",
+  "title": "Common GoPCA Type Definitions",
+  "description": "Shared type definitions used across GoPCA JSON schemas",
+  "definitions": {
+    "Matrix": {
+      "type": "array",
+      "description": "2D matrix of floating-point values (rows × columns)",
+      "items": {
+        "type": "array",
+        "items": {
+          "type": "number"
+        }
+      }
+    },
+    "MissingValueStrategy": {
+      "type": "string",
+      "description": "Strategy for handling missing values in data",
+      "enum": ["error", "drop", "mean", "median", "native"]
+    },
+    "PCAMethod": {
+      "type": "string",
+      "description": "PCA computation method",
+      "enum": ["svd", "eigen", "nipals", "kernel"]
+    },
+    "KernelType": {
+      "type": "string",
+      "description": "Kernel type for kernel PCA",
+      "enum": ["linear", "rbf", "poly", "polynomial"]
+    }
+  }
+}

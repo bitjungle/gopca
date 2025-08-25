@@ -1,0 +1,85 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://github.com/bitjungle/gopca/schemas/v1/preprocessing.schema.json",
+  "title": "Preprocessing Configuration",
+  "description": "Preprocessing methods and fitted parameters",
+  "type": "object",
+  "required": ["mean_center", "standard_scale", "robust_scale", "scale_only", "snv", "vector_norm", "parameters"],
+  "properties": {
+    "mean_center": {
+      "type": "boolean",
+      "description": "Whether mean centering was applied"
+    },
+    "standard_scale": {
+      "type": "boolean",
+      "description": "Whether standard scaling (z-score) was applied"
+    },
+    "robust_scale": {
+      "type": "boolean",
+      "description": "Whether robust scaling (median/MAD) was applied"
+    },
+    "scale_only": {
+      "type": "boolean",
+      "description": "Whether variance scaling without mean centering was applied"
+    },
+    "snv": {
+      "type": "boolean",
+      "description": "Whether Standard Normal Variate (row-wise normalization) was applied"
+    },
+    "vector_norm": {
+      "type": "boolean",
+      "description": "Whether L2 normalization (row-wise) was applied"
+    },
+    "parameters": {
+      "type": "object",
+      "description": "Fitted preprocessing parameters",
+      "properties": {
+        "feature_means": {
+          "type": "array",
+          "description": "Column-wise means before preprocessing",
+          "items": {
+            "type": "number"
+          }
+        },
+        "feature_stddevs": {
+          "type": "array",
+          "description": "Column-wise standard deviations before preprocessing",
+          "items": {
+            "type": "number",
+            "minimum": 0
+          }
+        },
+        "feature_medians": {
+          "type": "array",
+          "description": "Column-wise medians for robust scaling",
+          "items": {
+            "type": "number"
+          }
+        },
+        "feature_mads": {
+          "type": "array",
+          "description": "Column-wise median absolute deviations for robust scaling",
+          "items": {
+            "type": "number",
+            "minimum": 0
+          }
+        },
+        "row_means": {
+          "type": "array",
+          "description": "Row-wise means for SNV preprocessing",
+          "items": {
+            "type": "number"
+          }
+        },
+        "row_stddevs": {
+          "type": "array",
+          "description": "Row-wise standard deviations for SNV preprocessing",
+          "items": {
+            "type": "number",
+            "minimum": 0
+          }
+        }
+      }
+    }
+  }
+}

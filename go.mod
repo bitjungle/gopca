@@ -7,6 +7,7 @@ replace github.com/bitjungle/gopca => ./
 require (
 	github.com/spf13/cobra v1.9.1
 	github.com/wailsapp/wails/v2 v2.10.2
+	github.com/xeipuuv/gojsonschema v1.2.0
 	gonum.org/v1/gonum v0.16.0
 )
 
@@ -36,6 +37,8 @@ require (
 	github.com/valyala/fasttemplate v1.2.2 // indirect
 	github.com/wailsapp/go-webview2 v1.0.19 // indirect
 	github.com/wailsapp/mimetype v1.4.1 // indirect
+	github.com/xeipuuv/gojsonpointer v0.0.0-20180127040702-4e3ac2762d5f // indirect
+	github.com/xeipuuv/gojsonreference v0.0.0-20180127040603-bd5ef7bd5415 // indirect
 	golang.org/x/crypto v0.38.0 // indirect
 	golang.org/x/net v0.40.0 // indirect
 	golang.org/x/sys v0.33.0 // indirect
