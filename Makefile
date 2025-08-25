@@ -15,7 +15,7 @@ COVERAGE_FILE := coverage.out
 cli: build
 cli-all: build-all
 
-# Shortcuts for desktop/GUI builds  
+# Shortcuts for GoPCA/GUI builds  
 desktop: pca-build
 desktop-dev: pca-dev
 pca: pca-build
@@ -53,7 +53,7 @@ LDFLAGS := -ldflags="-s -w \
 	-X github.com/bitjungle/gopca/internal/version.GitCommit=$(GIT_COMMIT) \
 	-X github.com/bitjungle/gopca/internal/version.BuildDate=$(BUILD_DATE)"
 
-# Desktop build flags (for Wails)
+# GoPCA build flags (for Wails)
 DESKTOP_LDFLAGS := -ldflags "-s -w \
 	-X github.com/bitjungle/gopca/internal/version.Version=$(VERSION) \
 	-X github.com/bitjungle/gopca/internal/version.GitCommit=$(GIT_COMMIT) \
@@ -123,10 +123,10 @@ build-all-parallel:
 	@$(MAKE) -j5 build-darwin-amd64 build-darwin-arm64 build-linux-amd64 build-linux-arm64 build-windows-amd64
 	@echo "All parallel CLI builds complete!"
 
-## pca-dev: Run PCA Desktop in development mode with hot reload
+## pca-dev: Run GoPCA in development mode with hot reload
 pca-dev:
 	@if [ -x "$(WAILS)" ]; then \
-		echo "Starting PCA Desktop in development mode..."; \
+		echo "Starting GoPCA in development mode..."; \
 		cd $(DESKTOP_PATH) && $(WAILS) dev; \
 	else \
 		echo "Wails not found. Install it with:"; \
@@ -134,36 +134,36 @@ pca-dev:
 		exit 1; \
 	fi
 
-## pca-build: Build PCA Desktop application for production
+## pca-build: Build GoPCA application for production
 pca-build:
 	@if [ -x "$(WAILS)" ]; then \
-		echo "Building PCA Desktop application..."; \
+		echo "Building GoPCA application..."; \
 		cd $(DESKTOP_PATH) && $(WAILS) build $(DESKTOP_LDFLAGS); \
-		echo "PCA Desktop build complete. Check $(DESKTOP_PATH)/build/bin/"; \
+		echo "GoPCA build complete. Check $(DESKTOP_PATH)/build/bin/"; \
 	else \
 		echo "Wails not found. Install it with:"; \
 		echo "  go install github.com/wailsapp/wails/v2/cmd/wails@latest"; \
 		exit 1; \
 	fi
 
-## pca-run: Run the built PCA Desktop application
+## pca-run: Run the built GoPCA application
 pca-run:
 	@if [ -f "$(DESKTOP_PATH)/build/bin/GoPCA.app/Contents/MacOS/GoPCA" ]; then \
-		echo "Running PCA Desktop application..."; \
+		echo "Running GoPCA application..."; \
 		open $(DESKTOP_PATH)/build/bin/GoPCA.app; \
 	elif [ -f "$(DESKTOP_PATH)/build/bin/gopca-desktop" ]; then \
-		echo "Running PCA Desktop application..."; \
+		echo "Running GoPCA application..."; \
 		$(DESKTOP_PATH)/build/bin/gopca-desktop; \
 	else \
-		echo "PCA Desktop application not found. Build it first with 'make pca-build'"; \
+		echo "GoPCA application not found. Build it first with 'make pca-build'"; \
 		exit 1; \
 	fi
 
-## pca-deps: Install frontend dependencies for PCA Desktop
+## pca-deps: Install frontend dependencies for GoPCA
 pca-deps:
-	@echo "Installing PCA Desktop frontend dependencies..."
+	@echo "Installing GoPCA frontend dependencies..."
 	@cd $(DESKTOP_PATH)/frontend && npm install
-	@echo "PCA Desktop dependencies installed"
+	@echo "GoPCA dependencies installed"
 
 ## csv-dev: Run CSV editor in development mode with hot reload
 csv-dev:
@@ -223,16 +223,16 @@ sign-cli:
 	@echo "Signing CLI binary..."
 	@./scripts/sign-macos.sh | grep -A 3 "CLI"
 
-## sign-pca: Sign only the GoPCA Desktop app
+## sign-pca: Sign only the GoPCA app
 sign-pca:
-	@echo "Signing GoPCA Desktop app..."
+	@echo "Signing GoPCA app..."
 	@if [ -d "$(DESKTOP_PATH)/build/bin/GoPCA.app" ]; then \
 		codesign --force --deep --sign "$${APPLE_DEVELOPER_ID:-Developer ID Application: Rune Mathisen (LV599Q54BU)}" \
 			--options runtime --timestamp \
 			"$(DESKTOP_PATH)/build/bin/GoPCA.app" && \
 		codesign --verify --verbose "$(DESKTOP_PATH)/build/bin/GoPCA.app"; \
 	else \
-		echo "GoPCA Desktop app not found. Build it first with 'make pca-build'"; \
+		echo "GoPCA app not found. Build it first with 'make pca-build'"; \
 		exit 1; \
 	fi
 
@@ -269,7 +269,7 @@ sign-windows:
 	elif [ -f "$(DESKTOP_PATH)/build/bin/GoPCA.exe" ]; then \
 		echo "✅ Found: GoPCA.exe"; \
 	else \
-		echo "❌ ERROR: GoPCA Desktop not found"; \
+		echo "❌ ERROR: GoPCA not found"; \
 		echo "  Searched: $(DESKTOP_PATH)/build/bin/GoPCA-amd64.exe"; \
 		echo "  Searched: $(DESKTOP_PATH)/build/bin/GoPCA.exe"; \
 		echo ""; \
@@ -397,7 +397,7 @@ windows-installer:
 	elif [ -f "$(DESKTOP_PATH)/build/bin/GoPCA.exe" ]; then \
 		echo "✅ Found: GoPCA.exe"; \
 	else \
-		echo "❌ ERROR: GoPCA Desktop not found"; \
+		echo "❌ ERROR: GoPCA not found"; \
 		echo "  Searched: $(DESKTOP_PATH)/build/bin/GoPCA-amd64.exe"; \
 		echo "  Searched: $(DESKTOP_PATH)/build/bin/GoPCA.exe"; \
 		echo ""; \
@@ -477,11 +477,11 @@ notarize-cli:
 	APPLE_TEAM_ID="$${APPLE_TEAM_ID:-LV599Q54BU}" \
 	./scripts/notarize-macos.sh cli-only
 
-## notarize-pca: Notarize only the GoPCA Desktop app
+## notarize-pca: Notarize only the GoPCA app
 notarize-pca:
-	@echo "Notarizing GoPCA Desktop app..."
+	@echo "Notarizing GoPCA app..."
 	@if [ ! -d "$(DESKTOP_PATH)/build/bin/GoPCA.app" ]; then \
-		echo "GoPCA Desktop app not found. Build it first with 'make pca-build'"; \
+		echo "GoPCA app not found. Build it first with 'make pca-build'"; \
 		exit 1; \
 	fi
 	@if [ -f .env ]; then \
@@ -619,14 +619,14 @@ install-hooks:
 	@echo "Installing git hooks..."
 	@./scripts/install-hooks.sh
 
-## ci-test: Run tests for CI (excluding desktop)
+## ci-test: Run tests for CI (excluding GoPCA GUI)
 ci-test:
-	@echo "Running CI tests (excluding desktop)..."
+	@echo "Running CI tests (excluding GoPCA GUI)..."
 	@./scripts/ci/test-core.sh
 
-## ci-lint: Run linter for CI (excluding desktop)
+## ci-lint: Run linter for CI (excluding GoPCA GUI)
 ci-lint:
-	@echo "Running CI linter (excluding desktop)..."
+	@echo "Running CI linter (excluding GoPCA GUI)..."
 ifdef GOLINT
 	golangci-lint run --timeout=5m ./internal/... ./pkg/... ./cmd/gopca-cli/...
 else
@@ -646,12 +646,12 @@ ci-test-all:
 	@echo "Running all tests..."
 	@./scripts/ci/test-all.sh
 
-## pca-build-all: Build PCA Desktop for all platforms
+## pca-build-all: Build GoPCA for all platforms
 pca-build-all:
 	@if [ -x "$(WAILS)" ]; then \
-		echo "Building PCA Desktop for all platforms..."; \
+		echo "Building GoPCA for all platforms..."; \
 		cd $(DESKTOP_PATH) && $(WAILS) build -platform darwin/amd64,darwin/arm64,windows/amd64,linux/amd64 $(DESKTOP_LDFLAGS); \
-		echo "PCA Desktop builds complete for all platforms"; \
+		echo "GoPCA builds complete for all platforms"; \
 	else \
 		echo "Wails not found. Install it with:"; \
 		echo "  go install github.com/wailsapp/wails/v2/cmd/wails@latest"; \
@@ -674,9 +674,9 @@ csv-build-all:
 build-everything: build-all pca-build-all csv-build-all
 	@echo "All applications built for all platforms!"
 
-## ci-build-desktop: Build desktop app in CI
+## ci-build-desktop: Build GoPCA app in CI
 ci-build-desktop:
-	@echo "Building desktop app for CI..."
+	@echo "Building GoPCA app for CI..."
 	@PLATFORM=$(GOOS) ./scripts/ci/build-desktop.sh
 
 ## ci-setup: Setup CI environment
@@ -702,7 +702,7 @@ help:
 	@echo "Quick start:"
 	@echo "  make deps-all         # Install all dependencies (first time)"
 	@echo "  make                  # Build CLI and test (default)"
-	@echo "  make pca-dev          # Run PCA Desktop in dev mode"
+	@echo "  make pca-dev          # Run GoPCA in dev mode"
 	@echo "  make csv-dev          # Run CSV editor in dev mode"
 	@echo ""
 	@echo "Building CLI:"
@@ -714,7 +714,7 @@ help:
 	@echo "Code Signing (macOS):"
 	@echo "  make sign             # Sign all macOS binaries"
 	@echo "  make sign-cli         # Sign CLI binary only"
-	@echo "  make sign-pca         # Sign GoPCA Desktop app only"
+	@echo "  make sign-pca         # Sign GoPCA app only"
 	@echo "  make sign-csv         # Sign GoCSV app only"
 	@echo "  make sign-windows     # Sign Windows binaries (requires signtool/osslsigncode)"
 	@echo ""
@@ -726,12 +726,12 @@ help:
 	@echo "Notarization (macOS):"
 	@echo "  make notarize         # Notarize all signed binaries"
 	@echo "  make notarize-cli     # Notarize CLI only"
-	@echo "  make notarize-pca # Notarize GoPCA Desktop only"
+	@echo "  make notarize-pca     # Notarize GoPCA only"
 	@echo "  make notarize-csv     # Notarize GoCSV only"
 	@echo "  make sign-and-notarize # Sign and notarize everything"
 	@echo "  make build-windows-amd64 # Build for Windows x64"
 	@echo ""
-	@echo "PCA Desktop application:"
+	@echo "GoPCA application:"
 	@echo "  make pca-deps         # Install dependencies"
 	@echo "  make pca-dev          # Run in development mode"
 	@echo "  make pca-build        # Build for current platform"
