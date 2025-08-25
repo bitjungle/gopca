@@ -19,6 +19,42 @@ The release process is fully automated via GitHub Actions. Once you push a versi
 
 ## Release Process
 
+### Automated Execution (AI Assistant/Claude Code)
+
+When using Claude Code or another AI assistant to create a release, the assistant can automate most steps:
+
+**What the AI CAN do automatically:**
+1. ✅ Check current version and determine next version
+2. ✅ Verify main branch and clean working directory
+3. ✅ Run tests and linters
+4. ✅ Execute prepare-release.sh script
+5. ✅ Push release branch
+6. ✅ Create pull request
+7. ✅ Monitor CI checks status
+8. ✅ After PR merge: checkout main, pull, and run release.sh
+9. ✅ Monitor release workflow progress
+
+**What requires MANUAL action:**
+- ❌ **Merge the PR** - Must be done via GitHub web interface due to branch protection rules
+
+**AI Assistant Instructions:**
+```bash
+# The AI will execute these automatically:
+./scripts/prepare-release.sh v0.9.1
+git push -u origin release-v0.9.1
+gh pr create --title "Release v0.9.1" --body "Preparing release v0.9.1"
+
+# AI will monitor CI and notify when ready to merge
+# After you merge, AI continues automatically:
+git checkout main && git pull origin main
+./scripts/release.sh v0.9.1
+gh run watch  # AI monitors until complete
+```
+
+### Manual Execution (Human Developer)
+
+If executing manually, follow these steps:
+
 ### Step 1: Prepare the Release
 
 Run the release preparation script with your desired version:
