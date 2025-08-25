@@ -2,7 +2,7 @@
 
 ## Introduction: The Foundation of Good Analysis
 
-Before any advanced analysis—whether it's Principal Component Analysis (PCA), machine learning, or statistical modeling—your data needs to be clean, consistent, and properly structured. Raw datasets often contain issues that can compromise or invalidate your results: missing values, outliers, inconsistent formats, irrelevant variables, and quality issues that need to be addressed.
+Before any advanced analysis, whether it's Principal Component Analysis (PCA), machine learning, or statistical modeling, your data needs to be clean, consistent, and properly structured. Raw datasets often contain issues that can compromise or invalidate your results: missing values, outliers, inconsistent formats, irrelevant variables, and quality issues that need to be addressed.
 
 **GoCSV** is designed as your data preparation companion, providing the essential tools to transform raw data into analysis-ready datasets. While GoCSV focuses on data cleaning and preparation, its sister application **GoPCA** handles the actual PCA analysis, including mathematical preprocessing steps like mean centering and scaling.
 
