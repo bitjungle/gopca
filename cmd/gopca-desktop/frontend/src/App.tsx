@@ -23,7 +23,7 @@ const CircleOfCorrelations = lazy(() => import('./components/visualizations/Circ
 const DiagnosticScatterPlot = lazy(() => import('./components/visualizations/DiagnosticScatterPlot').then(m => ({ default: m.DiagnosticScatterPlot })));
 const EigencorrelationPlot = lazy(() => import('./components/visualizations/EigencorrelationPlot').then(m => ({ default: m.EigencorrelationPlot })));
 import { FileData, PCARequest, PCAResponse } from './types';
-import { ThemeProvider, ThemeToggle, ConfirmDialog } from '@gopca/ui-components';
+import { ThemeProvider, ThemeToggle, ConfirmDialog, CustomSelect, SelectOption } from '@gopca/ui-components';
 import { HelpProvider, useHelp } from './contexts/HelpContext';
 import { PaletteProvider, usePalette } from './contexts/PaletteContext';
 import { HelpDisplay } from './components/HelpDisplay';
@@ -701,28 +701,32 @@ return;
                             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
                                 {/* Left Column - Core PCA Configuration */}
                                 <div className="space-y-4">
-                                    <HelpWrapper helpKey="num-components">
-                                        <label className="block text-sm font-medium mb-2">
-                                            Number of Components
-                                        </label>
-                                        <input
-                                            type="number"
-                                            min="1"
-                                            max={Math.min(fileData.headers.length, fileData.data.length)}
-                                            value={config.components}
-                                            onChange={(e) => setConfig({ ...config, components: parseInt(e.target.value) || 2 })}
-                                            className="w-full px-3 py-2 bg-gray-100 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg text-gray-900 dark:text-white"
-                                        />
-                                    </HelpWrapper>
+                                    <h3 className="text-sm font-semibold text-gray-700 dark:text-gray-300">PCA Options</h3>
 
-                                    <HelpWrapper helpKey="pca-method">
-                                        <label className="block text-sm font-medium mb-2">
-                                            Method
-                                        </label>
-                                        <select
+                                    {/* Basic Configuration */}
+                                    <div className="p-3 bg-gray-50 dark:bg-gray-700/50 rounded-lg space-y-4">
+                                        <HelpWrapper helpKey="num-components">
+                                            <label className="block text-sm font-medium mb-2">
+                                                Number of Components
+                                            </label>
+                                            <input
+                                                type="number"
+                                                min="1"
+                                                max={Math.min(fileData.headers.length, fileData.data.length)}
+                                                value={config.components}
+                                                onChange={(e) => setConfig({ ...config, components: parseInt(e.target.value) || 2 })}
+                                                className="w-full px-3 py-2 bg-gray-100 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg text-gray-900 dark:text-white"
+                                            />
+                                        </HelpWrapper>
+
+                                        <HelpWrapper helpKey="pca-method">
+                                            <label className="block text-sm font-medium mb-2">
+                                                Method
+                                            </label>
+                                            <CustomSelect
                                             value={config.method}
-                                            onChange={(e) => {
-                                                const newMethod = e.target.value;
+                                            onChange={(value) => {
+                                                const newMethod = value;
                                                 const newConfig = { ...config, method: newMethod };
 
                                                 // If switching to kernel PCA and current preprocessing is invalid
@@ -741,13 +745,15 @@ return;
 
                                                 setConfig(newConfig);
                                             }}
-                                            className="w-full px-3 py-2 bg-gray-100 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg text-gray-900 dark:text-white"
-                                        >
-                                            <option value="SVD">SVD</option>
-                                            <option value="NIPALS">NIPALS</option>
-                                            <option value="kernel">Kernel PCA</option>
-                                        </select>
-                                    </HelpWrapper>
+                                            options={[
+                                                { value: 'SVD', label: 'SVD' },
+                                                { value: 'NIPALS', label: 'NIPALS' },
+                                                { value: 'kernel', label: 'Kernel PCA' }
+                                            ]}
+                                            className="w-full"
+                                        />
+                                        </HelpWrapper>
+                                    </div>
 
                                     {/* Method-specific information */}
                                     {config.method === 'SVD' && (
@@ -807,15 +813,16 @@ return;
                                                     <label className="block text-sm font-medium mb-1">
                                                         Kernel Type
                                                     </label>
-                                                    <select
+                                                    <CustomSelect
                                                         value={config.kernelType}
-                                                        onChange={(e) => setConfig({ ...config, kernelType: e.target.value })}
-                                                        className="w-full px-3 py-2 bg-gray-100 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg text-gray-900 dark:text-white"
-                                                    >
-                                                        <option value="rbf">RBF (Gaussian)</option>
-                                                        <option value="linear">Linear</option>
-                                                        <option value="poly">Polynomial</option>
-                                                    </select>
+                                                        onChange={(value) => setConfig({ ...config, kernelType: value })}
+                                                        options={[
+                                                            { value: 'rbf', label: 'RBF (Gaussian)' },
+                                                            { value: 'linear', label: 'Linear' },
+                                                            { value: 'poly', label: 'Polynomial' }
+                                                        ]}
+                                                        className="w-full"
+                                                    />
                                                 </HelpWrapper>
                                                 <HelpWrapper helpKey="kernel-gamma">
                                                     <label className="block text-sm font-medium mb-1">
@@ -882,26 +889,26 @@ return;
                                         <label className="block text-sm font-medium mb-2">
                                             Step 1: Row-wise Preprocessing (optional)
                                         </label>
-                                        <select
+                                        <CustomSelect
                                             value={
                                                 config.snv ? 'snv' :
                                                 config.vectorNorm ? 'vector-norm' :
                                                 'none'
                                             }
-                                            onChange={(e) => {
-                                                const value = e.target.value;
+                                            onChange={(value) => {
                                                 setConfig({
                                                     ...config,
                                                     snv: value === 'snv',
                                                     vectorNorm: value === 'vector-norm'
                                                 });
                                             }}
-                                            className="w-full px-3 py-2 bg-gray-100 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg text-gray-900 dark:text-white"
-                                        >
-                                            <option value="none">None</option>
-                                            <option value="snv">SNV (Standard Normal Variate)</option>
-                                            <option value="vector-norm">L2 Vector Normalization</option>
-                                        </select>
+                                            options={[
+                                                { value: 'none', label: 'None' },
+                                                { value: 'snv', label: 'SNV (Standard Normal Variate)' },
+                                                { value: 'vector-norm', label: 'L2 Vector Normalization' }
+                                            ]}
+                                            className="w-full"
+                                        />
                                         <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
                                             Normalizes each row/sample independently (useful for spectral data)
                                         </p>
@@ -912,15 +919,14 @@ return;
                                         <label className="block text-sm font-medium mb-2">
                                             Step 2: Column-wise Preprocessing
                                         </label>
-                                        <select
+                                        <CustomSelect
                                             value={
                                                 config.scaleOnly ? 'scale-only' :
                                                 config.robustScale ? 'robust' :
                                                 config.standardScale ? 'standard' :
                                                 config.meanCenter ? 'center' : 'none'
                                             }
-                                            onChange={(e) => {
-                                                const value = e.target.value;
+                                            onChange={(value) => {
                                                 // For kernel PCA, only allow none or scale-only
                                                 if (config.method === 'kernel' && !['none', 'scale-only'].includes(value)) {
                                                     return;
@@ -933,14 +939,15 @@ return;
                                                     scaleOnly: value === 'scale-only'
                                                 });
                                             }}
-                                            className="w-full px-3 py-2 bg-gray-100 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg text-gray-900 dark:text-white"
-                                        >
-                                            <option value="none">None (Raw Data)</option>
-                                            <option value="center" disabled={config.method === 'kernel'}>Mean Center Only</option>
-                                            <option value="standard" disabled={config.method === 'kernel'}>Standard Scale (Mean + Std Dev)</option>
-                                            <option value="robust" disabled={config.method === 'kernel'}>Robust Scale (Median + MAD)</option>
-                                            <option value="scale-only">Variance Scale (Std Dev Only)</option>
-                                        </select>
+                                            options={[
+                                                { value: 'none', label: 'None (Raw Data)' },
+                                                { value: 'center', label: 'Mean Center Only', disabled: config.method === 'kernel' },
+                                                { value: 'standard', label: 'Standard Scale (Mean + Std Dev)', disabled: config.method === 'kernel' },
+                                                { value: 'robust', label: 'Robust Scale (Median + MAD)', disabled: config.method === 'kernel' },
+                                                { value: 'scale-only', label: 'Variance Scale (Std Dev Only)' }
+                                            ]}
+                                            className="w-full"
+                                        />
                                         <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
                                             {config.method === 'kernel'
                                                 ? config.scaleOnly
@@ -951,21 +958,22 @@ return;
                                     </HelpWrapper>
 
                                     {/* Missing Data Strategy */}
-                                    <HelpWrapper helpKey="missing-strategy">
+                                    <HelpWrapper helpKey="missing-strategy" className="p-3 bg-gray-50 dark:bg-gray-700/50 rounded-lg">
                                         <label className="block text-sm font-medium mb-2">
                                             Missing Data Strategy
                                         </label>
-                                        <select
+                                        <CustomSelect
                                             value={config.missingStrategy}
-                                            onChange={(e) => setConfig({ ...config, missingStrategy: e.target.value })}
-                                            className="w-full px-3 py-2 bg-gray-100 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg text-gray-900 dark:text-white"
-                                        >
-                                            <option value="error">Show Error (default)</option>
-                                            <option value="drop">Drop Rows with Missing Values</option>
-                                            <option value="mean">Impute with Column Mean</option>
-                                            <option value="median">Impute with Column Median</option>
-                                            <option value="native">Native NIPALS Handling (NIPALS only)</option>
-                                        </select>
+                                            onChange={(value) => setConfig({ ...config, missingStrategy: value })}
+                                            options={[
+                                                { value: 'error', label: 'Show Error (default)' },
+                                                { value: 'drop', label: 'Drop Rows with Missing Values' },
+                                                { value: 'mean', label: 'Impute with Column Mean' },
+                                                { value: 'median', label: 'Impute with Column Median' },
+                                                { value: 'native', label: 'Native NIPALS Handling (NIPALS only)' }
+                                            ]}
+                                            className="w-full"
+                                        />
                                         <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
                                             Choose how to handle missing values (NaN) in your data
                                         </p>
@@ -1068,33 +1076,22 @@ return;
                                     <div className="flex items-center gap-4">
                                         <h3 className="text-lg font-semibold">Visualizations</h3>
                                         <HelpWrapper helpKey={`${selectedPlot}-plot`}>
-                                            <select
+                                            <CustomSelect
                                                 value={selectedPlot}
-                                                onChange={(e) => setSelectedPlot(e.target.value as 'scores' | 'scores3d' | 'scree' | 'loadings' | 'biplot' | 'biplot3d' | 'correlations' | 'diagnostics' | 'eigencorrelation')}
-                                                className="px-3 py-1.5 bg-gray-100 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg text-gray-900 dark:text-white font-medium"
-                                            >
-                                                <option value="scores">Scores Plot</option>
-                                                <option value="scores3d">3D Scores Plot</option>
-                                                <option value="scree">Scree Plot</option>
-                                                {pcaResponse.result.method !== 'kernel' && (
-                                                    <option value="loadings">Loadings Plot</option>
-                                                )}
-                                                {pcaResponse.result.preprocessing_applied && (
-                                                    <option value="biplot">Biplot</option>
-                                                )}
-                                                {pcaResponse.result.preprocessing_applied && (
-                                                    <option value="biplot3d">3D Biplot</option>
-                                                )}
-                                                {pcaResponse.result.preprocessing_applied && (
-                                                    <option value="correlations">Circle of Correlations</option>
-                                                )}
-                                                {pcaResponse.result.method !== 'kernel' && (
-                                                    <option value="diagnostics">Diagnostic Plot</option>
-                                                )}
-                                                {pcaResponse.result.eigencorrelations && pcaResponse.result.method !== 'kernel' && (
-                                                    <option value="eigencorrelation">Eigencorrelation Plot</option>
-                                                )}
-                                            </select>
+                                                onChange={(value) => setSelectedPlot(value as 'scores' | 'scores3d' | 'scree' | 'loadings' | 'biplot' | 'biplot3d' | 'correlations' | 'diagnostics' | 'eigencorrelation')}
+                                                options={[
+                                                    { value: 'scores', label: 'Scores Plot' },
+                                                    { value: 'scores3d', label: '3D Scores Plot' },
+                                                    { value: 'scree', label: 'Scree Plot' },
+                                                    ...(pcaResponse.result.method !== 'kernel' ? [{ value: 'loadings', label: 'Loadings Plot' }] : []),
+                                                    ...(pcaResponse.result.preprocessing_applied ? [{ value: 'biplot', label: 'Biplot' }] : []),
+                                                    ...(pcaResponse.result.preprocessing_applied ? [{ value: 'biplot3d', label: '3D Biplot' }] : []),
+                                                    ...(pcaResponse.result.preprocessing_applied ? [{ value: 'correlations', label: 'Circle of Correlations' }] : []),
+                                                    ...(pcaResponse.result.method !== 'kernel' ? [{ value: 'diagnostics', label: 'Diagnostic Plot' }] : []),
+                                                    ...(pcaResponse.result.eigencorrelations && pcaResponse.result.method !== 'kernel' ? [{ value: 'eigencorrelation', label: 'Eigencorrelation Plot' }] : [])
+                                                ]}
+                                                className="min-w-[200px]"
+                                            />
                                         </HelpWrapper>
                                     </div>
                                     <div className="flex-shrink-0">
@@ -1114,48 +1111,45 @@ return;
                                             <div className="flex items-center gap-3 px-3 py-2 bg-gray-50 dark:bg-gray-800 rounded-lg">
                                                 <HelpWrapper helpKey="group-coloring" className="flex items-center gap-2">
                                                     <label className="text-sm text-gray-600 dark:text-gray-400">Color by:</label>
-                                                    <select
+                                                    <CustomSelect
                                                         value={selectedGroupColumn || ''}
-                                                        onChange={(e) => {
-                                                            const value = e.target.value || null;
-                                                            setSelectedGroupColumn(value);
+                                                        onChange={(value) => {
+                                                            const selectedValue = value || null;
+                                                            setSelectedGroupColumn(selectedValue);
 
                                                             // Auto-switch palette mode based on column type
-                                                            if (!value) {
+                                                            if (!selectedValue) {
                                                                 setMode('none');
                                                                 setShowEllipses(false);
-                                                            } else if (fileData.numericTargetColumns && value in fileData.numericTargetColumns) {
+                                                            } else if (fileData.numericTargetColumns && selectedValue in fileData.numericTargetColumns) {
                                                                 setMode('continuous');
                                                                 setShowEllipses(false); // Ellipses only work with categorical data
-                                                            } else if (fileData.categoricalColumns && value in fileData.categoricalColumns) {
+                                                            } else if (fileData.categoricalColumns && selectedValue in fileData.categoricalColumns) {
                                                                 setMode('categorical');
                                                                 // Keep current showEllipses state for categorical columns
                                                             }
                                                         }}
-                                                        className="px-2 py-1 bg-gray-100 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded text-sm text-gray-900 dark:text-white"
-                                                    >
-                                                        <option value="">None</option>
-                                                        {/* Categorical columns */}
-                                                        {fileData.categoricalColumns && Object.keys(fileData.categoricalColumns).length > 0 && (
-                                                            <optgroup label="Categorical">
-                                                                {Object.keys(fileData.categoricalColumns).map((colName) => (
-                                                                    <option key={`cat-${colName}`} value={colName}>
-                                                                        🏷️ {colName}
-                                                                    </option>
-                                                                ))}
-                                                            </optgroup>
-                                                        )}
-                                                        {/* Continuous columns */}
-                                                        {fileData.numericTargetColumns && Object.keys(fileData.numericTargetColumns).length > 0 && (
-                                                            <optgroup label="Continuous">
-                                                                {Object.keys(fileData.numericTargetColumns).map((colName) => (
-                                                                    <option key={`cont-${colName}`} value={colName}>
-                                                                        📊 {colName}
-                                                                    </option>
-                                                                ))}
-                                                            </optgroup>
-                                                        )}
-                                                    </select>
+                                                        options={[
+                                                            { value: '', label: 'None' },
+                                                            // Categorical columns
+                                                            ...(fileData.categoricalColumns && Object.keys(fileData.categoricalColumns).length > 0 
+                                                                ? Object.keys(fileData.categoricalColumns).map((colName) => ({
+                                                                    value: colName,
+                                                                    label: `🏷️ ${colName}`,
+                                                                    group: 'Categorical'
+                                                                }))
+                                                                : []),
+                                                            // Continuous columns
+                                                            ...(fileData.numericTargetColumns && Object.keys(fileData.numericTargetColumns).length > 0
+                                                                ? Object.keys(fileData.numericTargetColumns).map((colName) => ({
+                                                                    value: colName,
+                                                                    label: `📊 ${colName}`,
+                                                                    group: 'Continuous'
+                                                                }))
+                                                                : [])
+                                                        ]}
+                                                        className="min-w-[150px]"
+                                                    />
                                                 </HelpWrapper>
                                             </div>
                                         )}
@@ -1195,14 +1189,15 @@ return;
                                                                 Threshold:
                                                             </label>
                                                         </HelpWrapper>
-                                                        <select
-                                                            value={confidenceLevel}
-                                                            onChange={(e) => setConfidenceLevel(parseFloat(e.target.value) as 0.90 | 0.95 | 0.99)}
-                                                            className="px-2 py-0.5 bg-gray-100 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded text-sm text-gray-900 dark:text-white"
-                                                        >
-                                                            <option value="0.95">95%</option>
-                                                            <option value="0.99">99%</option>
-                                                        </select>
+                                                        <CustomSelect
+                                                            value={confidenceLevel.toString()}
+                                                            onChange={(value) => setConfidenceLevel(parseFloat(value) as 0.90 | 0.95 | 0.99)}
+                                                            options={[
+                                                                { value: '0.95', label: '95%' },
+                                                                { value: '0.99', label: '99%' }
+                                                            ]}
+                                                            className="min-w-[80px]"
+                                                        />
                                                     </div>
                                                 )}
                                                 {fileData?.categoricalColumns &&
@@ -1224,15 +1219,16 @@ return;
                                                             </label>
                                                         </HelpWrapper>
                                                         {showEllipses && (
-                                                            <select
-                                                                value={confidenceLevel}
-                                                                onChange={(e) => setConfidenceLevel(parseFloat(e.target.value) as 0.90 | 0.95 | 0.99)}
-                                                                className="px-2 py-0.5 bg-gray-100 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded text-sm text-gray-900 dark:text-white"
-                                                            >
-                                                                <option value="0.90">90%</option>
-                                                                <option value="0.95">95%</option>
-                                                                <option value="0.99">99%</option>
-                                                            </select>
+                                                            <CustomSelect
+                                                                value={confidenceLevel.toString()}
+                                                                onChange={(value) => setConfidenceLevel(parseFloat(value) as 0.90 | 0.95 | 0.99)}
+                                                                options={[
+                                                                    { value: '0.90', label: '90%' },
+                                                                    { value: '0.95', label: '95%' },
+                                                                    { value: '0.99', label: '99%' }
+                                                                ]}
+                                                                className="min-w-[80px]"
+                                                            />
                                                         )}
                                                     </>
                                                 )}
@@ -1244,46 +1240,40 @@ return;
                                             <div className="flex items-center gap-3 px-3 py-2 bg-gray-50 dark:bg-gray-800 rounded-lg">
                                                 <div className="flex items-center gap-2">
                                                     <label className="text-sm text-gray-600 dark:text-gray-400">X:</label>
-                                                    <select
-                                                        value={selectedXComponent}
-                                                        onChange={(e) => setSelectedXComponent(parseInt(e.target.value))}
-                                                        className="px-2 py-0.5 bg-gray-100 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded text-sm text-gray-900 dark:text-white"
-                                                    >
-                                                        {pcaResponse.result.component_labels?.map((label, i) => (
-                                                            <option key={i} value={i}>
-                                                                {label} ({pcaResponse.result!.explained_variance_ratio[i].toFixed(1)}%)
-                                                            </option>
-                                                        ))}
-                                                    </select>
+                                                    <CustomSelect
+                                                        value={selectedXComponent.toString()}
+                                                        onChange={(value) => setSelectedXComponent(parseInt(value))}
+                                                        options={pcaResponse.result.component_labels?.map((label, i) => ({
+                                                            value: i.toString(),
+                                                            label: `${label} (${pcaResponse.result!.explained_variance_ratio[i].toFixed(1)}%)`
+                                                        })) || []}
+                                                        className="min-w-[150px]"
+                                                    />
                                                 </div>
                                                 <div className="flex items-center gap-2">
                                                     <label className="text-sm text-gray-600 dark:text-gray-400">Y:</label>
-                                                    <select
-                                                        value={selectedYComponent}
-                                                        onChange={(e) => setSelectedYComponent(parseInt(e.target.value))}
-                                                        className="px-2 py-0.5 bg-gray-100 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded text-sm text-gray-900 dark:text-white"
-                                                    >
-                                                        {pcaResponse.result.component_labels?.map((label, i) => (
-                                                            <option key={i} value={i}>
-                                                                {label} ({pcaResponse.result!.explained_variance_ratio[i].toFixed(1)}%)
-                                                            </option>
-                                                        ))}
-                                                    </select>
+                                                    <CustomSelect
+                                                        value={selectedYComponent.toString()}
+                                                        onChange={(value) => setSelectedYComponent(parseInt(value))}
+                                                        options={pcaResponse.result.component_labels?.map((label, i) => ({
+                                                            value: i.toString(),
+                                                            label: `${label} (${pcaResponse.result!.explained_variance_ratio[i].toFixed(1)}%)`
+                                                        })) || []}
+                                                        className="min-w-[150px]"
+                                                    />
                                                 </div>
                                                 {selectedPlot === 'scores3d' && pcaResponse.result.scores[0]?.length > 2 && (
                                                     <div className="flex items-center gap-2">
                                                         <label className="text-sm text-gray-600 dark:text-gray-400">Z:</label>
-                                                        <select
-                                                            value={selectedZComponent}
-                                                            onChange={(e) => setSelectedZComponent(parseInt(e.target.value))}
-                                                            className="px-2 py-0.5 bg-gray-100 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded text-sm text-gray-900 dark:text-white"
-                                                        >
-                                                            {pcaResponse.result.component_labels?.map((label, i) => (
-                                                                <option key={i} value={i}>
-                                                                    {label} ({pcaResponse.result!.explained_variance_ratio[i].toFixed(1)}%)
-                                                                </option>
-                                                            ))}
-                                                        </select>
+                                                        <CustomSelect
+                                                            value={selectedZComponent.toString()}
+                                                            onChange={(value) => setSelectedZComponent(parseInt(value))}
+                                                            options={pcaResponse.result.component_labels?.map((label, i) => ({
+                                                                value: i.toString(),
+                                                                label: `${label} (${pcaResponse.result!.explained_variance_ratio[i].toFixed(1)}%)`
+                                                            })) || []}
+                                                            className="min-w-[150px]"
+                                                        />
                                                     </div>
                                                 )}
                                             </div>
@@ -1293,30 +1283,28 @@ return;
                                         {selectedPlot === 'loadings' && pcaResponse.result?.method !== 'kernel' && (
                                             <div className="flex items-center gap-3 px-3 py-2 bg-gray-50 dark:bg-gray-800 rounded-lg">
                                                 <label className="text-sm text-gray-600 dark:text-gray-400">Component:</label>
-                                                <select
-                                                    value={selectedLoadingComponent}
-                                                    onChange={(e) => setSelectedLoadingComponent(parseInt(e.target.value))}
-                                                    className="px-2 py-1 bg-gray-100 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded text-sm text-gray-900 dark:text-white"
-                                                >
-                                                    {pcaResponse.result?.component_labels?.map((label, i) => (
-                                                        <option key={i} value={i}>
-                                                            {label} ({pcaResponse.result!.explained_variance_ratio[i].toFixed(1)}%)
-                                                        </option>
-                                                    ))}
-                                                </select>
+                                                <CustomSelect
+                                                    value={selectedLoadingComponent.toString()}
+                                                    onChange={(value) => setSelectedLoadingComponent(parseInt(value))}
+                                                    options={pcaResponse.result?.component_labels?.map((label, i) => ({
+                                                        value: i.toString(),
+                                                        label: `${label} (${pcaResponse.result!.explained_variance_ratio[i].toFixed(1)}%)`
+                                                    })) || []}
+                                                    className="min-w-[150px]"
+                                                />
                                                 <div className="w-px h-5 bg-gray-300 dark:bg-gray-600 mx-1" />
                                                 <label className="text-sm text-gray-600 dark:text-gray-400">Plot type:</label>
-                                                <select
+                                                <CustomSelect
                                                     value={loadingsPlotType || (pcaResponse.result?.loadings[0]?.length > (guiConfig?.visualization?.loadings_variable_threshold || 100) ? 'line' : 'bar')}
-                                                    onChange={(e) => {
-                                                        const value = e.target.value as 'bar' | 'line';
-                                                        setLoadingsPlotType(value);
+                                                    onChange={(value) => {
+                                                        setLoadingsPlotType(value as 'bar' | 'line');
                                                     }}
-                                                    className="px-2 py-1 bg-gray-100 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded text-sm text-gray-900 dark:text-white"
-                                                >
-                                                    <option value="bar">Bar Chart</option>
-                                                    <option value="line">Line Chart</option>
-                                                </select>
+                                                    options={[
+                                                        { value: 'bar', label: 'Bar Chart' },
+                                                        { value: 'line', label: 'Line Chart' }
+                                                    ]}
+                                                    className="min-w-[120px]"
+                                                />
                                             </div>
                                         )}
                                     </div>

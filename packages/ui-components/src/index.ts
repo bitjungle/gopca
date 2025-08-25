@@ -14,6 +14,7 @@ export { Dialog, DialogFooter, DialogBody } from './components/Dialog';
 export { InputDialog } from './components/InputDialog';
 export { SkipLinks } from './components/SkipLinks';
 export { KeyboardHelp } from './components/KeyboardHelp';
+export { CustomSelect } from './components/CustomSelect';
 
 // Component Types
 export type { ExportButtonProps, ExportConfig, ExportFormat } from './components/ExportButton';
@@ -24,6 +25,7 @@ export type { DialogProps } from './components/Dialog';
 export type { InputDialogProps } from './components/InputDialog';
 export type { SkipLinksProps, SkipLink } from './components/SkipLinks';
 export type { KeyboardHelpProps } from './components/KeyboardHelp';
+export type { SelectOption } from './components/CustomSelect';
 
 // Contexts
 export { ThemeProvider, useTheme } from './contexts/ThemeContext';

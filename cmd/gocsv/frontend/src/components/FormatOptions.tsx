@@ -6,6 +6,7 @@
 
 import React from 'react';
 import { main } from '../../wailsjs/go/models';
+import { CustomSelect } from '@gopca/ui-components';
 
 type ImportFileInfo = main.ImportFileInfo;
 type ImportOptions = main.ImportOptions;
@@ -66,16 +67,17 @@ return '0 Bytes';
                         <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
                             Delimiter
                         </label>
-                        <select
-                            value={options.delimiter === '\t' ? '\\t' : options.delimiter}
-                            onChange={(e) => onChange({ ...options, delimiter: e.target.value === '\\t' ? '\t' : e.target.value })}
-                            className="w-full px-3 py-2 text-sm border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100"
-                        >
-                            <option value=",">Comma (,)</option>
-                            <option value=";">Semicolon (;)</option>
-                            <option value="\t">Tab (\t)</option>
-                            <option value="|">Pipe (|)</option>
-                        </select>
+                        <CustomSelect
+                            value={options.delimiter === '\t' ? '\\t' : (options.delimiter || ',')}
+                            onChange={(value) => onChange({ ...options, delimiter: value === '\\t' ? '\t' : value })}
+                            options={[
+                                { value: ',', label: 'Comma (,)' },
+                                { value: ';', label: 'Semicolon (;)' },
+                                { value: '\\t', label: 'Tab (\\t)' },
+                                { value: '|', label: 'Pipe (|)' }
+                            ]}
+                            className="w-full"
+                        />
                     </div>
                 </div>
             )}
@@ -91,17 +93,15 @@ return '0 Bytes';
                         <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
                             Sheet
                         </label>
-                        <select
+                        <CustomSelect
                             value={options.sheet || fileInfo.sheets[0]}
-                            onChange={(e) => onChange({ ...options, sheet: e.target.value })}
-                            className="w-full px-3 py-2 text-sm border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100"
-                        >
-                            {fileInfo.sheets.map((sheet) => (
-                                <option key={sheet} value={sheet}>
-                                    {sheet}
-                                </option>
-                            ))}
-                        </select>
+                            onChange={(value) => onChange({ ...options, sheet: value })}
+                            options={fileInfo.sheets.map((sheet) => ({
+                                value: sheet,
+                                label: sheet
+                            }))}
+                            className="w-full"
+                        />
                     </div>
 
                     {/* Range (disabled for now) */}

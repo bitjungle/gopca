@@ -5,6 +5,7 @@
 // military, warfare, or surveillance applications.
 
 import React, { useState } from 'react';
+import { CustomSelect } from '@gopca/ui-components';
 
 interface MissingValueDialogProps {
     isOpen: boolean;
@@ -73,25 +74,25 @@ return null;
                         <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
                             Apply to Column
                         </label>
-                        <select
+                        <CustomSelect
                             value={selectedColumn}
-                            onChange={(e) => {
-                                setSelectedColumn(e.target.value);
+                            onChange={(value) => {
+                                setSelectedColumn(value);
                                 // Reset strategy if not available for new column type
-                                const newType = columnTypes[e.target.value] || 'numeric';
+                                const newType = columnTypes[value] || 'numeric';
                                 if (newType !== 'numeric' && (strategy === 'mean' || strategy === 'median')) {
                                     setStrategy('mode');
                                 }
                             }}
-                            className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100"
-                        >
-                            <option value="">All Columns</option>
-                            {columns.map(col => (
-                                <option key={col} value={col}>
-                                    {col} ({columnTypes[col] || 'numeric'})
-                                </option>
-                            ))}
-                        </select>
+                            options={[
+                                { value: '', label: 'All Columns' },
+                                ...columns.map(col => ({
+                                    value: col,
+                                    label: `${col} (${columnTypes[col] || 'numeric'})`
+                                }))
+                            ]}
+                            className="w-full"
+                        />
                     </div>
 
                     {/* Strategy Selection */}
@@ -99,18 +100,19 @@ return null;
                         <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
                             Fill Strategy
                         </label>
-                        <select
+                        <CustomSelect
                             value={strategy}
-                            onChange={(e) => setStrategy(e.target.value)}
-                            className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100"
-                        >
-                            {strategies.includes('mean') && <option value="mean">Mean (average)</option>}
-                            {strategies.includes('median') && <option value="median">Median (middle value)</option>}
-                            <option value="mode">Mode (most frequent)</option>
-                            <option value="forward">Forward Fill</option>
-                            <option value="backward">Backward Fill</option>
-                            <option value="custom">Custom Value</option>
-                        </select>
+                            onChange={(value) => setStrategy(value)}
+                            options={[
+                                ...(strategies.includes('mean') ? [{ value: 'mean', label: 'Mean (average)' }] : []),
+                                ...(strategies.includes('median') ? [{ value: 'median', label: 'Median (middle value)' }] : []),
+                                { value: 'mode', label: 'Mode (most frequent)' },
+                                { value: 'forward', label: 'Forward Fill' },
+                                { value: 'backward', label: 'Backward Fill' },
+                                { value: 'custom', label: 'Custom Value' }
+                            ]}
+                            className="w-full"
+                        />
                     </div>
 
                     {/* Custom Value Input */}

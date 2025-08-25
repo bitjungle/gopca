@@ -6,6 +6,7 @@
 
 import React from 'react';
 import { usePalette } from '../contexts/PaletteContext';
+import { CustomSelect } from '@gopca/ui-components';
 import {
   QUALITATIVE_PALETTES,
   SEQUENTIAL_PALETTES,
@@ -53,32 +54,28 @@ export const PaletteSelector: React.FC = () => {
       <label className="text-sm text-gray-600 dark:text-gray-400">Palette:</label>
       {mode !== 'none' && (
         <div className="relative">
-          <select
+          <CustomSelect
             value={mode === 'continuous' ? sequentialPalette : qualitativePalette}
-            onChange={mode === 'continuous' ? handleSequentialChange : handleQualitativeChange}
-            className="px-2 py-1 bg-gray-100 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded text-sm text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
-          >
-            {mode === 'categorical' && (
-              <>
-                <option value="deep">{paletteDisplayNames.deep}</option>
-                <option value="pastel">{paletteDisplayNames.pastel}</option>
-                <option value="dark">{paletteDisplayNames.dark}</option>
-                <option value="colorblind">{paletteDisplayNames.colorblind}</option>
-                <option value="husl">{paletteDisplayNames.husl}</option>
-              </>
-            )}
-            {mode === 'continuous' && (
-              <>
-                <option value="rocket">{paletteDisplayNames.rocket}</option>
-                <option value="viridis">{paletteDisplayNames.viridis}</option>
-                <option value="blues">{paletteDisplayNames.blues}</option>
-                <option value="reds">{paletteDisplayNames.reds}</option>
-                <option value="crest">{paletteDisplayNames.crest}</option>
-                <option value="mako">{paletteDisplayNames.mako}</option>
-                <option value="flare">{paletteDisplayNames.flare}</option>
-              </>
-            )}
-          </select>
+            onChange={mode === 'continuous' ? (value) => setSequentialPalette(value as SequentialPaletteName) : (value) => setQualitativePalette(value as QualitativePaletteName)}
+            options={
+              mode === 'categorical' ? [
+                { value: 'deep', label: paletteDisplayNames.deep },
+                { value: 'pastel', label: paletteDisplayNames.pastel },
+                { value: 'dark', label: paletteDisplayNames.dark },
+                { value: 'colorblind', label: paletteDisplayNames.colorblind },
+                { value: 'husl', label: paletteDisplayNames.husl }
+              ] : [
+                { value: 'rocket', label: paletteDisplayNames.rocket },
+                { value: 'viridis', label: paletteDisplayNames.viridis },
+                { value: 'blues', label: paletteDisplayNames.blues },
+                { value: 'reds', label: paletteDisplayNames.reds },
+                { value: 'crest', label: paletteDisplayNames.crest },
+                { value: 'mako', label: paletteDisplayNames.mako },
+                { value: 'flare', label: paletteDisplayNames.flare }
+              ]
+            }
+            className="min-w-[150px]"
+          />
         </div>
       )}
     </div>
