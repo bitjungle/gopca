@@ -173,7 +173,7 @@ jobs:
         retention-days: 7
 
   build-desktop:
-    name: Build Desktop App
+    name: Build GoPCA App
     needs: test
     if: github.ref == 'refs/heads/main' && github.event_name == 'push' || github.ref == 'refs/heads/160-macos-signing'
     strategy:
@@ -226,11 +226,11 @@ jobs:
         # Build the shared components that both apps depend on
         npm run build-ui
     
-    - name: Build desktop app
+    - name: Build GoPCA app
       run: PLATFORM=${{ matrix.platform }} ./scripts/ci/build-desktop.sh
       shell: bash
     
-    - name: Sign desktop app (macOS)
+    - name: Sign GoPCA app (macOS)
       if: matrix.os == 'macos-latest'
       env:
         APPLE_CERTIFICATE_BASE64: ${{ secrets.APPLE_CERTIFICATE_BASE64 }}
@@ -240,7 +240,7 @@ jobs:
         ./scripts/ci/sign-macos-ci.sh cmd/gopca-desktop/build/bin/GoPCA.app
       shell: bash
     
-    - name: Notarize desktop app (macOS)
+    - name: Notarize GoPCA app (macOS)
       if: matrix.os == 'macos-latest'
       env:
         APPLE_ID: ${{ secrets.APPLE_ID }}
@@ -250,7 +250,7 @@ jobs:
         ./scripts/ci/notarize-macos-ci.sh cmd/gopca-desktop/build/bin/GoPCA.app
       shell: bash
     
-    - name: Upload desktop artifacts
+    - name: Upload GoPCA artifacts
       uses: actions/upload-artifact@v4
       with:
         name: gopca-desktop-${{ matrix.platform }}
