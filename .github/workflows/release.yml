@@ -110,7 +110,7 @@ jobs:
         retention-days: 1
 
   build-desktop:
-    name: Build Desktop - ${{ matrix.os }}
+    name: Build GoPCA - ${{ matrix.os }}
     strategy:
       matrix:
         include:
@@ -166,7 +166,7 @@ jobs:
         fi
         echo "version=$VERSION" >> $GITHUB_OUTPUT
     
-    - name: Build desktop app
+    - name: Build GoPCA app
       working-directory: cmd/gopca-desktop
       env:
         VERSION: ${{ steps.get_version.outputs.version }}
@@ -178,7 +178,7 @@ jobs:
           -X github.com/bitjungle/gopca/internal/version.GitCommit=$(git rev-parse --short HEAD) \
           -X github.com/bitjungle/gopca/internal/version.BuildDate=$(date -u +\"%Y-%m-%dT%H:%M:%SZ\")"
     
-    - name: Sign Desktop app (macOS)
+    - name: Sign GoPCA app (macOS)
       if: matrix.os == 'macos-latest'
       env:
         APPLE_CERTIFICATE_BASE64: ${{ secrets.APPLE_CERTIFICATE_BASE64 }}
@@ -187,7 +187,7 @@ jobs:
       run: |
         ./scripts/ci/sign-macos-ci.sh cmd/gopca-desktop/build/bin/GoPCA.app
     
-    - name: Notarize Desktop app (macOS)
+    - name: Notarize GoPCA app (macOS)
       if: matrix.os == 'macos-latest'
       env:
         APPLE_ID: ${{ secrets.APPLE_ID }}
@@ -352,7 +352,7 @@ jobs:
         name: pca-windows-amd64
         path: windows-cli
     
-    - name: Download Windows Desktop artifact
+    - name: Download Windows GoPCA artifact
       if: steps.check_signpath.outputs.configured == 'true'
       uses: actions/download-artifact@v4
       with:
@@ -388,8 +388,8 @@ jobs:
         wait-for-completion: true
         output-artifact-directory: signed-cli
     
-    # Sign Desktop app
-    - name: Upload Desktop for signing
+    # Sign GoPCA app
+    - name: Upload GoPCA for signing
       if: steps.check_signpath.outputs.configured == 'true'
       id: upload-desktop
       uses: actions/upload-artifact@v4
@@ -397,7 +397,7 @@ jobs:
         name: unsigned-desktop
         path: windows-desktop/GoPCA.exe
     
-    - name: Sign Desktop app
+    - name: Sign GoPCA app
       if: steps.check_signpath.outputs.configured == 'true'
       id: sign-desktop
       uses: SignPath/github-action-submit-signing-request@v1
@@ -529,7 +529,7 @@ jobs:
         path: windows-signed
       continue-on-error: true
     
-    - name: Download Windows Desktop artifact
+    - name: Download Windows GoPCA artifact
       uses: actions/download-artifact@v4
       with:
         name: gopca-desktop-windows-latest
@@ -555,15 +555,15 @@ jobs:
           cp windows-cli/pca-windows-amd64.exe build/windows-installer/pca-windows-amd64.exe
         fi
         
-        # Copy Desktop app (prefer signed, handle both naming conventions)
+        # Copy GoPCA app (prefer signed, handle both naming conventions)
         if [ "${{ steps.check_signed.outputs.use_signed }}" = "true" ] && [ -f "windows-signed/GoPCA.exe" ]; then
-          echo "Using signed Desktop binary"
+          echo "Using signed GoPCA binary"
           cp windows-signed/GoPCA.exe build/windows-installer/GoPCA.exe
         elif [ -f "windows-desktop/GoPCA-amd64.exe" ]; then
-          echo "Using unsigned Desktop binary (cross-compiled)"
+          echo "Using unsigned GoPCA binary (cross-compiled)"
           cp windows-desktop/GoPCA-amd64.exe build/windows-installer/GoPCA.exe
         elif [ -f "windows-desktop/GoPCA.exe" ]; then
-          echo "Using unsigned Desktop binary"
+          echo "Using unsigned GoPCA binary"
           cp windows-desktop/GoPCA.exe build/windows-installer/GoPCA.exe
         else
           echo "ERROR: No GoPCA.exe found!"
@@ -706,7 +706,7 @@ jobs:
           cp "pca-darwin-arm64/pca-darwin-arm64" "macos/pca-arm64"
         fi
         
-        # Desktop app (use cp -a to preserve permissions and symlinks)
+        # GoPCA app (use cp -a to preserve permissions and symlinks)
         if [ -d "gopca-desktop-macos-latest/GoPCA.app" ]; then
           cp -a "gopca-desktop-macos-latest/GoPCA.app" "macos/"
         fi
@@ -733,12 +733,12 @@ jobs:
           cp "pca-windows-amd64/pca-windows-amd64.exe" "windows/pca.exe"
         fi
         
-        # Desktop app (prefer signed)
+        # GoPCA app (prefer signed)
         if [ "${{ steps.check_signed.outputs.windows_signed }}" = "signed" ] && [ -f "windows-signed/GoPCA.exe" ]; then
-          echo "Using signed Windows Desktop binary"
+          echo "Using signed Windows GoPCA binary"
           cp "windows-signed/GoPCA.exe" "windows/GoPCA.exe"
         elif [ -f "gopca-desktop-windows-latest/GoPCA.exe" ]; then
-          echo "Using unsigned Windows Desktop binary"
+          echo "Using unsigned Windows GoPCA binary"
           cp "gopca-desktop-windows-latest/GoPCA.exe" "windows/GoPCA.exe"
         fi
         
@@ -767,7 +767,7 @@ jobs:
           cp "pca-linux-arm64/pca-linux-arm64" "linux/pca-arm64"
         fi
         
-        # Desktop app
+        # GoPCA app
         if [ -f "gopca-desktop-ubuntu-latest/GoPCA" ]; then
           cp "gopca-desktop-ubuntu-latest/GoPCA" "linux/GoPCA"
         fi
@@ -859,7 +859,7 @@ jobs:
           |----------|----------|----------|
           | **macOS** | [`gopca-macos-universal.zip`](../../releases/download/${{ github.ref_name }}/gopca-macos-universal.zip) | • `pca-intel` and `pca-arm64` CLI tools<br>• `GoPCA.app` (signed & notarized)<br>• `GoCSV.app` (signed & notarized) |
           | **Windows** | [`gopca-windows-x64.zip`](../../releases/download/${{ github.ref_name }}/gopca-windows-x64.zip) | • `pca.exe` CLI tool${{ steps.check_signed.outputs.windows_signed == 'signed' && ' (digitally signed)' || '' }}<br>• `GoPCA.exe`${{ steps.check_signed.outputs.windows_signed == 'signed' && ' (digitally signed)' || '' }}<br>• `GoCSV.exe`${{ steps.check_signed.outputs.windows_signed == 'signed' && ' (digitally signed)' || '' }} |
-          | **Linux** | [`gopca-linux-x64.tar.gz`](../../releases/download/${{ github.ref_name }}/gopca-linux-x64.tar.gz) | • `pca-x64` and `pca-arm64` CLI tools<br>• `GoPCA` desktop app<br>• `GoCSV` editor |
+          | **Linux** | [`gopca-linux-x64.tar.gz`](../../releases/download/${{ github.ref_name }}/gopca-linux-x64.tar.gz) | • `pca-x64` and `pca-arm64` CLI tools<br>• `GoPCA` app<br>• `GoCSV` editor |
           
           ### Windows Installer (Recommended for Windows users)
           
