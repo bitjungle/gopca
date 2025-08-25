@@ -92,6 +92,7 @@ type PCAEngine interface {
 
 // PCAOutputData represents complete PCA results for output
 type PCAOutputData struct {
+	Schema            string                  `json:"$schema,omitempty"`
 	Metadata          ModelMetadata           `json:"metadata"`
 	Preprocessing     PreprocessingInfo       `json:"preprocessing"`
 	Model             ModelComponents         `json:"model"`
@@ -137,10 +138,22 @@ type PCAMetadata struct {
 
 // ModelMetadata contains metadata about the model and analysis
 type ModelMetadata struct {
-	Version   string      `json:"version"`
-	CreatedAt string      `json:"created_at"`
-	Software  string      `json:"software"`
-	Config    ModelConfig `json:"config"`
+	AnalysisID      string      `json:"analysis_id"` // Unique identifier for this analysis
+	SoftwareVersion string      `json:"software_version"`
+	CreatedAt       string      `json:"created_at"`
+	Software        string      `json:"software"`
+	Config          ModelConfig `json:"config"`
+	DataSource      *DataSource `json:"data_source,omitempty"` // Information about input data
+	Description     string      `json:"description,omitempty"` // User-provided description
+	Tags            []string    `json:"tags,omitempty"`        // User-defined tags for categorization
+}
+
+// DataSource contains information about the input data file
+type DataSource struct {
+	Filename      string `json:"filename"`                  // Original data file name
+	Hash          string `json:"hash,omitempty"`            // SHA-256 hash of input data
+	NRowsOriginal int    `json:"n_rows_original,omitempty"` // Number of rows before exclusions
+	NColsOriginal int    `json:"n_cols_original,omitempty"` // Number of columns before exclusions
 }
 
 // ModelConfig contains the configuration used for PCA

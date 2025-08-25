@@ -1,0 +1,131 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://github.com/bitjungle/gopca/schemas/v1/pca-output.schema.json",
+  "title": "GoPCA Output Data",
+  "description": "Complete PCA analysis results from GoPCA applications",
+  "type": "object",
+  "required": ["metadata", "preprocessing", "model", "results"],
+  "properties": {
+    "$schema": {
+      "type": "string",
+      "description": "Reference to the JSON schema for validation",
+      "pattern": "schemas/v[0-9]+/pca-output\\.schema\\.json$"
+    },
+    "metadata": {
+      "$ref": "model-metadata.schema.json",
+      "description": "Model metadata and configuration"
+    },
+    "preprocessing": {
+      "$ref": "preprocessing.schema.json",
+      "description": "Preprocessing configuration and parameters"
+    },
+    "model": {
+      "$ref": "model-components.schema.json",
+      "description": "Core PCA model components"
+    },
+    "results": {
+      "$ref": "results.schema.json",
+      "description": "Analysis results including scores and metrics"
+    },
+    "diagnostics": {
+      "type": "object",
+      "description": "Statistical limits for diagnostic metrics",
+      "properties": {
+        "t2_limit_95": {
+          "type": "number",
+          "description": "95% confidence limit for Hotelling's T²",
+          "minimum": 0
+        },
+        "t2_limit_99": {
+          "type": "number",
+          "description": "99% confidence limit for Hotelling's T²",
+          "minimum": 0
+        },
+        "q_limit_95": {
+          "type": "number",
+          "description": "95% confidence limit for Q-residuals",
+          "minimum": 0
+        },
+        "q_limit_99": {
+          "type": "number",
+          "description": "99% confidence limit for Q-residuals",
+          "minimum": 0
+        }
+      }
+    },
+    "eigencorrelations": {
+      "type": "object",
+      "description": "Correlations between PC scores and metadata variables",
+      "properties": {
+        "correlations": {
+          "type": "object",
+          "description": "Variable name to correlation coefficients mapping",
+          "additionalProperties": {
+            "type": "array",
+            "items": {
+              "type": "number",
+              "minimum": -1,
+              "maximum": 1
+            }
+          }
+        },
+        "pValues": {
+          "type": "object",
+          "description": "Variable name to p-values mapping",
+          "additionalProperties": {
+            "type": "array",
+            "items": {
+              "type": "number",
+              "minimum": 0,
+              "maximum": 1
+            }
+          }
+        },
+        "variables": {
+          "type": "array",
+          "description": "Order of variables",
+          "items": {
+            "type": "string"
+          }
+        },
+        "components": {
+          "type": "array",
+          "description": "PC labels",
+          "items": {
+            "type": "string"
+          }
+        },
+        "method": {
+          "type": "string",
+          "description": "Correlation method used"
+        }
+      }
+    },
+    "preservedColumns": {
+      "type": "object",
+      "description": "Columns excluded from PCA but preserved in output",
+      "properties": {
+        "categorical": {
+          "type": "object",
+          "description": "Categorical columns preserved",
+          "additionalProperties": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          }
+        },
+        "numericTarget": {
+          "type": "object",
+          "description": "Numeric target columns preserved",
+          "additionalProperties": {
+            "type": "array",
+            "items": {
+              "type": "number"
+            }
+          }
+        }
+      }
+    }
+  }
+}

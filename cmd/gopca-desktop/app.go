@@ -27,6 +27,7 @@ import (
 	pkgcsv "github.com/bitjungle/gopca/pkg/csv"
 	"github.com/bitjungle/gopca/pkg/integration"
 	"github.com/bitjungle/gopca/pkg/types"
+	"github.com/bitjungle/gopca/pkg/validation"
 	"github.com/wailsapp/wails/v2/pkg/runtime"
 	"gonum.org/v1/gonum/mat"
 )
@@ -962,6 +963,7 @@ type ExportPCAModelRequest struct {
 	Config          PCAConfig        `json:"config"`
 	ExcludedRows    []int            `json:"excludedRows"`
 	ExcludedColumns []int            `json:"excludedColumns"`
+	Filename        string           `json:"filename,omitempty"` // Original data filename
 }
 
 // ExportPCAModel exports the complete PCA model to a JSON file
@@ -1027,14 +1029,35 @@ func (a *App) ExportPCAModel(request ExportPCAModelRequest) error {
 		Columns:  len(request.Headers),
 	}
 
-	// Convert to PCAOutputData using the shared function from pkg/csv
+	// Create export metadata if we have a filename
+	var exportMeta *pkgcsv.ExportMetadata
+	if request.Filename != "" {
+		exportMeta = &pkgcsv.ExportMetadata{
+			InputFilename: filepath.Base(request.Filename),
+		}
+	}
+
+	// Convert to PCAOutputData using the shared function from pkg/csv with metadata
 	// Note: We don't have categorical/target data in the export request, so pass nil
-	outputData := pkgcsv.ConvertToPCAOutputData(request.PCAResult, csvData, true, pcaConfig, preprocessor, nil, nil)
+	outputData := pkgcsv.ConvertToPCAOutputDataWithMetadata(request.PCAResult, csvData, true, 
+		pcaConfig, preprocessor, nil, nil, exportMeta)
 
 	// Marshal to JSON
 	jsonData, err := json.MarshalIndent(outputData, "", "  ")
 	if err != nil {
 		return fmt.Errorf("failed to marshal model data: %v", err)
+	}
+
+	// Validate the exported model against schema
+	validator, err := validation.NewModelValidator("v1")
+	if err != nil {
+		// Schema validation not available, continue without validation
+		fmt.Fprintf(os.Stderr, "Warning: Schema validation not available: %v\n", err)
+	} else {
+		if err := validator.ValidateModel(jsonData); err != nil {
+			// Log validation error but still save the file
+			fmt.Fprintf(os.Stderr, "Warning: Exported model validation failed: %v\n", err)
+		}
 	}
 
 	// Write to file

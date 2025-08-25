@@ -205,9 +205,13 @@ func outputJSONFormat(result *types.PCAResult, data *pkgcsv.Data, inputFile stri
 	opts *AnalyzeOptions, config types.PCAConfig, preprocessor *core.Preprocessor,
 	categoricalData map[string][]string, targetData map[string][]float64) error {
 
-	// Convert to PCAOutputData
-	outputData := pkgcsv.ConvertToPCAOutputData(result, data, opts.IncludeMetrics,
-		config, preprocessor, categoricalData, targetData)
+	// Create export metadata with input filename
+	exportMeta := &pkgcsv.ExportMetadata{
+		InputFilename: filepath.Base(inputFile),
+	}
+	// Convert to PCAOutputData with metadata
+	outputData := pkgcsv.ConvertToPCAOutputDataWithMetadata(result, data, opts.IncludeMetrics,
+		config, preprocessor, categoricalData, targetData, exportMeta)
 
 	// Generate output paths
 	outputFile := generateOutputPath(inputFile, opts.OutputDir, "_pca.json")

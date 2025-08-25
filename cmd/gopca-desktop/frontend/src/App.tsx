@@ -492,7 +492,8 @@ return;
                 pcaResult: pcaResponse.result,
                 config,
                 excludedRows,
-                excludedColumns
+                excludedColumns,
+                filename: fileName  // Add the original filename
             });
 
             await ExportPCAModel(request);

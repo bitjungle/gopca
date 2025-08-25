@@ -1,0 +1,54 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://github.com/bitjungle/gopca/schemas/v1/model-components.schema.json",
+  "title": "PCA Model Components",
+  "description": "Core PCA model components including loadings and variance",
+  "type": "object",
+  "required": ["loadings", "explained_variance", "explained_variance_ratio", "cumulative_variance", "component_labels", "feature_labels"],
+  "properties": {
+    "loadings": {
+      "$ref": "common.schema.json#/definitions/Matrix",
+      "description": "Loading matrix (components × features)"
+    },
+    "explained_variance": {
+      "type": "array",
+      "description": "Variance explained by each component",
+      "items": {
+        "type": "number",
+        "minimum": 0
+      }
+    },
+    "explained_variance_ratio": {
+      "type": "array",
+      "description": "Percentage of variance explained by each component",
+      "items": {
+        "type": "number",
+        "minimum": 0,
+        "maximum": 1
+      }
+    },
+    "cumulative_variance": {
+      "type": "array",
+      "description": "Cumulative variance explained",
+      "items": {
+        "type": "number",
+        "minimum": 0,
+        "maximum": 1
+      }
+    },
+    "component_labels": {
+      "type": "array",
+      "description": "Labels for each principal component",
+      "items": {
+        "type": "string"
+      }
+    },
+    "feature_labels": {
+      "type": "array",
+      "description": "Labels for each feature/variable",
+      "items": {
+        "type": "string"
+      }
+    }
+  }
+}

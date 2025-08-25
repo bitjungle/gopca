@@ -16,6 +16,7 @@ import (
 	"github.com/bitjungle/gopca/internal/core"
 	pkgcsv "github.com/bitjungle/gopca/pkg/csv"
 	"github.com/bitjungle/gopca/pkg/types"
+	"github.com/bitjungle/gopca/pkg/validation"
 	"github.com/spf13/cobra"
 )
 
@@ -85,6 +86,17 @@ func runTransform(opts *TransformOptions, modelFile, inputFile string) error {
 	modelData, err := os.ReadFile(modelFile)
 	if err != nil {
 		return fmt.Errorf("failed to read model file: %w", err)
+	}
+
+	// Validate model against schema
+	validator, err := validation.NewModelValidator("v1")
+	if err != nil {
+		// Schema validation not available, continue without validation
+		fmt.Fprintf(os.Stderr, "Warning: Schema validation not available: %v\n", err)
+	} else {
+		if err := validator.ValidateModel(modelData); err != nil {
+			return fmt.Errorf("model validation failed: %w", err)
+		}
 	}
 
 	var pcaOutputData types.PCAOutputData
