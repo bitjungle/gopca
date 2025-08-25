@@ -1,6 +1,6 @@
 # GoPCA JSON Schemas
 
-This directory contains JSON Schema definitions for GoPCA's data export/import formats.
+JSON Schema definitions for GoPCA's data export/import formats are located in the `schemas/` directory.
 
 ## Overview
 
