@@ -138,10 +138,10 @@ type PCAMetadata struct {
 
 // ModelMetadata contains metadata about the model and analysis
 type ModelMetadata struct {
-	Version   string      `json:"version"`
-	CreatedAt string      `json:"created_at"`
-	Software  string      `json:"software"`
-	Config    ModelConfig `json:"config"`
+	SoftwareVersion string      `json:"software_version"`
+	CreatedAt       string      `json:"created_at"`
+	Software        string      `json:"software"`
+	Config          ModelConfig `json:"config"`
 }
 
 // ModelConfig contains the configuration used for PCA

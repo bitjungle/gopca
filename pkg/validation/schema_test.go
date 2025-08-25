@@ -96,9 +96,9 @@ func TestValidateModel(t *testing.T) {
 			name: "Invalid metadata structure",
 			data: map[string]interface{}{
 				"metadata": map[string]interface{}{
-					"version":    "1.0",
-					"software":   "wrong-software", // Should be "gopca"
-					"created_at": time.Now().Format(time.RFC3339),
+					"software_version": "dev",
+					"software":         "wrong-software", // Should be "gopca"
+					"created_at":       time.Now().Format(time.RFC3339),
 					"config": map[string]interface{}{
 						"method":       "svd",
 						"n_components": 2,
@@ -180,9 +180,9 @@ func TestValidateRealPCAOutputData(t *testing.T) {
 	outputData := &types.PCAOutputData{
 		Schema: "https://github.com/bitjungle/gopca/schemas/v1/pca-output.schema.json",
 		Metadata: types.ModelMetadata{
-			Version:   "1.0",
-			CreatedAt: time.Now().Format(time.RFC3339),
-			Software:  "gopca",
+			SoftwareVersion: "dev",
+			CreatedAt:       time.Now().Format(time.RFC3339),
+			Software:        "gopca",
 			Config: types.ModelConfig{
 				Method:          "svd",
 				NComponents:     2,
@@ -336,9 +336,9 @@ func TestValidateWithMetrics(t *testing.T) {
 
 func createValidMetadata() map[string]interface{} {
 	return map[string]interface{}{
-		"version":    "1.0",
-		"created_at": time.Now().Format(time.RFC3339),
-		"software":   "gopca",
+		"software_version": "dev",
+		"created_at":       time.Now().Format(time.RFC3339),
+		"software":         "gopca",
 		"config": map[string]interface{}{
 			"method":       "svd",
 			"n_components": 2,

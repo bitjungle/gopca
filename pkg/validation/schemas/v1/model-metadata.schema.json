@@ -4,12 +4,12 @@
   "title": "PCA Model Metadata",
   "description": "Metadata about the PCA model and analysis configuration",
   "type": "object",
-  "required": ["version", "created_at", "software", "config"],
+  "required": ["software_version", "created_at", "software", "config"],
   "properties": {
-    "version": {
+    "software_version": {
       "type": "string",
-      "description": "Schema version",
-      "pattern": "^\\d+\\.\\d+$"
+      "description": "GoPCA software version (e.g., '0.9.0', 'dev')",
+      "minLength": 1
     },
     "created_at": {
       "type": "string",

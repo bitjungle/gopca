@@ -67,7 +67,7 @@ A valid PCA model contains four required sections and an optional schema referen
 {
   "$schema": "https://github.com/bitjungle/gopca/schemas/v1/pca-output.schema.json",
   "metadata": {
-    "version": "1.0",
+    "software_version": "0.9.0",
     "created_at": "2025-01-25T10:00:00Z",
     "software": "gopca",
     "config": { ... }

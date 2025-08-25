@@ -10,6 +10,7 @@ import (
 	"time"
 
 	"github.com/bitjungle/gopca/internal/core"
+	"github.com/bitjungle/gopca/internal/version"
 	"github.com/bitjungle/gopca/pkg/types"
 )
 
@@ -25,9 +26,9 @@ func ConvertToPCAOutputData(result *types.PCAResult, data *Data, includeMetrics 
 	// Create model metadata
 	// Use the actual method from the result, not the config
 	metadata := types.ModelMetadata{
-		Version:   "1.0",
-		CreatedAt: createdAt,
-		Software:  "gopca",
+		SoftwareVersion: version.Version, // Use actual GoPCA version
+		CreatedAt:       createdAt,
+		Software:        "gopca",
 		Config: types.ModelConfig{
 			Method:          result.Method,             // Use actual method from result
 			NComponents:     result.ComponentsComputed, // Use actual components computed
