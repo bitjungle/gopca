@@ -175,6 +175,17 @@ function AppContent() {
 return {};
 }
 
+        // CRITICAL FIX: Use filtered data from PCA response when rows have been dropped
+        // This ensures categorical/numeric column data aligns with the reduced scores matrix
+        if (pcaResponse?.filteredCategoricalColumns && columnName in pcaResponse.filteredCategoricalColumns) {
+            return { values: pcaResponse.filteredCategoricalColumns[columnName], type: 'categorical' };
+        }
+
+        if (pcaResponse?.filteredNumericTargetColumns && columnName in pcaResponse.filteredNumericTargetColumns) {
+            return { values: pcaResponse.filteredNumericTargetColumns[columnName], type: 'continuous' };
+        }
+
+        // Fall back to original data if no filtered data is available
         if (fileData.categoricalColumns && columnName in fileData.categoricalColumns) {
             return { values: fileData.categoricalColumns[columnName], type: 'categorical' };
         }
