@@ -227,31 +227,19 @@ export class PlotlyScoresPlot extends PlotlyVisualization<ScoresPlotData> {
       return `<b>${label}</b><br>Value: ${valueStr}<br>PC${pc1 + 1}: ${score[pc1].toFixed(2)}<br>PC${pc2 + 1}: ${score[pc2].toFixed(2)}`;
     });
 
-    // Prepare text labels
-    const text = scores.map((_, i) => {
-      const label = sampleNames?.[i] || `Sample ${i}`;
-      return smartLabelIndices.includes(i) ? label : '';
-    });
-
     // Check if we have any actual labels to display
     const hasLabels = smartLabelIndices.length > 0;
 
-    // Create single trace with gradient colors
-    // Use the actual numeric values for colors, not interpolated hex colors
+    // Create main scatter trace with gradient colors (markers only)
+    // Separate from text to avoid Plotly rendering issues with colorscale + text
     traces.push({
       type: 'scatter',
-      mode: hasLabels ? ('markers+text' as any) : 'markers',
+      mode: 'markers',
       name: 'Samples',
       x: scores.map(s => s[pc1]),
       y: scores.map(s => s[pc2]),
-      text: hasLabels ? text : undefined,
       hovertext: hovertext,
       hovertemplate: '%{hovertext}<extra></extra>',
-      textposition: hasLabels ? 'top center' : undefined,
-      textfont: hasLabels ? {
-        size: 10,
-        color: this.config.theme === 'dark' ? '#e5e7eb' : '#374151'
-      } : undefined,
       marker: {
         size: 8,
         color: groupValues, // Use raw numeric values
@@ -269,6 +257,35 @@ export class PlotlyScoresPlot extends PlotlyVisualization<ScoresPlotData> {
         opacity: 0.8
       }
     });
+
+    // Add text labels as a separate trace (if enabled)
+    // This prevents rendering issues when combining gradient colors with text
+    if (hasLabels && this.scoresConfig.showSmartLabels) {
+      const labelX: number[] = [];
+      const labelY: number[] = [];
+      const labelText: string[] = [];
+
+      smartLabelIndices.forEach(i => {
+        labelX.push(scores[i][pc1]);
+        labelY.push(scores[i][pc2]);
+        labelText.push(sampleNames?.[i] || `Sample ${i}`);
+      });
+
+      traces.push({
+        type: 'scatter',
+        mode: 'text',
+        x: labelX,
+        y: labelY,
+        text: labelText,
+        textposition: 'top center',
+        textfont: {
+          size: 10,
+          color: this.config.theme === 'dark' ? '#e5e7eb' : '#374151'
+        },
+        showlegend: false,
+        hoverinfo: 'skip'
+      });
+    }
 
     return traces;
   }
