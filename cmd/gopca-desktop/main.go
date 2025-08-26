@@ -16,6 +16,7 @@ import (
 	"github.com/wailsapp/wails/v2"
 	"github.com/wailsapp/wails/v2/pkg/options"
 	"github.com/wailsapp/wails/v2/pkg/options/assetserver"
+	"github.com/wailsapp/wails/v2/pkg/options/mac"
 )
 
 //go:embed all:frontend/dist
@@ -43,9 +44,10 @@ func main() {
 
 	// Create application with options
 	err := wails.Run(&options.App{
-		Title:  "GoPCA Desktop",
-		Width:  1200,
-		Height: 800,
+		Title:            "GoPCA Desktop",
+		Width:            1200,
+		Height:           800,
+		WindowStartState: options.Normal,
 		AssetServer: &assetserver.Options{
 			Assets: assets,
 		},
@@ -53,6 +55,14 @@ func main() {
 		OnStartup:        app.startup,
 		Bind: []interface{}{
 			app,
+		},
+		Mac: &mac.Options{
+			TitleBar: &mac.TitleBar{
+				HideTitleBar:    false,
+				HideTitle:       false,
+				FullSizeContent: false,
+				UseToolbar:      false,
+			},
 		},
 	})
 
