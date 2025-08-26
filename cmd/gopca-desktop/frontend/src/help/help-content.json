@@ -35,6 +35,11 @@
       "text": "Dataset containing chemical analysis results of wines from three cultivars, widely used for classification and feature analysis tasks.",
       "category": "data-input"
     },
+    "sample-dataset-met": {
+      "title": "MET Dataset",
+      "text": "A long time series of meteorological measurements from two measuring stations located a few kilometers apart. Also includes missing data.",
+      "category": "data-input"
+    },
     "gocsv-integration": {
       "title": "GoCSV Data Editor",
       "text": "GoCSV is a companion app for data preparation. Click to install GoCSV if not available, and open your data file in GoCSV for editing and cleaning.",

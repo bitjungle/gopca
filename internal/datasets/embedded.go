@@ -7,36 +7,70 @@
 package datasets
 
 import (
+	"bytes"
+	"compress/gzip"
 	_ "embed"
+	"io"
 )
 
-// Embed the sample dataset files
+// Embed the sample dataset files (compressed to reduce binary size)
 var (
-	//go:embed corn.csv
-	CornCSV string
+	//go:embed corn.csv.gz
+	CornCSVGZ []byte
 
-	//go:embed iris.csv
-	IrisCSV string
+	//go:embed iris.csv.gz
+	IrisCSVGZ []byte
 
-	//go:embed wine.csv
-	WineCSV string
+	//go:embed wine.csv.gz
+	WineCSVGZ []byte
 
-	//go:embed swiss_roll.csv
-	SwissRollCSV string
+	//go:embed swiss_roll.csv.gz
+	SwissRollCSVGZ []byte
+
+	//go:embed met.csv.gz
+	MetCSVGZ []byte
 )
 
 // GetDataset returns the embedded dataset content by filename
+// All datasets are stored compressed and decompressed on-the-fly to reduce binary size
 func GetDataset(filename string) (string, bool) {
+	var compressedData []byte
+
 	switch filename {
 	case "corn.csv":
-		return CornCSV, true
+		compressedData = CornCSVGZ
 	case "iris.csv":
-		return IrisCSV, true
+		compressedData = IrisCSVGZ
 	case "wine.csv":
-		return WineCSV, true
+		compressedData = WineCSVGZ
 	case "swiss_roll.csv":
-		return SwissRollCSV, true
+		compressedData = SwissRollCSVGZ
+	case "met.csv":
+		compressedData = MetCSVGZ
 	default:
 		return "", false
 	}
+
+	// Decompress the dataset
+	decompressed, err := decompressGzip(compressedData)
+	if err != nil {
+		return "", false
+	}
+	return decompressed, true
+}
+
+// decompressGzip decompresses gzip-compressed data
+func decompressGzip(data []byte) (string, error) {
+	reader, err := gzip.NewReader(bytes.NewReader(data))
+	if err != nil {
+		return "", err
+	}
+	defer reader.Close()
+
+	decompressed, err := io.ReadAll(reader)
+	if err != nil {
+		return "", err
+	}
+
+	return string(decompressed), nil
 }
