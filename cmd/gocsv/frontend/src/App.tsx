@@ -487,23 +487,6 @@ return;
                                             Transform Data
                                         </span>
                                     </button>
-                                    <div className="w-px h-6 bg-gray-300 dark:bg-gray-600" />
-                                    <button
-                                        onClick={() => {
-                                            if (gridRef.current?.autoSizeColumns) {
-                                                gridRef.current.autoSizeColumns();
-                                            }
-                                        }}
-                                        className="px-3 py-1.5 text-sm bg-indigo-600 text-white rounded hover:bg-indigo-700 transition-colors"
-                                        title="Auto-size all columns based on their content"
-                                    >
-                                        <span className="flex items-center gap-2">
-                                            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 6h16M4 12h16m-7 6h7" />
-                                            </svg>
-                                            Auto-size Columns
-                                        </span>
-                                    </button>
                                 </div>
                                 {missingValueStats && (
                                     <div className="text-sm text-gray-600 dark:text-gray-400">
