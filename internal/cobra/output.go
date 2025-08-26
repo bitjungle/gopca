@@ -177,7 +177,7 @@ func outputTableFormat(result *types.PCAResult, data *pkgcsv.Data,
 		for i := 0; i < len(result.ComponentLabels); i++ {
 			fmt.Printf("%-15s%14.1f%%%14.1f%%\n",
 				result.ComponentLabels[i],
-				result.ExplainedVar[i],
+				result.ExplainedVarRatio[i],
 				result.CumulativeVar[i])
 		}
 	}
