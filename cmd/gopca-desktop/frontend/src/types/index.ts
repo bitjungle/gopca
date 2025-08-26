@@ -100,4 +100,8 @@ export interface PCAResponse {
   groupEllipses90?: Record<string, EllipseParams>;
   groupEllipses95?: Record<string, EllipseParams>;
   groupEllipses99?: Record<string, EllipseParams>;
+  // Filtered categorical and numeric columns after rows are dropped
+  // These ensure proper alignment with the reduced scores matrix
+  filteredCategoricalColumns?: Record<string, string[]>;
+  filteredNumericTargetColumns?: Record<string, number[]>;
 }

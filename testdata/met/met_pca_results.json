@@ -1,0 +1,29 @@
+{
+  "drop_strategy": {
+    "rows_after_drop": 48770,
+    "rows_dropped": 19150,
+    "scores_shape": [
+      48770,
+      2
+    ],
+    "categorical_shape": [
+      48770,
+      1
+    ],
+    "explained_variance": [
+      0.6128395565503441,
+      0.23176993591214728
+    ]
+  },
+  "mean_strategy": {
+    "rows": 67920,
+    "scores_shape": [
+      67920,
+      2
+    ],
+    "explained_variance": [
+      0.571643770388367,
+      0.21831661601641933
+    ]
+  }
+}
