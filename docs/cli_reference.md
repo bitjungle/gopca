@@ -81,11 +81,14 @@ pca analyze [OPTIONS] <input.csv>
 
 ##### Missing Data Handling
 - `--missing-strategy <strategy>` - How to handle missing values:
-  - `error` - Fail if missing values found (default)
+  - `error` - Report error if missing values are found (default). SVD method requires complete data
   - `drop` - Remove rows with missing values
   - `mean` - Replace with column mean
   - `median` - Replace with column median
-  - `native` - Use NIPALS algorithm's native missing data handling
+  - `zero` - Replace with zero
+  - `native` - Use NIPALS algorithm's native missing data handling (NIPALS only)
+
+**Note:** The `native` strategy is only available with the NIPALS method. When using SVD (default), you must choose a preprocessing strategy (drop, mean, median, or zero) if your data contains missing values.
 
 ##### Data Selection
 - `--exclude-rows <list>` - Exclude rows by index (1-based, e.g., '1,3,5-7')
@@ -150,9 +153,18 @@ pca analyze --missing-strategy drop data.csv
 # Use NIPALS with native missing data handling
 pca analyze --method nipals --missing-strategy native data.csv
 
-# Replace missing with mean
+# Replace missing with mean (for SVD compatibility)
 pca analyze --missing-strategy mean data.csv
+
+# Verbose output to see missing data statistics
+pca analyze --verbose --missing-strategy drop data.csv
 ```
+
+When verbose mode is enabled, the CLI will report:
+- Total number and percentage of missing values
+- Number of rows affected
+- Missing values per column
+- Applied strategy and its effect
 
 ##### Group Analysis
 ```bash

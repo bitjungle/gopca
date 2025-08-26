@@ -255,7 +255,7 @@ type PCAResponse struct {
 	GroupEllipses99 map[string]EllipseParams `json:"groupEllipses99,omitempty"`
 	// FilteredCategoricalColumns contains categorical data after rows are dropped
 	// This ensures the frontend uses properly aligned data when coloring by category
-	FilteredCategoricalColumns map[string][]string `json:"filteredCategoricalColumns,omitempty"`
+	FilteredCategoricalColumns   map[string][]string  `json:"filteredCategoricalColumns,omitempty"`
 	FilteredNumericTargetColumns map[string][]float64 `json:"filteredNumericTargetColumns,omitempty"`
 }
 
@@ -441,7 +441,7 @@ func (a *App) RunPCA(request PCARequest) (response PCAResponse) {
 					}
 					request.GroupLabels = newGroupLabels
 				}
-				
+
 				// Filter metadata categorical columns to match dropped rows
 				// This ensures frontend has properly aligned data for coloring
 				if request.MetadataCategorical != nil && len(request.MetadataCategorical) > 0 {
@@ -455,7 +455,7 @@ func (a *App) RunPCA(request PCARequest) (response PCAResponse) {
 						request.MetadataCategorical[colName] = filteredCol
 					}
 				}
-				
+
 				// Filter metadata numeric columns
 				if request.MetadataNumeric != nil && len(request.MetadataNumeric) > 0 {
 					for colName, colData := range request.MetadataNumeric {
@@ -691,21 +691,21 @@ func (a *App) RunPCA(request PCARequest) (response PCAResponse) {
 	// We pass it to the frontend so it can use properly aligned data when coloring by category
 	var filteredCategoricalCols map[string][]string
 	var filteredNumericTargetCols map[string][]float64
-	
+
 	if rowsDropped > 0 && request.MissingStrategy == "drop" {
 		// Pass the already-filtered metadata columns
 		filteredCategoricalCols = request.MetadataCategorical
 		filteredNumericTargetCols = request.MetadataNumeric
 	}
-	
+
 	return PCAResponse{
-		Success:         true,
-		Result:          ConvertPCAResultToJSON(result),
-		Info:            infoMsg,
-		GroupEllipses90: groupEllipses90,
-		GroupEllipses95: groupEllipses95,
-		GroupEllipses99: groupEllipses99,
-		FilteredCategoricalColumns: filteredCategoricalCols,
+		Success:                      true,
+		Result:                       ConvertPCAResultToJSON(result),
+		Info:                         infoMsg,
+		GroupEllipses90:              groupEllipses90,
+		GroupEllipses95:              groupEllipses95,
+		GroupEllipses99:              groupEllipses99,
+		FilteredCategoricalColumns:   filteredCategoricalCols,
 		FilteredNumericTargetColumns: filteredNumericTargetCols,
 	}
 }
