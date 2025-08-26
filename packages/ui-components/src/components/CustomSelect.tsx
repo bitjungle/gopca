@@ -215,7 +215,7 @@ export const CustomSelect: React.FC<CustomSelectProps> = ({
         onClick={() => handleOptionClick(option)}
         onMouseEnter={() => !option.disabled && setHighlightedIndex(index)}
         className={`
-          relative flex items-center px-3 py-2 cursor-pointer select-none
+          relative flex items-center px-3 py-2 cursor-pointer select-none text-left
           ${option.disabled 
             ? 'opacity-50 cursor-not-allowed bg-gray-50 dark:bg-gray-800 text-gray-400 dark:text-gray-500' 
             : isHighlighted
