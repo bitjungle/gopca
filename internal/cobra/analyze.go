@@ -8,7 +8,6 @@ package cobra
 
 import (
 	"fmt"
-	"math"
 	"strings"
 
 	"github.com/bitjungle/gopca/internal/core"
@@ -88,6 +87,12 @@ EXAMPLES:
   # Kernel PCA with RBF kernel
   pca analyze --method kernel --kernel-type rbf data.csv
 
+  # Handle missing data by dropping rows
+  pca analyze --missing-strategy drop data.csv
+
+  # NIPALS with native missing value handling
+  pca analyze --method nipals --missing-strategy native data.csv
+
   # Output to JSON with full results
   pca analyze -f json --output-dir results/ data.csv`,
 		Args: cobra.ExactArgs(1),
@@ -137,8 +142,8 @@ EXAMPLES:
 		"Comma-separated list of target columns to exclude")
 
 	// Missing data handling
-	cmd.Flags().StringVar(&opts.MissingStrategy, "missing-strategy", "mean",
-		"Strategy for missing values: mean, median, zero, drop")
+	cmd.Flags().StringVar(&opts.MissingStrategy, "missing-strategy", "error",
+		"Strategy for missing values: error (default), mean, median, zero, drop, native (NIPALS only)")
 	cmd.Flags().Float64Var(&opts.MissingPercent, "missing-percent", 50.0,
 		"Maximum missing percentage before dropping")
 
@@ -205,16 +210,69 @@ func runAnalyze(opts *AnalyzeOptions, inputFile string) error {
 		return fmt.Errorf("data validation failed: %w", err)
 	}
 
-	// Handle missing values based on strategy
-	if opts.MissingStrategy != "error" && opts.MissingStrategy != "native" {
-		// Get columns that will be used for PCA (all columns since we don't have exclusion here yet)
-		selectedCols := make([]int, 0, data.Columns)
-		for i := 0; i < data.Columns; i++ {
-			selectedCols = append(selectedCols, i)
+	// Early detection and reporting of missing values
+	selectedCols := make([]int, 0, data.Columns)
+	for i := 0; i < data.Columns; i++ {
+		selectedCols = append(selectedCols, i)
+	}
+	missingInfo := data.GetMissingValueInfo(selectedCols)
+
+	if missingInfo.HasMissing() {
+		totalValues := data.Rows * data.Columns
+		missingPercent := float64(missingInfo.TotalMissing) * 100.0 / float64(totalValues)
+		rowsWithMissing := len(missingInfo.RowsAffected)
+		rowsPercent := float64(rowsWithMissing) * 100.0 / float64(data.Rows)
+
+		// Report missing values to user
+		if opts.Verbose {
+			fmt.Printf("Missing values detected:\n")
+			fmt.Printf("  Total missing: %d of %d values (%.1f%%)\n",
+				missingInfo.TotalMissing, totalValues, missingPercent)
+			fmt.Printf("  Rows affected: %d of %d rows (%.1f%%)\n",
+				rowsWithMissing, data.Rows, rowsPercent)
+
+			// Report by column
+			if len(missingInfo.MissingByColumn) > 0 {
+				fmt.Printf("  Missing by column:\n")
+				for colIdx, count := range missingInfo.MissingByColumn {
+					colName := fmt.Sprintf("Column %d", colIdx+1)
+					if colIdx < len(data.Headers) && data.Headers[colIdx] != "" {
+						colName = data.Headers[colIdx]
+					}
+					colPercent := float64(count) * 100.0 / float64(data.Rows)
+					fmt.Printf("    %s: %d (%.1f%%)\n", colName, count, colPercent)
+				}
+			}
 		}
 
-		// Check for missing values
-		missingInfo := data.GetMissingValueInfo(selectedCols)
+		// Validate method compatibility with native strategy
+		if opts.MissingStrategy == "native" {
+			if strings.ToLower(opts.Method) != "nipals" {
+				return fmt.Errorf("native missing value handling is only supported with the NIPALS method, not %s", opts.Method)
+			}
+		}
+
+		// Check if using SVD with missing values without proper strategy
+		if strings.ToLower(opts.Method) == "svd" && opts.MissingStrategy == "error" {
+			return fmt.Errorf("missing values detected (%d values, %.1f%%). SVD requires complete data. "+
+				"Use --missing-strategy with one of: drop, mean, median, zero. "+
+				"Or use --method nipals with --missing-strategy native for native handling",
+				missingInfo.TotalMissing, missingPercent)
+		}
+	}
+
+	// Handle missing values based on strategy
+	if missingInfo.HasMissing() && opts.MissingStrategy != "error" && opts.MissingStrategy != "native" {
+		// Handle missing values based on strategy
+		if opts.MissingStrategy != "drop" && opts.MissingStrategy != "mean" &&
+			opts.MissingStrategy != "median" && opts.MissingStrategy != "zero" {
+			return fmt.Errorf("invalid missing value strategy: %s. Valid options are: error, drop, mean, median, zero, native (NIPALS only)", opts.MissingStrategy)
+		}
+
+		if opts.Verbose {
+			fmt.Printf("Applying missing value strategy: %s\n", opts.MissingStrategy)
+		}
+
 		if missingInfo.HasMissing() {
 			// Handle missing values using the specified strategy
 			handler := core.NewMissingValueHandler(types.MissingValueStrategy(opts.MissingStrategy))
@@ -241,15 +299,21 @@ func runAnalyze(opts *AnalyzeOptions, inputFile string) error {
 
 			data.Matrix = cleanData
 			data.Rows = len(cleanData)
-		}
-	} else if opts.MissingStrategy == "error" {
-		// Check for any missing values
-		for i := 0; i < data.Rows; i++ {
-			for j := 0; j < data.Columns; j++ {
-				if math.IsNaN(data.Matrix[i][j]) {
-					return fmt.Errorf("missing values found in data - use --missing-strategy to specify handling")
+
+			if opts.Verbose {
+				if opts.MissingStrategy == "drop" {
+					fmt.Printf("Dropped %d rows with missing values. Data now has %d rows.\n",
+						len(missingInfo.RowsAffected), data.Rows)
+				} else {
+					fmt.Printf("Imputed %d missing values using %s strategy.\n",
+						missingInfo.TotalMissing, opts.MissingStrategy)
 				}
 			}
+		}
+	} else if opts.MissingStrategy == "native" && missingInfo.HasMissing() {
+		// NIPALS will handle missing values internally
+		if opts.Verbose {
+			fmt.Printf("NIPALS will handle %d missing values natively.\n", missingInfo.TotalMissing)
 		}
 	}
 
