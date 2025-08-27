@@ -14,6 +14,7 @@ import { getSequentialPalette } from '../../utils/colorPalettes';
 interface EigencorrelationPlotProps {
   pcaResult: PCAResult;
   maxComponents?: number;
+  fontScale?: number;
 }
 
 export const EigencorrelationPlot: React.FC<EigencorrelationPlotProps> = ({

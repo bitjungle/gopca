@@ -15,6 +15,7 @@ interface CircleOfCorrelationsProps {
   pcaResult: PCAResult;
   xComponent?: number; // 0-based index
   yComponent?: number; // 0-based index
+  fontScale?: number;
 }
 
 export const CircleOfCorrelations: React.FC<CircleOfCorrelationsProps> = ({

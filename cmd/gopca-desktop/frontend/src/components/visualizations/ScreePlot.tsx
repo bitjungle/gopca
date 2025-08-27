@@ -15,12 +15,14 @@ interface ScreePlotProps {
   pcaResult: PCAResult;
   showCumulative?: boolean;
   elbowThreshold?: number; // Optional: highlight components explaining this % variance
+  fontScale?: number;
 }
 
 export const ScreePlot: React.FC<ScreePlotProps> = ({
   pcaResult,
   showCumulative = true,
-  elbowThreshold = 80
+  elbowThreshold = 80,
+  fontScale = 1.0
 }) => {
   const { theme } = useTheme();
   const { qualitativePalette } = usePalette();
@@ -36,7 +38,8 @@ export const ScreePlot: React.FC<ScreePlotProps> = ({
     showCumulative,
     elbowThreshold,
     theme,
-    colorScheme
+    colorScheme,
+    fontScale
   );
 
   return (

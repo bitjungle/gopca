@@ -20,6 +20,7 @@ interface DiagnosticScatterPlotProps {
   confidenceLevel?: number;
   showRowLabels?: boolean;
   maxLabelsToShow?: number;
+  fontScale?: number;
 }
 
 export const DiagnosticScatterPlot: React.FC<DiagnosticScatterPlotProps> = ({

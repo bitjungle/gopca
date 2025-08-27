@@ -19,6 +19,7 @@ import {
 } from '../utils/plotlyMath';
 import { optimizeTraceType, getOptimalConfig } from '../utils/plotlyPerformance';
 import { getExportMenuItems } from '../utils/plotlyExport';
+import { getScaledMarkerSize } from '../config/plotConfig';
 
 export interface ScoresPlotData {
   scores: number[][];
@@ -118,14 +119,14 @@ export class PlotlyScoresPlot extends PlotlyVisualization<ScoresPlotData> {
         hovertext: hovertext,
         hovertemplate: '%{hovertext}<extra></extra>',
         marker: {
-          size: 8,
+          size: getScaledMarkerSize(8, this.config.fontScale || 1.0),
           color: this.scoresConfig.colorScheme![groupIndex % this.scoresConfig.colorScheme!.length],
           opacity: 0.8
         },
         selectedpoints: undefined,
         selected: {
           marker: {
-            size: 12,
+            size: getScaledMarkerSize(12, this.config.fontScale || 1.0),
             opacity: 1
           }
         } as any,
@@ -166,7 +167,7 @@ export class PlotlyScoresPlot extends PlotlyVisualization<ScoresPlotData> {
         text: labelText,
         textposition: 'top center',
         textfont: {
-          size: 10,
+          size: Math.round(10 * (this.config.fontScale || 1.0)),
           color: this.config.theme === 'dark' ? '#e5e7eb' : '#374151'
         },
         showlegend: false,
@@ -241,7 +242,7 @@ export class PlotlyScoresPlot extends PlotlyVisualization<ScoresPlotData> {
       hovertext: hovertext,
       hovertemplate: '%{hovertext}<extra></extra>',
       marker: {
-        size: 8,
+        size: getScaledMarkerSize(8, this.config.fontScale || 1.0),
         color: groupValues, // Use raw numeric values
         colorscale: colorscale, // Use custom colorscale from palette
         cmin: min,
@@ -279,7 +280,7 @@ export class PlotlyScoresPlot extends PlotlyVisualization<ScoresPlotData> {
         text: labelText,
         textposition: 'top center',
         textfont: {
-          size: 10,
+          size: Math.round(10 * (this.config.fontScale || 1.0)),
           color: this.config.theme === 'dark' ? '#e5e7eb' : '#374151'
         },
         showlegend: false,

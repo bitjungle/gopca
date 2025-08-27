@@ -16,13 +16,15 @@ interface LoadingsPlotProps {
   selectedComponent?: number; // 0-based index
   variableThreshold?: number; // Threshold for auto-switching between bar and line
   plotType?: 'bar' | 'line'; // Optional plot type override from parent
+  fontScale?: number;
 }
 
 export const LoadingsPlot: React.FC<LoadingsPlotProps> = ({
   pcaResult,
   selectedComponent = 0,
   variableThreshold = 100,
-  plotType: plotTypeProp
+  plotType: plotTypeProp,
+  fontScale = 1.0
 }) => {
   const { theme } = useTheme();
   const { qualitativePalette } = usePalette();
@@ -52,7 +54,8 @@ export const LoadingsPlot: React.FC<LoadingsPlotProps> = ({
     theme,
     colorScheme,
     numVariables,
-    variableThreshold
+    variableThreshold,
+    fontScale
   );
 
   return (

@@ -16,7 +16,7 @@ import {
 } from '../utils/plotlyMath';
 import { getPlotlyTheme, mergeLayouts, ThemeMode } from '../utils/plotlyTheme';
 import { getExportMenuItems } from '../utils/plotlyExport';
-import { PLOT_CONFIG } from '../config/plotConfig';
+import { PLOT_CONFIG, getScaledMarkerSize } from '../config/plotConfig';
 import { PlotlyWithFullscreen } from '../utils/plotlyFullscreen';
 import { getWatermarkDataUrlSync } from '../assets/watermark';
 import { optimizeTraceType } from '../utils/plotlyPerformance';
@@ -48,6 +48,7 @@ export interface BiplotConfig {
   showEllipses?: boolean;
   ellipseConfidence?: number;
   maxVariables?: number;  // Maximum number of loading vectors to display
+  fontScale?: number;  // Scale factor for all font sizes (default: 1.0)
 }
 
 /**
@@ -162,7 +163,7 @@ export class PlotlyBiplot {
           hovertext: hovertext,
           hovertemplate: '%{hovertext}<extra></extra>',
           marker: {
-            size: this.config.pointSize,
+            size: getScaledMarkerSize(this.config.pointSize || 8, this.config.fontScale || 1.0),
             color: groupValues, // Use raw numeric values
             colorscale: colorscale, // Use custom colorscale from palette
             cmin: min,
@@ -200,7 +201,7 @@ export class PlotlyBiplot {
               color: this.config.colorScheme
                 ? this.config.colorScheme[i % this.config.colorScheme.length]
                 : ['#3b82f6', '#ef4444', '#10b981', '#f59e0b', '#8b5cf6'][i % 5],
-              size: this.config.pointSize,
+              size: getScaledMarkerSize(this.config.pointSize || 8, this.config.fontScale || 1.0),
               opacity: 0.7
             },
             text: sampleNames ? indices.map((idx: number) => sampleNames[idx]) : undefined,
@@ -249,7 +250,7 @@ export class PlotlyBiplot {
           name: 'Scores',
           marker: {
             color: this.config.colorScheme?.[0] || '#3b82f6',
-            size: this.config.pointSize,
+            size: getScaledMarkerSize(this.config.pointSize || 8, this.config.fontScale || 1.0),
             opacity: 0.7
           },
           text: sampleNames,
@@ -274,7 +275,7 @@ export class PlotlyBiplot {
           text: selectedIndices.map(i => sampleNames[i]),
           textposition: 'top center',
           textfont: {
-            size: 10,
+            size: Math.round(10 * (this.config.fontScale || 1.0)),
             color: this.config.theme === 'dark' ? '#e5e7eb' : '#374151'
           },
           showlegend: false,
@@ -352,7 +353,7 @@ return;
           y: validVectors.map(v => v ? loadingsY[v.i] : 0),
           marker: {
             symbol: 'arrow',
-            size: 12,
+            size: getScaledMarkerSize(12, this.config.fontScale || 1.0),
             color: this.config.colorScheme?.[1] || '#ef4444'
           } as any,
           showlegend: false,
@@ -382,7 +383,7 @@ return { x: 0, y: 0 };
           text: validVectors.map(v => v?.name || ''),
           textposition: 'middle center',
           textfont: {
-            size: 10,
+            size: Math.round(10 * (this.config.fontScale || 1.0)),
             color: this.config.colorScheme?.[1] || '#ef4444'
           },
           showlegend: false,
@@ -396,7 +397,7 @@ return { x: 0, y: 0 };
 
   getEnhancedLayout(): Partial<Layout> {
     const baseLayout = this.getLayout();
-    const themeLayout = getPlotlyTheme(this.config.theme || 'light').layout;
+    const themeLayout = getPlotlyTheme(this.config.theme || 'light', this.config.fontScale).layout;
     
     // Add watermark if enabled
     let watermarkImages: any[] = [];

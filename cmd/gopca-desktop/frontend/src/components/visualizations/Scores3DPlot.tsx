@@ -28,6 +28,7 @@ interface Scores3DPlotProps {
   groupType?: 'categorical' | 'continuous';
   showRowLabels?: boolean;
   maxLabelsToShow?: number;
+  fontScale?: number;
 }
 
 export const Scores3DPlot: React.FC<Scores3DPlotProps> = ({
