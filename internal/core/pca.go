@@ -53,10 +53,27 @@ func (p *PCAImpl) Fit(data types.Matrix, config types.PCAConfig) (*types.PCAResu
 	// Convert to gonum matrix
 	X := utils.MatrixToDense(data)
 
-	// Check if we're using NIPALS with native missing value handling
-	usingNativeMissing := config.Method == "nipals" && config.MissingStrategy == types.MissingNative
+	// Check if we're using NIPALS with native missing value handling AND actually have missing values
+	// This check must happen early to determine whether to apply preprocessing
+	hasMissing := false
+	if config.Method == "nipals" && config.MissingStrategy == types.MissingNative {
+		// Check for NaN values in the data
+		r, c := X.Dims()
+		for i := 0; i < r && !hasMissing; i++ {
+			for j := 0; j < c; j++ {
+				if math.IsNaN(X.At(i, j)) {
+					hasMissing = true
+					break
+				}
+			}
+		}
+	}
 
-	// Preprocessing using the Preprocessor class (skip if using native missing value handling)
+	// Only skip preprocessing if using Native NIPALS AND data actually has missing values
+	// For complete datasets, always apply preprocessing regardless of missing strategy
+	usingNativeMissing := config.Method == "nipals" && config.MissingStrategy == types.MissingNative && hasMissing
+
+	// Preprocessing using the Preprocessor class (skip only if using native missing value handling with actual missing values)
 	// Note: For NIPALS with missing values, mean centering is handled within the algorithm
 	if !usingNativeMissing && (config.MeanCenter || config.StandardScale || config.RobustScale || config.ScaleOnly || config.SNV || config.VectorNorm) {
 		// Create preprocessor with the appropriate settings
@@ -84,26 +101,14 @@ func (p *PCAImpl) Fit(data types.Matrix, config types.PCAConfig) (*types.PCAResu
 	var allEigenvalues []float64
 	var err error
 
-	// Check if we should use NIPALS with native missing value handling
-	hasMissing := false
-	if config.Method == "nipals" && config.MissingStrategy == types.MissingNative {
-		// Check for NaN values in the data
-		r, c := X.Dims()
-		for i := 0; i < r && !hasMissing; i++ {
-			for j := 0; j < c; j++ {
-				if math.IsNaN(X.At(i, j)) {
-					hasMissing = true
-					break
-				}
-			}
-		}
-	}
+	// Note: hasMissing has already been checked above to determine preprocessing behavior
 
 	switch config.Method {
 	case "svd", "":
 		scores, loadings, allEigenvalues, err = p.svdAlgorithm(X, config.Components)
 	case "nipals":
-		if hasMissing && config.MissingStrategy == types.MissingNative {
+		// Use native missing value handling only if strategy is native AND data has missing values
+		if config.MissingStrategy == types.MissingNative && hasMissing {
 			scores, loadings, allEigenvalues, err = p.nipalsAlgorithmWithMissing(X, config.Components)
 		} else {
 			scores, loadings, allEigenvalues, err = p.nipalsAlgorithm(X, config.Components)
