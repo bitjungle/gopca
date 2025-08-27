@@ -109,7 +109,8 @@ func runTransform(opts *TransformOptions, modelFile, inputFile string) error {
 	parseOpts.HasHeaders = !opts.NoHeaders
 	parseOpts.HasRowNames = !opts.NoIndex
 	parseOpts.Delimiter = rune(opts.Delimiter[0])
-	parseOpts.ParseMode = pkgcsv.ParseMixed
+	// Use ParseMixedWithTargets to properly identify and exclude target columns
+	parseOpts.ParseMode = pkgcsv.ParseMixedWithTargets
 
 	// Parse NA values
 	if opts.NAValues != "" {
@@ -131,11 +132,52 @@ func runTransform(opts *TransformOptions, modelFile, inputFile string) error {
 		return fmt.Errorf("data validation failed: %w", err)
 	}
 
-	// Check that the number of features matches
-	if len(data.Headers) != len(pcaOutputData.Model.FeatureLabels) {
-		return fmt.Errorf("feature count mismatch: model has %d features, data has %d",
-			len(pcaOutputData.Model.FeatureLabels), len(data.Headers))
+	// Extract feature columns that match the model's feature labels
+	// This handles cases where target columns are present in the data
+	modelFeatures := pcaOutputData.Model.FeatureLabels
+
+	// Create a map for quick lookup of model feature indices
+	modelFeatureMap := make(map[string]int)
+	for i, label := range modelFeatures {
+		modelFeatureMap[label] = i
 	}
+
+	// Find indices of data columns that match model features
+	dataColumnIndices := make([]int, 0, len(modelFeatures))
+	missingFeatures := make([]string, 0)
+
+	for _, modelFeature := range modelFeatures {
+		found := false
+		for j, dataHeader := range data.Headers {
+			if dataHeader == modelFeature {
+				dataColumnIndices = append(dataColumnIndices, j)
+				found = true
+				break
+			}
+		}
+		if !found {
+			missingFeatures = append(missingFeatures, modelFeature)
+		}
+	}
+
+	// Check if all required features are present
+	if len(missingFeatures) > 0 {
+		return fmt.Errorf("missing required features in data: %v", missingFeatures)
+	}
+
+	// Filter the data matrix to include only the feature columns in the correct order
+	filteredMatrix := make([][]float64, len(data.Matrix))
+	for i := range data.Matrix {
+		filteredMatrix[i] = make([]float64, len(dataColumnIndices))
+		for j, colIdx := range dataColumnIndices {
+			filteredMatrix[i][j] = data.Matrix[i][colIdx]
+		}
+	}
+
+	// Update data structure with filtered matrix
+	data.Matrix = filteredMatrix
+	data.Columns = len(modelFeatures)
+	data.Headers = modelFeatures
 
 	// Create preprocessor from saved parameters
 	preprocessor := core.NewPreprocessorWithScaleOnly(
