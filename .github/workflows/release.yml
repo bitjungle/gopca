@@ -800,11 +800,7 @@ jobs:
           cp gopca-desktop-ubuntu-latest/GoPCA appdir-gopca/usr/bin/
           
           # Create AppRun script
-          cat > appdir-gopca/AppRun <<\EOF
-#!/bin/bash
-HERE="$(dirname "$(readlink -f "${0}")")"
-exec "${HERE}/usr/bin/GoPCA" "$@"
-EOF
+          printf '#!/bin/bash\nHERE="$(dirname "$(readlink -f "${0}")")"\nexec "${HERE}/usr/bin/GoPCA" "$@"\n' > appdir-gopca/AppRun
           chmod +x appdir-gopca/AppRun
           
           # Create desktop file
@@ -842,11 +838,7 @@ EOF
           cp gocsv-ubuntu-latest/GoCSV appdir-gocsv/usr/bin/
           
           # Create AppRun script
-          cat > appdir-gocsv/AppRun <<\EOF
-#!/bin/bash
-HERE="$(dirname "$(readlink -f "${0}")")"
-exec "${HERE}/usr/bin/GoCSV" "$@"
-EOF
+          printf '#!/bin/bash\nHERE="$(dirname "$(readlink -f "${0}")")"\nexec "${HERE}/usr/bin/GoCSV" "$@"\n' > appdir-gocsv/AppRun
           chmod +x appdir-gocsv/AppRun
           
           # Create desktop file
