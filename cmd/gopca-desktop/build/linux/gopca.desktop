@@ -1,0 +1,15 @@
+[Desktop Entry]
+# Desktop Entry Specification Version (not application version)
+Version=1.0
+Type=Application
+Name=GoPCA
+GenericName=PCA Analysis Tool
+Comment=Professional Principal Component Analysis Tool
+Exec=/usr/local/bin/GoPCA
+Icon=gopca
+Terminal=false
+Categories=Science;Math;Education;
+MimeType=text/csv;
+Keywords=PCA;Principal;Component;Analysis;Statistics;Data;
+StartupWMClass=GoPCA
+StartupNotify=true
