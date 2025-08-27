@@ -800,15 +800,15 @@ jobs:
           cp gopca-desktop-ubuntu-latest/GoPCA appdir-gopca/usr/bin/
           
           # Create AppRun script
-          cat > appdir-gopca/AppRun << 'APPRUN_EOF'
+          cat > appdir-gopca/AppRun <<\EOF
 #!/bin/bash
 HERE="$(dirname "$(readlink -f "$${0}")")"
 exec "$${HERE}/usr/bin/GoPCA" "$$@"
-APPRUN_EOF
+EOF
           chmod +x appdir-gopca/AppRun
           
           # Create desktop file
-          cat > appdir-gopca/gopca.desktop << 'DESKTOP_EOF'
+          cat > appdir-gopca/gopca.desktop <<\EOF
 [Desktop Entry]
 Version=1.0
 Type=Application
@@ -821,7 +821,7 @@ Terminal=false
 Categories=Science;Math;Education;DataVisualization;
 MimeType=text/csv;text/plain;
 StartupNotify=true
-DESKTOP_EOF
+EOF
           
           # Download icon from repository
           curl -L -o appdir-gopca/gopca.png https://raw.githubusercontent.com/${{ github.repository }}/main/cmd/gopca-desktop/build/linux/icon-256.png
@@ -842,15 +842,15 @@ DESKTOP_EOF
           cp gocsv-ubuntu-latest/GoCSV appdir-gocsv/usr/bin/
           
           # Create AppRun script
-          cat > appdir-gocsv/AppRun << 'APPRUN_EOF'
+          cat > appdir-gocsv/AppRun <<\EOF
 #!/bin/bash
 HERE="$(dirname "$(readlink -f "$${0}")")"
 exec "$${HERE}/usr/bin/GoCSV" "$$@"
-APPRUN_EOF
+EOF
           chmod +x appdir-gocsv/AppRun
           
           # Create desktop file
-          cat > appdir-gocsv/gocsv.desktop << 'DESKTOP_EOF'
+          cat > appdir-gocsv/gocsv.desktop <<\EOF
 [Desktop Entry]
 Version=1.0
 Type=Application
@@ -863,7 +863,7 @@ Terminal=false
 Categories=Office;Spreadsheet;Science;DataVisualization;
 MimeType=text/csv;text/plain;text/tab-separated-values;
 StartupNotify=true
-DESKTOP_EOF
+EOF
           
           # Download icon from repository
           curl -L -o appdir-gocsv/gocsv.png https://raw.githubusercontent.com/${{ github.repository }}/main/cmd/gocsv/build/linux/icon-256.png
