@@ -10,7 +10,7 @@ import React, { useMemo } from 'react';
 import { Data, Layout } from 'plotly.js';
 import { getPlotlyTheme, mergeLayouts, ThemeMode } from '../utils/plotlyTheme';
 import { getExportMenuItems } from '../utils/plotlyExport';
-import { PLOT_CONFIG } from '../config/plotConfig';
+import { PLOT_CONFIG, getScaledMarkerSize } from '../config/plotConfig';
 import { PlotlyWithFullscreen } from '../utils/plotlyFullscreen';
 import { getWatermarkDataUrlSync } from '../assets/watermark';
 
@@ -32,6 +32,7 @@ export interface CircleOfCorrelationsConfig {
   labelSize?: number;
   theme?: ThemeMode;
   colorScheme?: string[];  // Color palette for visualization
+  fontScale?: number;  // Scale factor for all font sizes (default: 1.0)
 }
 
 /**
@@ -156,7 +157,7 @@ export class PlotlyCircleOfCorrelations {
         y: [correlationsY[i]],
         marker: {
           symbol: 'circle',
-          size: 6,
+          size: getScaledMarkerSize(6, this.config.fontScale || 1.0),
           color: color
         },
         showlegend: false,
@@ -174,7 +175,7 @@ export class PlotlyCircleOfCorrelations {
         text: filteredNames,
         textposition: 'middle center',
         textfont: {
-          size: this.config.labelSize,
+          size: Math.round((this.config.labelSize || 10) * (this.config.fontScale || 1.0)),
           color: this.config.theme === 'dark' ? '#e5e7eb' : '#374151'
         },
         showlegend: false,
@@ -214,7 +215,7 @@ export class PlotlyCircleOfCorrelations {
 
   getEnhancedLayout(): Partial<Layout> {
     const baseLayout = this.getLayout();
-    const themeLayout = getPlotlyTheme(this.config.theme || 'light').layout;
+    const themeLayout = getPlotlyTheme(this.config.theme || 'light', this.config.fontScale).layout;
     
     // Add watermark if enabled
     let watermarkImages: any[] = [];
@@ -278,7 +279,7 @@ export class PlotlyCircleOfCorrelations {
           xref: 'x',
           yref: 'y',
           showarrow: false,
-          font: { size: 12, color: 'gray' }
+          font: { size: Math.round(12 * (this.config.fontScale || 1.0)), color: 'gray' }
         },
         {
           text: '-/+',
@@ -287,7 +288,7 @@ export class PlotlyCircleOfCorrelations {
           xref: 'x',
           yref: 'y',
           showarrow: false,
-          font: { size: 12, color: 'gray' }
+          font: { size: Math.round(12 * (this.config.fontScale || 1.0)), color: 'gray' }
         },
         {
           text: '-/-',
@@ -296,7 +297,7 @@ export class PlotlyCircleOfCorrelations {
           xref: 'x',
           yref: 'y',
           showarrow: false,
-          font: { size: 12, color: 'gray' }
+          font: { size: Math.round(12 * (this.config.fontScale || 1.0)), color: 'gray' }
         },
         {
           text: '+/-',
@@ -305,7 +306,7 @@ export class PlotlyCircleOfCorrelations {
           xref: 'x',
           yref: 'y',
           showarrow: false,
-          font: { size: 12, color: 'gray' }
+          font: { size: Math.round(12 * (this.config.fontScale || 1.0)), color: 'gray' }
         }
       ]
     };

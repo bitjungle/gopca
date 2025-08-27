@@ -10,7 +10,7 @@ import React, { useMemo } from 'react';
 import { Data, Layout, Config } from 'plotly.js';
 import { getPlotlyTheme, mergeLayouts, ThemeMode } from '../utils/plotlyTheme';
 import { getExportMenuItems } from '../utils/plotlyExport';
-import { PLOT_CONFIG } from '../config/plotConfig';
+import { PLOT_CONFIG, getScaledMarkerSize } from '../config/plotConfig';
 import { PlotlyWithFullscreen } from '../utils/plotlyFullscreen';
 import { getWatermarkDataUrlSync } from '../assets/watermark';
 
@@ -34,6 +34,7 @@ export interface Scores3DPlotConfig {
     center?: { x: number; y: number; z: number };
   };
   theme?: ThemeMode;
+  fontScale?: number;  // Scale factor for all font sizes (default: 1.0)
 }
 
 /**
@@ -90,7 +91,7 @@ export class Plotly3DScoresPlot {
         hovertext: hovertext,
         hovertemplate: '%{hovertext}<extra></extra>',
         marker: {
-          size: this.config.markerSize,
+          size: getScaledMarkerSize(this.config.markerSize || 5, this.config.fontScale || 1.0),
           color: this.config.colorScheme![groupIndex % this.config.colorScheme!.length],
           opacity: this.config.opacity
         }
@@ -125,7 +126,7 @@ export class Plotly3DScoresPlot {
         y: groupScores.map(s => s[pc2]),
         z: groupScores.map(() => minZ),
         marker: {
-          size: 2,
+          size: getScaledMarkerSize(2, this.config.fontScale || 1.0),
           color: color,
           opacity: 0.3
         },
@@ -142,7 +143,7 @@ export class Plotly3DScoresPlot {
         y: groupScores.map(() => minY),
         z: groupScores.map(s => s[pc3]),
         marker: {
-          size: 2,
+          size: getScaledMarkerSize(2, this.config.fontScale || 1.0),
           color: color,
           opacity: 0.3
         },
@@ -159,7 +160,7 @@ export class Plotly3DScoresPlot {
         y: groupScores.map(s => s[pc2]),
         z: groupScores.map(s => s[pc3]),
         marker: {
-          size: 2,
+          size: getScaledMarkerSize(2, this.config.fontScale || 1.0),
           color: color,
           opacity: 0.3
         },
@@ -173,7 +174,7 @@ export class Plotly3DScoresPlot {
 
   getEnhancedLayout(): Partial<Layout> {
     const baseLayout = this.getLayout();
-    const themeLayout = getPlotlyTheme(this.config.theme || 'light').layout;
+    const themeLayout = getPlotlyTheme(this.config.theme || 'light', this.config.fontScale).layout;
     
     // Add watermark if enabled
     let watermarkImages: any[] = [];
@@ -248,7 +249,7 @@ export class Plotly3DScoresPlot {
       showlegend: true,
       legend: {
         borderwidth: 1,
-        font: { size: 12 },
+        font: { size: Math.round(12 * (this.config.fontScale || 1.0)) },
         x: 1.02,
         y: 1,
         xanchor: 'left',

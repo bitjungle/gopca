@@ -10,7 +10,7 @@ import React, { useMemo } from 'react';
 import { Data, Layout } from 'plotly.js';
 import { getPlotlyTheme, mergeLayouts, ThemeMode } from '../utils/plotlyTheme';
 import { getExportMenuItems } from '../utils/plotlyExport';
-import { PLOT_CONFIG } from '../config/plotConfig';
+import { PLOT_CONFIG, getScaledMarkerSize } from '../config/plotConfig';
 import { PlotlyWithFullscreen } from '../utils/plotlyFullscreen';
 import { getWatermarkDataUrlSync } from '../assets/watermark';
 
@@ -31,6 +31,7 @@ export interface DiagnosticPlotConfig {
   colorScheme?: string[];
   pointSize?: number;
   theme?: ThemeMode;
+  fontScale?: number;  // Scale factor for all font sizes (default: 1.0)
 }
 
 /**
@@ -130,7 +131,7 @@ return;
         name: cat.name,
         marker: {
           color: cat.color,
-          size: this.config.pointSize,
+          size: getScaledMarkerSize(this.config.pointSize || 8, this.config.fontScale || 1.0),
           symbol: cat.symbol,
           opacity: 0.7
         },
@@ -172,7 +173,7 @@ return;
         text: topPoints.map(p => sampleNames[p.index]),
         textposition: 'top center',
         textfont: {
-          size: 10,
+          size: Math.round(10 * (this.config.fontScale || 1.0)),
           color: this.config.theme === 'dark' ? '#e5e7eb' : '#374151'
         },
         showlegend: false,
@@ -185,7 +186,7 @@ return;
 
   getEnhancedLayout(): Partial<Layout> {
     const baseLayout = this.getLayout();
-    const themeLayout = getPlotlyTheme(this.config.theme || 'light').layout;
+    const themeLayout = getPlotlyTheme(this.config.theme || 'light', this.config.fontScale).layout;
     
     // Add watermark if enabled
     let watermarkImages: any[] = [];
@@ -296,7 +297,7 @@ return;
           xanchor: 'left',
           yanchor: 'bottom',
           showarrow: false,
-          font: { size: 11, color: this.config.colorScheme?.[3] || '#C44E52' },
+          font: { size: Math.round(11 * (this.config.fontScale || 1.0)), color: this.config.colorScheme?.[3] || '#C44E52' },
           textangle: '-90'
         },
         {
@@ -313,7 +314,7 @@ return;
           x: this.config.mahalanobisThreshold! / 2,
           y: this.config.rssThreshold! / 2,
           showarrow: false,
-          font: { size: 12, color: 'gray' },
+          font: { size: Math.round(12 * (this.config.fontScale || 1.0)), color: 'gray' },
           opacity: 0.5
         },
         {
@@ -321,7 +322,7 @@ return;
           x: (this.config.mahalanobisThreshold! + maxMD) / 2,
           y: this.config.rssThreshold! / 2,
           showarrow: false,
-          font: { size: 12, color: 'gray' },
+          font: { size: Math.round(12 * (this.config.fontScale || 1.0)), color: 'gray' },
           opacity: 0.5
         },
         {
@@ -329,7 +330,7 @@ return;
           x: this.config.mahalanobisThreshold! / 2,
           y: (this.config.rssThreshold! + maxRSS) / 2,
           showarrow: false,
-          font: { size: 12, color: 'gray' },
+          font: { size: Math.round(12 * (this.config.fontScale || 1.0)), color: 'gray' },
           opacity: 0.5
         },
         {
@@ -337,7 +338,7 @@ return;
           x: (this.config.mahalanobisThreshold! + maxMD) / 2,
           y: (this.config.rssThreshold! + maxRSS) / 2,
           showarrow: false,
-          font: { size: 12, color: 'gray' },
+          font: { size: Math.round(12 * (this.config.fontScale || 1.0)), color: 'gray' },
           opacity: 0.5
         }
       ];
