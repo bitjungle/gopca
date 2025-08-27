@@ -1,0 +1,15 @@
+[Desktop Entry]
+# Desktop Entry Specification Version (not application version)
+Version=1.0
+Type=Application
+Name=GoCSV
+GenericName=CSV Editor
+Comment=Fast and efficient CSV data editor
+Exec=/usr/local/bin/GoCSV
+Icon=gocsv
+Terminal=false
+Categories=Office;Utility;
+MimeType=text/csv;
+Keywords=CSV;Editor;Data;Spreadsheet;Table;
+StartupWMClass=gocsv
+StartupNotify=true
