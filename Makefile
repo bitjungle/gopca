@@ -515,6 +515,50 @@ csv-deps:
 	@cd $(CSV_PATH)/frontend && npm install
 	@echo "CSV editor dependencies installed"
 
+## appimage-tool: Download appimagetool for building AppImages
+appimage-tool:
+	@if [ ! -f "$(BUILD_DIR)/appimagetool-x86_64.AppImage" ]; then \
+		echo "Downloading appimagetool..."; \
+		curl -L -o "$(BUILD_DIR)/appimagetool-x86_64.AppImage" \
+			https://github.com/AppImage/AppImageKit/releases/download/continuous/appimagetool-x86_64.AppImage; \
+		chmod +x "$(BUILD_DIR)/appimagetool-x86_64.AppImage"; \
+		echo "appimagetool downloaded successfully"; \
+	else \
+		echo "appimagetool already exists"; \
+	fi
+
+## appimage-gopca: Build GoPCA AppImage (Linux only)
+appimage-gopca: appimage-tool
+	@echo "Building GoPCA AppImage..."
+	@if [ ! -f "$(DESKTOP_PATH)/build/bin/GoPCA" ]; then \
+		echo "Error: GoPCA binary not found. Build it first with 'make pca-build' on Linux"; \
+		exit 1; \
+	fi
+	@# Copy binary to appdir
+	@cp "$(DESKTOP_PATH)/build/bin/GoPCA" "$(DESKTOP_PATH)/appdir/usr/bin/GoPCA"
+	@# Build AppImage
+	@cd $(DESKTOP_PATH) && \
+		../$(BUILD_DIR)/appimagetool-x86_64.AppImage appdir ../$(BUILD_DIR)/GoPCA-x86_64.AppImage
+	@echo "GoPCA AppImage created: $(BUILD_DIR)/GoPCA-x86_64.AppImage"
+
+## appimage-gocsv: Build GoCSV AppImage (Linux only)
+appimage-gocsv: appimage-tool
+	@echo "Building GoCSV AppImage..."
+	@if [ ! -f "$(CSV_PATH)/build/bin/GoCSV" ]; then \
+		echo "Error: GoCSV binary not found. Build it first with 'make csv-build' on Linux"; \
+		exit 1; \
+	fi
+	@# Copy binary to appdir
+	@cp "$(CSV_PATH)/build/bin/GoCSV" "$(CSV_PATH)/appdir/usr/bin/GoCSV"
+	@# Build AppImage
+	@cd $(CSV_PATH) && \
+		../$(BUILD_DIR)/appimagetool-x86_64.AppImage appdir ../$(BUILD_DIR)/GoCSV-x86_64.AppImage
+	@echo "GoCSV AppImage created: $(BUILD_DIR)/GoCSV-x86_64.AppImage"
+
+## appimage-all: Build both GoPCA and GoCSV AppImages (Linux only)
+appimage-all: appimage-gopca appimage-gocsv
+	@echo "All AppImages built successfully!"
+
 ## test: Run all tests with coverage
 test:
 	@echo "Running tests with coverage..."

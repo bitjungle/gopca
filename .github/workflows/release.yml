@@ -782,6 +782,97 @@ jobs:
         tar -czf ../gopca-linux-x64.tar.gz .
         cd ..
         
+        # Build AppImages for Linux
+        echo "Building AppImages..."
+        
+        # Download appimagetool
+        curl -L -o appimagetool https://github.com/AppImage/AppImageKit/releases/download/continuous/appimagetool-x86_64.AppImage
+        chmod +x appimagetool
+        
+        # Build GoPCA AppImage if binary exists
+        if [ -f "gopca-desktop-ubuntu-latest/GoPCA" ]; then
+          echo "Building GoPCA AppImage..."
+          # Prepare appdir structure
+          mkdir -p appdir-gopca/usr/bin
+          mkdir -p appdir-gopca/usr/share/icons/hicolor/256x256/apps
+          
+          # Copy files from repository
+          cp gopca-desktop-ubuntu-latest/GoPCA appdir-gopca/usr/bin/
+          
+          # Create AppRun script
+          cat > appdir-gopca/AppRun << 'EOF'
+#!/bin/bash
+HERE="$(dirname "$(readlink -f "${0}")")"
+exec "${HERE}/usr/bin/GoPCA" "$@"
+EOF
+          chmod +x appdir-gopca/AppRun
+          
+          # Create desktop file
+          cat > appdir-gopca/gopca.desktop << 'EOF'
+[Desktop Entry]
+Version=1.0
+Type=Application
+Name=GoPCA
+GenericName=PCA Analysis Tool
+Comment=Professional Principal Component Analysis Tool
+Exec=GoPCA %f
+Icon=gopca
+Terminal=false
+Categories=Science;Math;Education;DataVisualization;
+MimeType=text/csv;text/plain;
+StartupNotify=true
+EOF
+          
+          # Download icon from repository
+          curl -L -o appdir-gopca/gopca.png https://raw.githubusercontent.com/${{ github.repository }}/main/cmd/gopca-desktop/build/linux/icon-256.png
+          cp appdir-gopca/gopca.png appdir-gopca/usr/share/icons/hicolor/256x256/apps/
+          
+          # Build AppImage
+          ARCH=x86_64 ./appimagetool appdir-gopca GoPCA-x86_64.AppImage
+        fi
+        
+        # Build GoCSV AppImage if binary exists
+        if [ -f "gocsv-ubuntu-latest/GoCSV" ]; then
+          echo "Building GoCSV AppImage..."
+          # Prepare appdir structure
+          mkdir -p appdir-gocsv/usr/bin
+          mkdir -p appdir-gocsv/usr/share/icons/hicolor/256x256/apps
+          
+          # Copy files from repository
+          cp gocsv-ubuntu-latest/GoCSV appdir-gocsv/usr/bin/
+          
+          # Create AppRun script
+          cat > appdir-gocsv/AppRun << 'EOF'
+#!/bin/bash
+HERE="$(dirname "$(readlink -f "${0}")")"
+exec "${HERE}/usr/bin/GoCSV" "$@"
+EOF
+          chmod +x appdir-gocsv/AppRun
+          
+          # Create desktop file
+          cat > appdir-gocsv/gocsv.desktop << 'EOF'
+[Desktop Entry]
+Version=1.0
+Type=Application
+Name=GoCSV
+GenericName=CSV Editor
+Comment=Fast and Efficient CSV Data Editor
+Exec=GoCSV %f
+Icon=gocsv
+Terminal=false
+Categories=Office;Spreadsheet;Science;DataVisualization;
+MimeType=text/csv;text/plain;text/tab-separated-values;
+StartupNotify=true
+EOF
+          
+          # Download icon from repository
+          curl -L -o appdir-gocsv/gocsv.png https://raw.githubusercontent.com/${{ github.repository }}/main/cmd/gocsv/build/linux/icon-256.png
+          cp appdir-gocsv/gocsv.png appdir-gocsv/usr/share/icons/hicolor/256x256/apps/
+          
+          # Build AppImage
+          ARCH=x86_64 ./appimagetool appdir-gocsv GoCSV-x86_64.AppImage
+        fi
+        
         # Move Windows installer to artifacts root if available
         if [ "${INSTALLER_AVAILABLE}" = "true" ]; then
           mv windows-installer/GoPCA-Setup-*.exe .
@@ -791,16 +882,19 @@ jobs:
         rm -rf macos windows linux
         rm -rf pca-* gopca-desktop-* gocsv-* windows-signed signing-status unsigned-* windows-installer
         
-        # Generate checksums for all artifacts
+        # Generate checksums for all artifacts (including AppImages if built)
         if [ "${INSTALLER_AVAILABLE}" = "true" ]; then
+          shasum -a 256 gopca-*.zip gopca-*.tar.gz *.AppImage GoPCA-Setup-*.exe 2>/dev/null > checksums.txt || \
           shasum -a 256 gopca-*.zip gopca-*.tar.gz GoPCA-Setup-*.exe > checksums.txt
         else
+          shasum -a 256 gopca-*.zip gopca-*.tar.gz *.AppImage 2>/dev/null > checksums.txt || \
           shasum -a 256 gopca-*.zip gopca-*.tar.gz > checksums.txt
         fi
         
         # List final artifacts
         echo "=== Final release artifacts ==="
-        ls -lh gopca-*.zip gopca-*.tar.gz GoPCA-Setup-*.exe checksums.txt 2>/dev/null || ls -lh gopca-*.zip gopca-*.tar.gz checksums.txt
+        ls -lh gopca-*.zip gopca-*.tar.gz *.AppImage GoPCA-Setup-*.exe checksums.txt 2>/dev/null || \
+        ls -lh gopca-*.zip gopca-*.tar.gz checksums.txt 2>/dev/null
         echo "==============================="
     
     - name: Upload test artifacts for workflow_dispatch
@@ -812,6 +906,7 @@ jobs:
           artifacts/gopca-macos-universal.zip
           artifacts/gopca-windows-x64.zip
           artifacts/gopca-linux-x64.tar.gz
+          artifacts/*.AppImage
           artifacts/checksums.txt
         retention-days: 7
     
@@ -841,6 +936,7 @@ jobs:
           artifacts/gopca-macos-universal.zip
           artifacts/gopca-windows-x64.zip
           artifacts/gopca-linux-x64.tar.gz
+          artifacts/*.AppImage
           artifacts/GoPCA-Setup-*.exe
           artifacts/checksums.txt
         generate_release_notes: true
@@ -860,6 +956,15 @@ jobs:
           | **macOS** | [`gopca-macos-universal.zip`](../../releases/download/${{ github.ref_name }}/gopca-macos-universal.zip) | • `pca-intel` and `pca-arm64` CLI tools<br>• `GoPCA.app` (signed & notarized)<br>• `GoCSV.app` (signed & notarized) |
           | **Windows** | [`gopca-windows-x64.zip`](../../releases/download/${{ github.ref_name }}/gopca-windows-x64.zip) | • `pca.exe` CLI tool${{ steps.check_signed.outputs.windows_signed == 'signed' && ' (digitally signed)' || '' }}<br>• `GoPCA.exe`${{ steps.check_signed.outputs.windows_signed == 'signed' && ' (digitally signed)' || '' }}<br>• `GoCSV.exe`${{ steps.check_signed.outputs.windows_signed == 'signed' && ' (digitally signed)' || '' }} |
           | **Linux** | [`gopca-linux-x64.tar.gz`](../../releases/download/${{ github.ref_name }}/gopca-linux-x64.tar.gz) | • `pca-x64` and `pca-arm64` CLI tools<br>• `GoPCA` app<br>• `GoCSV` editor |
+          
+          ### Linux AppImages (Recommended for Linux desktop users)
+          
+          AppImages are portable, single-file applications that work on all Linux distributions. They include proper icon support and require no installation.
+          
+          | Application | Download | Description |
+          |------------|----------|-------------|
+          | **GoPCA Desktop** | [`GoPCA-x86_64.AppImage`](../../releases/download/${{ github.ref_name }}/GoPCA-x86_64.AppImage) | PCA analysis GUI with full icon support<br>• Download and make executable: `chmod +x`<br>• Double-click to run |
+          | **GoCSV Editor** | [`GoCSV-x86_64.AppImage`](../../releases/download/${{ github.ref_name }}/GoCSV-x86_64.AppImage) | CSV data preparation tool with full icon support<br>• Download and make executable: `chmod +x`<br>• Double-click to run |
           
           ### Windows Installer (Recommended for Windows users)
           

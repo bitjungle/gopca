@@ -1,0 +1,9 @@
+#!/bin/bash
+# AppRun script for GoCSV
+# This script is executed when the AppImage is run
+
+# Get the directory where this AppRun script is located
+HERE="$(dirname "$(readlink -f "${0}")")"
+
+# Execute the GoCSV binary with all arguments passed to the AppImage
+exec "${HERE}/usr/bin/GoCSV" "$@"
