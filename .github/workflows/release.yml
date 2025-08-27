@@ -802,8 +802,8 @@ jobs:
           # Create AppRun script
           cat > appdir-gopca/AppRun <<\EOF
 #!/bin/bash
-HERE="$(dirname "$(readlink -f "$${0}")")"
-exec "$${HERE}/usr/bin/GoPCA" "$$@"
+HERE="$(dirname "$(readlink -f "${0}")")"
+exec "${HERE}/usr/bin/GoPCA" "$@"
 EOF
           chmod +x appdir-gopca/AppRun
           
@@ -844,8 +844,8 @@ EOF
           # Create AppRun script
           cat > appdir-gocsv/AppRun <<\EOF
 #!/bin/bash
-HERE="$(dirname "$(readlink -f "$${0}")")"
-exec "$${HERE}/usr/bin/GoCSV" "$$@"
+HERE="$(dirname "$(readlink -f "${0}")")"
+exec "${HERE}/usr/bin/GoCSV" "$@"
 EOF
           chmod +x appdir-gocsv/AppRun
           
