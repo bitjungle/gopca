@@ -11,8 +11,10 @@ export interface PlotlyTheme {
   config: Partial<Config>;
 }
 
-export const getPlotlyTheme = (mode: ThemeMode): PlotlyTheme => {
+export const getPlotlyTheme = (mode: ThemeMode, fontScale: number = 1.0): PlotlyTheme => {
   const isDark = mode === 'dark';
+  const baseFontSize = 12;
+  const scaledFontSize = Math.round(baseFontSize * fontScale);
 
   return {
     layout: {
@@ -20,7 +22,7 @@ export const getPlotlyTheme = (mode: ThemeMode): PlotlyTheme => {
       plot_bgcolor: isDark ? '#374151' : '#f9fafb',
       font: {
         family: 'system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
-        size: 12,
+        size: scaledFontSize,
         color: isDark ? '#e5e7eb' : '#1f2937'
       },
       xaxis: {
@@ -28,7 +30,8 @@ export const getPlotlyTheme = (mode: ThemeMode): PlotlyTheme => {
         zerolinecolor: isDark ? '#6b7280' : '#9ca3af',
         linecolor: isDark ? '#6b7280' : '#9ca3af',
         tickfont: {
-          color: isDark ? '#d1d5db' : '#4b5563'
+          color: isDark ? '#d1d5db' : '#4b5563',
+          size: scaledFontSize
         }
       },
       yaxis: {
@@ -36,14 +39,16 @@ export const getPlotlyTheme = (mode: ThemeMode): PlotlyTheme => {
         zerolinecolor: isDark ? '#6b7280' : '#9ca3af',
         linecolor: isDark ? '#6b7280' : '#9ca3af',
         tickfont: {
-          color: isDark ? '#d1d5db' : '#4b5563'
+          color: isDark ? '#d1d5db' : '#4b5563',
+          size: scaledFontSize
         }
       },
       hoverlabel: {
         bgcolor: isDark ? '#374151' : '#ffffff',
         bordercolor: isDark ? '#6b7280' : '#e5e7eb',
         font: {
-          color: isDark ? '#e5e7eb' : '#1f2937'
+          color: isDark ? '#e5e7eb' : '#1f2937',
+          size: scaledFontSize
         }
       },
       legend: {
@@ -51,7 +56,8 @@ export const getPlotlyTheme = (mode: ThemeMode): PlotlyTheme => {
         bordercolor: isDark ? '#4b5563' : '#e5e7eb',
         borderwidth: 1,
         font: {
-          color: isDark ? '#e5e7eb' : '#1f2937'
+          color: isDark ? '#e5e7eb' : '#1f2937',
+          size: scaledFontSize
         }
       },
       margin: {

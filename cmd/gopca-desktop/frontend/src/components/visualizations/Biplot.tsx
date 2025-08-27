@@ -28,6 +28,7 @@ interface BiplotProps {
   showLoadings?: boolean;
   vectorScale?: number;
   maxVariables?: number; // Maximum number of loading vectors to display
+  fontScale?: number;
 }
 
 export const Biplot: React.FC<BiplotProps> = ({

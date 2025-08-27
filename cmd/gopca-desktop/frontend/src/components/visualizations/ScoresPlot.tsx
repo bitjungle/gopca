@@ -25,6 +25,7 @@ interface ScoresPlotProps {
   confidenceLevel?: 0.90 | 0.95 | 0.99;
   showRowLabels?: boolean;
   maxLabelsToShow?: number;
+  fontScale?: number;
 }
 
 export const ScoresPlot: React.FC<ScoresPlotProps> = ({
@@ -40,7 +41,8 @@ export const ScoresPlot: React.FC<ScoresPlotProps> = ({
   showEllipses = false,
   confidenceLevel = 0.95,
   showRowLabels = false,
-  maxLabelsToShow = 10
+  maxLabelsToShow = 10,
+  fontScale = 1.0
 }) => {
   const { theme } = useTheme();
   const { qualitativePalette, sequentialPalette, mode } = usePalette();
@@ -70,7 +72,8 @@ export const ScoresPlot: React.FC<ScoresPlotProps> = ({
     showRowLabels,
     maxLabelsToShow,
     theme,
-    colorScheme
+    colorScheme,
+    fontScale
   );
 
   return (

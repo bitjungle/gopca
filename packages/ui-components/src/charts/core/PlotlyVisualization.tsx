@@ -31,6 +31,7 @@ export interface PlotlyVisualizationConfig {
   exportScale?: number;
   maintainAspectRatio?: boolean;
   theme?: ThemeMode;
+  fontScale?: number; // Scale factor for all font sizes (default: 1.0)
 }
 
 export interface PlotlyButton {
@@ -186,7 +187,7 @@ return trace;
    */
   protected getEnhancedLayout(): Partial<Layout> {
     const baseLayout = this.getLayout();
-    const themeLayout = getPlotlyTheme(this.theme).layout;
+    const themeLayout = getPlotlyTheme(this.theme, this.config.fontScale).layout;
     
     // Add watermark if enabled
     let watermarkImages: any[] = [];

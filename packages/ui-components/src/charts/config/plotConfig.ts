@@ -135,3 +135,18 @@ export function getGridColor(isDark: boolean = false): string {
 export function getZerolineColor(isDark: boolean = false): string {
   return isDark ? PLOT_CONFIG.colors.zeroline.dark : PLOT_CONFIG.colors.zeroline.light;
 }
+
+/**
+ * Get scaled font sizes based on the provided scale factor
+ * @param scale - Font scale factor (default: 1.0, range: 0.7-1.5)
+ * @returns Object with scaled font sizes
+ */
+export function getScaledFontSizes(scale: number = 1.0): typeof PLOT_CONFIG.visual.fontSize {
+  const baseSizes = PLOT_CONFIG.visual.fontSize;
+  return {
+    label: Math.round(baseSizes.label * scale),
+    title: Math.round(baseSizes.title * scale),
+    axis: Math.round(baseSizes.axis * scale),
+    annotation: Math.round(baseSizes.annotation * scale)
+  };
+}

@@ -28,6 +28,7 @@ import { HelpProvider, useHelp } from './contexts/HelpContext';
 import { PaletteProvider, usePalette } from './contexts/PaletteContext';
 import { HelpDisplay } from './components/HelpDisplay';
 import { PaletteSelector } from './components/PaletteSelector';
+import { FontSizeControl } from './components/FontSizeControl';
 import { config } from '../wailsjs/go/models';
 import logo from './assets/images/GoPCA-logo-1024-transp.png';
 
@@ -60,6 +61,7 @@ function AppContent() {
     const [datasetId, setDatasetId] = useState(0); // Force DataTable re-render on dataset change
     const [showCopied, setShowCopied] = useState(false);
     const [loadingsPlotType, setLoadingsPlotType] = useState<'bar' | 'line' | null>(null); // null means auto
+    const [plotFontScale, setPlotFontScale] = useState(1.0); // Font scale factor for all plots
 
     // Refs for smooth scrolling
     const pcaErrorRef = useRef<HTMLDivElement>(null);
@@ -1115,6 +1117,11 @@ return;
                                         </HelpWrapper>
                                     </div>
                                     <div className="flex-shrink-0">
+                                        <HelpWrapper helpKey="font-size-control">
+                                            <FontSizeControl value={plotFontScale} onChange={setPlotFontScale} />
+                                        </HelpWrapper>
+                                    </div>
+                                    <div className="flex-shrink-0">
                                         <HelpWrapper helpKey="palette-selector">
                                             <PaletteSelector />
                                         </HelpWrapper>
@@ -1346,6 +1353,7 @@ return;
                                                 xComponent={selectedXComponent}
                                                 yComponent={selectedYComponent}
                                                 groupColumn={selectedGroupColumn}
+                                                fontScale={plotFontScale}
                                                 groupLabels={getColumnData(selectedGroupColumn).type === 'categorical' ? getColumnData(selectedGroupColumn).values as string[] : undefined}
                                                 groupValues={getColumnData(selectedGroupColumn).type === 'continuous' ? getColumnData(selectedGroupColumn).values as number[] : undefined}
                                                 groupType={getColumnData(selectedGroupColumn).type}
@@ -1366,6 +1374,7 @@ return;
                                                 xComponent={selectedXComponent}
                                                 yComponent={selectedYComponent}
                                                 zComponent={selectedZComponent}
+                                                fontScale={plotFontScale}
                                                 groupColumn={selectedGroupColumn}
                                                 groupLabels={getColumnData(selectedGroupColumn).type === 'categorical' ? getColumnData(selectedGroupColumn).values as string[] : undefined}
                                                 groupValues={getColumnData(selectedGroupColumn).type === 'continuous' ? getColumnData(selectedGroupColumn).values as number[] : undefined}
@@ -1378,6 +1387,7 @@ return;
                                                 pcaResult={pcaResponse.result}
                                                 showCumulative={true}
                                                 elbowThreshold={80}
+                                                fontScale={plotFontScale}
                                             />
                                         ) : selectedPlot === 'loadings' && pcaResponse.result.method !== 'kernel' ? (
                                             <LoadingsPlot
@@ -1385,6 +1395,7 @@ return;
                                                 selectedComponent={selectedLoadingComponent}
                                                 variableThreshold={guiConfig?.visualization?.loadings_variable_threshold || 100}
                                                 plotType={loadingsPlotType || undefined}
+                                                fontScale={plotFontScale}
                                             />
                                         ) : selectedPlot === 'biplot' ? (
                                             <Biplot
@@ -1393,6 +1404,7 @@ return;
                                                 xComponent={selectedXComponent}
                                                 yComponent={selectedYComponent}
                                                 showRowLabels={showRowLabels}
+                                                fontScale={plotFontScale}
                                                 maxLabelsToShow={maxLabelsToShow}
                                                 groupColumn={selectedGroupColumn}
                                                 groupLabels={getColumnData(selectedGroupColumn).type === 'categorical' ? getColumnData(selectedGroupColumn).values as string[] : undefined}
@@ -1414,6 +1426,7 @@ return;
                                                 xComponent={selectedXComponent}
                                                 yComponent={selectedYComponent}
                                                 zComponent={selectedZComponent}
+                                                fontScale={plotFontScale}
                                                 showRowLabels={showRowLabels}
                                                 maxLabelsToShow={maxLabelsToShow}
                                                 groupColumn={selectedGroupColumn}
@@ -1434,6 +1447,7 @@ return;
                                                 pcaResult={pcaResponse.result}
                                                 xComponent={selectedXComponent}
                                                 yComponent={selectedYComponent}
+                                                fontScale={plotFontScale}
                                             />
                                         ) : selectedPlot === 'diagnostics' && pcaResponse.result.method !== 'kernel' ? (
                                             <DiagnosticScatterPlot
@@ -1442,10 +1456,12 @@ return;
                                                 showRowLabels={showRowLabels}
                                                 maxLabelsToShow={maxLabelsToShow}
                                                 confidenceLevel={confidenceLevel === 0.90 ? 0.95 : confidenceLevel}
+                                                fontScale={plotFontScale}
                                             />
                                         ) : selectedPlot === 'eigencorrelation' ? (
                                             <EigencorrelationPlot
                                                 pcaResult={pcaResponse.result}
+                                                fontScale={plotFontScale}
                                             />
                                         ) : (
                                             <div className="w-full h-full flex items-center justify-center text-gray-500 dark:text-gray-400">

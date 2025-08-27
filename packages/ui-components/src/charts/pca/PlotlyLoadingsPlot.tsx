@@ -8,7 +8,8 @@
 
 import React, { useMemo } from 'react';
 import { Data, Layout } from 'plotly.js';
-import { getPlotlyTheme, mergeLayouts, ThemeMode } from '../utils/plotlyTheme';
+import { getPlotlyTheme, mergeLayouts } from '../utils/plotlyTheme';
+import { PlotlyVisualizationConfig } from '../core/PlotlyVisualization';
 import { getExportMenuItems } from '../utils/plotlyExport';
 import { PLOT_CONFIG } from '../config/plotConfig';
 import { PlotlyWithFullscreen } from '../utils/plotlyFullscreen';
@@ -20,7 +21,7 @@ export interface LoadingsPlotData {
   componentIndex?: number;  // Which PC to show (0-based)
 }
 
-export interface LoadingsPlotConfig {
+export interface LoadingsPlotConfig extends PlotlyVisualizationConfig {
   mode?: 'bar' | 'line' | 'grouped';
   colorScheme?: string[];
   showThreshold?: boolean;
@@ -29,7 +30,6 @@ export interface LoadingsPlotConfig {
   sortByMagnitude?: boolean;
   showGrid?: boolean;
   showMarkers?: boolean; // For line mode: whether to show markers (false for many variables)
-  theme?: ThemeMode;
 }
 
 /**
@@ -174,7 +174,7 @@ export class PlotlyLoadingsPlot {
 
   getEnhancedLayout(): Partial<Layout> {
     const baseLayout = this.getLayout();
-    const themeLayout = getPlotlyTheme(this.config.theme || 'light').layout;
+    const themeLayout = getPlotlyTheme(this.config.theme || 'light', this.config.fontScale).layout;
     
     // Add watermark if enabled
     let watermarkImages: any[] = [];

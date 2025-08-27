@@ -84,7 +84,8 @@ export function createScoresPlotConfig(
   showRowLabels?: boolean,
   maxLabelsToShow?: number,
   theme?: 'light' | 'dark',
-  colorScheme?: string[]
+  colorScheme?: string[],
+  fontScale?: number
 ): ScoresPlotConfig {
   return {
     showEllipses,
@@ -92,7 +93,8 @@ export function createScoresPlotConfig(
     showSmartLabels: showRowLabels,
     maxLabels: maxLabelsToShow,
     theme,
-    colorScheme
+    colorScheme,
+    fontScale
   };
 }
 
@@ -164,14 +166,16 @@ export function createScreePlotConfig(
   showCumulative: boolean = true,
   elbowThreshold: number = 80,
   theme?: 'light' | 'dark',
-  colorScheme?: string[]
+  colorScheme?: string[],
+  fontScale?: number
 ): ScreePlotConfig {
   return {
     showCumulativeLine: showCumulative,
     showThresholdLine: true,
     thresholdValue: elbowThreshold,
     theme,
-    colorScheme
+    colorScheme,
+    fontScale
   };
 }
 
@@ -202,7 +206,8 @@ export function createLoadingsPlotConfig(
   theme?: 'light' | 'dark',
   colorScheme?: string[],
   numVariables?: number,
-  variableThreshold?: number
+  variableThreshold?: number,
+  fontScale?: number
 ): LoadingsPlotConfig {
   // Determine whether to show markers in line mode
   // When we have many variables (above threshold), don't show markers for cleaner visualization
@@ -219,7 +224,8 @@ export function createLoadingsPlotConfig(
     showMarkers,
     // Don't set maxVariables - show all by default
     theme,
-    colorScheme
+    colorScheme,
+    fontScale
   };
 }
 
