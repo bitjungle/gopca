@@ -13,8 +13,9 @@ export type SequentialPaletteName = 'rocket' | 'viridis' | 'blues' | 'reds' | 'c
 
 // Qualitative palettes for categorical data
 export const QUALITATIVE_PALETTES: Record<QualitativePaletteName, string[]> = {
-  // Seaborn deep/default palette
+  // Seaborn deep/default palette - extended to 25 colors
   deep: [
+    // Original 10 colors (unchanged for backward compatibility)
     '#4C72B0', // blue
     '#DD8452', // orange
     '#55A868', // green
@@ -24,11 +25,28 @@ export const QUALITATIVE_PALETTES: Record<QualitativePaletteName, string[]> = {
     '#DA8BC3', // pink
     '#8C8C8C', // gray
     '#CCB974', // tan
-    '#64B5CD' // light blue
+    '#64B5CD', // light blue
+    // Additional 15 colors maintaining deep/saturated character
+    '#2E5985', // deep blue
+    '#E67E22', // deep orange
+    '#27AE60', // forest green
+    '#9B59B6', // deep purple
+    '#16A085', // teal
+    '#D35400', // burnt orange
+    '#8E44AD', // violet
+    '#2C3E50', // dark blue-gray
+    '#E74C3C', // crimson
+    '#F39C12', // amber
+    '#1ABC9C', // turquoise
+    '#34495E', // slate
+    '#7F8C8D', // medium gray
+    '#C0392B', // dark red
+    '#D68910'  // gold
   ],
 
-  // Seaborn pastel palette (lighter version)
+  // Seaborn pastel palette (lighter version) - extended to 25 colors
   pastel: [
+    // Original 10 colors (unchanged for backward compatibility)
     '#A1C9F4', // light blue
     '#FFB482', // light orange
     '#8DE5A1', // light green
@@ -38,11 +56,28 @@ export const QUALITATIVE_PALETTES: Record<QualitativePaletteName, string[]> = {
     '#FAB0E4', // light pink
     '#CFCFCF', // light gray
     '#FFFEA3', // light yellow
-    '#B9F2F0' // light cyan
+    '#B9F2F0', // light cyan
+    // Additional 15 pastel colors (soft and desaturated)
+    '#C5CAE9', // lavender blue
+    '#FFCCBC', // peach
+    '#C8E6C9', // mint green
+    '#F8BBD0', // blush pink
+    '#D1C4E9', // lilac
+    '#FFE0B2', // cream
+    '#B2EBF2', // sky blue
+    '#DCEDC8', // pale green
+    '#F0F4C3', // pale yellow
+    '#FFCDD2', // rose
+    '#E1BEE7', // orchid
+    '#C5E1A5', // sage
+    '#FFD4E5', // cotton candy
+    '#D7CCC8', // taupe
+    '#B2DFDB'  // seafoam
   ],
 
-  // Seaborn dark palette (darker version)
+  // Seaborn dark palette (darker version) - extended to 25 colors
   dark: [
+    // Original 10 colors (unchanged for backward compatibility)
     '#023EFF', // dark blue
     '#FF7C00', // dark orange
     '#1AC938', // dark green
@@ -52,11 +87,28 @@ export const QUALITATIVE_PALETTES: Record<QualitativePaletteName, string[]> = {
     '#F14CC1', // dark pink
     '#4D4D4D', // dark gray
     '#FFC400', // dark yellow
-    '#00D7FF' // dark cyan
+    '#00D7FF', // dark cyan
+    // Additional 15 dark but vibrant colors
+    '#0000CD', // medium blue
+    '#FF4500', // orange red
+    '#228B22', // forest green
+    '#8B008B', // dark magenta
+    '#008B8B', // dark cyan
+    '#B22222', // fire brick
+    '#483D8B', // dark slate blue
+    '#2F4F4F', // dark slate gray
+    '#FF1493', // deep pink
+    '#00CED1', // dark turquoise
+    '#9400D3', // violet
+    '#FF8C00', // dark orange
+    '#8B0000', // dark red
+    '#006400', // dark green
+    '#4B0082'  // indigo
   ],
 
-  // Colorblind safe palette (Paul Tol's palette)
+  // Colorblind safe palette (Paul Tol's palette) - extended to 25 colors
   colorblind: [
+    // Original 10 colors (unchanged for backward compatibility)
     '#0173B2', // blue
     '#DE8F05', // orange
     '#029E73', // green
@@ -66,11 +118,28 @@ export const QUALITATIVE_PALETTES: Record<QualitativePaletteName, string[]> = {
     '#949494', // gray
     '#ECE133', // yellow
     '#56B4E9', // light blue
-    '#208B3A' // dark green
+    '#208B3A', // dark green
+    // Additional 15 colorblind-safe colors (based on Paul Tol's research)
+    '#882E72', // purple
+    '#B178A6', // light purple
+    '#D6C1DE', // very light purple
+    '#1965B0', // strong blue
+    '#5289C7', // medium blue
+    '#7BAFDE', // light blue
+    '#4EB265', // green
+    '#90C987', // light green
+    '#CAE0AB', // pale green
+    '#F7F056', // bright yellow
+    '#F6C141', // orange yellow
+    '#F1932D', // orange
+    '#E8601C', // red orange
+    '#DC050C', // red
+    '#777777'  // medium gray
   ],
 
-  // HUSL palette - perceptually uniform colors
+  // HUSL palette - perceptually uniform colors - extended to 25 colors
   husl: [
+    // Original 10 colors (unchanged for backward compatibility)
     '#F77189', // red
     '#BB9832', // yellow
     '#50B131', // green
@@ -80,7 +149,23 @@ export const QUALITATIVE_PALETTES: Record<QualitativePaletteName, string[]> = {
     '#E85B7A', // pink
     '#9C9C9C', // gray
     '#C29D4F', // tan
-    '#5FBCD3' // light blue
+    '#5FBCD3', // light blue
+    // Additional 15 perceptually uniform colors (HUSL color space)
+    '#F7914D', // orange
+    '#E8A838', // golden
+    '#A4C61A', // lime
+    '#5DC963', // light green
+    '#00C9A7', // mint
+    '#00B4D8', // sky blue
+    '#0096C7', // ocean blue
+    '#7678ED', // periwinkle
+    '#9D4EDD', // violet
+    '#C77DFF', // lavender
+    '#E0AAFF', // mauve
+    '#F48C8C', // coral
+    '#F9C74F', // saffron
+    '#80B918', // chartreuse
+    '#52B788'  // emerald
   ]
 };
 
