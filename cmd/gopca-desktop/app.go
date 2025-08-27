@@ -444,7 +444,7 @@ func (a *App) RunPCA(request PCARequest) (response PCAResponse) {
 
 				// Filter metadata categorical columns to match dropped rows
 				// This ensures frontend has properly aligned data for coloring
-				if request.MetadataCategorical != nil && len(request.MetadataCategorical) > 0 {
+				if len(request.MetadataCategorical) > 0 {
 					for colName, colData := range request.MetadataCategorical {
 						filteredCol := []string{}
 						for i := 0; i < len(colData); i++ {
@@ -457,7 +457,7 @@ func (a *App) RunPCA(request PCARequest) (response PCAResponse) {
 				}
 
 				// Filter metadata numeric columns
-				if request.MetadataNumeric != nil && len(request.MetadataNumeric) > 0 {
+				if len(request.MetadataNumeric) > 0 {
 					for colName, colData := range request.MetadataNumeric {
 						filteredCol := []float64{}
 						for i := 0; i < len(colData); i++ {
