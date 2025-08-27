@@ -1,0 +1,14 @@
+[Desktop Entry]
+Version=1.0
+Type=Application
+Name=GoCSV
+GenericName=CSV Editor
+Comment=Fast and Efficient CSV Data Editor
+Exec=GoCSV %f
+Icon=gocsv
+Terminal=false
+Categories=Office;Spreadsheet;Science;DataVisualization;
+MimeType=text/csv;text/plain;text/tab-separated-values;
+Keywords=CSV;Data;Editor;Spreadsheet;Table;
+StartupWMClass=GoCSV
+StartupNotify=true
