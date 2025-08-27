@@ -804,20 +804,18 @@ jobs:
           chmod +x appdir-gopca/AppRun
           
           # Create desktop file
-          cat > appdir-gopca/gopca.desktop <<\EOF
-[Desktop Entry]
-Version=1.0
-Type=Application
-Name=GoPCA
-GenericName=PCA Analysis Tool
-Comment=Professional Principal Component Analysis Tool
-Exec=GoPCA %f
-Icon=gopca
-Terminal=false
-Categories=Science;Math;Education;DataVisualization;
-MimeType=text/csv;text/plain;
-StartupNotify=true
-EOF
+          echo '[Desktop Entry]' > appdir-gopca/gopca.desktop
+          echo 'Version=1.0' >> appdir-gopca/gopca.desktop
+          echo 'Type=Application' >> appdir-gopca/gopca.desktop
+          echo 'Name=GoPCA' >> appdir-gopca/gopca.desktop
+          echo 'GenericName=PCA Analysis Tool' >> appdir-gopca/gopca.desktop
+          echo 'Comment=Professional Principal Component Analysis Tool' >> appdir-gopca/gopca.desktop
+          echo 'Exec=GoPCA %f' >> appdir-gopca/gopca.desktop
+          echo 'Icon=gopca' >> appdir-gopca/gopca.desktop
+          echo 'Terminal=false' >> appdir-gopca/gopca.desktop
+          echo 'Categories=Science;Math;Education;DataVisualization;' >> appdir-gopca/gopca.desktop
+          echo 'MimeType=text/csv;text/plain;' >> appdir-gopca/gopca.desktop
+          echo 'StartupNotify=true' >> appdir-gopca/gopca.desktop
           
           # Download icon from repository
           curl -L -o appdir-gopca/gopca.png https://raw.githubusercontent.com/${{ github.repository }}/main/cmd/gopca-desktop/build/linux/icon-256.png
@@ -842,20 +840,18 @@ EOF
           chmod +x appdir-gocsv/AppRun
           
           # Create desktop file
-          cat > appdir-gocsv/gocsv.desktop <<\EOF
-[Desktop Entry]
-Version=1.0
-Type=Application
-Name=GoCSV
-GenericName=CSV Editor
-Comment=Fast and Efficient CSV Data Editor
-Exec=GoCSV %f
-Icon=gocsv
-Terminal=false
-Categories=Office;Spreadsheet;Science;DataVisualization;
-MimeType=text/csv;text/plain;text/tab-separated-values;
-StartupNotify=true
-EOF
+          echo '[Desktop Entry]' > appdir-gocsv/gocsv.desktop
+          echo 'Version=1.0' >> appdir-gocsv/gocsv.desktop
+          echo 'Type=Application' >> appdir-gocsv/gocsv.desktop
+          echo 'Name=GoCSV' >> appdir-gocsv/gocsv.desktop
+          echo 'GenericName=CSV Editor' >> appdir-gocsv/gocsv.desktop
+          echo 'Comment=Fast and Efficient CSV Data Editor' >> appdir-gocsv/gocsv.desktop
+          echo 'Exec=GoCSV %f' >> appdir-gocsv/gocsv.desktop
+          echo 'Icon=gocsv' >> appdir-gocsv/gocsv.desktop
+          echo 'Terminal=false' >> appdir-gocsv/gocsv.desktop
+          echo 'Categories=Office;Spreadsheet;Science;DataVisualization;' >> appdir-gocsv/gocsv.desktop
+          echo 'MimeType=text/csv;text/plain;text/tab-separated-values;' >> appdir-gocsv/gocsv.desktop
+          echo 'StartupNotify=true' >> appdir-gocsv/gocsv.desktop
           
           # Download icon from repository
           curl -L -o appdir-gocsv/gocsv.png https://raw.githubusercontent.com/${{ github.repository }}/main/cmd/gocsv/build/linux/icon-256.png
