@@ -44,7 +44,6 @@ export const PaletteSelector: React.FC = () => {
     viridis: 'Viridis',
     blues: 'Blues',
     reds: 'Reds',
-    crest: 'Crest',
     mako: 'Mako',
     flare: 'Flare'
   };
@@ -69,7 +68,6 @@ export const PaletteSelector: React.FC = () => {
                 { value: 'viridis', label: paletteDisplayNames.viridis },
                 { value: 'blues', label: paletteDisplayNames.blues },
                 { value: 'reds', label: paletteDisplayNames.reds },
-                { value: 'crest', label: paletteDisplayNames.crest },
                 { value: 'mako', label: paletteDisplayNames.mako },
                 { value: 'flare', label: paletteDisplayNames.flare }
               ]
