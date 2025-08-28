@@ -1,35 +1,35 @@
-# GoPCA - The Definitive Principal Component Analysis Application
+# GoPCA Suite - The Definitive Principal Component Analysis Toolset
 
-Professional-grade PCA analysis made simple. Available as both a powerful command-line tool and an intuitive desktop application.
+Professional-grade PCA analysis made simple. A comprehensive suite of tools including a powerful command-line interface and intuitive desktop applications.
 
-## What is GoPCA?
+## What is GoPCA Suite?
 
-GoPCA is **the** go-to application for Principal Component Analysis, a fundamental machine learning technique for understanding complex  multivariate data. Whether you're analyzing spectroscopic data, exploring gene expression patterns, or reducing dimensionality in machine learning pipelines, GoPCA provides the tools you need.
+GoPCA Suite is **the** go-to toolset for Principal Component Analysis, a fundamental machine learning technique for understanding complex  multivariate data. Whether you're analyzing spectroscopic data, exploring gene expression patterns, or reducing dimensionality in machine learning pipelines, GoPCA Suite provides the tools you need.
 
 ![GoPCA Overview](docs/images/gopca-overview.jpg)
 
-### Includes GoCSV Data Preparation Tool
+### Includes GoCSV Desktop Data Preparation Tool
 
-GoPCA comes with **GoCSV**, a companion application for preparing your data. With its Excel-like interface, GoCSV makes it easy to clean, edit, and format your CSV files before PCA analysis - ensuring your data is analysis-ready.
+GoPCA Suite includes **GoCSV Desktop**, a companion application for preparing your data. With its Excel-like interface, GoCSV Desktop makes it easy to clean, edit, and format your CSV files before PCA analysis - ensuring your data is analysis-ready.
 
 ![GoPCA Overview](docs/images/gocsv-overview.jpg)
 
-## Three Powerful Tools
+## Three Powerful Tools in the Suite
 
-### The GoPCA Desktop Application
+### GoPCA Desktop
 
 Perfect for interactive data exploration, method development, and teaching.
 
 ![GoPCA Scoreplot Example](docs/images/gopca-scoreplot-example.png)
 
-**Key Desktop Features:**
+**Key GoPCA Desktop Features:**
 - Interactive visualizations with zoom, pan, and export
 - Real-time plot updates as you adjust parameters
 - Confidence ellipses for group visualization
 - Customizable color palettes for different data types
 - Light and dark themes for comfortable viewing
 
-### The GoPCA Command-Line Interface
+### The pca CLI
 
 Ideal for automation, batch processing, and integration into data pipelines.
 
@@ -47,18 +47,18 @@ pca transform model.json new_data.csv
 pca transform -f json -o results/ model.json new_samples.csv
 ```
 
-### The GoCSV Data Editor
+### GoCSV Desktop
 
 Clean and prepare your data with an intuitive spreadsheet-like interface.
 
 ![GoCSV Quality Report Example](docs/images/gocsv-qr-example.png)
 
-**GoCSV Features:**
+**GoCSV Desktop Features:**
 - Edit cells directly like in Excel
 - Add, remove, or reorder columns
 - Multi-step undo/redo functionality
 - Column type detection (numeric, categorical, target)
-- Real-time validation against GoPCA requirements
+- Real-time validation against pca CLI requirements
 - Missing value detection and handling
 - Export clean CSV files ready for PCA analysis
 
@@ -106,7 +106,7 @@ All visualizations feature:
 
 ## Getting Started
 
-### Desktop Application
+### GoPCA Desktop Application
 
 1. **Download** the latest release for your platform from [GitHub Releases](https://github.com/bitjungle/gopca/releases)
 2. **Launch** GoPCA Desktop
@@ -118,9 +118,9 @@ All visualizations feature:
 <!-- ![GoPCA Workflow](docs/images/workflow.png) -->
 *[Screenshot placeholder: Step-by-step workflow visualization]*
 
-### Data Preparation with GoCSV
+### Data Preparation with GoCSV Desktop
 
-1. **Launch** GoCSV from the GoPCA installation folder
+1. **Launch** GoCSV Desktop from the GoPCA Suite installation folder
 2. **Open** your raw CSV file or paste data from clipboard
 3. **Clean** your data:
    - Remove empty rows/columns
@@ -129,11 +129,11 @@ All visualizations feature:
    - Validate column types
    - Transform features (e.g., log, sqrt)
 4. **Save** the cleaned file
-5. **Open in GoPCA** with one click
+5. **Open in GoPCA Desktop** with one click
 
 ### macOS Security Note
 
-When downloading GoPCA and GoCSV from GitHub releases, macOS may apply security measures that prevent the apps from detecting each other. This happens because macOS runs downloaded apps from a temporary, randomized location (App Translocation) for security.
+When downloading GoPCA Desktop and GoCSV Desktop from GitHub releases, macOS may apply security measures that prevent the apps from detecting each other. This happens because macOS runs downloaded apps from a temporary, randomized location (App Translocation) for security.
 
 **Solutions:**
 1. **Move both apps to Applications**: Drag both GoPCA.app and GoCSV.app to your Applications folder before launching
@@ -195,7 +195,7 @@ Teach multivariate statistics with interactive visualizations, explore research 
 - [Introduction to PCA](docs/intro_to_pca.md) - Learn the fundamentals of Principal Component Analysis
 - [Data Preparation Guide](docs/intro_to_data_prep.md) - Best practices for preparing your data
 - [Data Format Specification](docs/data-format.md) - Detailed CSV format requirements
-- Built-in help system - Hover over any control in the desktop app for instant help
+- Built-in help system - Hover over any control in GoPCA Desktop for instant help
 
 ## System Requirements
 
@@ -204,7 +204,7 @@ Teach multivariate statistics with interactive visualizations, explore research 
 - **macOS**: Intel and Apple Silicon Macs (where Go and Wails are supported)  
 - **Linux**: 64-bit distributions (where Go and Wails are supported)
 
-### Desktop Applications (GoPCA Desktop & GoCSV)
+### Desktop Applications (GoPCA Desktop & GoCSV Desktop)
 - Require a graphical environment
 - Modern web browser engine (uses system WebView)
 - Screen resolution that can display the application window
@@ -223,4 +223,4 @@ Teach multivariate statistics with interactive visualizations, explore research 
 
 ## License
 
-GoPCA is open-source software licensed under the MIT License. However, the author respectfully requests that it **not be used for military, warfare, or surveillance applications**.
+GoPCA Suite is open-source software licensed under the MIT License. However, the author respectfully requests that it **not be used for military, warfare, or surveillance applications**.

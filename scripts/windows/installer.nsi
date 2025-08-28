@@ -345,10 +345,10 @@ SectionEnd
 ; Section Descriptions
 
 !insertmacro MUI_FUNCTION_DESCRIPTION_BEGIN
-  !insertmacro MUI_DESCRIPTION_TEXT ${SEC_GOPCA_DESKTOP} "The main GoPCA Desktop application for PCA analysis with GUI (Required)"
-  !insertmacro MUI_DESCRIPTION_TEXT ${SEC_GOCSV} "GoCSV Editor for CSV file manipulation and data preparation (Required)"
-  !insertmacro MUI_DESCRIPTION_TEXT ${SEC_PCA_CLI} "Command-line interface for PCA analysis and automation (Required)"
-  !insertmacro MUI_DESCRIPTION_TEXT ${SEC_ADD_PATH} "Add the CLI tool to your system PATH for easy command-line access"
+  !insertmacro MUI_DESCRIPTION_TEXT ${SEC_GOPCA_DESKTOP} "GoPCA Desktop - Interactive PCA analysis application (Required)"
+  !insertmacro MUI_DESCRIPTION_TEXT ${SEC_GOCSV} "GoCSV Desktop - CSV file manipulation and data preparation tool (Required)"
+  !insertmacro MUI_DESCRIPTION_TEXT ${SEC_PCA_CLI} "pca CLI - Command-line interface for PCA analysis and automation (Required)"
+  !insertmacro MUI_DESCRIPTION_TEXT ${SEC_ADD_PATH} "Add the pca CLI to your system PATH for easy command-line access"
   !insertmacro MUI_DESCRIPTION_TEXT ${SEC_SHORTCUTS} "Create shortcuts in the Start Menu"
 !insertmacro MUI_FUNCTION_DESCRIPTION_END
 

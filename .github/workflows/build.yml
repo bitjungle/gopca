@@ -119,7 +119,7 @@ jobs:
         fi
       shell: bash
     
-    - name: Build CLI for integration tests
+    - name: Build pca CLI for integration tests
       run: |
         echo "Building CLI for integration tests..."
         make build
@@ -134,7 +134,7 @@ jobs:
         GOPCA_TEST_TIMEOUT: 60
 
   build-cli:
-    name: Build CLI
+    name: Build pca CLI
     needs: test
     if: github.ref == 'refs/heads/main' && github.event_name == 'push' || github.ref == 'refs/heads/160-macos-signing'
     runs-on: self-hosted
@@ -165,7 +165,7 @@ jobs:
     - name: Build all platforms
       run: make ci-build-cli
     
-    - name: Upload CLI artifacts
+    - name: Upload pca CLI artifacts
       uses: actions/upload-artifact@v4
       with:
         name: pca-binaries
@@ -173,7 +173,7 @@ jobs:
         retention-days: 7
 
   build-desktop:
-    name: Build GoPCA App
+    name: Build GoPCA Desktop
     needs: test
     if: github.ref == 'refs/heads/main' && github.event_name == 'push' || github.ref == 'refs/heads/160-macos-signing'
     strategy:
@@ -226,11 +226,11 @@ jobs:
         # Build the shared components that both apps depend on
         npm run build-ui
     
-    - name: Build GoPCA app
+    - name: Build GoPCA Desktop
       run: PLATFORM=${{ matrix.platform }} ./scripts/ci/build-desktop.sh
       shell: bash
     
-    - name: Sign GoPCA app (macOS)
+    - name: Sign GoPCA Desktop (macOS)
       if: matrix.os == 'macos-latest'
       env:
         APPLE_CERTIFICATE_BASE64: ${{ secrets.APPLE_CERTIFICATE_BASE64 }}
@@ -240,7 +240,7 @@ jobs:
         ./scripts/ci/sign-macos-ci.sh cmd/gopca-desktop/build/bin/GoPCA.app
       shell: bash
     
-    - name: Notarize GoPCA app (macOS)
+    - name: Notarize GoPCA Desktop (macOS)
       if: matrix.os == 'macos-latest'
       env:
         APPLE_ID: ${{ secrets.APPLE_ID }}
@@ -261,7 +261,7 @@ jobs:
         retention-days: 7
 
   build-gocsv:
-    name: Build GoCSV App
+    name: Build GoCSV Desktop
     needs: test
     if: github.ref == 'refs/heads/main' && github.event_name == 'push' || github.ref == 'refs/heads/160-macos-signing'
     strategy:
@@ -314,11 +314,11 @@ jobs:
         # Build the shared components that both apps depend on
         npm run build-ui
     
-    - name: Build GoCSV app
+    - name: Build GoCSV Desktop
       run: PLATFORM=${{ matrix.platform }} APPNAME=gocsv ./scripts/ci/build-gocsv.sh
       shell: bash
     
-    - name: Sign GoCSV app (macOS)
+    - name: Sign GoCSV Desktop (macOS)
       if: matrix.os == 'macos-latest'
       env:
         APPLE_CERTIFICATE_BASE64: ${{ secrets.APPLE_CERTIFICATE_BASE64 }}
@@ -328,7 +328,7 @@ jobs:
         ./scripts/ci/sign-macos-ci.sh cmd/gocsv/build/bin/GoCSV.app
       shell: bash
     
-    - name: Notarize GoCSV app (macOS)
+    - name: Notarize GoCSV Desktop (macOS)
       if: matrix.os == 'macos-latest'
       env:
         APPLE_ID: ${{ secrets.APPLE_ID }}
@@ -347,7 +347,7 @@ jobs:
         cd -
       shell: bash
     
-    - name: Upload GoCSV artifacts
+    - name: Upload GoCSV Desktop artifacts
       uses: actions/upload-artifact@v4
       with:
         name: gocsv-${{ matrix.platform }}
@@ -358,7 +358,7 @@ jobs:
           !cmd/gocsv/build/bin/GoCSV.app
         retention-days: 7
     
-    - name: Upload macOS GoCSV app bundle
+    - name: Upload macOS GoCSV Desktop bundle
       if: matrix.os == 'macos-latest'
       uses: actions/upload-artifact@v4
       with:

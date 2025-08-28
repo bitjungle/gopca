@@ -5,7 +5,7 @@
 // military, warfare, or surveillance applications.
 
 // Package integration provides shared functionality for integrating
-// GoPCA and GoCSV applications, including app detection and launching.
+// GoPCA Desktop and GoCSV Desktop applications, including app detection and launching.
 package integration
 
 import (

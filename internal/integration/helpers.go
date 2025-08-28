@@ -48,7 +48,7 @@ func NewTestConfig(t *testing.T) *TestConfig {
 	}
 }
 
-// BuildCLI builds the CLI tool for testing
+// BuildCLI builds the pca CLI for testing
 func (tc *TestConfig) BuildCLI(t *testing.T) {
 	t.Helper()
 

@@ -11,16 +11,16 @@ DESKTOP_PATH := cmd/gopca-desktop
 CSV_PATH := cmd/gocsv
 COVERAGE_FILE := coverage.out
 
-# Shortcuts for CLI builds
+# Shortcuts for pca CLI builds
 cli: build
 cli-all: build-all
 
-# Shortcuts for GoPCA/GUI builds  
+# Shortcuts for GoPCA Desktop builds  
 desktop: pca-build
 desktop-dev: pca-dev
 pca: pca-build
 
-# Shortcuts for CSV editor builds
+# Shortcuts for GoCSV Desktop builds
 csv: csv-build
 
 # Cross-platform build variables
@@ -74,7 +74,7 @@ WAILS := $(shell which wails 2> /dev/null || echo "$${HOME}/go/bin/wails")
 ## all: Build all applications for current platform and run tests
 all: build pca-build csv-build test
 
-## build: Build the CLI binary
+## build: Build the pca CLI binary
 build:
 	@echo "Building $(BINARY_NAME) for $(GOOS)/$(GOARCH)..."
 	@mkdir -p $(BUILD_DIR)
@@ -113,20 +113,20 @@ build-linux-arm64:
 build-windows-amd64:
 	@$(MAKE) build-cross GOOS=windows GOARCH=amd64
 
-## build-all: Build CLI for all supported platforms
+## build-all: Build pca CLI for all supported platforms
 build-all: build-darwin-amd64 build-darwin-arm64 build-linux-amd64 build-linux-arm64 build-windows-amd64
-	@echo "All CLI platform builds complete!"
+	@echo "All pca CLI platform builds complete!"
 
-## build-all-parallel: Build CLI for all platforms in parallel
+## build-all-parallel: Build pca CLI for all platforms in parallel
 build-all-parallel:
-	@echo "Building CLI for all platforms in parallel..."
+	@echo "Building pca CLI for all platforms in parallel..."
 	@$(MAKE) -j5 build-darwin-amd64 build-darwin-arm64 build-linux-amd64 build-linux-arm64 build-windows-amd64
-	@echo "All parallel CLI builds complete!"
+	@echo "All parallel pca CLI builds complete!"
 
-## pca-dev: Run GoPCA in development mode with hot reload
+## pca-dev: Run GoPCA Desktop in development mode with hot reload
 pca-dev:
 	@if [ -x "$(WAILS)" ]; then \
-		echo "Starting GoPCA in development mode..."; \
+		echo "Starting GoPCA Desktop in development mode..."; \
 		cd $(DESKTOP_PATH) && $(WAILS) dev; \
 	else \
 		echo "Wails not found. Install it with:"; \
@@ -134,38 +134,38 @@ pca-dev:
 		exit 1; \
 	fi
 
-## pca-build: Build GoPCA application for production
+## pca-build: Build GoPCA Desktop for production
 pca-build:
 	@if [ -x "$(WAILS)" ]; then \
-		echo "Building GoPCA application..."; \
+		echo "Building GoPCA Desktop..."; \
 		cd $(DESKTOP_PATH) && $(WAILS) build $(DESKTOP_LDFLAGS); \
-		echo "GoPCA build complete. Check $(DESKTOP_PATH)/build/bin/"; \
+		echo "GoPCA Desktop build complete. Check $(DESKTOP_PATH)/build/bin/"; \
 	else \
 		echo "Wails not found. Install it with:"; \
 		echo "  go install github.com/wailsapp/wails/v2/cmd/wails@latest"; \
 		exit 1; \
 	fi
 
-## pca-run: Run the built GoPCA application
+## pca-run: Run the built GoPCA Desktop
 pca-run:
 	@if [ -f "$(DESKTOP_PATH)/build/bin/GoPCA.app/Contents/MacOS/GoPCA" ]; then \
-		echo "Running GoPCA application..."; \
+		echo "Running GoPCA Desktop..."; \
 		open $(DESKTOP_PATH)/build/bin/GoPCA.app; \
 	elif [ -f "$(DESKTOP_PATH)/build/bin/gopca-desktop" ]; then \
-		echo "Running GoPCA application..."; \
+		echo "Running GoPCA Desktop..."; \
 		$(DESKTOP_PATH)/build/bin/gopca-desktop; \
 	else \
-		echo "GoPCA application not found. Build it first with 'make pca-build'"; \
+		echo "GoPCA Desktop not found. Build it first with 'make pca-build'"; \
 		exit 1; \
 	fi
 
-## pca-deps: Install frontend dependencies for GoPCA
+## pca-deps: Install frontend dependencies for GoPCA Desktop
 pca-deps:
-	@echo "Installing GoPCA frontend dependencies..."
+	@echo "Installing GoPCA Desktop frontend dependencies..."
 	@cd $(DESKTOP_PATH)/frontend && npm install
-	@echo "GoPCA dependencies installed"
+	@echo "GoPCA Desktop dependencies installed"
 
-## csv-dev: Run CSV editor in development mode with hot reload
+## csv-dev: Run GoCSV Desktop in development mode with hot reload
 csv-dev:
 	@if [ -x "$(WAILS)" ]; then \
 		echo "Starting CSV editor in development mode..."; \
@@ -176,7 +176,7 @@ csv-dev:
 		exit 1; \
 	fi
 
-## csv-build: Build CSV editor application for production
+## csv-build: Build GoCSV Desktop for production
 csv-build:
 	@if [ -x "$(WAILS)" ]; then \
 		echo "Building CSV editor application..."; \
@@ -188,7 +188,7 @@ csv-build:
 		exit 1; \
 	fi
 
-## csv-run: Run the built CSV editor application
+## csv-run: Run the built GoCSV Desktop
 csv-run:
 	@if [ -f "$(CSV_PATH)/build/bin/gocsv.app/Contents/MacOS/gocsv" ]; then \
 		echo "Running CSV editor application..."; \
@@ -218,34 +218,34 @@ sign:
 	@echo "Signing macOS binaries..."
 	@./scripts/sign-macos.sh
 
-## sign-cli: Sign only the CLI binary
+## sign-cli: Sign only the pca CLI binary
 sign-cli:
-	@echo "Signing CLI binary..."
+	@echo "Signing pca CLI binary..."
 	@./scripts/sign-macos.sh | grep -A 3 "CLI"
 
-## sign-pca: Sign only the GoPCA app
+## sign-pca: Sign only GoPCA Desktop
 sign-pca:
-	@echo "Signing GoPCA app..."
+	@echo "Signing GoPCA Desktop..."
 	@if [ -d "$(DESKTOP_PATH)/build/bin/GoPCA.app" ]; then \
 		codesign --force --deep --sign "$${APPLE_DEVELOPER_ID:-Developer ID Application: Rune Mathisen (LV599Q54BU)}" \
 			--options runtime --timestamp \
 			"$(DESKTOP_PATH)/build/bin/GoPCA.app" && \
 		codesign --verify --verbose "$(DESKTOP_PATH)/build/bin/GoPCA.app"; \
 	else \
-		echo "GoPCA app not found. Build it first with 'make pca-build'"; \
+		echo "GoPCA Desktop not found. Build it first with 'make pca-build'"; \
 		exit 1; \
 	fi
 
-## sign-csv: Sign only the GoCSV app
+## sign-csv: Sign only GoCSV Desktop
 sign-csv:
-	@echo "Signing GoCSV app..."
+	@echo "Signing GoCSV Desktop..."
 	@if [ -d "$(CSV_PATH)/build/bin/GoCSV.app" ]; then \
 		codesign --force --deep --sign "$${APPLE_DEVELOPER_ID:-Developer ID Application: Rune Mathisen (LV599Q54BU)}" \
 			--options runtime --timestamp \
 			"$(CSV_PATH)/build/bin/GoCSV.app" && \
 		codesign --verify --verbose "$(CSV_PATH)/build/bin/GoCSV.app"; \
 	else \
-		echo "GoCSV app not found. Build it first with 'make csv-build'"; \
+		echo "GoCSV Desktop not found. Build it first with 'make csv-build'"; \
 		exit 1; \
 	fi
 
@@ -256,7 +256,7 @@ sign-windows:
 	@# Check for ALL required binaries first
 	@echo "Checking for required binaries..."
 	@if [ ! -f "$(BUILD_DIR)/pca-windows-amd64.exe" ]; then \
-		echo "❌ ERROR: CLI binary not found at $(BUILD_DIR)/pca-windows-amd64.exe"; \
+		echo "❌ ERROR: pca CLI binary not found at $(BUILD_DIR)/pca-windows-amd64.exe"; \
 		echo ""; \
 		echo "To fix: Run 'make build-windows-amd64'"; \
 		echo ""; \
@@ -269,7 +269,7 @@ sign-windows:
 	elif [ -f "$(DESKTOP_PATH)/build/bin/GoPCA.exe" ]; then \
 		echo "✅ Found: GoPCA.exe"; \
 	else \
-		echo "❌ ERROR: GoPCA not found"; \
+		echo "❌ ERROR: GoPCA Desktop not found"; \
 		echo "  Searched: $(DESKTOP_PATH)/build/bin/GoPCA-amd64.exe"; \
 		echo "  Searched: $(DESKTOP_PATH)/build/bin/GoPCA.exe"; \
 		echo ""; \
@@ -384,7 +384,7 @@ windows-installer:
 	@# Check for ALL required executables - fail if any are missing
 	@echo "Checking for required components..."
 	@if [ ! -f "$(BUILD_DIR)/pca-windows-amd64.exe" ]; then \
-		echo "❌ ERROR: CLI binary not found at $(BUILD_DIR)/pca-windows-amd64.exe"; \
+		echo "❌ ERROR: pca CLI binary not found at $(BUILD_DIR)/pca-windows-amd64.exe"; \
 		echo ""; \
 		echo "To fix: Run 'make build-windows-amd64'"; \
 		echo ""; \
@@ -397,7 +397,7 @@ windows-installer:
 	elif [ -f "$(DESKTOP_PATH)/build/bin/GoPCA.exe" ]; then \
 		echo "✅ Found: GoPCA.exe"; \
 	else \
-		echo "❌ ERROR: GoPCA not found"; \
+		echo "❌ ERROR: GoPCA Desktop not found"; \
 		echo "  Searched: $(DESKTOP_PATH)/build/bin/GoPCA-amd64.exe"; \
 		echo "  Searched: $(DESKTOP_PATH)/build/bin/GoPCA.exe"; \
 		echo ""; \
@@ -450,7 +450,7 @@ windows-installer-signed: sign-windows windows-installer
 
 ## windows-installer-all: Build all Windows binaries and create installer
 windows-installer-all: build-windows-amd64
-	@echo "Note: Desktop applications (GoPCA.exe, GoCSV.exe) must be built on Windows"
+	@echo "Note: Desktop applications (GoPCA Desktop, GoCSV Desktop) must be built on Windows"
 	@echo "Building available components..."
 	@$(MAKE) windows-installer
 
@@ -463,7 +463,7 @@ notarize:
 		./scripts/notarize-macos.sh; \
 	fi
 
-## notarize-cli: Notarize only the CLI binary
+## notarize-cli: Notarize only the pca CLI binary
 notarize-cli:
 	@echo "Notarizing CLI binary..."
 	@if [ ! -f "$(BUILD_DIR)/$(BINARY_NAME)" ]; then \
@@ -477,11 +477,11 @@ notarize-cli:
 	APPLE_TEAM_ID="$${APPLE_TEAM_ID:-LV599Q54BU}" \
 	./scripts/notarize-macos.sh cli-only
 
-## notarize-pca: Notarize only the GoPCA app
+## notarize-pca: Notarize only GoPCA Desktop
 notarize-pca:
 	@echo "Notarizing GoPCA app..."
 	@if [ ! -d "$(DESKTOP_PATH)/build/bin/GoPCA.app" ]; then \
-		echo "GoPCA app not found. Build it first with 'make pca-build'"; \
+		echo "GoPCA Desktop not found. Build it first with 'make pca-build'"; \
 		exit 1; \
 	fi
 	@if [ -f .env ]; then \
@@ -491,11 +491,11 @@ notarize-pca:
 	APPLE_TEAM_ID="$${APPLE_TEAM_ID:-LV599Q54BU}" \
 	./scripts/notarize-macos.sh desktop-only
 
-## notarize-csv: Notarize only the GoCSV app
+## notarize-csv: Notarize only GoCSV Desktop
 notarize-csv:
-	@echo "Notarizing GoCSV app..."
+	@echo "Notarizing GoCSV Desktop..."
 	@if [ ! -d "$(CSV_PATH)/build/bin/GoCSV.app" ]; then \
-		echo "GoCSV app not found. Build it first with 'make csv-build'"; \
+		echo "GoCSV Desktop not found. Build it first with 'make csv-build'"; \
 		exit 1; \
 	fi
 	@if [ -f .env ]; then \
@@ -509,7 +509,7 @@ notarize-csv:
 sign-and-notarize: sign notarize
 	@echo "All binaries signed and notarized!"
 
-## csv-deps: Install frontend dependencies for CSV editor
+## csv-deps: Install frontend dependencies for GoCSV Desktop
 csv-deps:
 	@echo "Installing CSV editor frontend dependencies..."
 	@cd $(CSV_PATH)/frontend && npm install
@@ -527,7 +527,7 @@ appimage-tool:
 		echo "appimagetool already exists"; \
 	fi
 
-## appimage-gopca: Build GoPCA AppImage (Linux only)
+## appimage-gopca: Build GoPCA Desktop AppImage (Linux only)
 appimage-gopca: appimage-tool
 	@echo "Building GoPCA AppImage..."
 	@if [ ! -f "$(DESKTOP_PATH)/build/bin/GoPCA" ]; then \
@@ -541,7 +541,7 @@ appimage-gopca: appimage-tool
 		../$(BUILD_DIR)/appimagetool-x86_64.AppImage appdir ../$(BUILD_DIR)/GoPCA-x86_64.AppImage
 	@echo "GoPCA AppImage created: $(BUILD_DIR)/GoPCA-x86_64.AppImage"
 
-## appimage-gocsv: Build GoCSV AppImage (Linux only)
+## appimage-gocsv: Build GoCSV Desktop AppImage (Linux only)
 appimage-gocsv: appimage-tool
 	@echo "Building GoCSV AppImage..."
 	@if [ ! -f "$(CSV_PATH)/build/bin/GoCSV" ]; then \
@@ -555,7 +555,7 @@ appimage-gocsv: appimage-tool
 		../$(BUILD_DIR)/appimagetool-x86_64.AppImage appdir ../$(BUILD_DIR)/GoCSV-x86_64.AppImage
 	@echo "GoCSV AppImage created: $(BUILD_DIR)/GoCSV-x86_64.AppImage"
 
-## appimage-all: Build both GoPCA and GoCSV AppImages (Linux only)
+## appimage-all: Build both GoPCA Desktop and GoCSV Desktop AppImages (Linux only)
 appimage-all: appimage-gopca appimage-gocsv
 	@echo "All AppImages built successfully!"
 
@@ -591,7 +591,7 @@ test-e2e:
 	@echo "Running end-to-end tests..."
 	$(GOTEST) -v -run TestE2E ./internal/integration/...
 
-## test-parity: Run CLI/GUI parity tests
+## test-parity: Run pca CLI/GoPCA Desktop parity tests
 test-parity:
 	@echo "Running parity tests..."
 	$(GOTEST) -v -run TestParity ./internal/integration/...
@@ -745,21 +745,21 @@ help:
 	@echo ""
 	@echo "Quick start:"
 	@echo "  make deps-all         # Install all dependencies (first time)"
-	@echo "  make                  # Build CLI and test (default)"
-	@echo "  make pca-dev          # Run GoPCA in dev mode"
-	@echo "  make csv-dev          # Run CSV editor in dev mode"
+	@echo "  make                  # Build pca CLI and test (default)"
+	@echo "  make pca-dev          # Run GoPCA Desktop in dev mode"
+	@echo "  make csv-dev          # Run GoCSV Desktop in dev mode"
 	@echo ""
-	@echo "Building CLI:"
-	@echo "  make build            # Build CLI for current platform"
-	@echo "  make build-all        # Build CLI for all platforms"
+	@echo "Building pca CLI:"
+	@echo "  make build            # Build pca CLI for current platform"
+	@echo "  make build-all        # Build pca CLI for all platforms"
 	@echo "  make build-linux-amd64   # Build for Linux x64"
 	@echo "  make build-darwin-arm64  # Build for macOS Apple Silicon"
 	@echo ""
 	@echo "Code Signing (macOS):"
 	@echo "  make sign             # Sign all macOS binaries"
-	@echo "  make sign-cli         # Sign CLI binary only"
-	@echo "  make sign-pca         # Sign GoPCA app only"
-	@echo "  make sign-csv         # Sign GoCSV app only"
+	@echo "  make sign-cli         # Sign pca CLI binary only"
+	@echo "  make sign-pca         # Sign GoPCA Desktop only"
+	@echo "  make sign-csv         # Sign GoCSV Desktop only"
 	@echo "  make sign-windows     # Sign Windows binaries (requires signtool/osslsigncode)"
 	@echo ""
 	@echo "Windows Installer:"
@@ -769,9 +769,9 @@ help:
 	@echo ""
 	@echo "Notarization (macOS):"
 	@echo "  make notarize         # Notarize all signed binaries"
-	@echo "  make notarize-cli     # Notarize CLI only"
-	@echo "  make notarize-pca     # Notarize GoPCA only"
-	@echo "  make notarize-csv     # Notarize GoCSV only"
+	@echo "  make notarize-cli     # Notarize pca CLI only"
+	@echo "  make notarize-pca     # Notarize GoPCA Desktop only"
+	@echo "  make notarize-csv     # Notarize GoCSV Desktop only"
 	@echo "  make sign-and-notarize # Sign and notarize everything"
 	@echo "  make build-windows-amd64 # Build for Windows x64"
 	@echo ""
