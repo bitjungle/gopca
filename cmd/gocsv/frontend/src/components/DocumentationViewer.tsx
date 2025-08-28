@@ -6,6 +6,9 @@
 
 import React, { useEffect, useState } from 'react';
 import ReactMarkdown from 'react-markdown';
+import remarkMath from 'remark-math';
+import rehypeKatex from 'rehype-katex';
+import 'katex/dist/katex.min.css';
 
 interface DocumentationViewerProps {
   isOpen: boolean;
@@ -99,6 +102,8 @@ return null;
               prose-blockquote:border-blue-500
               prose-li:text-gray-700 dark:prose-li:text-gray-300 prose-li:text-left">
               <ReactMarkdown
+                remarkPlugins={[remarkMath]}
+                rehypePlugins={[rehypeKatex]}
                 components={{
                   // Custom link component to open external links in new tab
                   a: ({ node, children, href, ...props }) => (
