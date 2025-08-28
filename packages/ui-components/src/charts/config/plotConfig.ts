@@ -150,3 +150,15 @@ export function getScaledFontSizes(scale: number = 1.0): typeof PLOT_CONFIG.visu
     annotation: Math.round(baseSizes.annotation * scale)
   };
 }
+
+/**
+ * Get scaled marker size based on the provided scale factor
+ * @param baseSize - Base marker size (default: 8)
+ * @param scale - Scale factor (default: 1.0, range: 0.7-1.5)
+ * @returns Scaled marker size with min/max limits
+ */
+export function getScaledMarkerSize(baseSize: number = 8, scale: number = 1.0): number {
+  const scaled = Math.round(baseSize * scale);
+  // Limit marker size to prevent unusability
+  return Math.max(4, Math.min(20, scaled));
+}

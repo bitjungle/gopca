@@ -10,7 +10,7 @@ import React, { useMemo } from 'react';
 import { Data, Layout, Config } from 'plotly.js';
 import { getPlotlyTheme, mergeLayouts, ThemeMode } from '../utils/plotlyTheme';
 import { getExportMenuItems } from '../utils/plotlyExport';
-import { PLOT_CONFIG } from '../config/plotConfig';
+import { PLOT_CONFIG, getScaledMarkerSize } from '../config/plotConfig';
 import { PlotlyWithFullscreen } from '../utils/plotlyFullscreen';
 import { getWatermarkDataUrlSync } from '../assets/watermark';
 
@@ -45,6 +45,7 @@ export interface Biplot3DConfig {
     center?: { x: number; y: number; z: number };
   };
   theme?: ThemeMode;
+  fontScale?: number;  // Scale factor for all font sizes (default: 1.0)
 }
 
 /**
@@ -203,7 +204,7 @@ export class Plotly3DBiplot {
           hovertext: hovertext,
           hovertemplate: '%{hovertext}<extra></extra>',
           marker: {
-            size: this.config.markerSize,
+            size: getScaledMarkerSize(this.config.markerSize || 5, this.config.fontScale || 1.0),
             color: groupValues,
             colorscale: colorscale,
             cmin: min,
@@ -245,7 +246,7 @@ export class Plotly3DBiplot {
             hovertext: hovertext,
             hovertemplate: '%{hovertext}<extra></extra>',
             marker: {
-              size: this.config.markerSize,
+              size: getScaledMarkerSize(this.config.markerSize || 5, this.config.fontScale || 1.0),
               color: this.config.colorScheme![groupIndex % this.config.colorScheme!.length],
               opacity: this.config.opacity
             }
@@ -268,7 +269,7 @@ export class Plotly3DBiplot {
           hovertext: hovertext,
           hovertemplate: '%{hovertext}<extra></extra>',
           marker: {
-            size: this.config.markerSize,
+            size: getScaledMarkerSize(this.config.markerSize || 5, this.config.fontScale || 1.0),
             color: this.config.colorScheme![0],
             opacity: this.config.opacity
           }
@@ -292,7 +293,7 @@ export class Plotly3DBiplot {
         z: [0],
         marker: {
           symbol: 'circle',
-          size: 8,
+          size: getScaledMarkerSize(8, this.config.fontScale || 1.0),
           color: this.config.colorScheme![1] || '#ef4444',
           opacity: 0.5
         },
@@ -348,7 +349,7 @@ export class Plotly3DBiplot {
         z: endpointZ,
         marker: {
           symbol: 'diamond',
-          size: 6,
+          size: getScaledMarkerSize(6, this.config.fontScale || 1.0),
           color: this.config.colorScheme![1],
           opacity: 0.9
         },
@@ -378,7 +379,7 @@ export class Plotly3DBiplot {
         z: labelPositions.map(p => p.z),
         text: labelPositions.map(p => p.text),
         textfont: {
-          size: 10,
+          size: Math.round(10 * (this.config.fontScale || 1.0)),
           color: this.config.colorScheme![1]
         },
         showlegend: false,
@@ -418,7 +419,7 @@ export class Plotly3DBiplot {
         y: groupY,
         z: groupX.map(() => minZ),
         marker: {
-          size: 2,
+          size: getScaledMarkerSize(2, this.config.fontScale || 1.0),
           color: color,
           opacity: 0.3
         },
@@ -435,7 +436,7 @@ export class Plotly3DBiplot {
         y: groupX.map(() => minY),
         z: groupZ,
         marker: {
-          size: 2,
+          size: getScaledMarkerSize(2, this.config.fontScale || 1.0),
           color: color,
           opacity: 0.3
         },
@@ -452,7 +453,7 @@ export class Plotly3DBiplot {
         y: groupY,
         z: groupZ,
         marker: {
-          size: 2,
+          size: getScaledMarkerSize(2, this.config.fontScale || 1.0),
           color: color,
           opacity: 0.3
         },
@@ -466,7 +467,7 @@ export class Plotly3DBiplot {
 
   getEnhancedLayout(): Partial<Layout> {
     const baseLayout = this.getLayout();
-    const themeLayout = getPlotlyTheme(this.config.theme || 'light').layout;
+    const themeLayout = getPlotlyTheme(this.config.theme || 'light', this.config.fontScale).layout;
     
     // Add watermark if enabled
     let watermarkImages: any[] = [];
@@ -553,7 +554,7 @@ export class Plotly3DBiplot {
       showlegend: true,
       legend: {
         borderwidth: 1,
-        font: { size: 12 },
+        font: { size: Math.round(12 * (this.config.fontScale || 1.0)) },
         x: 1.02,
         y: 1,
         xanchor: 'left',

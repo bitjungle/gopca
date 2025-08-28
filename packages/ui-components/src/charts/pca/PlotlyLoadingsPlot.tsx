@@ -284,7 +284,7 @@ export class PlotlyLoadingsPlot {
           showarrow: false,
           font: {
             color: 'orange',
-            size: 10
+            size: Math.round(10 * (this.config.fontScale || 1.0))
           }
         }
       ];
