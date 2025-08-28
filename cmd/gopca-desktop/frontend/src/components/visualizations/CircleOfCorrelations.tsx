@@ -21,7 +21,8 @@ interface CircleOfCorrelationsProps {
 export const CircleOfCorrelations: React.FC<CircleOfCorrelationsProps> = ({
   pcaResult,
   xComponent = 0,
-  yComponent = 1
+  yComponent = 1,
+  fontScale
 }) => {
   const { theme } = useTheme();
   const { qualitativePalette } = usePalette();
@@ -37,7 +38,8 @@ export const CircleOfCorrelations: React.FC<CircleOfCorrelationsProps> = ({
     xComponent,
     yComponent,
     theme,
-    colorScheme
+    colorScheme,
+    fontScale
   );
 
   return (

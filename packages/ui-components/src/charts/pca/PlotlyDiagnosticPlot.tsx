@@ -8,11 +8,12 @@
 
 import React, { useMemo } from 'react';
 import { Data, Layout } from 'plotly.js';
-import { getPlotlyTheme, mergeLayouts, ThemeMode } from '../utils/plotlyTheme';
+import { getPlotlyTheme, mergeLayouts } from '../utils/plotlyTheme';
 import { getExportMenuItems } from '../utils/plotlyExport';
 import { PLOT_CONFIG, getScaledMarkerSize } from '../config/plotConfig';
 import { PlotlyWithFullscreen } from '../utils/plotlyFullscreen';
 import { getWatermarkDataUrlSync } from '../assets/watermark';
+import { PlotlyVisualizationConfig } from '../core/PlotlyVisualization';
 
 export interface DiagnosticPlotData {
   mahalanobisDistances: number[];
@@ -21,17 +22,15 @@ export interface DiagnosticPlotData {
   groups?: string[];
 }
 
-export interface DiagnosticPlotConfig {
+export interface DiagnosticPlotConfig extends PlotlyVisualizationConfig {
   showThresholds?: boolean;
   mahalanobisThreshold?: number;  // Chi-square based threshold
   rssThreshold?: number;
   confidenceLevel?: number;  // For Mahalanobis threshold calculation
   showLabels?: boolean;
   labelThreshold?: number;  // Number of outliers to label
-  colorScheme?: string[];
   pointSize?: number;
-  theme?: ThemeMode;
-  fontScale?: number;  // Scale factor for all font sizes (default: 1.0)
+  colorScheme?: string[];  // Color palette for visualization
 }
 
 /**

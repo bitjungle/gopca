@@ -31,7 +31,8 @@ export const DiagnosticScatterPlot: React.FC<DiagnosticScatterPlotProps> = ({
   showThresholds = true,
   confidenceLevel = 0.95,
   showRowLabels = false,
-  maxLabelsToShow = 10
+  maxLabelsToShow = 10,
+  fontScale
 }) => {
   const { theme } = useTheme();
   const { qualitativePalette } = usePalette();
@@ -62,7 +63,8 @@ export const DiagnosticScatterPlot: React.FC<DiagnosticScatterPlotProps> = ({
       theme,
       colorScheme,
       mahalanobisThreshold,
-      rssThreshold
+      rssThreshold,
+      fontScale
     ),
     showLabels: showRowLabels,
     labelThreshold: maxLabelsToShow

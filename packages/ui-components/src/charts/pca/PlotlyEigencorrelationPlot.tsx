@@ -8,11 +8,12 @@
 
 import React, { useMemo } from 'react';
 import { Data, Layout } from 'plotly.js';
-import { getPlotlyTheme, mergeLayouts, ThemeMode } from '../utils/plotlyTheme';
+import { getPlotlyTheme, mergeLayouts } from '../utils/plotlyTheme';
 import { getExportMenuItems } from '../utils/plotlyExport';
 import { PLOT_CONFIG } from '../config/plotConfig';
 import { PlotlyWithFullscreen } from '../utils/plotlyFullscreen';
 import { getWatermarkDataUrlSync } from '../assets/watermark';
+import { PlotlyVisualizationConfig } from '../core/PlotlyVisualization';
 
 export interface EigencorrelationPlotData {
   correlations: number[][];  // [n_components][n_variables]
@@ -20,7 +21,7 @@ export interface EigencorrelationPlotData {
   explainedVariance: number[];
 }
 
-export interface EigencorrelationPlotConfig {
+export interface EigencorrelationPlotConfig extends PlotlyVisualizationConfig {
   maxComponents?: number;
   colorScale?: string | any[];
   showValues?: boolean;
@@ -28,7 +29,6 @@ export interface EigencorrelationPlotConfig {
   clusterVariables?: boolean;
   clusterComponents?: boolean;
   annotationThreshold?: number;  // Only show values above this threshold
-  theme?: ThemeMode;
   colorScheme?: string[];  // Color palette for visualization
 }
 
@@ -182,7 +182,7 @@ export class PlotlyEigencorrelationPlot {
 
   getEnhancedLayout(): Partial<Layout> {
     const baseLayout = this.getLayout();
-    const themeLayout = getPlotlyTheme(this.config.theme || 'light').layout;
+    const themeLayout = getPlotlyTheme(this.config.theme || 'light', this.config.fontScale).layout;
     
     // Add watermark if enabled
     let watermarkImages: any[] = [];

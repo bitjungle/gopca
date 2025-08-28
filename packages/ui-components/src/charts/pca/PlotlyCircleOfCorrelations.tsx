@@ -8,11 +8,12 @@
 
 import React, { useMemo } from 'react';
 import { Data, Layout } from 'plotly.js';
-import { getPlotlyTheme, mergeLayouts, ThemeMode } from '../utils/plotlyTheme';
+import { getPlotlyTheme, mergeLayouts } from '../utils/plotlyTheme';
 import { getExportMenuItems } from '../utils/plotlyExport';
 import { PLOT_CONFIG, getScaledMarkerSize } from '../config/plotConfig';
 import { PlotlyWithFullscreen } from '../utils/plotlyFullscreen';
 import { getWatermarkDataUrlSync } from '../assets/watermark';
+import { PlotlyVisualizationConfig } from '../core/PlotlyVisualization';
 
 export interface CircleOfCorrelationsData {
   loadings: number[][];  // [n_components][n_variables]
@@ -20,7 +21,7 @@ export interface CircleOfCorrelationsData {
   explainedVariance: number[];
 }
 
-export interface CircleOfCorrelationsConfig {
+export interface CircleOfCorrelationsConfig extends PlotlyVisualizationConfig {
   pcX?: number;  // PC for X-axis (1-indexed)
   pcY?: number;  // PC for Y-axis (1-indexed)
   showCircle?: boolean;
@@ -30,9 +31,7 @@ export interface CircleOfCorrelationsConfig {
   colorByMagnitude?: boolean;
   arrowWidth?: number;
   labelSize?: number;
-  theme?: ThemeMode;
   colorScheme?: string[];  // Color palette for visualization
-  fontScale?: number;  // Scale factor for all font sizes (default: 1.0)
 }
 
 /**
