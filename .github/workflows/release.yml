@@ -378,7 +378,7 @@ jobs:
           Categories=Science;Math;Education;DataVisualization;
           MimeType=text/csv;text/plain;
           StartupNotify=true
-          EOF
+EOF
           
           # Download icon from repository
           curl -L -o appdir-gopca/gopca.png https://raw.githubusercontent.com/${{ github.repository }}/main/cmd/gopca-desktop/build/linux/icon-256.png
@@ -420,7 +420,7 @@ jobs:
           Categories=Office;Spreadsheet;Science;DataVisualization;
           MimeType=text/csv;text/plain;text/tab-separated-values;
           StartupNotify=true
-          EOF
+EOF
           
           # Download icon from repository
           curl -L -o appdir-gocsv/gocsv.png https://raw.githubusercontent.com/${{ github.repository }}/main/cmd/gocsv/build/linux/icon-256.png
