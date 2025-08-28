@@ -19,7 +19,8 @@ interface EigencorrelationPlotProps {
 
 export const EigencorrelationPlot: React.FC<EigencorrelationPlotProps> = ({
   pcaResult,
-  maxComponents
+  maxComponents,
+  fontScale
 }) => {
   const { theme } = useTheme();
   const { sequentialPalette } = usePalette();
@@ -44,7 +45,7 @@ export const EigencorrelationPlot: React.FC<EigencorrelationPlotProps> = ({
   }
 
   // Create config for Plotly component
-  const plotlyConfig = createEigencorrelationPlotConfig(maxComponents, theme, colorScheme);
+  const plotlyConfig = createEigencorrelationPlotConfig(maxComponents, theme, colorScheme, fontScale);
 
   return (
     <div style={{ width: '100%', height: '100%' }}>

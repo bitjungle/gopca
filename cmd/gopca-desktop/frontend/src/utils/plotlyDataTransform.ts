@@ -50,6 +50,22 @@ return [];
 }
 
 /**
+ * Shared config builder for all Plotly visualizations
+ * Provides common configuration properties to ensure consistency
+ */
+function createBaseVisualizationConfig(
+  theme?: 'light' | 'dark',
+  colorScheme?: string[],
+  fontScale?: number
+): { theme?: 'light' | 'dark'; colorScheme?: string[]; fontScale?: number } {
+  return {
+    theme,
+    colorScheme,
+    fontScale
+  };
+}
+
+/**
  * Transform PCAResult to Plotly ScoresPlot data format
  */
 export function transformToScoresPlotData(
@@ -265,7 +281,8 @@ export function createBiplotConfig(
   theme?: 'light' | 'dark',
   colorScheme?: string[],
   showEllipses: boolean = false,
-  ellipseConfidence: number = 0.95
+  ellipseConfidence: number = 0.95,
+  fontScale?: number
 ): BiplotConfig {
   return {
     pcX: xComponent + 1,
@@ -276,10 +293,9 @@ export function createBiplotConfig(
     showLabels,
     labelThreshold: 20,
     vectorScale: 1.0,
-    theme,
-    colorScheme,
     showEllipses,
-    ellipseConfidence
+    ellipseConfidence,
+    ...createBaseVisualizationConfig(theme, colorScheme, fontScale)
   };
 }
 
@@ -307,7 +323,8 @@ export function createCircleOfCorrelationsConfig(
   xComponent: number = 0,
   yComponent: number = 1,
   theme?: 'light' | 'dark',
-  colorScheme?: string[]
+  colorScheme?: string[],
+  fontScale?: number
 ): CircleOfCorrelationsConfig {
   return {
     pcX: xComponent + 1,
@@ -317,8 +334,7 @@ export function createCircleOfCorrelationsConfig(
     showLabels: true,
     minVectorLength: 0.1,
     colorByMagnitude: true,
-    theme,
-    colorScheme
+    ...createBaseVisualizationConfig(theme, colorScheme, fontScale)
   };
 }
 
@@ -353,17 +369,17 @@ export function createDiagnosticPlotConfig(
   theme?: 'light' | 'dark',
   colorScheme?: string[],
   mahalanobisThreshold?: number,
-  rssThreshold?: number
+  rssThreshold?: number,
+  fontScale?: number
 ): DiagnosticPlotConfig {
   return {
     showThresholds,
     confidenceLevel,
     showLabels: false,  // Changed to false by default
     labelThreshold: 10,
-    theme,
-    colorScheme,
     mahalanobisThreshold,
-    rssThreshold
+    rssThreshold,
+    ...createBaseVisualizationConfig(theme, colorScheme, fontScale)
   };
 }
 
@@ -410,7 +426,8 @@ export function transformToEigencorrelationPlotData(
 export function createEigencorrelationPlotConfig(
   maxComponents?: number,
   theme?: 'light' | 'dark',
-  colorScheme?: string[]
+  colorScheme?: string[],
+  fontScale?: number
 ): EigencorrelationPlotConfig {
   return {
     maxComponents,
@@ -419,8 +436,7 @@ export function createEigencorrelationPlotConfig(
     valueFormat: '.2f',
     clusterVariables: false,
     annotationThreshold: 0.3,
-    theme,
-    colorScheme
+    ...createBaseVisualizationConfig(theme, colorScheme, fontScale)
   };
 }
 
