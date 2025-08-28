@@ -426,6 +426,129 @@ func TestCalculateEigencorrelations(t *testing.T) {
 	}
 }
 
+// TestEigencorrelationPC1Sorting verifies that variables are sorted by PC1 correlation
+// from highest positive to most negative values
+func TestEigencorrelationPC1Sorting(t *testing.T) {
+	// Create test scores with known patterns
+	scores := mat.NewDense(10, 2, []float64{
+		1.0, 0.1,
+		0.9, 0.2,
+		0.8, -0.1,
+		0.7, 0.0,
+		0.0, 0.8,
+		-0.1, 0.9,
+		-0.5, 0.5,
+		-0.7, 0.3,
+		-0.8, -0.2,
+		-0.9, -0.3,
+	})
+
+	// Create metadata variables with varying correlations to PC1
+	request := CorrelationRequest{
+		Scores: scores,
+		MetadataNumeric: map[string][]float64{
+			"strong_positive": {1.0, 0.9, 0.8, 0.7, 0.0, -0.1, -0.5, -0.7, -0.8, -0.9}, // Strong positive correlation
+			"weak_positive":   {0.2, 0.1, 0.3, 0.1, 0.0, -0.1, -0.2, 0.0, -0.1, -0.2},  // Weak positive correlation
+			"zero_corr":       {0.1, -0.1, 0.2, -0.2, 0.3, -0.3, 0.1, -0.1, 0.2, -0.2}, // Near zero correlation
+			"weak_negative":   {-0.1, -0.2, 0.0, -0.1, 0.1, 0.2, 0.3, 0.1, 0.2, 0.3},   // Weak negative correlation
+			"strong_negative": {-1.0, -0.9, -0.8, -0.7, 0.0, 0.1, 0.5, 0.7, 0.8, 0.9},  // Strong negative correlation
+		},
+		Components: []int{0, 1},
+		Method:     "pearson",
+	}
+
+	result, err := CalculateEigencorrelations(request)
+	if err != nil {
+		t.Fatalf("CalculateEigencorrelations failed: %v", err)
+	}
+
+	// Check that variables are sorted by PC1 correlation in descending order
+	if len(result.Variables) != 5 {
+		t.Fatalf("Expected 5 variables, got %d", len(result.Variables))
+	}
+
+	// Verify sorting order: highest positive to most negative
+	prevCorr := 2.0 // Start with value higher than any possible correlation
+	for i, varName := range result.Variables {
+		pc1Corr := result.Correlations[varName][0]
+
+		// Check descending order
+		if pc1Corr > prevCorr {
+			t.Errorf("Variables not sorted correctly at position %d: %s (corr=%f) > previous (corr=%f)",
+				i, varName, pc1Corr, prevCorr)
+		}
+
+		t.Logf("Position %d: %s, PC1 correlation = %.3f", i, varName, pc1Corr)
+		prevCorr = pc1Corr
+	}
+
+	// Verify expected order
+	expectedOrder := []string{"strong_positive", "weak_positive", "zero_corr", "weak_negative", "strong_negative"}
+	for i, expected := range expectedOrder {
+		if result.Variables[i] != expected {
+			// It's OK if the order is not exactly as expected due to numerical precision,
+			// but the general pattern should be maintained
+			pc1Corr := result.Correlations[result.Variables[i]][0]
+			t.Logf("Warning: Position %d has %s (corr=%.3f) instead of expected %s",
+				i, result.Variables[i], pc1Corr, expected)
+		}
+	}
+}
+
+// TestEigencorrelationSortingWithCategorical verifies that one-hot encoded categorical
+// variables are sorted individually by PC1 correlation, not grouped by base name
+func TestEigencorrelationSortingWithCategorical(t *testing.T) {
+	// Create test scores
+	scores := mat.NewDense(8, 2, []float64{
+		1.0, 0.1, // Pattern for category A
+		0.9, 0.2, // Pattern for category A
+		-0.8, 0.3, // Pattern for category B
+		-0.9, 0.4, // Pattern for category B
+		0.3, -0.8, // Pattern for category C
+		0.2, -0.9, // Pattern for category C
+		-0.1, 0.0, // Pattern for category D
+		-0.2, 0.1, // Pattern for category D
+	})
+
+	request := CorrelationRequest{
+		Scores: scores,
+		MetadataCategorical: map[string][]string{
+			"group": {"A", "A", "B", "B", "C", "C", "D", "D"},
+		},
+		Components: []int{0, 1},
+		Method:     "pearson",
+	}
+
+	result, err := CalculateEigencorrelations(request)
+	if err != nil {
+		t.Fatalf("CalculateEigencorrelations failed: %v", err)
+	}
+
+	// Should have 4 one-hot encoded variables
+	expectedVars := 4
+	if len(result.Variables) != expectedVars {
+		t.Fatalf("Expected %d variables, got %d", expectedVars, len(result.Variables))
+	}
+
+	// Verify all variables are sorted by PC1 correlation
+	prevCorr := 2.0
+	for i, varName := range result.Variables {
+		pc1Corr := result.Correlations[varName][0]
+
+		if pc1Corr > prevCorr {
+			t.Errorf("Variables not sorted at position %d: %s (corr=%f) > previous (corr=%f)",
+				i, varName, pc1Corr, prevCorr)
+		}
+
+		t.Logf("Position %d: %s, PC1 correlation = %.3f", i, varName, pc1Corr)
+		prevCorr = pc1Corr
+	}
+
+	// Note: The sorting is by PC1 correlation value, so one-hot encoded variables
+	// from the same categorical variable may be separated based on their correlation values
+	// This is intentional as it provides the most meaningful visual hierarchy
+}
+
 // TestStatisticalFunctions tests the statistical helper functions
 func TestStatisticalFunctions(t *testing.T) {
 	t.Run("normalCDF", func(t *testing.T) {

@@ -45,7 +45,7 @@ export class PlotlyEigencorrelationPlot {
   constructor(data: EigencorrelationPlotData, config?: EigencorrelationPlotConfig) {
     this.data = data;
     this.config = {
-      colorScale: 'RdBu',
+      colorScale: 'Reds',
       showValues: true,
       valueFormat: '.2f',
       clusterVariables: false,
