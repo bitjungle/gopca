@@ -296,6 +296,9 @@ func (a *App) RunPCA(request PCARequest) (response PCAResponse) {
 		}
 	}
 
+	// Track how many rows are excluded
+	rowsExcluded := len(request.ExcludedRows)
+	
 	// Filter data if exclusions are provided
 	if len(request.ExcludedRows) > 0 || len(request.ExcludedColumns) > 0 {
 		// Filter the data matrix
@@ -322,7 +325,7 @@ func (a *App) RunPCA(request PCARequest) (response PCAResponse) {
 		// Filter metadata categorical columns if rows are excluded
 		if len(request.ExcludedRows) > 0 && len(request.MetadataCategorical) > 0 {
 			for colName, colData := range request.MetadataCategorical {
-				filteredCol := make([]string, 0)
+				filteredCol := make([]string, 0, len(colData)-len(request.ExcludedRows))
 				for i := 0; i < len(colData); i++ {
 					if !contains(request.ExcludedRows, i) {
 						filteredCol = append(filteredCol, colData[i])
@@ -335,7 +338,7 @@ func (a *App) RunPCA(request PCARequest) (response PCAResponse) {
 		// Filter metadata numeric columns if rows are excluded
 		if len(request.ExcludedRows) > 0 && len(request.MetadataNumeric) > 0 {
 			for colName, colData := range request.MetadataNumeric {
-				filteredCol := make([]float64, 0)
+				filteredCol := make([]float64, 0, len(colData)-len(request.ExcludedRows))
 				for i := 0; i < len(colData); i++ {
 					if !contains(request.ExcludedRows, i) {
 						filteredCol = append(filteredCol, colData[i])
@@ -625,35 +628,55 @@ func (a *App) RunPCA(request PCARequest) (response PCAResponse) {
 
 	// Calculate eigencorrelations if requested
 	if request.CalculateEigencorrelations && (len(request.MetadataNumeric) > 0 || len(request.MetadataCategorical) > 0) {
-
-		// Convert scores to mat.Matrix
-		scoresMatrix := mat.NewDense(len(result.Scores), len(result.Scores[0]), nil)
-		for i, row := range result.Scores {
-			for j, val := range row {
-				scoresMatrix.Set(i, j, val)
+		// Verify metadata dimensions match scores before calculation
+		nSamples := len(result.Scores)
+		dimensionMismatch := false
+		
+		for colName, colData := range request.MetadataCategorical {
+			if len(colData) != nSamples {
+				fmt.Printf("Warning: Categorical variable '%s' has %d values, expected %d\n", colName, len(colData), nSamples)
+				dimensionMismatch = true
 			}
 		}
-
-		// Create correlation request
-		corrRequest := core.CorrelationRequest{
-			Scores:              scoresMatrix,
-			MetadataNumeric:     request.MetadataNumeric,
-			MetadataCategorical: request.MetadataCategorical,
-			Components:          nil,       // Use all components
-			Method:              "pearson", // Default to Pearson
+		for colName, colData := range request.MetadataNumeric {
+			if len(colData) != nSamples {
+				fmt.Printf("Warning: Numeric variable '%s' has %d values, expected %d\n", colName, len(colData), nSamples)
+				dimensionMismatch = true
+			}
 		}
-
-		// Calculate correlations
-		corrResult, err := core.CalculateEigencorrelations(corrRequest)
-		if err != nil {
-			fmt.Printf("Warning: failed to calculate eigencorrelations: %v\n", err)
+		
+		if dimensionMismatch {
+			fmt.Printf("Warning: Skipping eigencorrelation calculation due to dimension mismatch\n")
 		} else {
-			result.Eigencorrelations = &types.EigencorrelationResult{
-				Correlations: corrResult.Correlations,
-				PValues:      corrResult.PValues,
-				Variables:    corrResult.Variables,
-				Components:   corrResult.Components,
-				Method:       "pearson",
+			// Convert scores to mat.Matrix
+			scoresMatrix := mat.NewDense(len(result.Scores), len(result.Scores[0]), nil)
+			for i, row := range result.Scores {
+				for j, val := range row {
+					scoresMatrix.Set(i, j, val)
+				}
+			}
+
+			// Create correlation request
+			corrRequest := core.CorrelationRequest{
+				Scores:              scoresMatrix,
+				MetadataNumeric:     request.MetadataNumeric,
+				MetadataCategorical: request.MetadataCategorical,
+				Components:          nil,       // Use all components
+				Method:              "pearson", // Default to Pearson
+			}
+
+			// Calculate correlations
+			corrResult, err := core.CalculateEigencorrelations(corrRequest)
+			if err != nil {
+				fmt.Printf("Warning: failed to calculate eigencorrelations: %v\n", err)
+			} else {
+				result.Eigencorrelations = &types.EigencorrelationResult{
+					Correlations: corrResult.Correlations,
+					PValues:      corrResult.PValues,
+					Variables:    corrResult.Variables,
+					Components:   corrResult.Components,
+					Method:       "pearson",
+				}
 			}
 		}
 	}
@@ -713,12 +736,12 @@ func (a *App) RunPCA(request PCARequest) (response PCAResponse) {
 	}
 
 	// Prepare filtered categorical and numeric columns for the frontend
-	// If rows were dropped, the metadata in the request has already been filtered above
+	// If rows were dropped OR excluded, the metadata in the request has already been filtered above
 	// We pass it to the frontend so it can use properly aligned data when coloring by category
 	var filteredCategoricalCols map[string][]string
 	var filteredNumericTargetCols map[string][]float64
 
-	if rowsDropped > 0 && request.MissingStrategy == "drop" {
+	if (rowsDropped > 0 && request.MissingStrategy == "drop") || rowsExcluded > 0 {
 		// Pass the already-filtered metadata columns
 		filteredCategoricalCols = request.MetadataCategorical
 		filteredNumericTargetCols = request.MetadataNumeric
