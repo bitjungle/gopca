@@ -46,6 +46,10 @@ export const PaletteProvider: React.FC<{ children: ReactNode }> = ({ children })
 
   const [sequentialPalette, setSequentialPalette] = useState<SequentialPaletteName>(() => {
     const stored = localStorage.getItem(SEQUENTIAL_STORAGE_KEY);
+    // Fallback from removed 'crest' palette to 'blues' (similar color scheme)
+    if (stored === 'crest') {
+      return 'blues';
+    }
     return (stored as SequentialPaletteName) || 'rocket';
   });
 

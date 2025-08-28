@@ -9,7 +9,7 @@
 
 // Palette names for user selection
 export type QualitativePaletteName = 'deep' | 'pastel' | 'dark' | 'colorblind' | 'husl';
-export type SequentialPaletteName = 'rocket' | 'viridis' | 'blues' | 'reds' | 'crest' | 'mako' | 'flare';
+export type SequentialPaletteName = 'rocket' | 'viridis' | 'blues' | 'reds' | 'mako' | 'flare';
 
 // Qualitative palettes for categorical data
 export const QUALITATIVE_PALETTES: Record<QualitativePaletteName, string[]> = {
@@ -223,20 +223,6 @@ export const SEQUENTIAL_PALETTES: Record<SequentialPaletteName, string[]> = {
     '#cb181d', //
     '#a50f15', //
     '#67000d' // dark red
-  ],
-
-  // Crest palette - blue to purple (seaborn's crest)
-  crest: [
-    '#f0f9ff', // very light blue
-    '#d0e7f7', // light blue
-    '#a8d5e2', //
-    '#7dc0d4', //
-    '#4fa8c5', //
-    '#2e8ab5', // medium blue
-    '#236ba3', //
-    '#22508c', // blue-purple
-    '#1e3670', // dark blue-purple
-    '#071e58' // very dark purple
   ],
 
   // Mako palette - blue to green (seaborn's mako)
