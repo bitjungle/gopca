@@ -47,7 +47,8 @@ export const Biplot: React.FC<BiplotProps> = ({
   maxLabelsToShow = 10,
   showLoadings = true,
   vectorScale = 1.0,
-  maxVariables = 100
+  maxVariables = 100,
+  fontScale
 }) => {
   const { theme } = useTheme();
   const { qualitativePalette, sequentialPalette } = usePalette();
@@ -75,7 +76,8 @@ export const Biplot: React.FC<BiplotProps> = ({
       theme,
       colorScheme,
       showEllipses,
-      confidenceLevel
+      confidenceLevel,
+      fontScale
     ),
     showLoadings,
     vectorScale,

@@ -281,7 +281,8 @@ export function createBiplotConfig(
   theme?: 'light' | 'dark',
   colorScheme?: string[],
   showEllipses: boolean = false,
-  ellipseConfidence: number = 0.95
+  ellipseConfidence: number = 0.95,
+  fontScale?: number
 ): BiplotConfig {
   return {
     pcX: xComponent + 1,
@@ -292,10 +293,9 @@ export function createBiplotConfig(
     showLabels,
     labelThreshold: 20,
     vectorScale: 1.0,
-    theme,
-    colorScheme,
     showEllipses,
-    ellipseConfidence
+    ellipseConfidence,
+    ...createBaseVisualizationConfig(theme, colorScheme, fontScale)
   };
 }
 
