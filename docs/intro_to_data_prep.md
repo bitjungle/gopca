@@ -1,12 +1,12 @@
-# Data Preparation with GoCSV: Getting Your Data Ready for Analysis
+# Data Preparation with GoCSV Desktop: Getting Your Data Ready for Analysis
 
 ## Introduction: The Foundation of Good Analysis
 
 Before any advanced analysis, whether it's Principal Component Analysis (PCA), machine learning, or statistical modeling, your data needs to be clean, consistent, and properly structured. Raw datasets often contain issues that can compromise or invalidate your results: missing values, outliers, inconsistent formats, irrelevant variables, and quality issues that need to be addressed.
 
-**GoCSV** is designed as your data preparation companion, providing the essential tools to transform raw data into analysis-ready datasets. While GoCSV focuses on data cleaning and preparation, its sister application **GoPCA** handles the actual PCA analysis, including mathematical preprocessing steps like mean centering and scaling.
+**GoCSV Desktop** is designed as your data preparation companion, providing the essential tools to transform raw data into analysis-ready datasets. While GoCSV Desktop focuses on data cleaning and preparation, its sister application **GoPCA Desktop** (along with the pca CLI) handles the actual PCA analysis, including mathematical preprocessing steps like mean centering and scaling.
 
-This guide covers the critical data preparation steps you should perform in GoCSV before moving to analytical tools. We'll explain not just *what* to do, but *why* each step matters, grounding our recommendations in statistical best practices from authoritative sources including Bro & Smilde (2014), Jolliffe & Cadima (2016), and others.
+This guide covers the critical data preparation steps you should perform in GoCSV Desktop before moving to analytical tools. We'll explain not just *what* to do, but *why* each step matters, grounding our recommendations in statistical best practices from authoritative sources including Bro & Smilde (2014), Jolliffe & Cadima (2016), and others.
 
 ---
 
@@ -18,15 +18,15 @@ Most analytical methods expect data in a standard matrix format:
 - **Rows** represent samples, objects, or observations (e.g., patients, products, measurements)
 - **Columns** represent variables, features, or attributes (e.g., temperature, concentration, gene expression)
 
-> **In GoCSV:**  
-> When you load a CSV file, GoCSV automatically detects the structure and provides a summary showing the number of rows (samples) and columns (variables). The Data Quality Dashboard gives you an immediate overview of your data's characteristics.
+> **In GoCSV Desktop:**  
+> When you load a CSV file, GoCSV Desktop automatically detects the structure and provides a summary showing the number of rows (samples) and columns (variables). The Data Quality Dashboard gives you an immediate overview of your data's characteristics.
 
 ### Row Names and Sample Identifiers
 
 Many datasets include a column of sample identifiers (IDs, names, or codes). These are crucial for tracking but typically shouldn't be included in numerical analysis.
 
 > **Best Practice:**  
-> Use GoCSV's import wizard to designate which column contains row names. This preserves sample identity while excluding these labels from numerical calculations.
+> Use GoCSV Desktop's import wizard to designate which column contains row names. This preserves sample identity while excluding these labels from numerical calculations.
 
 ---
 
@@ -41,7 +41,7 @@ Missing values are one of the most common data quality issues. They can arise fr
 
 Most analytical methods, including PCA, require complete data matrices. Even a single missing value can prevent analysis or produce misleading results.
 
-### GoCSV's Missing Data Tools
+### GoCSV Desktop's Missing Data Tools
 
 **1. Detection and Visualization**
 - The Data Quality Dashboard immediately shows missing data patterns
@@ -50,7 +50,7 @@ Most analytical methods, including PCA, require complete data matrices. Even a s
 
 **2. Missing Data Strategies**
 
-GoCSV provides several approaches for handling missing values:
+GoCSV Desktop provides several approaches for handling missing values:
 
 - **Row Deletion**: Remove samples with any missing values
   - ✅ Simple and unbiased if data is "missing completely at random"
@@ -76,15 +76,15 @@ GoCSV provides several approaches for handling missing values:
 > Start by understanding WHY data is missing. Use the Data Quality Dashboard to examine patterns. Random missingness (MCAR) is least problematic, while systematic patterns require careful consideration.
 
 > **Note on NIPALS:**  
-> While most PCA algorithms require complete data, GoPCA implements the NIPALS (Nonlinear Iterative Partial Least Squares) algorithm which can handle some missing data scenarios without imputation. However, for best results and to use all of GoPCA's features (like SVD method or Kernel PCA), it's still recommended to address missing values in GoCSV first.
+> While most PCA algorithms require complete data, GoPCA Suite implements the NIPALS (Nonlinear Iterative Partial Least Squares) algorithm which can handle some missing data scenarios without imputation. However, for best results and to use all of GoPCA Suite's features (like SVD method or Kernel PCA), it's still recommended to address missing values in GoCSV Desktop first.
 
 ---
 
 ## 3. Data Quality Assessment
 
-### GoCSV's Data Quality Dashboard
+### GoCSV Desktop's Data Quality Dashboard
 
-Before making any changes, assess your data's current state. GoCSV's Data Quality Dashboard provides:
+Before making any changes, assess your data's current state. GoCSV Desktop's Data Quality Dashboard provides:
 
 **Overall Metrics:**
 - Data dimensions and memory usage
@@ -109,7 +109,7 @@ Each column receives a quality score (0-100) based on:
 
 ---
 
-## 4. Data Transformations in GoCSV
+## 4. Data Transformations in GoCSV Desktop
 
 ### Why Transform Data?
 
@@ -121,7 +121,7 @@ Many real-world variables don't follow ideal statistical distributions. They may
 
 ### Available Transformations
 
-GoCSV's transformation dialog organizes options by purpose:
+GoCSV Desktop's transformation dialog organizes options by purpose:
 
 **Mathematical Transformations:**
 - **Logarithm (log)**: For right-skewed data (e.g., concentrations, income)
@@ -140,7 +140,7 @@ GoCSV's transformation dialog organizes options by purpose:
 - **Standardization (Z-score)**: Scales to mean=0, std=1
   - Centers and scales data
   - Makes variables comparable regardless of units
-  - Note: For PCA, let GoPCA handle this during analysis
+  - Note: For PCA, let GoPCA Suite handle this during analysis
   
 - **Min-Max Scaling**: Scales to a specified range
   - Default range [0, 1], but customizable
@@ -158,7 +158,7 @@ GoCSV's transformation dialog organizes options by purpose:
   - Expands dataset width significantly
 
 > **Important Note:**  
-> While GoCSV includes standardization (z-score scaling) for general data transformation, mean centering is intentionally NOT included. For PCA analysis specifically, it's recommended to let GoPCA handle both centering and scaling during the analysis phase. This ensures that preprocessing is applied correctly based on your chosen PCA method and options.
+> While GoCSV Desktop includes standardization (z-score scaling) for general data transformation, mean centering is intentionally NOT included. For PCA analysis specifically, it's recommended to let GoPCA Suite handle both centering and scaling during the analysis phase. This ensures that preprocessing is applied correctly based on your chosen PCA method and options.
 
 ---
 
@@ -177,7 +177,7 @@ Not all variables contribute meaningful information to analysis. Including irrel
 **1. Zero or Near-Zero Variance**
 - Variables where all values are identical or nearly identical
 - Cannot contribute to differentiating samples
-- GoCSV's Data Quality Dashboard flags these automatically
+- GoCSV Desktop's Data Quality Dashboard flags these automatically
 
 **2. Highly Redundant Variables**
 - Variables that are nearly perfect duplicates
@@ -189,7 +189,7 @@ Not all variables contribute meaningful information to analysis. Including irrel
 - Variables unrelated to the analysis question
 - Administrative or tracking fields
 
-### Variable Selection in GoCSV
+### Variable Selection in GoCSV Desktop
 
 **Column Operations:**
 - Remove columns permanently
@@ -204,7 +204,7 @@ Not all variables contribute meaningful information to analysis. Including irrel
 - Outlier detection and reporting
 
 > **Best Practice:**  
-> Document your selection rationale. GoCSV can export a column summary report showing which variables were retained and why.
+> Document your selection rationale. GoCSV Desktop can export a column summary report showing which variables were retained and why.
 
 ---
 
@@ -217,7 +217,7 @@ Outliers are observations that deviate markedly from other data points. They can
 - **Anomalies**: Equipment malfunctions, contamination
 - **Interesting cases**: Novel discoveries, extreme but valid observations
 
-### GoCSV's Outlier Detection Methods
+### GoCSV Desktop's Outlier Detection Methods
 
 **1. Statistical Methods:**
 - **IQR Method**: Points beyond 1.5×IQR from quartiles
@@ -256,7 +256,7 @@ Outliers are observations that deviate markedly from other data points. They can
 
 ### Pre-Analysis Checklist
 
-Before exporting to GoPCA or other analytical tools:
+Before exporting to GoPCA Suite or other analytical tools:
 
 **Data Structure:**
 - ✓ Rows represent samples, columns represent variables
@@ -272,22 +272,22 @@ Before exporting to GoPCA or other analytical tools:
 
 **Documentation:**
 - ✓ Original data preserved
-- ✓ All changes tracked (GoCSV's undo history)
+- ✓ All changes tracked (GoCSV Desktop's undo history)
 - ✓ Rationale for major decisions recorded
 
-### Integration with GoPCA
+### Integration with GoPCA Suite
 
-GoCSV includes direct integration with GoPCA Desktop:
+GoCSV Desktop includes direct integration with GoPCA Desktop:
 
-1. **Validation**: Click "Open in GoPCA" to automatically validate your data
-2. **Compatibility Check**: GoCSV ensures data meets GoPCA requirements
+1. **Validation**: Click "Open in GoPCA Desktop" to automatically validate your data
+2. **Compatibility Check**: GoCSV Desktop ensures data meets GoPCA Suite requirements
 3. **Seamless Transfer**: Data is automatically exported and opened in GoPCA Desktop
-4. **Preprocessing Note**: GoPCA will handle mean centering, scaling, and other PCA-specific preprocessing based on your analysis choices
+4. **Preprocessing Note**: GoPCA Suite will handle mean centering, scaling, and other PCA-specific preprocessing based on your analysis choices
 
 ### Export Options
 
-**For GoPCA Analysis:**
-- Use "Open in GoPCA" for direct transfer
+**For GoPCA Suite Analysis:**
+- Use "Open in GoPCA Desktop" for direct transfer
 - Export as CSV with appropriate formatting
 
 **For Other Tools:**

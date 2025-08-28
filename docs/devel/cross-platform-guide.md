@@ -1,10 +1,10 @@
 # Cross-Platform Development Guide
 
-This guide documents cross-platform compatibility considerations for GoPCA development, ensuring consistent behavior across Windows, macOS, and Linux.
+This guide documents cross-platform compatibility considerations for GoPCA Suite development, ensuring consistent behavior across Windows, macOS, and Linux.
 
 ## Overview
 
-GoPCA is designed to work seamlessly across all major operating systems. This guide outlines platform-specific considerations, common pitfalls, and best practices for maintaining cross-platform compatibility.
+GoPCA Suite is designed to work seamlessly across all major operating systems. This guide outlines platform-specific considerations, common pitfalls, and best practices for maintaining cross-platform compatibility.
 
 ## Platform Detection
 

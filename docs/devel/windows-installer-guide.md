@@ -32,7 +32,7 @@ The installer requires ALL three Windows executables to be present:
 
 ### Quick Build
 ```bash
-# Build CLI binary (can be done on any platform)
+# Build pca CLI binary (can be done on any platform)
 make build-windows-amd64
 
 # Build installer with available binaries
@@ -80,7 +80,7 @@ C:\Program Files\GoPCA\
 ├── GoPCA.exe          # Desktop application
 ├── GoCSV.exe          # CSV editor
 ├── bin\
-│   └── pca.exe        # CLI tool
+│   └── pca.exe        # pca CLI
 └── uninstall.exe      # Uninstaller
 ```
 

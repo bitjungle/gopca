@@ -1,12 +1,12 @@
 # Integration Testing Guide
 
-This guide covers the comprehensive integration testing framework for the GoPCA monorepo, including end-to-end workflows, cross-application communication, and platform-specific testing.
+This guide covers the comprehensive integration testing framework for the GoPCA Suite monorepo, including end-to-end workflows, cross-application communication, and platform-specific testing.
 
 ## Overview
 
-The integration test suite validates that all components of GoPCA work together correctly:
-- CLI tool functionality
-- GUI applications (GoPCA Desktop and GoCSV)
+The integration test suite validates that all components of GoPCA Suite work together correctly:
+- pca CLI functionality
+- GUI applications (GoPCA Desktop and GoCSV Desktop)
 - Cross-application communication
 - Platform-specific behaviors
 - Performance and security requirements

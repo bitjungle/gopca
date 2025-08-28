@@ -20,7 +20,7 @@ permissions:
 
 jobs:
   build-cli-binaries:
-    name: Build CLI - ${{ matrix.goos }}-${{ matrix.goarch }}
+    name: Build pca CLI - ${{ matrix.goos }}-${{ matrix.goarch }}
     runs-on: ${{ matrix.runner }}
     strategy:
       matrix:
@@ -84,7 +84,7 @@ jobs:
         
         echo "BINARY_NAME=${BINARY_NAME}" >> $GITHUB_ENV
     
-    - name: Sign CLI binary (macOS)
+    - name: Sign pca CLI binary (macOS)
       if: matrix.goos == 'darwin'
       env:
         APPLE_CERTIFICATE_BASE64: ${{ secrets.APPLE_CERTIFICATE_BASE64 }}
@@ -93,7 +93,7 @@ jobs:
       run: |
         ./scripts/ci/sign-macos-ci.sh "build/${{ env.BINARY_NAME }}"
     
-    - name: Notarize CLI binary (macOS)
+    - name: Notarize pca CLI binary (macOS)
       if: matrix.goos == 'darwin'
       env:
         APPLE_ID: ${{ secrets.APPLE_ID }}
@@ -110,7 +110,7 @@ jobs:
         retention-days: 1
 
   build-desktop:
-    name: Build GoPCA - ${{ matrix.os }}
+    name: Build GoPCA Desktop - ${{ matrix.os }}
     strategy:
       matrix:
         include:
@@ -166,7 +166,7 @@ jobs:
         fi
         echo "version=$VERSION" >> $GITHUB_OUTPUT
     
-    - name: Build GoPCA app
+    - name: Build GoPCA Desktop
       working-directory: cmd/gopca-desktop
       env:
         VERSION: ${{ steps.get_version.outputs.version }}
@@ -178,7 +178,7 @@ jobs:
           -X github.com/bitjungle/gopca/internal/version.GitCommit=$(git rev-parse --short HEAD) \
           -X github.com/bitjungle/gopca/internal/version.BuildDate=$(date -u +\"%Y-%m-%dT%H:%M:%SZ\")"
     
-    - name: Sign GoPCA app (macOS)
+    - name: Sign GoPCA Desktop (macOS)
       if: matrix.os == 'macos-latest'
       env:
         APPLE_CERTIFICATE_BASE64: ${{ secrets.APPLE_CERTIFICATE_BASE64 }}
@@ -187,7 +187,7 @@ jobs:
       run: |
         ./scripts/ci/sign-macos-ci.sh cmd/gopca-desktop/build/bin/GoPCA.app
     
-    - name: Notarize GoPCA app (macOS)
+    - name: Notarize GoPCA Desktop (macOS)
       if: matrix.os == 'macos-latest'
       env:
         APPLE_ID: ${{ secrets.APPLE_ID }}
@@ -215,7 +215,7 @@ jobs:
         retention-days: 1
 
   build-gocsv:
-    name: Build GoCSV - ${{ matrix.os }}
+    name: Build GoCSV Desktop - ${{ matrix.os }}
     strategy:
       matrix:
         include:
@@ -271,7 +271,7 @@ jobs:
         fi
         echo "version=$VERSION" >> $GITHUB_OUTPUT
     
-    - name: Build GoCSV app
+    - name: Build GoCSV Desktop
       working-directory: cmd/gocsv
       env:
         VERSION: ${{ steps.get_version.outputs.version }}
@@ -283,7 +283,7 @@ jobs:
           -X github.com/bitjungle/gopca/internal/version.GitCommit=$(git rev-parse --short HEAD) \
           -X github.com/bitjungle/gopca/internal/version.BuildDate=$(date -u +\"%Y-%m-%dT%H:%M:%SZ\")"
     
-    - name: Sign GoCSV app (macOS)
+    - name: Sign GoCSV Desktop (macOS)
       if: matrix.os == 'macos-latest'
       env:
         APPLE_CERTIFICATE_BASE64: ${{ secrets.APPLE_CERTIFICATE_BASE64 }}
@@ -292,7 +292,7 @@ jobs:
       run: |
         ./scripts/ci/sign-macos-ci.sh cmd/gocsv/build/bin/GoCSV.app
     
-    - name: Notarize GoCSV app (macOS)
+    - name: Notarize GoCSV Desktop (macOS)
       if: matrix.os == 'macos-latest'
       env:
         APPLE_ID: ${{ secrets.APPLE_ID }}
@@ -301,7 +301,7 @@ jobs:
       run: |
         ./scripts/ci/notarize-macos-ci.sh cmd/gocsv/build/bin/GoCSV.app
     
-    - name: Package macOS GoCSV app for artifact upload
+    - name: Package macOS GoCSV Desktop for artifact upload
       if: matrix.os == 'macos-latest'
       run: |
         cd cmd/gocsv/build/bin
@@ -366,8 +366,8 @@ jobs:
         name: gocsv-windows-latest
         path: windows-gocsv
     
-    # Sign CLI binary
-    - name: Upload CLI for signing
+    # Sign pca CLI binary
+    - name: Upload pca CLI for signing
       if: steps.check_signpath.outputs.configured == 'true'
       id: upload-cli
       uses: actions/upload-artifact@v4
@@ -375,7 +375,7 @@ jobs:
         name: unsigned-cli
         path: windows-cli/pca-windows-amd64.exe
     
-    - name: Sign CLI binary
+    - name: Sign pca CLI binary
       if: steps.check_signpath.outputs.configured == 'true'
       id: sign-cli
       uses: SignPath/github-action-submit-signing-request@v1
@@ -388,8 +388,8 @@ jobs:
         wait-for-completion: true
         output-artifact-directory: signed-cli
     
-    # Sign GoPCA app
-    - name: Upload GoPCA for signing
+    # Sign GoPCA Desktop
+    - name: Upload GoPCA Desktop for signing
       if: steps.check_signpath.outputs.configured == 'true'
       id: upload-desktop
       uses: actions/upload-artifact@v4
@@ -397,7 +397,7 @@ jobs:
         name: unsigned-desktop
         path: windows-desktop/GoPCA.exe
     
-    - name: Sign GoPCA app
+    - name: Sign GoPCA Desktop
       if: steps.check_signpath.outputs.configured == 'true'
       id: sign-desktop
       uses: SignPath/github-action-submit-signing-request@v1
@@ -410,8 +410,8 @@ jobs:
         wait-for-completion: true
         output-artifact-directory: signed-desktop
     
-    # Sign GoCSV app
-    - name: Upload GoCSV for signing
+    # Sign GoCSV Desktop
+    - name: Upload GoCSV Desktop for signing
       if: steps.check_signpath.outputs.configured == 'true'
       id: upload-gocsv
       uses: actions/upload-artifact@v4
@@ -419,7 +419,7 @@ jobs:
         name: unsigned-gocsv
         path: windows-gocsv/GoCSV.exe
     
-    - name: Sign GoCSV app
+    - name: Sign GoCSV Desktop
       if: steps.check_signpath.outputs.configured == 'true'
       id: sign-gocsv
       uses: SignPath/github-action-submit-signing-request@v1
@@ -546,16 +546,16 @@ jobs:
         # Create directory for installer binaries
         mkdir -p build/windows-installer
         
-        # Copy CLI binary (prefer signed)
+        # Copy pca CLI binary (prefer signed)
         if [ "${{ steps.check_signed.outputs.use_signed }}" = "true" ] && [ -f "windows-signed/pca-windows-amd64.exe" ]; then
-          echo "Using signed CLI binary"
+          echo "Using signed pca CLI binary"
           cp windows-signed/pca-windows-amd64.exe build/windows-installer/pca-windows-amd64.exe
         else
-          echo "Using unsigned CLI binary"
+          echo "Using unsigned pca CLI binary"
           cp windows-cli/pca-windows-amd64.exe build/windows-installer/pca-windows-amd64.exe
         fi
         
-        # Copy GoPCA app (prefer signed, handle both naming conventions)
+        # Copy GoPCA Desktop (prefer signed, handle both naming conventions)
         if [ "${{ steps.check_signed.outputs.use_signed }}" = "true" ] && [ -f "windows-signed/GoPCA.exe" ]; then
           echo "Using signed GoPCA binary"
           cp windows-signed/GoPCA.exe build/windows-installer/GoPCA.exe
@@ -571,7 +571,7 @@ jobs:
           exit 1
         fi
         
-        # Copy GoCSV app (prefer signed, handle both naming conventions)
+        # Copy GoCSV Desktop (prefer signed, handle both naming conventions)
         if [ "${{ steps.check_signed.outputs.use_signed }}" = "true" ] && [ -f "windows-signed/GoCSV.exe" ]; then
           echo "Using signed GoCSV binary"
           cp windows-signed/GoCSV.exe build/windows-installer/GoCSV.exe
@@ -706,12 +706,12 @@ jobs:
           cp "pca-darwin-arm64/pca-darwin-arm64" "macos/pca-arm64"
         fi
         
-        # GoPCA app (use cp -a to preserve permissions and symlinks)
+        # GoPCA Desktop (use cp -a to preserve permissions and symlinks)
         if [ -d "gopca-desktop-macos-latest/GoPCA.app" ]; then
           cp -a "gopca-desktop-macos-latest/GoPCA.app" "macos/"
         fi
         
-        # GoCSV app (use cp -a to preserve permissions and symlinks)
+        # GoCSV Desktop (use cp -a to preserve permissions and symlinks)
         if [ -d "gocsv-macos-latest/GoCSV.app" ]; then
           cp -a "gocsv-macos-latest/GoCSV.app" "macos/"
         fi

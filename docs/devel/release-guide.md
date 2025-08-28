@@ -334,12 +334,12 @@ The `.github/workflows/release.yml` workflow:
 1. **Triggered by**: Push of tags matching `v*`
 
 2. **Build Jobs** (run in parallel):
-   - `build-cli-binaries`: Builds CLI for 5 platforms
+   - `build-cli-binaries`: Builds pca CLI for 5 platforms
      - Self-hosted runner: Linux x64, Linux ARM64, Windows x64
      - GitHub runner: macOS Intel, macOS ARM
-   - `build-desktop`: Builds Desktop app for 3 platforms
+   - `build-desktop`: Builds GoPCA Desktop for 3 platforms
      - GitHub runners: ubuntu-latest, windows-latest, macos-latest
-   - `build-gocsv`: Builds GoCSV for 3 platforms
+   - `build-gocsv`: Builds GoCSV Desktop for 3 platforms
      - GitHub runners: ubuntu-latest, windows-latest, macos-latest
 
 3. **Release Job**:

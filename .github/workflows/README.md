@@ -35,9 +35,9 @@ This directory contains the CI/CD workflows for the GoPCA project, optimized for
 
 **Actions**:
 1. **Build Phase**: Creates binaries for all platforms
-   - CLI: macOS (Intel/ARM), Linux (x64/ARM64), Windows (x64)
-   - Desktop: macOS, Windows, Linux
-   - GoCSV: macOS, Windows, Linux
+   - pca CLI: macOS (Intel/ARM), Linux (x64/ARM64), Windows (x64)
+   - GoPCA Desktop: macOS, Windows, Linux
+   - GoCSV Desktop: macOS, Windows, Linux
 
 2. **Signing Phase**:
    - macOS: Automatic signing and notarization
@@ -55,30 +55,30 @@ This directory contains the CI/CD workflows for the GoPCA project, optimized for
 
 ## Platform Bundles
 
-Each platform bundle is a complete package containing all three GoPCA tools:
+Each platform bundle is a complete package containing all three GoPCA Suite tools:
 
 ### macOS Bundle (`gopca-macos-universal.zip`)
 ```
-├── pca-intel          # CLI for Intel Macs
-├── pca-arm64          # CLI for Apple Silicon
-├── GoPCA.app/         # Desktop app (signed & notarized)
-└── GoCSV.app/         # CSV editor (signed & notarized)
+├── pca-intel          # pca CLI for Intel Macs
+├── pca-arm64          # pca CLI for Apple Silicon
+├── GoPCA.app/         # GoPCA Desktop (signed & notarized)
+└── GoCSV.app/         # GoCSV Desktop (signed & notarized)
 ```
 
 ### Windows Bundle (`gopca-windows-x64.zip`)
 ```
-├── pca.exe            # CLI tool
-├── GoPCA.exe          # Desktop application
-└── GoCSV.exe          # CSV editor
+├── pca.exe            # pca CLI
+├── GoPCA.exe          # GoPCA Desktop
+└── GoCSV.exe          # GoCSV Desktop
 ```
 *All signed when SignPath is configured*
 
 ### Linux Bundle (`gopca-linux-x64.tar.gz`)
 ```
-├── pca-x64            # CLI for x64
-├── pca-arm64          # CLI for ARM64
-├── GoPCA              # Desktop application
-└── GoCSV              # CSV editor
+├── pca-x64            # pca CLI for x64
+├── pca-arm64          # pca CLI for ARM64
+├── GoPCA              # GoPCA Desktop
+└── GoCSV              # GoCSV Desktop
 ```
 
 ## Creating a Release
@@ -123,8 +123,8 @@ git push origin v0.9.1
 ## Infrastructure
 
 ### Runners
-- **GitHub-hosted**: Used for all macOS builds and desktop/GoCSV applications
-- **Self-hosted**: Used for Linux/Windows CLI builds (cost optimization)
+- **GitHub-hosted**: Used for all macOS builds and GoPCA Desktop/GoCSV Desktop applications
+- **Self-hosted**: Used for Linux/Windows pca CLI builds (cost optimization)
 
 ### Code Signing
 - **macOS**: Automated via GitHub secrets (Apple Developer certificates)
@@ -174,8 +174,8 @@ The workflow automatically detects and uses SignPath when configured.
 
 Versions are embedded at build time:
 - **Source**: Git tags (e.g., `v0.9.1`)
-- **CLI**: `pca version` or `pca --version`
-- **Desktop/GoCSV**: Displayed in application header
+- **pca CLI**: `pca version` or `pca --version`
+- **GoPCA Desktop/GoCSV Desktop**: Displayed in application header
 
 ## Local Development
 
@@ -190,7 +190,7 @@ make build-all
 # Specific platform
 make build-linux-amd64
 
-# Desktop apps
+# GoPCA Desktop and GoCSV Desktop
 make pca-build
 make csv-build
 ```

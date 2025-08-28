@@ -1,10 +1,10 @@
-# GoPCA CLI Reference
+# pca CLI Reference
 
-Complete command-line interface documentation for pca.
+Complete command-line interface documentation for the pca CLI.
 
 ## Overview
 
-The GoPCA command-line interface (`pca`) provides powerful PCA analysis capabilities for automation, batch processing, and integration into data pipelines. It supports multiple PCA algorithms, comprehensive preprocessing options, and flexible output formats.
+The pca CLI (part of the GoPCA Suite) provides powerful PCA analysis capabilities for automation, batch processing, and integration into data pipelines. It supports multiple PCA algorithms, comprehensive preprocessing options, and flexible output formats.
 
 ## Installation
 

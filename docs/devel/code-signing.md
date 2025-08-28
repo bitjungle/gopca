@@ -39,18 +39,18 @@ APPLE_APP_SPECIFIC_PASSWORD="xxxx-xxxx-xxxx-xxxx"
 
 1. **Build the applications**:
    ```bash
-   make build           # CLI binary
+   make build           # pca CLI binary
    make pca-build       # GoPCA Desktop
-   make csv-build       # GoCSV Editor
+   make csv-build       # GoCSV Desktop
    ```
 
 2. **Sign all binaries**:
    ```bash
-   make sign            # Signs CLI, GoPCA, and GoCSV
+   make sign            # Signs pca CLI, GoPCA Desktop, and GoCSV Desktop
    # Or sign individually:
-   make sign-cli        # CLI only
-   make sign-pca        # GoPCA only
-   make sign-csv        # GoCSV only
+   make sign-cli        # pca CLI only
+   make sign-pca        # GoPCA Desktop only
+   make sign-csv        # GoCSV Desktop only
    ```
 
 3. **Verify signatures**:
@@ -66,9 +66,9 @@ APPLE_APP_SPECIFIC_PASSWORD="xxxx-xxxx-xxxx-xxxx"
    ```bash
    make notarize        # Notarizes all binaries
    # Or notarize individually:
-   make notarize-cli    # CLI only
-   make notarize-pca    # GoPCA only
-   make notarize-csv    # GoCSV only
+   make notarize-cli    # pca CLI only
+   make notarize-pca    # GoPCA Desktop only
+   make notarize-csv    # GoCSV Desktop only
    ```
 
 2. **Combined signing and notarization**:
@@ -82,7 +82,7 @@ APPLE_APP_SPECIFIC_PASSWORD="xxxx-xxxx-xxxx-xxxx"
    spctl -a -vvv -t install cmd/gopca-desktop/build/bin/GoPCA.app
    spctl -a -vvv -t install cmd/gocsv/build/bin/GoCSV.app
    
-   # For CLI binary (verified online when run)
+   # For pca CLI binary (verified online when run)
    # Test with quarantine attribute
    xattr -w com.apple.quarantine "0081;00000000;Safari;|" build/pca
    ./build/pca --version

@@ -1,12 +1,12 @@
-# GoPCA Configuration Guide
+# GoPCA Suite Configuration Guide
 
-GoPCA provides configuration options to customize various aspects of the application behavior. While most users won't need to modify these settings, they are available for advanced use cases.
+GoPCA Suite provides configuration options to customize various aspects of the application behavior. While most users won't need to modify these settings, they are available for advanced use cases.
 
 ## Configuration Structure
 
 The application uses sensible defaults for all configuration options. Currently, configuration is implemented through code constants and structures, with the foundation laid for future external configuration file support.
 
-## CLI Configuration
+## pca CLI Configuration
 
 ### CSV Parsing
 - **Type Detection Sample Size**: Number of rows sampled to determine column types (default: 10)

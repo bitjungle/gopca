@@ -1,4 +1,4 @@
-# An Introduction to Principal Component Analysis (PCA) with GoPCA
+# An Introduction to Principal Component Analysis (PCA) with GoPCA Suite
 
 ## 1. Introduction: The Need for Simpler Data
 
@@ -8,10 +8,10 @@ Analyzing such **multivariate data**, where each sample or observation is descri
 
 **Principal Component Analysis (PCA)** is a mathematical tool designed to tackle exactly this problem. Dating back to the early 20th century, PCA remains at the core of modern data science, chemometrics, bioinformatics, neuroscience, engineering, psychology, and many other fields. PCA offers a principled way to **reduce the dimensionality** of large datasets while retaining as much of the original information as possible. In doing so, PCA makes it easier to visualize, understand, and further analyze complex data.
 
-**GoPCA** is a focused, professional-grade application that implements PCA with both a command-line interface (CLI) for automation and scripting, and a desktop graphical user interface (GUI) for interactive data exploration. This guide will introduce you to the fundamentals of PCA and show how GoPCA makes this powerful technique accessible and practical.
+**GoPCA Suite** is a focused, professional-grade toolset that implements PCA with both a command-line interface (pca CLI) for automation and scripting, and a desktop graphical user interface (GoPCA Desktop) for interactive data exploration. This guide will introduce you to the fundamentals of PCA and show how GoPCA Suite makes this powerful technique accessible and practical.
 
 > **Note on Data Preparation:**  
-> Before performing PCA, your data should be properly cleaned and structured. If you're starting with raw data that contains missing values, outliers, or quality issues, consider using **GoCSV** for data preparation. See our companion guide *"Data Preparation with GoCSV"* for detailed guidance on getting your data ready for analysis.
+> Before performing PCA, your data should be properly cleaned and structured. If you're starting with raw data that contains missing values, outliers, or quality issues, consider using **GoCSV Desktop** for data preparation. See our companion guide *"Data Preparation with GoCSV Desktop"* for detailed guidance on getting your data ready for analysis.
 
 ---
 
@@ -62,9 +62,9 @@ If variables are measured in different units or have very different variances, i
 
 > **Tip:** Centering is *essential* for PCA; scaling is *strongly recommended* when variables are on different scales.
 
-**In GoPCA:** Both the CLI and GUI provide simple options for centering and scaling your data. The GUI offers checkboxes for these preprocessing steps, while the CLI uses flags like `--no-mean-centering` (to disable centering) and `--scale` (with options: none, standard, or robust).
+**In GoPCA Suite:** Both the pca CLI and GoPCA Desktop provide simple options for centering and scaling your data. GoPCA Desktop offers checkboxes for these preprocessing steps, while the pca CLI uses flags like `--no-mean-centering` (to disable centering) and `--scale` (with options: none, standard, or robust).
 
-> **Important:** These mathematical preprocessing steps (centering and scaling) are handled by GoPCA during the analysis. Data cleaning tasks like handling missing values, removing outliers, and selecting variables should be done beforehand using appropriate data preparation tools like GoCSV.
+> **Important:** These mathematical preprocessing steps (centering and scaling) are handled by GoPCA Suite during the analysis. Data cleaning tasks like handling missing values, removing outliers, and selecting variables should be done beforehand using appropriate data preparation tools like GoCSV Desktop.
 
 ### 4.3. Covariance and Correlation
 
@@ -188,12 +188,12 @@ The second PC is the direction (unit vector) orthogonal to the first, maximizing
 - **Variable selection:** Remove irrelevant or near-constant variables
 - **Data quality:** Ensure data is clean and properly formatted
 
-**Mathematical Preprocessing (During PCA in GoPCA):**
-- **Centering:** Always center each variable (subtract the mean) - handled automatically by GoPCA
-- **Scaling:** If variables have different units or scales, standardize each variable - option in GoPCA
-- **Advanced preprocessing:** SNV, vector normalization for specific data types - available in GoPCA
+**Mathematical Preprocessing (During PCA in GoPCA Suite):**
+- **Centering:** Always center each variable (subtract the mean) - handled automatically by GoPCA Suite
+- **Scaling:** If variables have different units or scales, standardize each variable - option in GoPCA Suite
+- **Advanced preprocessing:** SNV, vector normalization for specific data types - available in GoPCA Suite
 
-> **Workflow:** Use data preparation tools (like GoCSV) to clean your data, then let GoPCA handle the mathematical preprocessing appropriate for PCA.
+> **Workflow:** Use data preparation tools (like GoCSV Desktop) to clean your data, then let GoPCA Suite handle the mathematical preprocessing appropriate for PCA.
 
 ### 8.2. Number of Components to Retain
 
@@ -212,7 +212,7 @@ The second PC is the direction (unit vector) orthogonal to the first, maximizing
 - **Loading plots:** Visualize which variables are most important for each PC.
 - **Biplots:** Combine score and loading information to show both sample and variable relationships in a single plot.
 
-**GoPCA Visualization Features:**
+**GoPCA Suite Visualization Features:**
 - **Interactive Score Plots:** The GUI provides interactive 2D score plots with zoom, pan, and export capabilities
 - **Loadings Visualization:** Bar charts and heatmaps showing variable contributions to each PC
 - **Scree Plots:** Visual representation of explained variance to help determine component selection
@@ -232,17 +232,17 @@ The second PC is the direction (unit vector) orthogonal to the first, maximizing
 - **Image and signal processing:** Compression, noise reduction, and feature extraction.
 - **Finance:** Risk analysis, portfolio management, identifying common factors in markets.
 
-**Getting Started with GoPCA:**
-- **Quick Analysis:** GoPCA includes built-in example datasets (wine, iris) to explore PCA immediately
-- **CLI for Automation:** Perfect for batch processing and integration into data pipelines
+**Getting Started with GoPCA Suite:**
+- **Quick Analysis:** GoPCA Suite includes built-in example datasets (wine, iris) to explore PCA immediately
+- **pca CLI for Automation:** Perfect for batch processing and integration into data pipelines
 - **GUI for Exploration:** Ideal for interactive analysis, method development, and teaching
-- **Data Preparation:** For real-world data, use GoCSV to handle missing values, outliers, and data quality issues before analysis
+- **Data Preparation:** For real-world data, use GoCSV Desktop to handle missing values, outliers, and data quality issues before analysis
 
 ---
 
 ## 9. Beyond Linear PCA: Kernel PCA for Nonlinear Patterns
 
-While classical PCA excels at finding linear patterns in data, real-world datasets often contain complex, nonlinear relationships that standard PCA cannot capture. GoPCA implements **Kernel PCA**, a powerful extension that can uncover these hidden nonlinear structures.
+While classical PCA excels at finding linear patterns in data, real-world datasets often contain complex, nonlinear relationships that standard PCA cannot capture. GoPCA Suite implements **Kernel PCA**, a powerful extension that can uncover these hidden nonlinear structures.
 
 ### 9.1. The Limitation of Linear PCA
 
@@ -254,9 +254,9 @@ Kernel PCA overcomes this limitation using the "kernel trick", a mathematical te
 
 The key insight is that many algorithms, including PCA, only need to compute dot products between data points. Kernel functions provide a way to compute these dot products in the transformed space without ever explicitly performing the transformation.
 
-### 9.3. Available Kernels in GoPCA
+### 9.3. Available Kernels in GoPCA Suite
 
-GoPCA supports three kernel types, each suited to different kinds of nonlinear patterns:
+GoPCA Suite supports three kernel types, each suited to different kinds of nonlinear patterns:
 
 **RBF (Radial Basis Function) Kernel:**
 - Most versatile and widely used
@@ -300,10 +300,10 @@ Consider Kernel PCA when:
 
 ### 9.6. Example: Unrolling the Swiss Roll
 
-The Swiss Roll dataset, included with GoPCA, perfectly demonstrates Kernel PCA's power. This three-dimensional spiral structure has an underlying two-dimensional nature that standard PCA cannot reveal:
+The Swiss Roll dataset, included with GoPCA Suite, perfectly demonstrates Kernel PCA's power. This three-dimensional spiral structure has an underlying two-dimensional nature that standard PCA cannot reveal:
 
 ```bash
-# Using CLI with RBF kernel
+# Using pca CLI with RBF kernel
 pca analyze --method kernel --kernel-type rbf \
   --kernel-gamma 0.333 swiss_roll.csv
 
@@ -317,9 +317,9 @@ In the GUI:
 3. Choose RBF kernel (gamma automatically set to 0.333)
 4. Run the analysis to see the beautifully unrolled structure
 
-### 9.7. Implementation Methods in GoPCA
+### 9.7. Implementation Methods in GoPCA Suite
 
-Beyond the choice of kernel vs. standard PCA, GoPCA offers two numerical algorithms for computing principal components:
+Beyond the choice of kernel vs. standard PCA, GoPCA Suite offers two numerical algorithms for computing principal components:
 
 **SVD (Singular Value Decomposition):**
 - Default method for standard PCA
@@ -370,14 +370,14 @@ Principal Component Analysis is a cornerstone of multivariate data analysis. It 
 
 Understanding PCA and its variants is a key step for any data analyst, scientist, or engineer working with multivariate data. Mastery of PCA provides a foundation for more advanced analytical techniques and for data-driven research and decision-making across the sciences and industry.
 
-**GoPCA** makes this powerful technique accessible through:
-- A fast, scriptable CLI for automated workflows and batch processing
+**GoPCA Suite** makes this powerful technique accessible through:
+- A fast, scriptable pca CLI for automated workflows and batch processing
 - An intuitive GUI for interactive exploration and visualization
 - Professional-grade implementations of PCA algorithms (SVD, NIPALS)
 - Comprehensive preprocessing options and robust data handling
 - Export capabilities for further analysis in other tools
 
-Whether you're a researcher exploring complex datasets, a data scientist building analytical pipelines, or a student learning multivariate statistics, GoPCA provides the tools you need to apply PCA effectively.
+Whether you're a researcher exploring complex datasets, a data scientist building analytical pipelines, or a student learning multivariate statistics, GoPCA Suite provides the tools you need to apply PCA effectively.
 
 ---
 
