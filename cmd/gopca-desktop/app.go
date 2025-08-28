@@ -319,6 +319,32 @@ func (a *App) RunPCA(request PCARequest) (response PCAResponse) {
 			request.GroupLabels = newGroupLabels
 		}
 
+		// Filter metadata categorical columns if rows are excluded
+		if len(request.ExcludedRows) > 0 && len(request.MetadataCategorical) > 0 {
+			for colName, colData := range request.MetadataCategorical {
+				filteredCol := make([]string, 0)
+				for i := 0; i < len(colData); i++ {
+					if !contains(request.ExcludedRows, i) {
+						filteredCol = append(filteredCol, colData[i])
+					}
+				}
+				request.MetadataCategorical[colName] = filteredCol
+			}
+		}
+
+		// Filter metadata numeric columns if rows are excluded
+		if len(request.ExcludedRows) > 0 && len(request.MetadataNumeric) > 0 {
+			for colName, colData := range request.MetadataNumeric {
+				filteredCol := make([]float64, 0)
+				for i := 0; i < len(colData); i++ {
+					if !contains(request.ExcludedRows, i) {
+						filteredCol = append(filteredCol, colData[i])
+					}
+				}
+				request.MetadataNumeric[colName] = filteredCol
+			}
+		}
+
 		// Note: We don't need to filter headers and row names for PCA computation
 		// The frontend handles the display of selected data
 	}

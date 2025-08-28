@@ -72,6 +72,19 @@ export class PlotlyScoresPlot extends PlotlyVisualization<ScoresPlotData> {
     const { scores, groups, groupValues, groupType = 'categorical', sampleNames, pc1 = 0, pc2 = 1 } = this.data;
     const traces: Data[] = [];
 
+    // Validate scores data
+    if (!scores || scores.length === 0) {
+      console.error('PlotlyScoresPlot: No scores data available');
+      return [];
+    }
+
+    // Validate that each score has enough components
+    const invalidScores = scores.some(s => !s || !Array.isArray(s) || s.length <= Math.max(pc1, pc2));
+    if (invalidScores) {
+      console.error(`PlotlyScoresPlot: Invalid scores data - not enough components for PC${pc1 + 1} and PC${pc2 + 1}`);
+      return [];
+    }
+
     // Handle continuous vs categorical data
     if (groupType === 'continuous' && groupValues) {
       return this.getContinuousTraces();
@@ -195,6 +208,19 @@ export class PlotlyScoresPlot extends PlotlyVisualization<ScoresPlotData> {
   private getContinuousTraces(): Data[] {
     const { scores, groupValues, sampleNames, pc1 = 0, pc2 = 1 } = this.data;
     const traces: Data[] = [];
+
+    // Validate scores data
+    if (!scores || scores.length === 0) {
+      console.error('PlotlyScoresPlot: No scores data available for continuous plot');
+      return [];
+    }
+
+    // Validate that each score has enough components
+    const invalidScores = scores.some(s => !s || !Array.isArray(s) || s.length <= Math.max(pc1, pc2));
+    if (invalidScores) {
+      console.error(`PlotlyScoresPlot: Invalid scores data - not enough components for PC${pc1 + 1} and PC${pc2 + 1}`);
+      return [];
+    }
 
     if (!groupValues || groupValues.length === 0) {
       return this.getTraces(); // Fall back to categorical

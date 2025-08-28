@@ -50,7 +50,7 @@ PCA solves these challenges by:
 
 ### 4.1. The Data Matrix
 
-Let’s denote our dataset as matrix **X**. Each row of **X** is a sample (e.g., a wine bottle), and each column is a variable (e.g., ethanol content, acidity, pH, etc.). If there are \( n \) samples and \( p \) variables, **X** is an \( n \times p \) matrix.
+Let’s denote our dataset as matrix **X**. Each row of **X** is a sample (e.g., a wine bottle), and each column is a variable (e.g., ethanol content, acidity, pH, etc.). If there are $ n $ samples and $ p $ variables, **X** is an $ n \times p $ matrix.
 
 ### 4.2. Centering and Scaling
 
@@ -121,28 +121,28 @@ While the intuition for PCA is powerful, its mathematical basis is both elegant 
 
 ### 6.1. Covariance Matrix and Eigendecomposition
 
-Suppose **X** is an \( n \times p \) data matrix with mean-centered columns.
+Suppose **X** is an $ n \times p $ data matrix with mean-centered columns.
 
 - **Covariance matrix**:  
-  \( S = \frac{1}{n-1} X^T X \) (a \( p \times p \) matrix)
+  $ S = \frac{1}{n-1} X^T X $ (a $ p \times p $ matrix)
 - **Eigenproblem**:  
-  \( S a = \lambda a \), where \( a \) is an eigenvector (a loading vector) and \( \lambda \) is the corresponding eigenvalue (variance explained).
+  $ S a = \lambda a $, where $ a $ is an eigenvector (a loading vector) and $ \lambda $ is the corresponding eigenvalue (variance explained).
 - **Principal components (scores)**:  
-  \( t = X a \)
+  $ t = X a $
 
 ### 6.2. Singular Value Decomposition (SVD)
 
 PCA can also be performed via **SVD**, which is more numerically stable and generalizes to non-square matrices.
 
 If **X** (centered) has SVD:  
-\( X = U \Sigma V^T \)
+$ X = U \Sigma V^T $
 - Columns of **V**: principal directions (loadings)
 - **U \Sigma**: projections (scores)
-- Diagonal of **\(\Sigma\)** squared: variance explained
+- Diagonal of $\Sigma$ squared: variance explained
 
 ### 6.3. Number of Principal Components
 
-- The maximum number of **meaningful** PCs is the smaller of \( n-1 \) (number of samples minus one) or \( p \) (number of variables).
+- The maximum number of **meaningful** PCs is the smaller of $ n-1 $ (number of samples minus one) or $ p $ (number of variables).
 - Often, only the first few PCs are required to capture most of the structure.
 
 ### 6.4. Connection to Variance
@@ -151,7 +151,7 @@ PCA finds the axes (directions in variable space) along which the variance of th
 
 **Mathematically:**  
 The first PC is the solution to  
-\( \text{argmax}_{a_1: ||a_1||=1} \text{Var}(X a_1) \)
+$ \text{argmax}_{a_1: ||a_1||=1} \text{Var}(X a_1) $
 
 The second PC is the direction (unit vector) orthogonal to the first, maximizing the remaining variance, and so on.
 
