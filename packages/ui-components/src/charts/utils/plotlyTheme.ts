@@ -61,10 +61,10 @@ export const getPlotlyTheme = (mode: ThemeMode, fontScale: number = 1.0): Plotly
         }
       },
       margin: {
-        l: 60,
-        r: 30,
-        t: 30,
-        b: 60
+        l: Math.round(60 * Math.max(fontScale, 1.0)),
+        r: Math.round(30 * Math.max(fontScale, 1.0)),
+        t: Math.round(30 * Math.max(fontScale, 1.0)),
+        b: Math.round(60 * Math.max(fontScale, 1.0))
       }
     },
     config: {
