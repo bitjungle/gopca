@@ -171,8 +171,16 @@ func CalculateEigencorrelations(request CorrelationRequest) (*CorrelationResult,
 		}
 	}
 
-	// Sort variables for consistent ordering
-	sort.Strings(result.Variables)
+	// Sort variables by PC1 correlation (highest positive to most negative)
+	// This provides meaningful visual hierarchy in the eigencorrelation plot
+	sort.Slice(result.Variables, func(i, j int) bool {
+		// Get PC1 correlations (first component)
+		corr1 := result.Correlations[result.Variables[i]][0]
+		corr2 := result.Correlations[result.Variables[j]][0]
+
+		// Sort in descending order (highest positive to most negative)
+		return corr1 > corr2
+	})
 
 	return result, nil
 }

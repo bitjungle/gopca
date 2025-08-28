@@ -431,7 +431,7 @@ export function createEigencorrelationPlotConfig(
 ): EigencorrelationPlotConfig {
   return {
     maxComponents,
-    colorScale: 'RdBu',
+    colorScale: 'Reds',
     showValues: true,
     valueFormat: '.2f',
     clusterVariables: false,
