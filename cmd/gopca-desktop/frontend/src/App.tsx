@@ -1217,7 +1217,7 @@ return;
                                                             </label>
                                                         </HelpWrapper>
                                                         <CustomSelect
-                                                            value={confidenceLevel.toString()}
+                                                            value={confidenceLevel.toFixed(2)}
                                                             onChange={(value) => setConfidenceLevel(parseFloat(value) as 0.90 | 0.95 | 0.99)}
                                                             options={[
                                                                 { value: '0.95', label: '95%' },
@@ -1247,7 +1247,7 @@ return;
                                                         </HelpWrapper>
                                                         {showEllipses && (
                                                             <CustomSelect
-                                                                value={confidenceLevel.toString()}
+                                                                value={confidenceLevel.toFixed(2)}
                                                                 onChange={(value) => setConfidenceLevel(parseFloat(value) as 0.90 | 0.95 | 0.99)}
                                                                 options={[
                                                                     { value: '0.90', label: '90%' },
