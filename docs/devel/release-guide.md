@@ -126,9 +126,9 @@ open https://github.com/bitjungle/gopca/actions
 
 The workflow will:
 1. Build CLI binaries (5 platforms)
-2. Build Desktop apps (3 platforms)
-3. Build GoCSV apps (3 platforms)
-4. Sign and notarize macOS applications
+2. Build Desktop apps (3 platforms + Linux AppImage)
+3. Build GoCSV apps (3 platforms + Linux AppImage)
+4. Sign and notarize macOS applications (fully automated, no Gatekeeper issues)
 5. Sign Windows binaries (if SignPath configured)
 6. Generate SHA-256 checksums
 7. Create GitHub release with all artifacts
@@ -144,10 +144,12 @@ open https://github.com/bitjungle/gopca/releases/tag/v0.9.1
 ```
 
 Check that:
-- [ ] All binaries are attached (11 files + checksums)
+- [ ] All binaries are attached (13 files + checksums)
 - [ ] Release notes are accurate
 - [ ] Download links work
 - [ ] Checksums file is present
+- [ ] Linux AppImages are included for both GoPCA and GoCSV
+- [ ] macOS apps run without Gatekeeper warnings
 
 ## Artifacts Produced
 
@@ -160,15 +162,17 @@ Each release includes:
 - `pca-linux-arm64` - Linux ARM64
 - `pca-windows-amd64.exe` - Windows x64
 
-### Desktop Applications (3 files)
-- `GoPCA-macos.zip` - macOS app (signed & notarized)
+### Desktop Applications (4 files)
+- `GoPCA-macos.zip` - macOS app (fully signed & notarized, no Gatekeeper warnings)
 - `GoPCA-windows.exe` - Windows executable
 - `GoPCA-linux` - Linux executable
+- `GoPCA-linux.AppImage` - Linux AppImage (portable, works across distributions)
 
-### GoCSV Editor (3 files)
-- `GoCSV-macos.zip` - macOS app (signed & notarized)
+### GoCSV Editor (4 files)
+- `GoCSV-macos.zip` - macOS app (fully signed & notarized, no Gatekeeper warnings)
 - `GoCSV-windows.exe` - Windows executable
 - `GoCSV-linux` - Linux executable
+- `GoCSV-linux.AppImage` - Linux AppImage (portable, works across distributions)
 
 ### Windows Installer
 - `GoPCA-Setup-vX.X.X.exe` - Windows installer containing all components
@@ -356,8 +360,9 @@ The `.github/workflows/release.yml` workflow:
   - Linux runner with NSIS installed for Windows installer creation
 - **GitHub-hosted runners**: Used for all testing
 - **Code signing**:
-  - **macOS**: Automated signing and notarization for all binaries
+  - **macOS**: Fully automated signing and notarization for all binaries (no Gatekeeper warnings)
   - **Windows**: Optional SignPath.io integration for digital signatures (when configured)
+  - **Linux AppImages**: Automatically generated for both GoPCA and GoCSV Desktop apps
 - **Windows Installer**: Built on self-hosted Linux runner using NSIS
 
 ## Questions?
