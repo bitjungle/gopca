@@ -280,7 +280,7 @@ func (a *App) RunPCA(request PCARequest) (response PCAResponse) {
 	}
 
 	if request.Components <= 0 {
-		request.Components = 2 // Default to 2 components
+		request.Components = 5 // Default to 5 components
 	}
 
 	// Restore NaN values from missing mask
@@ -298,7 +298,7 @@ func (a *App) RunPCA(request PCARequest) (response PCAResponse) {
 
 	// Track how many rows are excluded
 	rowsExcluded := len(request.ExcludedRows)
-	
+
 	// Filter data if exclusions are provided
 	if len(request.ExcludedRows) > 0 || len(request.ExcludedColumns) > 0 {
 		// Filter the data matrix
@@ -631,7 +631,7 @@ func (a *App) RunPCA(request PCARequest) (response PCAResponse) {
 		// Verify metadata dimensions match scores before calculation
 		nSamples := len(result.Scores)
 		dimensionMismatch := false
-		
+
 		for colName, colData := range request.MetadataCategorical {
 			if len(colData) != nSamples {
 				fmt.Printf("Warning: Categorical variable '%s' has %d values, expected %d\n", colName, len(colData), nSamples)
@@ -644,7 +644,7 @@ func (a *App) RunPCA(request PCARequest) (response PCAResponse) {
 				dimensionMismatch = true
 			}
 		}
-		
+
 		if dimensionMismatch {
 			fmt.Printf("Warning: Skipping eigencorrelation calculation due to dimension mismatch\n")
 		} else {
@@ -1046,6 +1046,89 @@ type PCAConfig struct {
 	KernelGamma  float64 `json:"kernelGamma,omitempty"`
 	KernelDegree int     `json:"kernelDegree,omitempty"`
 	KernelCoef0  float64 `json:"kernelCoef0,omitempty"`
+}
+
+// ModelMetricsRequest contains the request for model metrics calculation
+type ModelMetricsRequest struct {
+	Loadings          [][]float64 `json:"loadings"`
+	ExplainedVariance []float64   `json:"explainedVariance"`
+	VariableLabels    []string    `json:"variableLabels"`
+	SelectedPC        int         `json:"selectedPC"`
+}
+
+// ModelMetricsResponse contains calculated model metrics
+type ModelMetricsResponse struct {
+	MostInfluentialVariable string  `json:"mostInfluentialVariable"`
+	LoadingValue            float64 `json:"loadingValue"`
+	RecommendedComponents   int     `json:"recommendedComponents"`
+	Success                 bool    `json:"success"`
+	Error                   string  `json:"error,omitempty"`
+}
+
+// CalculateModelMetrics calculates key model metrics for the Model Overview
+func (a *App) CalculateModelMetrics(request ModelMetricsRequest) ModelMetricsResponse {
+	// Validate input
+	if len(request.Loadings) == 0 || len(request.Loadings[0]) == 0 {
+		return ModelMetricsResponse{
+			Success: false,
+			Error:   "Invalid loadings matrix",
+		}
+	}
+
+	if len(request.VariableLabels) == 0 {
+		return ModelMetricsResponse{
+			Success: false,
+			Error:   "Variable labels are required",
+		}
+	}
+
+	// Ensure selectedPC is valid
+	if request.SelectedPC < 0 || request.SelectedPC >= len(request.Loadings[0]) {
+		request.SelectedPC = 0 // Default to PC1
+	}
+
+	// Find most influential variable for selected PC
+	mostInfluentialVar := ""
+	maxLoading := 0.0
+
+	for i, row := range request.Loadings {
+		if i < len(request.VariableLabels) && request.SelectedPC < len(row) {
+			absLoading := math.Abs(row[request.SelectedPC])
+			if absLoading > maxLoading {
+				maxLoading = absLoading
+				mostInfluentialVar = request.VariableLabels[i]
+			}
+		}
+	}
+
+	// Calculate recommended components using Kaiser criterion (eigenvalues > 1)
+	// Note: For percentage-based explained variance, we need to convert back to eigenvalues
+	// Assuming the sum of eigenvalues equals the number of variables (standardized data)
+	recommendedComponents := 0
+	numVariables := len(request.Loadings)
+
+	for _, variance := range request.ExplainedVariance {
+		// Convert percentage to eigenvalue approximation
+		// For standardized data, total variance = number of variables
+		eigenvalue := (variance / 100.0) * float64(numVariables)
+		if eigenvalue > 1.0 {
+			recommendedComponents++
+		} else {
+			break // Eigenvalues are ordered, so we can stop here
+		}
+	}
+
+	// If no components meet Kaiser criterion, recommend at least 1
+	if recommendedComponents == 0 {
+		recommendedComponents = 1
+	}
+
+	return ModelMetricsResponse{
+		MostInfluentialVariable: mostInfluentialVar,
+		LoadingValue:            maxLoading,
+		RecommendedComponents:   recommendedComponents,
+		Success:                 true,
+	}
 }
 
 // ExportPCAModelRequest contains the data needed to export a PCA model

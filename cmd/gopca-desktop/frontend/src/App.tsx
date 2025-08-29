@@ -9,7 +9,7 @@ import './App.css';
 import { ParseCSV, RunPCA, LoadIrisDataset, LoadDatasetFile, GetVersion, CalculateEllipses, GetGUIConfig, LoadCSVFile, CheckGoCSVStatus, OpenInGoCSV, LaunchGoCSV, DownloadGoCSV, SaveFile } from '../wailsjs/go/main/App';
 import { Copy, Check } from 'lucide-react';
 import { EventsOn } from '../wailsjs/runtime/runtime';
-import { DataTable, SelectionTable, MatrixIllustration, HelpWrapper, DocumentationViewer } from './components';
+import { DataTable, SelectionTable, MatrixIllustration, HelpWrapper, DocumentationViewer, ModelOverview } from './components';
 import { setupPlotlyWailsIntegration } from '@gopca/ui-components';
 
 // Lazy load visualization components for better performance
@@ -70,7 +70,7 @@ function AppContent() {
 
     // PCA configuration
     const [config, setConfig] = useState({
-        components: 2,
+        components: 5,
         meanCenter: true,
         standardScale: false,
         robustScale: false,
@@ -97,7 +97,8 @@ function AppContent() {
             const numFeatures = data.data[0].length;
             setConfig(prev => ({
                 ...prev,
-                kernelGamma: 1.0 / numFeatures
+                kernelGamma: 1.0 / numFeatures,
+                components: Math.min(5, numFeatures)  // Default to 5 or number of features if less
             }));
         }
     };
@@ -736,7 +737,7 @@ return;
                                                 min="1"
                                                 max={Math.min(fileData.headers.length, fileData.data.length)}
                                                 value={config.components}
-                                                onChange={(e) => setConfig({ ...config, components: parseInt(e.target.value) || 2 })}
+                                                onChange={(e) => setConfig({ ...config, components: parseInt(e.target.value) || 5 })}
                                                 className="w-full px-3 py-2 bg-gray-100 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg text-gray-900 dark:text-white"
                                             />
                                         </HelpWrapper>
@@ -1064,32 +1065,41 @@ return;
                                 </div>
                             )}
 
-                            {/* Explained Variance */}
-                            <HelpWrapper helpKey="explained-variance">
-                                <div className="bg-gray-100 dark:bg-gray-700 rounded-lg p-4">
-                                    <div className="mb-2">
-                                        <h3 className="text-lg font-semibold">Explained Variance</h3>
-                                    </div>
-                                    <div className="space-y-2">
-                                        {pcaResponse.result.explained_variance_ratio.map((percentage, i) => {
-                                            return (
-                                                <div key={i} className="flex justify-between">
-                                                    <span>{pcaResponse.result?.component_labels?.[i] || `PC${i+1}`}:</span>
-                                                    <span>{percentage.toFixed(2)}%</span>
+                            {/* Explained Variance and Model Overview Grid */}
+                            <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+                                {/* Explained Variance */}
+                                <HelpWrapper helpKey="explained-variance">
+                                    <div className="bg-gray-100 dark:bg-gray-700 rounded-lg p-4">
+                                        <div className="mb-2">
+                                            <h3 className="text-lg font-semibold">Explained Variance</h3>
+                                        </div>
+                                        <div className="space-y-2">
+                                            {pcaResponse.result.explained_variance_ratio.map((percentage, i) => {
+                                                return (
+                                                    <div key={i} className="flex justify-between">
+                                                        <span>{pcaResponse.result?.component_labels?.[i] || `PC${i+1}`}:</span>
+                                                        <span>{percentage.toFixed(2)}%</span>
+                                                    </div>
+                                                );
+                                            })}
+                                            <div className="border-t border-gray-300 dark:border-gray-600 pt-2 font-semibold">
+                                                <div className="flex justify-between">
+                                                    <span>Cumulative:</span>
+                                                    <span>
+                                                        {pcaResponse.result.cumulative_variance[pcaResponse.result.cumulative_variance.length - 1].toFixed(2)}%
+                                                    </span>
                                                 </div>
-                                            );
-                                        })}
-                                        <div className="border-t border-gray-300 dark:border-gray-600 pt-2 font-semibold">
-                                            <div className="flex justify-between">
-                                                <span>Cumulative:</span>
-                                                <span>
-                                                    {pcaResponse.result.cumulative_variance[pcaResponse.result.cumulative_variance.length - 1].toFixed(2)}%
-                                                </span>
                                             </div>
                                         </div>
                                     </div>
-                                </div>
-                            </HelpWrapper>
+                                </HelpWrapper>
+
+                                {/* Model Overview */}
+                                <ModelOverview 
+                                    pcaResult={pcaResponse.result}
+                                    selectedPC={selectedXComponent}
+                                />
+                            </div>
 
                             {/* Plot Selector and Visualization */}
                             <div className="mt-6">

@@ -12,4 +12,5 @@ export { MatrixIllustration } from './MatrixIllustration';
 export { HelpWrapper } from './HelpWrapper';
 export { HelpDisplay } from './HelpDisplay';
 export { DocumentationViewer } from './DocumentationViewer';
+export { ModelOverview } from './ModelOverview';
 export * from './visualizations';
