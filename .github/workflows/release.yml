@@ -1031,7 +1031,6 @@ jobs:
           1. Download the bundle for your platform
           2. Extract the archive to your preferred location
           3. Add the directory to your PATH for CLI access (optional)
-          4. On macOS: Right-click and select "Open" on first launch to bypass Gatekeeper
           
           ### Verification
           
