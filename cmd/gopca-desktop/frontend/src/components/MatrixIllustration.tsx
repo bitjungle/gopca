@@ -19,9 +19,9 @@ export const MatrixIllustration: React.FC = () => {
         <rect x="70" y="40" width="200" height="120" fill="none" stroke="#e5e7eb" strokeWidth="1" className="dark:stroke-gray-600"/>
 
         {/* Column headers */}
-        <text x="120" y="30" textAnchor="middle" className="text-xs fill-gray-600 dark:fill-gray-400 font-medium">Feature 1</text>
-        <text x="170" y="30" textAnchor="middle" className="text-xs fill-gray-600 dark:fill-gray-400 font-medium">Feature 2</text>
-        <text x="220" y="30" textAnchor="middle" className="text-xs fill-gray-600 dark:fill-gray-400 font-medium">Feature 3</text>
+        <text x="120" y="30" textAnchor="middle" className="text-xs fill-gray-600 dark:fill-gray-400 font-medium">Variable 1</text>
+        <text x="170" y="30" textAnchor="middle" className="text-xs fill-gray-600 dark:fill-gray-400 font-medium">Variable 2</text>
+        <text x="220" y="30" textAnchor="middle" className="text-xs fill-gray-600 dark:fill-gray-400 font-medium">Variable 3</text>
         <text x="260" y="30" textAnchor="middle" className="text-xs fill-gray-500 dark:fill-gray-500">...</text>
 
         {/* Row headers */}
@@ -62,7 +62,7 @@ export const MatrixIllustration: React.FC = () => {
 
       <div className="mt-4 text-center">
         <p className="text-sm text-gray-600 dark:text-gray-400">
-          CSV format: first row contains feature names,<br/>
+          CSV format: first row contains variable names,<br/>
           first column contains sample names
         </p>
       </div>
