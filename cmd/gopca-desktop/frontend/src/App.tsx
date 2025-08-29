@@ -1066,14 +1066,14 @@ return;
                             )}
 
                             {/* Explained Variance and Model Overview Grid */}
-                            <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+                            <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 items-stretch">
                                 {/* Explained Variance */}
-                                <HelpWrapper helpKey="explained-variance">
-                                    <div className="bg-gray-100 dark:bg-gray-700 rounded-lg p-4">
+                                <HelpWrapper helpKey="explained-variance" className="h-full">
+                                    <div className="bg-gray-100 dark:bg-gray-700 rounded-lg p-4 h-full flex flex-col">
                                         <div className="mb-2">
                                             <h3 className="text-lg font-semibold">Explained Variance</h3>
                                         </div>
-                                        <div className="space-y-2">
+                                        <div className="space-y-2 flex-grow">
                                             {pcaResponse.result.explained_variance_ratio.map((percentage, i) => {
                                                 return (
                                                     <div key={i} className="flex justify-between">
@@ -1098,6 +1098,8 @@ return;
                                 <ModelOverview 
                                     pcaResult={pcaResponse.result}
                                     selectedPC={selectedXComponent}
+                                    standardScale={config.standardScale}
+                                    originalData={fileData?.data}
                                 />
                             </div>
 

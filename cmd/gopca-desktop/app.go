@@ -1054,6 +1054,8 @@ type ModelMetricsRequest struct {
 	ExplainedVariance []float64   `json:"explainedVariance"`
 	VariableLabels    []string    `json:"variableLabels"`
 	SelectedPC        int         `json:"selectedPC"`
+	StandardScale     bool        `json:"standardScale"`
+	OriginalData      [][]float64 `json:"originalData,omitempty"` // For scale detection
 }
 
 // ModelMetricsResponse contains calculated model metrics
@@ -1061,6 +1063,10 @@ type ModelMetricsResponse struct {
 	MostInfluentialVariable string  `json:"mostInfluentialVariable"`
 	LoadingValue            float64 `json:"loadingValue"`
 	RecommendedComponents   int     `json:"recommendedComponents"`
+	VarianceCaptured        float64 `json:"varianceCaptured"`
+	KaiserComponents        int     `json:"kaiserComponents"` // -1 if not applicable
+	ScaleRatio              float64 `json:"scaleRatio"`
+	ScaleWarning            string  `json:"scaleWarning,omitempty"`
 	Success                 bool    `json:"success"`
 	Error                   string  `json:"error,omitempty"`
 }
@@ -1070,15 +1076,17 @@ func (a *App) CalculateModelMetrics(request ModelMetricsRequest) ModelMetricsRes
 	// Validate input
 	if len(request.Loadings) == 0 || len(request.Loadings[0]) == 0 {
 		return ModelMetricsResponse{
-			Success: false,
-			Error:   "Invalid loadings matrix",
+			Success:          false,
+			Error:            "Invalid loadings matrix",
+			KaiserComponents: -1,
 		}
 	}
 
 	if len(request.VariableLabels) == 0 {
 		return ModelMetricsResponse{
-			Success: false,
-			Error:   "Variable labels are required",
+			Success:          false,
+			Error:            "Variable labels are required",
+			KaiserComponents: -1,
 		}
 	}
 
@@ -1101,32 +1109,121 @@ func (a *App) CalculateModelMetrics(request ModelMetricsRequest) ModelMetricsRes
 		}
 	}
 
-	// Calculate recommended components using Kaiser criterion (eigenvalues > 1)
-	// Note: For percentage-based explained variance, we need to convert back to eigenvalues
-	// Assuming the sum of eigenvalues equals the number of variables (standardized data)
+	// Calculate variance-based recommendation (80% threshold)
 	recommendedComponents := 0
-	numVariables := len(request.Loadings)
+	varianceCaptured := 0.0
+	targetVariance := 80.0 // 80% threshold
+	
+	cumulative := 0.0
+	for i, variance := range request.ExplainedVariance {
+		cumulative += variance
+		if cumulative >= targetVariance && recommendedComponents == 0 {
+			recommendedComponents = i + 1
+			varianceCaptured = cumulative
+		}
+	}
+	
+	// If we haven't reached 80%, use all components
+	if recommendedComponents == 0 {
+		recommendedComponents = len(request.ExplainedVariance)
+		varianceCaptured = cumulative
+	}
 
-	for _, variance := range request.ExplainedVariance {
-		// Convert percentage to eigenvalue approximation
-		// For standardized data, total variance = number of variables
-		eigenvalue := (variance / 100.0) * float64(numVariables)
-		if eigenvalue > 1.0 {
-			recommendedComponents++
-		} else {
-			break // Eigenvalues are ordered, so we can stop here
+	// Calculate Kaiser criterion only if data is standardized
+	kaiserComponents := -1 // -1 indicates not applicable
+	if request.StandardScale {
+		kaiserComponents = 0
+		numVariables := len(request.Loadings)
+		
+		for _, variance := range request.ExplainedVariance {
+			// Convert percentage to eigenvalue approximation
+			// For standardized data, total variance = number of variables
+			eigenvalue := (variance / 100.0) * float64(numVariables)
+			if eigenvalue > 1.0 {
+				kaiserComponents++
+			} else {
+				break // Eigenvalues are ordered, so we can stop here
+			}
+		}
+		
+		if kaiserComponents == 0 {
+			kaiserComponents = 1
 		}
 	}
 
-	// If no components meet Kaiser criterion, recommend at least 1
-	if recommendedComponents == 0 {
-		recommendedComponents = 1
+	// Calculate scale heterogeneity if original data is provided
+	scaleRatio := 1.0
+	scaleWarning := ""
+	
+	if len(request.OriginalData) > 0 && len(request.OriginalData[0]) > 0 {
+		// Calculate variance for each column (variable)
+		numRows := len(request.OriginalData)
+		numCols := len(request.OriginalData[0])
+		
+		if numRows > 1 && numCols > 0 {
+			minVar := math.MaxFloat64
+			maxVar := 0.0
+			
+			for j := 0; j < numCols; j++ {
+				// Calculate mean
+				mean := 0.0
+				validCount := 0
+				for i := 0; i < numRows; i++ {
+					if !math.IsNaN(request.OriginalData[i][j]) {
+						mean += request.OriginalData[i][j]
+						validCount++
+					}
+				}
+				if validCount > 0 {
+					mean /= float64(validCount)
+					
+					// Calculate variance
+					variance := 0.0
+					for i := 0; i < numRows; i++ {
+						if !math.IsNaN(request.OriginalData[i][j]) {
+							diff := request.OriginalData[i][j] - mean
+							variance += diff * diff
+						}
+					}
+					if validCount > 1 {
+						variance /= float64(validCount - 1)
+						
+						if variance > 0 {
+							if variance < minVar {
+								minVar = variance
+							}
+							if variance > maxVar {
+								maxVar = variance
+							}
+						}
+					}
+				}
+			}
+			
+			// Calculate scale ratio
+			if minVar > 0 && minVar < math.MaxFloat64 {
+				scaleRatio = maxVar / minVar
+				
+				// Generate warning if scales are heterogeneous and not standardized
+				if scaleRatio > 100 && !request.StandardScale {
+					if scaleRatio > 10000 {
+						scaleWarning = fmt.Sprintf("Variables have very different scales (%.0fx difference). Consider standardization unless this is intentional.", scaleRatio)
+					} else {
+						scaleWarning = fmt.Sprintf("Variables have different scales (%.0fx difference). Consider if standardization is needed.", scaleRatio)
+					}
+				}
+			}
+		}
 	}
 
 	return ModelMetricsResponse{
 		MostInfluentialVariable: mostInfluentialVar,
 		LoadingValue:            maxLoading,
 		RecommendedComponents:   recommendedComponents,
+		VarianceCaptured:        varianceCaptured,
+		KaiserComponents:        kaiserComponents,
+		ScaleRatio:              scaleRatio,
+		ScaleWarning:            scaleWarning,
 		Success:                 true,
 	}
 }
