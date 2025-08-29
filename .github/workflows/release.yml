@@ -366,18 +366,18 @@ jobs:
           
           # Create desktop file
           cat > appdir-gopca/gopca.desktop << 'EOF'
-          [Desktop Entry]
-          Version=1.0
-          Type=Application
-          Name=GoPCA
-          GenericName=PCA Analysis Tool
-          Comment=Professional Principal Component Analysis Tool
-          Exec=GoPCA %f
-          Icon=gopca
-          Terminal=false
-          Categories=Science;Math;Education;DataVisualization;
-          MimeType=text/csv;text/plain;
-          StartupNotify=true
+[Desktop Entry]
+Version=1.0
+Type=Application
+Name=GoPCA
+GenericName=PCA Analysis Tool
+Comment=Professional Principal Component Analysis Tool
+Exec=GoPCA %f
+Icon=gopca
+Terminal=false
+Categories=Science;Math;Education;DataVisualization;
+MimeType=text/csv;text/plain;
+StartupNotify=true
 EOF
           
           # Download icon from repository
@@ -408,18 +408,18 @@ EOF
           
           # Create desktop file
           cat > appdir-gocsv/gocsv.desktop << 'EOF'
-          [Desktop Entry]
-          Version=1.0
-          Type=Application
-          Name=GoCSV
-          GenericName=CSV Editor
-          Comment=Fast and Efficient CSV Data Editor
-          Exec=GoCSV %f
-          Icon=gocsv
-          Terminal=false
-          Categories=Office;Spreadsheet;Science;DataVisualization;
-          MimeType=text/csv;text/plain;text/tab-separated-values;
-          StartupNotify=true
+[Desktop Entry]
+Version=1.0
+Type=Application
+Name=GoCSV
+GenericName=CSV Editor
+Comment=Fast and Efficient CSV Data Editor
+Exec=GoCSV %f
+Icon=gocsv
+Terminal=false
+Categories=Office;Spreadsheet;Science;DataVisualization;
+MimeType=text/csv;text/plain;text/tab-separated-values;
+StartupNotify=true
 EOF
           
           # Download icon from repository
