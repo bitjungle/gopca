@@ -129,7 +129,7 @@ export const ModelOverview: React.FC<ModelOverviewProps> = ({ pcaResult, selecte
         <div className="space-y-2 flex-grow">
           <HelpWrapper helpKey="most-influential-variable">
             <div className="flex justify-between items-start">
-              <span>Most influential variable:</span>
+              <span>Top variable:</span>
               <div className="text-right">
                 <span className="font-medium">
                   {metrics.mostInfluentialVariable}

@@ -125,6 +125,26 @@
       "text": "Percentage of total data variance captured by each component. Higher = more information retained. Cumulative 70-90% typical.",
       "category": "results"
     },
+    "model-overview": {
+      "title": "Model Overview",
+      "text": "Key metrics for PCA interpretation: influential variables, component recommendations, and variance captured.",
+      "category": "results"
+    },
+    "most-influential-variable": {
+      "title": "Top Variable",
+      "text": "Variable with highest absolute loading on selected PC. Shows which feature contributes most to this component's variation.",
+      "category": "results"
+    },
+    "recommended-components": {
+      "title": "Components",
+      "text": "Optimal number of PCs based on 80% variance threshold. Kaiser criterion shown when data is standardized.",
+      "category": "results"
+    },
+    "variance-captured": {
+      "title": "Variance",
+      "text": "Cumulative variance explained by recommended components. Higher percentage means more original information retained.",
+      "category": "results"
+    },
     "scores-plot": {
       "title": "Scores Plot",
       "text": "Shows samples in PC space. Similar samples cluster together. Look for groups and outliers.",
