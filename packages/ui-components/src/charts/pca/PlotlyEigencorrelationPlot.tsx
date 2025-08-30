@@ -266,24 +266,12 @@ export class PlotlyEigencorrelationPlot {
       }
     }
 
-    // Add interpretation guide
-    layout.annotations!.push({
-      text: 'Strong correlations (|r| > 0.7) indicate metadata variables that are associated with PC variance',
-      xref: 'paper',
-      yref: 'paper',
-      x: 0.5,
-      y: -0.08,
-      xanchor: 'center',
-      showarrow: false,
-      font: { size: 10, color: 'gray' }
-    });
-
     // Adjust margins to accommodate labels
     layout.margin = {
       l: Math.max(...variableNames.map(n => n.length)) * 6 + 50,
       r: 100,
       t: 50,
-      b: 120
+      b: 80
     };
 
     return layout;
