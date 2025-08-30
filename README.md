@@ -4,15 +4,16 @@ Professional-grade PCA analysis made simple. A comprehensive suite of tools incl
 
 ## What is GoPCA Suite?
 
-GoPCA Suite is **the** go-to toolset for Principal Component Analysis, a fundamental machine learning technique for understanding complex  multivariate data. Whether you're analyzing spectroscopic data, exploring gene expression patterns, or reducing dimensionality in machine learning pipelines, GoPCA Suite provides the tools you need.
+GoPCA Suite makes **Principal Component Analysis accessible to everyone** through professional-grade, user-friendly tools that are completely free and open source. PCA is one of the most versatile and interpretable machine learning methods for understanding complex data - and GoPCA Suite removes the barriers to using it effectively. As an added benefit, all processing happens locally on your machine, ensuring your data never leaves your computer.
+
+The suite provides three powerful tools that work together seamlessly:
+- **GoPCA Desktop** - Interactive visual analysis and exploration
+- **pca CLI** - Scriptable command-line interface for automation
+- **GoCSV Desktop** - Data preparation with an Excel-like interface
+
+Whether you're analyzing spectroscopic data, exploring gene expression patterns, or reducing dimensionality in machine learning pipelines, GoPCA Suite delivers enterprise-grade analysis while maintaining complete data sovereignty.
 
 ![GoPCA Overview](docs/images/gopca-overview.jpg)
-
-### Includes GoCSV Desktop Data Preparation Tool
-
-GoPCA Suite includes **GoCSV Desktop**, a companion application for preparing your data. With its Excel-like interface, GoCSV Desktop makes it easy to clean, edit, and format your CSV files before PCA analysis - ensuring your data is analysis-ready.
-
-![GoPCA Overview](docs/images/gocsv-overview.jpg)
 
 ## Three Powerful Tools in the Suite
 
@@ -51,6 +52,7 @@ pca transform -f json -o results/ model.json new_samples.csv
 
 Clean and prepare your data with an intuitive spreadsheet-like interface.
 
+![GoCSV Overview](docs/images/gocsv-overview.jpg)
 ![GoCSV Quality Report Example](docs/images/gocsv-qr-example.png)
 
 **GoCSV Desktop Features:**
@@ -103,6 +105,38 @@ All visualizations feature:
 - **Cross-platform**: Native performance on Windows, macOS, and Linux
 - **Fast**: Optimized implementations handle large datasets efficiently
 - **Themeable**: Light and dark modes for comfortable extended use
+
+## Privacy & Security
+
+GoPCA Suite is designed with privacy and security as fundamental principles:
+
+### 100% Local Processing
+All computations happen exclusively on your machine. There are no cloud services, external servers, or remote processing involved. Your data is processed where it lives - on your computer.
+
+### Complete Data Sovereignty
+Your data **never** leaves your computer. We don't upload, transmit, or share any of your data, results, or usage patterns. What you analyze stays with you.
+
+### Zero Telemetry
+- No usage analytics or metrics collection
+- No crash reporting to external services
+- No feature tracking or user behavior monitoring
+- No automatic updates that phone home
+
+### No External Dependencies
+- Works completely offline - no internet connection required
+- No API calls to external services
+- No third-party analytics or tracking libraries
+- No hidden connections or background communications
+
+### Open Source Transparency
+The entire codebase is open source and publicly auditable on GitHub. You can review every line of code to verify our privacy commitments. We believe transparency builds trust.
+
+### Compliance Ready
+Perfect for organizations with strict data governance requirements, including:
+- GDPR compliance (data remains under your control)
+- HIPAA environments (no data transmission risks)
+- Corporate policies restricting cloud services
+- Research requiring data isolation
 
 ## Getting Started
 
