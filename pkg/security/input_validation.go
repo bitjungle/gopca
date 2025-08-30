@@ -19,18 +19,19 @@ import (
 
 // Limits for various input types to prevent resource exhaustion
 const (
-	MaxFileSize      = 500 * 1024 * 1024 // 500MB max file size
-	MaxCSVRows       = 1000000           // 1M rows max
-	MaxCSVColumns    = 10000             // 10K columns max
-	MaxFieldLength   = 100000            // 100K chars per field
-	MaxStringLength  = 10000             // 10K chars for general strings
-	MaxPathLength    = 4096              // Standard PATH_MAX
-	MaxComponents    = 1000              // Max PCA components
-	MinComponents    = 1                 // Min PCA components
-	MaxKernelGamma   = 1e6               // Max kernel gamma value
-	MinKernelGamma   = 1e-6              // Min kernel gamma value
-	MaxIterations    = 10000             // Max iterations for algorithms
-	MaxMemoryUsageMB = 2048              // 2GB max memory for operations
+	MaxFileSize         = 500 * 1024 * 1024 // 500MB max file size
+	MaxCSVRows          = 1000000           // 1M rows max
+	MaxCSVColumns       = 10000             // 10K columns max
+	MaxFieldLength      = 100000            // 100K chars per field
+	MaxStringLength     = 10000             // 10K chars for general strings
+	MaxPathLength       = 4096              // Standard PATH_MAX
+	MaxComponents       = 1000              // Max PCA components
+	MinComponents       = 1                 // Min PCA components
+	MaxKernelPCASamples = 10000             // Max samples for Kernel PCA (memory safety)
+	MaxKernelGamma      = 1e6               // Max kernel gamma value
+	MinKernelGamma      = 1e-6              // Min kernel gamma value
+	MaxIterations       = 10000             // Max iterations for algorithms
+	MaxMemoryUsageMB    = 2048              // 2GB max memory for operations
 )
 
 // ValidateNumericInput validates and sanitizes numeric input within bounds
