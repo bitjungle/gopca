@@ -75,7 +75,7 @@ All contributions must meet these standards:
    - Screenshots (for UI changes)
 
 #### Review Timeline
-- PRs may take **several weeks to months** for review
+- PRs may take **several weeks** for review
 - Complex changes require more time
 - I may request changes or decide not to merge
 - No response doesn't mean rejection - it means I haven't had time yet
