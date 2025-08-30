@@ -1,0 +1,14 @@
+blank_issues_enabled: false
+contact_links:
+  - name: Ask a Question
+    url: https://github.com/bitjungle/gopca/discussions/categories/q-a
+    about: Please ask questions in Discussions, not Issues
+  - name: Show and Tell
+    url: https://github.com/bitjungle/gopca/discussions/categories/show-and-tell
+    about: Share how you're using GoPCA Suite
+  - name: Ideas and Feedback
+    url: https://github.com/bitjungle/gopca/discussions/categories/ideas
+    about: Share ideas and general feedback in Discussions
+  - name: Read Contributing Guidelines
+    url: https://github.com/bitjungle/gopca/blob/main/CONTRIBUTING.md
+    about: Please read the contributing guidelines before submitting code
