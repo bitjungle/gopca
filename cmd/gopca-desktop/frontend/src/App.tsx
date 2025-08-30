@@ -831,6 +831,22 @@ return;
                                     {config.method === 'kernel' && (
                                         <div className="p-4 bg-gray-50 dark:bg-gray-700/50 rounded-lg space-y-4">
                                             <h4 className="font-medium text-sm">Kernel PCA Options</h4>
+                                            
+                                            {/* Memory warning for large datasets */}
+                                            {fileData && fileData.data && fileData.data.length > 5000 && (
+                                                <div className="p-3 bg-yellow-100 dark:bg-yellow-900/50 border border-yellow-300 dark:border-yellow-700 rounded-lg">
+                                                    <p className="text-sm text-yellow-800 dark:text-yellow-200">
+                                                        <strong>⚠️ Warning:</strong> Kernel PCA with {fileData.data.length.toLocaleString()} samples 
+                                                        may require significant memory (~{Math.round(fileData.data.length * fileData.data.length * 24 / 1024 / 1024 / 1024 * 10) / 10} GB).
+                                                        {fileData.data.length > 10000 && (
+                                                            <span className="block mt-1 font-semibold">
+                                                                Maximum supported: 10,000 samples. Consider using SVD or NIPALS instead.
+                                                            </span>
+                                                        )}
+                                                    </p>
+                                                </div>
+                                            )}
+                                            
                                             <div className="space-y-4">
                                                 <HelpWrapper helpKey="kernel-type">
                                                     <label className="block text-sm font-medium mb-1">

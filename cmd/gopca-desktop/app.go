@@ -1113,7 +1113,7 @@ func (a *App) CalculateModelMetrics(request ModelMetricsRequest) ModelMetricsRes
 	recommendedComponents := 0
 	varianceCaptured := 0.0
 	targetVariance := 80.0 // 80% threshold
-	
+
 	cumulative := 0.0
 	for i, variance := range request.ExplainedVariance {
 		cumulative += variance
@@ -1122,7 +1122,7 @@ func (a *App) CalculateModelMetrics(request ModelMetricsRequest) ModelMetricsRes
 			varianceCaptured = cumulative
 		}
 	}
-	
+
 	// If we haven't reached 80%, use all components
 	if recommendedComponents == 0 {
 		recommendedComponents = len(request.ExplainedVariance)
@@ -1134,7 +1134,7 @@ func (a *App) CalculateModelMetrics(request ModelMetricsRequest) ModelMetricsRes
 	if request.StandardScale {
 		kaiserComponents = 0
 		numVariables := len(request.Loadings)
-		
+
 		for _, variance := range request.ExplainedVariance {
 			// Convert percentage to eigenvalue approximation
 			// For standardized data, total variance = number of variables
@@ -1145,7 +1145,7 @@ func (a *App) CalculateModelMetrics(request ModelMetricsRequest) ModelMetricsRes
 				break // Eigenvalues are ordered, so we can stop here
 			}
 		}
-		
+
 		if kaiserComponents == 0 {
 			kaiserComponents = 1
 		}
@@ -1154,16 +1154,16 @@ func (a *App) CalculateModelMetrics(request ModelMetricsRequest) ModelMetricsRes
 	// Calculate scale heterogeneity if original data is provided
 	scaleRatio := 1.0
 	scaleWarning := ""
-	
+
 	if len(request.OriginalData) > 0 && len(request.OriginalData[0]) > 0 {
 		// Calculate variance for each column (variable)
 		numRows := len(request.OriginalData)
 		numCols := len(request.OriginalData[0])
-		
+
 		if numRows > 1 && numCols > 0 {
 			minVar := math.MaxFloat64
 			maxVar := 0.0
-			
+
 			for j := 0; j < numCols; j++ {
 				// Calculate mean
 				mean := 0.0
@@ -1176,7 +1176,7 @@ func (a *App) CalculateModelMetrics(request ModelMetricsRequest) ModelMetricsRes
 				}
 				if validCount > 0 {
 					mean /= float64(validCount)
-					
+
 					// Calculate variance
 					variance := 0.0
 					for i := 0; i < numRows; i++ {
@@ -1187,7 +1187,7 @@ func (a *App) CalculateModelMetrics(request ModelMetricsRequest) ModelMetricsRes
 					}
 					if validCount > 1 {
 						variance /= float64(validCount - 1)
-						
+
 						if variance > 0 {
 							if variance < minVar {
 								minVar = variance
@@ -1199,11 +1199,11 @@ func (a *App) CalculateModelMetrics(request ModelMetricsRequest) ModelMetricsRes
 					}
 				}
 			}
-			
+
 			// Calculate scale ratio
 			if minVar > 0 && minVar < math.MaxFloat64 {
 				scaleRatio = maxVar / minVar
-				
+
 				// Generate warning if scales are heterogeneous and not standardized
 				if scaleRatio > 100 && !request.StandardScale {
 					if scaleRatio > 10000 {

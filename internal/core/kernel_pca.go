@@ -11,6 +11,7 @@ import (
 	"math"
 	"sort"
 
+	"github.com/bitjungle/gopca/pkg/security"
 	"github.com/bitjungle/gopca/pkg/types"
 	"gonum.org/v1/gonum/mat"
 )
@@ -220,6 +221,15 @@ func (kpca *KernelPCAImpl) Fit(data types.Matrix, config types.PCAConfig) (*type
 
 	nSamples := len(data)
 	nFeatures := len(data[0])
+
+	// Check sample size limit for memory safety
+	if nSamples > security.MaxKernelPCASamples {
+		return nil, fmt.Errorf("kernel PCA limited to %d samples for memory safety (got %d samples). "+
+			"Consider: 1) Using SVD or NIPALS methods for large datasets, "+
+			"2) Subsampling your data, or "+
+			"3) Applying dimension reduction first",
+			security.MaxKernelPCASamples, nSamples)
+	}
 
 	if config.Components > nSamples {
 		return nil, fmt.Errorf("number of components (%d) cannot exceed number of samples (%d)",
