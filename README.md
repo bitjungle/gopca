@@ -4,7 +4,7 @@ Professional-grade PCA analysis made simple. A comprehensive suite of tools incl
 
 ## What is GoPCA Suite?
 
-GoPCA Suite makes **Principal Component Analysis accessible to everyone** through professional-grade, user-friendly tools that are completely free and open source. PCA is one of the most versatile and interpretable machine learning methods for understanding complex data - and GoPCA Suite removes the barriers to using it effectively. As an added benefit, all processing happens locally on your machine, ensuring your data never leaves your computer.
+GoPCA Suite makes **Principal Component Analysis (PCA) accessible to everyone** through professional-grade, user-friendly tools that are completely free and open source. PCA is one of the most versatile and interpretable machine learning methods for understanding complex data, and GoPCA Suite removes the barriers to using it effectively. As an added benefit, all processing happens locally on your machine, ensuring your data never leaves your computer.
 
 The suite provides three powerful tools that work together seamlessly:
 - **GoPCA Desktop** - Interactive visual analysis and exploration
@@ -13,7 +13,7 @@ The suite provides three powerful tools that work together seamlessly:
 
 Whether you're analyzing spectroscopic data, exploring gene expression patterns, or reducing dimensionality in machine learning pipelines, GoPCA Suite delivers enterprise-grade analysis while maintaining complete data sovereignty.
 
-![GoPCA Overview](docs/images/gopca-overview.jpg)
+![GoPCA Suite Overview](docs/images/GoPCA_suite_overview.png)
 
 ## Three Powerful Tools in the Suite
 
@@ -21,7 +21,7 @@ Whether you're analyzing spectroscopic data, exploring gene expression patterns,
 
 Perfect for interactive data exploration, method development, and teaching.
 
-![GoPCA Scoreplot Example](docs/images/gopca-scoreplot-example.png)
+![GoPCA Overview](docs/images/GoPCA_overview.png)
 
 **Key GoPCA Desktop Features:**
 - Interactive visualizations with zoom, pan, and export
@@ -52,8 +52,7 @@ pca transform -f json -o results/ model.json new_samples.csv
 
 Clean and prepare your data with an intuitive spreadsheet-like interface.
 
-![GoCSV Overview](docs/images/gocsv-overview.jpg)
-![GoCSV Quality Report Example](docs/images/gocsv-qr-example.png)
+![GoCSV Overview](docs/images/GoCSV_overview.png)
 
 **GoCSV Desktop Features:**
 - Edit cells directly like in Excel
@@ -91,12 +90,14 @@ Clean and prepare your data with an intuitive spreadsheet-like interface.
 - **Diagnostic plots** - Detect outliers with T² vs Q residuals
 - **Eigencorrelation plots** - Explore correlations between PCs and original variables
 
-All visualizations feature:
-- Export to PNG for publications
-- Interactive tooltips with detailed information
-- Customizable color palettes (qualitative and sequential)
-- Full-screen mode for presentations
-- Optional row labels for identifying specific data points
+**All visualizations feature:**
+- **Export to PNG** for publications
+- **Interactive tooltips** with detailed information
+- **High quality color palettes** (qualitative and sequential)
+- **Full-screen mode** for presentations
+- **Optional row labels** for identifying specific data points
+
+![GoPCA Scoreplot Example](docs/images/GoPCA_scoreplot_example.png)
 
 ### Built for Real Work
 - **Example datasets included**: Four interesting datasets for immediate exploration
