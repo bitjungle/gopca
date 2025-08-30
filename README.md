@@ -255,6 +255,7 @@ Teach multivariate statistics with interactive visualizations, explore research 
 - **Report Issues**: [GitHub Issues](https://github.com/bitjungle/gopca/issues)
 - **Ask Questions**: [GitHub Discussions](https://github.com/bitjungle/gopca/discussions)
 - **Documentation**: See the docs folder for detailed guides
+- **Contributing**: Please read [CONTRIBUTING.md](CONTRIBUTING.md) before submitting code
 
 ## License
 
