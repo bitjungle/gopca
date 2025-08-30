@@ -353,7 +353,7 @@ return;
         cmd += ` --method ${config.method.toLowerCase()}`;
 
         // Add kernel parameters if using kernel PCA
-        if (config.method === 'Kernel') {
+        if (config.method === 'kernel') {
             cmd += ` --kernel-type ${config.kernelType}`;
             if (config.kernelType === 'rbf' || config.kernelType === 'laplacian' || config.kernelType === 'sigmoid') {
                 cmd += ` --kernel-gamma ${config.kernelGamma}`;
