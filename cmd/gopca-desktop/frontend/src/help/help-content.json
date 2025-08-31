@@ -190,6 +190,16 @@
       "text": "Heatmap showing correlations between PC scores and metadata variables. Helps identify relationships between components and external factors.",
       "category": "visualization"
     },
+    "scores3d-plot": {
+      "title": "3D Scores Plot",
+      "text": "3D visualization of samples in PC space. Rotate with mouse to explore patterns from different angles.",
+      "category": "visualization"
+    },
+    "biplot3d-plot": {
+      "title": "3D Biplot",
+      "text": "3D biplot combining scores and loadings. Interactive rotation reveals sample-variable relationships.",
+      "category": "visualization"
+    },
     "component-selector": {
       "title": "Component Selection",
       "text": "Choose which PCs to plot. PC1 usually most important. Try different combinations.",
@@ -225,6 +235,16 @@
       "text": "Switch between light and dark modes. Preference saved locally.",
       "category": "interface"
     },
+    "logo-about": {
+      "title": "About GoPCA",
+      "text": "Click to view application version, credits, and licensing information.",
+      "category": "interface"
+    },
+    "documentation-button": {
+      "title": "Documentation",
+      "text": "Open user manual with documentation for all features and PCA concepts.",
+      "category": "interface"
+    },
     "plot-color-palette": {
       "title": "Plot Palettes",
       "text": "Choose between Categorical (distinct colors for groups/categories) or Sequential (gradient for continuous values).",
@@ -243,6 +263,11 @@
     "outlier-detection": {
       "title": "Outlier Detection",
       "text": "High T²: unusual but follows model. High Q: doesn't fit model. Both high: strong outlier.",
+      "category": "analysis"
+    },
+    "diagnostic-threshold": {
+      "title": "Diagnostic Threshold",
+      "text": "Set statistical threshold for outlier detection. 95% for standard, 99% for strict outlier identification.",
       "category": "analysis"
     },
     "row-labels": {
@@ -273,6 +298,11 @@
     "palette-selector": {
       "title": "Color Palette",
       "text": "Choose colors for plot. Categorical: distinct colors for groups. Sequential: gradient for continuous values.",
+      "category": "visualization"
+    },
+    "font-size-control": {
+      "title": "Font Size Control",
+      "text": "Adjust font size for all plot labels and text. Useful for presentations or high-res exports.",
       "category": "visualization"
     },
     "plot-tabs": {

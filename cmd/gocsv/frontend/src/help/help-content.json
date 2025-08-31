@@ -1,0 +1,188 @@
+{
+  "help": {
+    "gocsv-logo-about": {
+      "title": "About GoCSV",
+      "text": "Click to view GoCSV version and information.",
+      "category": "interface"
+    },
+    "gocsv-documentation": {
+      "title": "Documentation",
+      "text": "Open GoCSV user manual for data editing and preparation guidance.",
+      "category": "interface"
+    },
+    "undo-redo-controls": {
+      "title": "Undo/Redo",
+      "text": "Undo or redo recent edits. Keyboard shortcuts: Ctrl+Z/Ctrl+Y.",
+      "category": "editing"
+    },
+    "data-quality-report": {
+      "title": "Data Quality Report",
+      "text": "Generate comprehensive report on data completeness, types, and potential issues.",
+      "category": "analysis"
+    },
+    "analyze-missing": {
+      "title": "Analyze Missing Values",
+      "text": "Identify missing data patterns and get column-wise statistics.",
+      "category": "analysis"
+    },
+    "fill-missing": {
+      "title": "Fill Missing Values",
+      "text": "Replace missing values using mean, median, or custom strategies.",
+      "category": "editing"
+    },
+    "transform-data": {
+      "title": "Transform Data",
+      "text": "Apply data transformations like scaling, normalization, or encoding.",
+      "category": "editing"
+    },
+    "browse-file": {
+      "title": "Browse for File",
+      "text": "Select CSV, TSV, or Excel file from your computer.",
+      "category": "data-input"
+    },
+    "import-wizard": {
+      "title": "Import with Wizard",
+      "text": "Advanced import with custom delimiters, encoding, and column selection.",
+      "category": "data-input"
+    },
+    "validate-gopca": {
+      "title": "Validate for GoPCA",
+      "text": "Check if data meets requirements for PCA analysis.",
+      "category": "validation"
+    },
+    "open-gopca": {
+      "title": "Open in GoPCA",
+      "text": "Launch GoPCA Desktop with current data for PCA analysis.",
+      "category": "integration"
+    },
+    "export-csv": {
+      "title": "Export as CSV",
+      "text": "Save edited data as CSV file with current formatting.",
+      "category": "export"
+    },
+    "export-excel": {
+      "title": "Export as Excel",
+      "text": "Save edited data as Excel file with formatting preserved.",
+      "category": "export"
+    },
+    "theme-toggle": {
+      "title": "Theme Toggle",
+      "text": "Switch between light and dark modes. Preference saved locally.",
+      "category": "interface"
+    },
+    "grid-editor": {
+      "title": "Data Grid Editor",
+      "text": "Edit cells directly. Click to select, double-click to edit. Use Tab/Enter to navigate.",
+      "category": "editing"
+    },
+    "column-stats": {
+      "title": "Column Statistics",
+      "text": "View min, max, mean, and missing count for each column.",
+      "category": "analysis"
+    },
+    "row-operations": {
+      "title": "Row Operations",
+      "text": "Add, delete, or duplicate rows. Right-click for context menu.",
+      "category": "editing"
+    },
+    "column-operations": {
+      "title": "Column Operations",
+      "text": "Add, delete, rename, or reorder columns. Right-click header for options.",
+      "category": "editing"
+    },
+    "search-replace": {
+      "title": "Search and Replace",
+      "text": "Find and replace values across the entire dataset or selected columns.",
+      "category": "editing"
+    },
+    "filter-data": {
+      "title": "Filter Data",
+      "text": "Apply filters to show only rows matching specific criteria.",
+      "category": "analysis"
+    },
+    "sort-data": {
+      "title": "Sort Data",
+      "text": "Sort by one or multiple columns in ascending or descending order.",
+      "category": "editing"
+    },
+    "data-types": {
+      "title": "Data Types",
+      "text": "Automatically detect or manually set column data types (numeric, text, date).",
+      "category": "analysis"
+    },
+    "correlation-matrix": {
+      "title": "Correlation Matrix",
+      "text": "View correlation coefficients between numeric columns.",
+      "category": "analysis"
+    },
+    "distribution-plots": {
+      "title": "Distribution Plots",
+      "text": "Visualize data distribution with histograms and box plots.",
+      "category": "visualization"
+    },
+    "missing-heatmap": {
+      "title": "Missing Data Heatmap",
+      "text": "Visual representation of missing data patterns across the dataset.",
+      "category": "visualization"
+    },
+    "keyboard-shortcuts": {
+      "title": "Keyboard Shortcuts",
+      "text": "Ctrl+O: Open, Ctrl+S: Save, Ctrl+Z: Undo, Ctrl+Y: Redo, Delete: Clear cell.",
+      "category": "interface"
+    },
+    "file-formats": {
+      "title": "Supported Formats",
+      "text": "CSV, TSV, and Excel files. Auto-detect delimiter and encoding.",
+      "category": "data-input"
+    },
+    "encoding-options": {
+      "title": "Text Encoding",
+      "text": "UTF-8, ISO-8859-1, Windows-1252. Auto-detect or manually specify.",
+      "category": "data-input"
+    },
+    "delimiter-options": {
+      "title": "Delimiter Options",
+      "text": "Comma, tab, semicolon, pipe, or custom delimiter for CSV files.",
+      "category": "data-input"
+    }
+  },
+  "categories": {
+    "data-input": {
+      "name": "Data Input",
+      "description": "Loading and importing data files"
+    },
+    "editing": {
+      "name": "Editing",
+      "description": "Data modification and manipulation"
+    },
+    "analysis": {
+      "name": "Analysis",
+      "description": "Data quality and statistics"
+    },
+    "visualization": {
+      "name": "Visualization",
+      "description": "Charts and visual analysis"
+    },
+    "validation": {
+      "name": "Validation",
+      "description": "Data validation and checking"
+    },
+    "integration": {
+      "name": "Integration",
+      "description": "Integration with GoPCA"
+    },
+    "export": {
+      "name": "Export",
+      "description": "Saving and exporting data"
+    },
+    "interface": {
+      "name": "Interface",
+      "description": "UI controls and navigation"
+    }
+  },
+  "metadata": {
+    "version": "1.0.0",
+    "lastUpdated": "2025-01-31",
+    "application": "GoCSV Desktop"
+  }
+}
