@@ -366,5 +366,4 @@ Track:
 
 - [Code Audit Report](../../docs_tmp/CODE_AUDIT_v1.0.md)
 - [CI/CD Workflows](../../.github/workflows/README.md)
-- [Performance Benchmarks](../devel/performance.md)
 - [Security Testing](../devel/security.md)
