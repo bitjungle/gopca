@@ -337,12 +337,19 @@ func (kpca *KernelPCAImpl) Fit(data types.Matrix, config types.PCAConfig) (*type
 	// We'll return an empty matrix for compatibility
 	loadings := make(types.Matrix, 0)
 
+	// Generate component labels
+	componentLabels := make([]string, config.Components)
+	for i := 0; i < config.Components; i++ {
+		componentLabels[i] = fmt.Sprintf("PC%d", i+1)
+	}
+
 	return &types.PCAResult{
 		Scores:               scoresMatrix,
 		Loadings:             loadings,
 		ExplainedVar:         explainedVar,
 		ExplainedVarRatio:    explainedVarRatio,
 		CumulativeVar:        cumulativeVar,
+		ComponentLabels:      componentLabels,
 		ComponentsComputed:   config.Components,
 		Method:               "kernel",
 		PreprocessingApplied: config.ScaleOnly || config.SNV || config.VectorNorm,
