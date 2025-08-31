@@ -91,12 +91,32 @@ body {
     border-bottom: 3px solid var(--blood-red);
 }
 
+.logo-container {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin: 2rem auto;
+    gap: 1rem;
+}
+
 .hero-logo {
     width: 150px;
     height: 150px;
-    margin: 2rem auto;
+    margin: 0;
     filter: drop-shadow(0 0 20px rgba(196, 30, 58, 0.6));
     animation: pulse 2s infinite;
+}
+
+.logo-text {
+    font-size: 150px;
+    line-height: 150px;
+    font-weight: 900;
+    font-family: 'Space Grotesk', monospace;
+    color: var(--primary-color);
+    text-shadow: 
+        2px 2px 0 var(--secondary-color),
+        4px 4px 8px rgba(196, 30, 58, 0.4);
+    letter-spacing: -0.05em;
 }
 
 @keyframes pulse {
@@ -233,6 +253,7 @@ body {
     border: 2px solid var(--blood-red);
     border-radius: 225px 25px 255px 5px/25px 205px 25px 235px;
     opacity: 0.5;
+    pointer-events: none;
 }
 
 /* Sections */
@@ -525,9 +546,18 @@ section {
 
 /* Responsive Design */
 @media (max-width: 768px) {
+    .logo-container {
+        gap: 0.5rem;
+    }
+    
     .hero-logo {
         width: 100px;
         height: 100px;
+    }
+    
+    .logo-text {
+        font-size: 100px;
+        line-height: 100px;
     }
     
     .ascii-border {

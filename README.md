@@ -175,6 +175,25 @@ When downloading GoPCA Desktop and GoCSV Desktop from GitHub releases, macOS may
 2. **Keep apps together**: Always keep both apps in the same folder (Applications, Downloads, or Desktop)
 3. **Alternative launch method**: Right-click the app and choose "Open" instead of double-clicking
 
+### Windows Security Note
+
+When downloading the GoPCA installer from GitHub releases, Windows may show a security warning stating the file "isn't commonly downloaded" or may be blocked by Windows SmartScreen. This is a standard Windows security feature that flags newer or less frequently downloaded files.
+
+**How to proceed safely:**
+1. **From the download warning**: Click the three dots (...) menu and select "Keep" 
+2. **If Windows Defender blocks it**: Click "More info" then "Run anyway"
+3. **Alternative**: You can also right-click the downloaded file, go to Properties, and check "Unblock" if present
+
+**Why this happens:**
+- Windows SmartScreen uses download frequency as one safety metric
+- As an open-source project, our installers have fewer downloads than commercial software
+- The warning will decrease as more users download each release
+
+**Verify authenticity:**
+- Check that you're downloading from our official GitHub releases page
+- Each release includes SHA-256 checksums for verification
+- The entire source code is available for review on GitHub
+
 ### Command-Line Interface
 
 ```bash

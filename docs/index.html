@@ -18,22 +18,11 @@
     <!-- Hero Section -->
     <header class="hero">
         <div class="container">
-            <div class="ascii-border">
-╔═══════════════════════════════════════════════════════════════╗
-║                                                               ║
-║  ░██████╗░░█████╗░██████╗░░█████╗░░█████╗░                  ║
-║  ██╔════╝░██╔══██╗██╔══██╗██╔══██╗██╔══██╗                  ║
-║  ██║░░██╗░██║░░██║██████╔╝██║░░╚═╝███████║                  ║
-║  ██║░░╚██╗██║░░██║██╔═══╝░██║░░██╗██╔══██║                  ║
-║  ╚██████╔╝╚█████╔╝██║░░░░░╚█████╔╝██║░░██║                  ║
-║  ░╚═════╝░░╚════╝░╚═╝░░░░░░╚════╝░╚═╝░░╚═╝                  ║
-║                                                               ║
-║              S U I T E                                        ║
-║                                                               ║
-╚═══════════════════════════════════════════════════════════════╝
-            </div>
             
-            <img src="images/GoPCA-icon-1024-black.png" alt="GoPCA Logo" class="hero-logo glitch-image">
+            <div class="logo-container">
+                <img src="images/GoPCA-icon-1024-black.png" alt="GoPCA Logo" class="hero-logo glitch-image">
+                <span class="logo-text">GoPCA</span>
+            </div>
             
             <h1 class="glitch" data-text="PRINCIPAL COMPONENT ANALYSIS">
                 PRINCIPAL COMPONENT ANALYSIS<br>
@@ -97,8 +86,6 @@ $ pca analyze data.csv
 $ pca validate spectra.csv
 $ pca transform model.json
 
-<span class="comment"># Flexible output formats</span>
-<span class="comment"># JSON, CSV, or text</span>
                     </pre>
                     <p class="feature-description">
                         <strong>COMMAND-LINE TOOL</strong><br>
@@ -108,7 +95,6 @@ $ pca transform model.json
                     </p>
                     <ul class="feature-list">
                         <li>◉ Batch processing capabilities</li>
-                        <li>◉ Multiple output formats</li>
                         <li>◉ Pipeline integration</li>
                         <li>◉ Cross-platform support</li>
                     </ul>
@@ -156,14 +142,14 @@ $ pca transform model.json
                     <div class="step-number">02</div>
                     <h3>LOAD DATA</h3>
                     <p>Import CSV files with numerical data.</p>
-                    <code class="inline-code">pca analyze --components 3 your-data.csv</code>
+                    <span class="revolution-text">Use GoCSV Desktop for easy import and edit</span>
                 </div>
                 
                 <div class="step rough-border">
                     <div class="step-number">03</div>
                     <h3>RUN ANALYSIS</h3>
                     <p>Configure components and algorithm. View results instantly.</p>
-                    <span class="revolution-text">Execute PCA computation</span>
+                    <span class="revolution-text">Execute PCA computation in GoPCA Desktop or CLI</span>
                 </div>
             </div>
         </div>
@@ -173,7 +159,7 @@ $ pca transform model.json
     <section class="philosophy">
         <div class="container">
             <h2 class="section-title">
-                <span class="distressed">━━━</span> WHY GOPCA? <span class="distressed">━━━</span>
+                <span class="distressed">━━━</span> WHY GoPCA? <span class="distressed">━━━</span>
             </h2>
             
             <div class="manifesto-grid">
@@ -216,9 +202,6 @@ $ pca transform model.json
                 </a>
                 <a href="https://github.com/bitjungle/gopca/blob/main/docs/intro_to_data_prep.md" class="doc-link rough-border">
                     ✂ Data Preparation Guide
-                </a>
-                <a href="https://github.com/bitjungle/gopca" class="doc-link rough-border">
-                    💻 GitHub Repository
                 </a>
             </div>
         </div>
