@@ -558,7 +558,9 @@ return;
                                 </svg>
                             </button>
                         </HelpWrapper>
-                        <ThemeToggle />
+                        <HelpWrapper helpKey="theme-toggle">
+                            <ThemeToggle />
+                        </HelpWrapper>
                     </div>
                 </div>
             </header>
