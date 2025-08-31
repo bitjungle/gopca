@@ -19,6 +19,8 @@ export interface Scores3DPlotData {
   groups: string[];
   sampleNames?: string[];
   explainedVariance: number[];
+  groupValues?: number[]; // For continuous data
+  groupType?: 'categorical' | 'continuous';
   pc1?: number;
   pc2?: number;
   pc3?: number;
@@ -64,39 +66,97 @@ export class Plotly3DScoresPlot {
   }
 
   getTraces(): Data[] {
-    const { scores, groups, sampleNames, pc1 = 0, pc2 = 1, pc3 = 2 } = this.data;
+    const { scores, groups, sampleNames, groupValues, groupType, pc1 = 0, pc2 = 1, pc3 = 2 } = this.data;
     const traces: Data[] = [];
 
-    // Get unique groups
-    const uniqueGroups = Array.from(new Set(groups));
+    // Handle continuous coloring
+    if (groupType === 'continuous' && groupValues) {
+      // Extract score values for each axis
+      const scoresX = scores.map(s => s[pc1]);
+      const scoresY = scores.map(s => s[pc2]);
+      const scoresZ = scores.map(s => s[pc3]);
 
-    // Create 3D scatter trace for each group
-    uniqueGroups.forEach((group, groupIndex) => {
-      const groupIndices = groups.map((g, i) => g === group ? i : -1).filter(i => i >= 0);
-      const groupScores = groupIndices.map(i => scores[i]);
+      // Filter out invalid values for min/max calculation
+      const validValues = groupValues.filter(v => v !== null && v !== undefined && !isNaN(v) && isFinite(v));
+      const min = Math.min(...validValues);
+      const max = Math.max(...validValues);
+
+      // Create a custom colorscale from the palette
+      const palette = this.config.colorScheme || ['#440154', '#31688e', '#35b779', '#fde725'];
+      const colorscale: [number, string][] = palette.map((color, i) => [
+        i / (palette.length - 1),
+        color
+      ]);
 
       // Prepare hover text
-      const hovertext = groupIndices.map(i => {
+      const hovertext = scoresX.map((x, i) => {
         const label = sampleNames?.[i] || `Sample ${i}`;
-        return `<b>${label}</b><br>Group: ${group}<br>PC${pc1 + 1}: ${scores[i][pc1].toFixed(2)}<br>PC${pc2 + 1}: ${scores[i][pc2].toFixed(2)}<br>PC${pc3 + 1}: ${scores[i][pc3].toFixed(2)}`;
+        const value = groupValues[i];
+        const valueStr = value !== null && value !== undefined && !isNaN(value) && isFinite(value)
+          ? value.toFixed(2)
+          : 'Missing';
+        return `<b>${label}</b><br>Value: ${valueStr}<br>PC${pc1 + 1}: ${x.toFixed(2)}<br>PC${pc2 + 1}: ${scoresY[i].toFixed(2)}<br>PC${pc3 + 1}: ${scoresZ[i].toFixed(2)}`;
       });
 
       traces.push({
         type: 'scatter3d',
         mode: 'markers',
-        name: group,
-        x: groupScores.map(s => s[pc1]),
-        y: groupScores.map(s => s[pc2]),
-        z: groupScores.map(s => s[pc3]),
+        name: 'Scores',
+        x: scoresX,
+        y: scoresY,
+        z: scoresZ,
         hovertext: hovertext,
         hovertemplate: '%{hovertext}<extra></extra>',
         marker: {
           size: getScaledMarkerSize(this.config.markerSize || 5, this.config.fontScale || 1.0),
-          color: this.config.colorScheme![groupIndex % this.config.colorScheme!.length],
+          color: groupValues,
+          colorscale: colorscale,
+          cmin: min,
+          cmax: max,
+          showscale: true,
+          colorbar: {
+            title: {
+              text: 'Value'
+            } as any,
+            thickness: 15,
+            len: 0.9
+          },
           opacity: this.config.opacity
         }
       });
-    });
+    } else {
+      // Categorical coloring - existing implementation
+      // Get unique groups
+      const uniqueGroups = Array.from(new Set(groups));
+
+      // Create 3D scatter trace for each group
+      uniqueGroups.forEach((group, groupIndex) => {
+        const groupIndices = groups.map((g, i) => g === group ? i : -1).filter(i => i >= 0);
+        const groupScores = groupIndices.map(i => scores[i]);
+
+        // Prepare hover text
+        const hovertext = groupIndices.map(i => {
+          const label = sampleNames?.[i] || `Sample ${i}`;
+          return `<b>${label}</b><br>Group: ${group}<br>PC${pc1 + 1}: ${scores[i][pc1].toFixed(2)}<br>PC${pc2 + 1}: ${scores[i][pc2].toFixed(2)}<br>PC${pc3 + 1}: ${scores[i][pc3].toFixed(2)}`;
+        });
+
+        traces.push({
+          type: 'scatter3d',
+          mode: 'markers',
+          name: group,
+          x: groupScores.map(s => s[pc1]),
+          y: groupScores.map(s => s[pc2]),
+          z: groupScores.map(s => s[pc3]),
+          hovertext: hovertext,
+          hovertemplate: '%{hovertext}<extra></extra>',
+          marker: {
+            size: getScaledMarkerSize(this.config.markerSize || 5, this.config.fontScale || 1.0),
+            color: this.config.colorScheme![groupIndex % this.config.colorScheme!.length],
+            opacity: this.config.opacity
+          }
+        });
+      });
+    }
 
     // Add projection traces if enabled
     if (this.config.showProjections) {
