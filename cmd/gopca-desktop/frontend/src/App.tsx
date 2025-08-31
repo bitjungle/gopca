@@ -524,11 +524,6 @@ return;
                             className="h-12 cursor-pointer hover:opacity-90 transition-opacity flex-shrink-0"
                             onClick={handleLogoClick}
                         />
-                        {version && (
-                            <span className="text-xs text-gray-500 dark:text-gray-400">
-                                {version}
-                            </span>
-                        )}
                     </div>
                     <div className="flex-1 mx-8 overflow-hidden">
                         <HelpDisplay

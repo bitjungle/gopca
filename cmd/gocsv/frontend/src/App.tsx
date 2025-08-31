@@ -300,11 +300,6 @@ return;
                             className="h-12 cursor-pointer hover:opacity-90 transition-opacity flex-shrink-0"
                             onClick={handleLogoClick}
                         />
-                        {version && (
-                            <span className="text-xs text-gray-500 dark:text-gray-400">
-                                {version}
-                            </span>
-                        )}
                         <div>
                             <p className="text-sm text-gray-600 dark:text-gray-400">Data Editor for GoPCA</p>
                         </div>

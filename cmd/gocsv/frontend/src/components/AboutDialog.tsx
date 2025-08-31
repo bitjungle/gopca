@@ -39,7 +39,7 @@ export const AboutDialog: React.FC<AboutDialogProps> = ({ isOpen, onClose, versi
                     <img
                         src={logo}
                         alt="GoCSV Logo"
-                        className="h-24 w-24"
+                        className="h-24 w-auto"
                     />
                     
                     <div className="space-y-2">
