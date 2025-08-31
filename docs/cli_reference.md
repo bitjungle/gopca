@@ -28,6 +28,34 @@ These options apply to all commands:
 
 ## Commands
 
+### `version` - Show Version Information
+
+Display the version of the pca CLI.
+
+```bash
+pca version
+```
+
+### `completion` - Generate Shell Completion Scripts
+
+Generate shell completion scripts for bash, zsh, fish, or PowerShell.
+
+#### Examples
+
+```bash
+# Bash
+pca completion bash > /etc/bash_completion.d/pca
+
+# Zsh
+pca completion zsh > "${fpath[1]}/_pca"
+
+# Fish
+pca completion fish > ~/.config/fish/completions/pca.fish
+
+# PowerShell
+pca completion powershell > pca.ps1
+```
+
 ### `analyze` - Perform PCA Analysis
 
 The main command for running PCA analysis on your data.
@@ -44,13 +72,12 @@ pca analyze [OPTIONS] <input.csv>
 
 ##### General Options
 - `--verbose, -v` - Enable verbose output with detailed progress
-- `--quiet, -q` - Minimal output, suitable for scripting
 - `--output-dir, -o <path>` - Output directory (default: same as input file)
 - `--format, -f <format>` - Output format: `table` or `json` (default: `table`)
 
 ##### PCA Configuration
 - `--components, -c <n>` - Number of principal components (default: 2)
-- `--method <method>` - PCA algorithm: `svd`, `nipals`, or `kernel` (default: `svd`)
+- `--method, -m <method>` - PCA algorithm: `svd`, `nipals`, or `kernel` (default: `svd`)
   - `svd` - Singular Value Decomposition (fastest, requires complete data)
   - `nipals` - Nonlinear Iterative Partial Least Squares (handles missing data)
   - `kernel` - Kernel PCA for non-linear relationships
@@ -67,17 +94,16 @@ pca analyze [OPTIONS] <input.csv>
 
 ##### Kernel PCA Options
 - `--kernel-type <type>` - Kernel type: `rbf`, `linear`, or `poly`
-- `--kernel-gamma <value>` - Gamma parameter for RBF and polynomial kernels (default: 1)
+- `--kernel-gamma <value>` - Gamma parameter for RBF and polynomial kernels (default: 0.01)
 - `--kernel-degree <n>` - Degree for polynomial kernel (default: 3)
-- `--kernel-coef0 <value>` - Independent term for polynomial kernel (default: 0)
+- `--kernel-coef0 <value>` - Coef0 for polynomial kernel (default: 0)
 
 ##### Data Format Options
 - `--no-headers` - First row contains data, not column names
 - `--no-index` - First column contains data, not row names
-- `--delimiter <char>` - CSV delimiter: `comma`, `semicolon`, or `tab` (default: `comma`)
-- `--decimal-separator <sep>` - Decimal separator: `dot` or `comma` (default: `dot`)
+- `--delimiter <string>` - CSV field delimiter (default: ",")
 - `--na-values <list>` - Comma-separated strings representing missing values
-  - Default: `"NA,N/A,nan,NaN,null,NULL"`
+  - Default: `",NA,N/A,nan,NaN,null,NULL,m"`
 
 ##### Missing Data Handling
 - `--missing-strategy <strategy>` - How to handle missing values:
@@ -87,25 +113,24 @@ pca analyze [OPTIONS] <input.csv>
   - `median` - Replace with column median
   - `zero` - Replace with zero
   - `native` - Use NIPALS algorithm's native missing data handling (NIPALS only)
+- `--missing-percent <float>` - Maximum missing percentage before dropping column (default: 50)
 
 **Note:** The `native` strategy is only available with the NIPALS method. When using SVD (default), you must choose a preprocessing strategy (drop, mean, median, or zero) if your data contains missing values.
 
 ##### Data Selection
-- `--exclude-rows <list>` - Exclude rows by index (1-based, e.g., '1,3,5-7')
-- `--exclude-cols <list>` - Exclude columns by index (1-based, e.g., '2,4-6,8')
+- `--exclude-rows <string>` - Comma-separated list of row indices to exclude (1-based)
+- `--exclude-columns <string>` - Comma-separated list of column names or indices to exclude
+- `--target-columns <string>` - Comma-separated list of target columns to exclude
 
 ##### Group and Correlation Analysis
-- `--group-column <name>` - Categorical column for grouping samples
-- `--metadata-cols <list>` - Columns for eigencorrelation analysis
-- `--target-columns <list>` - Target columns (auto-detected if ending with `#target`)
-- `--eigencorrelations` - Calculate correlations between PCs and metadata/target
+Currently, group and metadata analysis features are available through the GoPCA Desktop application but not yet implemented in the CLI.
 
 ##### Output Control
-- `--output-scores` - Include PC scores (default: true)
-- `--output-loadings` - Include loadings (default: false)
-- `--output-variance` - Include explained variance (default: false)
+- `--output-scores` - Include PC scores in output (default: true)
+- `--output-loadings` - Include loadings in output (default: true)
+- `--output-variance` - Include explained variance in output (default: true)
 - `--output-all` - Output all results
-- `--include-metrics` - Include diagnostic metrics (T², Mahalanobis, RSS)
+- `--include-metrics` - Calculate and include advanced metrics (T², Q-residual, etc.)
 
 #### Examples
 
@@ -166,16 +191,16 @@ When verbose mode is enabled, the CLI will report:
 - Missing values per column
 - Applied strategy and its effect
 
-##### Group Analysis
+##### Data Selection Examples
 ```bash
-# Specify grouping column
-pca analyze --group-column sample_type data.csv
+# Exclude specific columns
+pca analyze --exclude-columns "id,timestamp" data.csv
 
-# Calculate eigencorrelations with metadata
-pca analyze --metadata-cols age,weight --eigencorrelations -f json data.csv
+# Exclude specific rows
+pca analyze --exclude-rows "1,5,10-15" data.csv
 
-# Include target columns
-pca analyze --target-columns concentration,pH --eigencorrelations data.csv
+# Exclude target columns
+pca analyze --target-columns "result,outcome" data.csv
 ```
 
 ##### Output Formats
@@ -232,7 +257,7 @@ pca validate --summary data.csv
 pca validate --strict data.csv
 
 # Custom delimiter and missing values
-pca validate --delimiter semicolon --na-values "?,unknown" data.csv
+pca validate --delimiter ";" --na-values "?,unknown" data.csv
 ```
 
 ### `transform` - Apply PCA Model to New Data
@@ -249,17 +274,12 @@ pca transform [OPTIONS] <model.json> <input.csv>
 
 #### Options
 
-- `--output-dir, -o <path>` - Output directory for results
-- `--format, -f <format>` - Output format: `table` or `json`
-- `--verbose` - Show detailed progress
-- `--quiet, -q` - Suppress output except errors
-- `--no-headers` - Input CSV has no header row
-- `--no-index` - Input CSV has no index column
-- `--delimiter, -d <char>` - CSV delimiter
-- `--decimal-separator <sep>` - Decimal separator
-- `--na-values <list>` - Missing value strings
-- `--exclude-rows <list>` - Row indices to exclude
-- `--include-metrics` - Calculate diagnostic metrics
+- `--output, -o <string>` - Output directory for results
+- `--format, -f <format>` - Output format: `table` or `json` (default: `table`)
+- `--no-headers` - First row contains data, not column names
+- `--no-index` - First column contains data, not row names
+- `--delimiter <string>` - CSV field delimiter (default: ",")
+- `--na-values <string>` - Comma-separated list of strings representing missing values (default: ",NA,N/A,nan,NaN,null,NULL,m")
 
 #### Requirements
 
