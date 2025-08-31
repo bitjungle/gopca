@@ -6,7 +6,7 @@
 
 import React, { useState, useRef, useEffect } from 'react';
 import './App.css';
-import { CSVGrid, ValidationResults, MissingValueSummary, MissingValueDialog, DataQualityDashboard, UndoRedoControls, ImportWizard, DataTransformDialog, DocumentationViewer } from './components';
+import { CSVGrid, ValidationResults, MissingValueSummary, MissingValueDialog, DataQualityDashboard, UndoRedoControls, ImportWizard, DataTransformDialog, DocumentationViewer, AboutDialog } from './components';
 import { ConfirmDialog } from '@gopca/ui-components';
 import { ThemeProvider, ThemeToggle } from '@gopca/ui-components';
 import logo from './assets/images/GoCSV-logo-1024-transp.png';
@@ -34,6 +34,7 @@ function AppContent() {
     const [showImportWizard, setShowImportWizard] = useState(false);
     const [showTransformDialog, setShowTransformDialog] = useState(false);
     const [showDocumentation, setShowDocumentation] = useState(false);
+    const [showAboutDialog, setShowAboutDialog] = useState(false);
     const [showDownloadConfirm, setShowDownloadConfirm] = useState(false);
     const [version, setVersion] = useState<string>('');
 
@@ -90,9 +91,9 @@ function AppContent() {
         }
     }, [fileLoaded, fileData]);
 
-    // Scroll to top function
-    const scrollToTop = () => {
-        window.scrollTo({ top: 0, behavior: 'smooth' });
+    // Handle logo click - show About dialog
+    const handleLogoClick = () => {
+        setShowAboutDialog(true);
     };
 
     // Check GoPCA installation status
@@ -297,7 +298,7 @@ return;
                             src={logo}
                             alt="GoCSV - GoPCA CSV Editor"
                             className="h-12 cursor-pointer hover:opacity-90 transition-opacity flex-shrink-0"
-                            onClick={scrollToTop}
+                            onClick={handleLogoClick}
                         />
                         {version && (
                             <span className="text-xs text-gray-500 dark:text-gray-400">
@@ -671,6 +672,13 @@ return;
             <DocumentationViewer
                 isOpen={showDocumentation}
                 onClose={() => setShowDocumentation(false)}
+            />
+
+            {/* About Dialog */}
+            <AboutDialog
+                isOpen={showAboutDialog}
+                onClose={() => setShowAboutDialog(false)}
+                version={version}
             />
 
             {/* Download GoPCA Confirmation */}

@@ -9,7 +9,7 @@ import './App.css';
 import { ParseCSV, RunPCA, LoadIrisDataset, LoadDatasetFile, GetVersion, CalculateEllipses, GetGUIConfig, LoadCSVFile, CheckGoCSVStatus, OpenInGoCSV, LaunchGoCSV, DownloadGoCSV, SaveFile } from '../wailsjs/go/main/App';
 import { Copy, Check } from 'lucide-react';
 import { EventsOn } from '../wailsjs/runtime/runtime';
-import { DataTable, SelectionTable, MatrixIllustration, HelpWrapper, DocumentationViewer, ModelOverview } from './components';
+import { DataTable, SelectionTable, MatrixIllustration, HelpWrapper, DocumentationViewer, ModelOverview, AboutDialog } from './components';
 import { setupPlotlyWailsIntegration } from '@gopca/ui-components';
 
 // Lazy load visualization components for better performance
@@ -58,6 +58,7 @@ function AppContent() {
     const [showRowLabels, setShowRowLabels] = useState(false);
     const [maxLabelsToShow, setMaxLabelsToShow] = useState(10);
     const [showDocumentation, setShowDocumentation] = useState(false);
+    const [showAboutDialog, setShowAboutDialog] = useState(false);
     const [datasetId, setDatasetId] = useState(0); // Force DataTable re-render on dataset change
     const [showCopied, setShowCopied] = useState(false);
     const [loadingsPlotType, setLoadingsPlotType] = useState<'bar' | 'line' | null>(null); // null means auto
@@ -325,13 +326,8 @@ return;
         }
     }, [fileData]);
 
-    const scrollToTop = () => {
-        if (mainScrollRef.current) {
-            mainScrollRef.current.scrollTo({
-                top: 0,
-                behavior: 'smooth'
-            });
-        }
+    const handleLogoClick = () => {
+        setShowAboutDialog(true);
     };
 
     const generateCLICommand = (): string => {
@@ -526,7 +522,7 @@ return;
                             src={logo}
                             alt="GoPCA - Principal Component Analysis Tool"
                             className="h-12 cursor-pointer hover:opacity-90 transition-opacity flex-shrink-0"
-                            onClick={scrollToTop}
+                            onClick={handleLogoClick}
                         />
                         {version && (
                             <span className="text-xs text-gray-500 dark:text-gray-400">
@@ -1521,6 +1517,13 @@ return;
             <DocumentationViewer
                 isOpen={showDocumentation}
                 onClose={() => setShowDocumentation(false)}
+            />
+
+            {/* About Dialog */}
+            <AboutDialog
+                isOpen={showAboutDialog}
+                onClose={() => setShowAboutDialog(false)}
+                version={version}
             />
 
             {/* GoCSV Download Confirmation Dialog */}
