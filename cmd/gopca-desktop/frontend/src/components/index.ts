@@ -13,4 +13,5 @@ export { HelpWrapper } from './HelpWrapper';
 export { HelpDisplay } from './HelpDisplay';
 export { DocumentationViewer } from './DocumentationViewer';
 export { ModelOverview } from './ModelOverview';
+export { AboutDialog } from './AboutDialog';
 export * from './visualizations';

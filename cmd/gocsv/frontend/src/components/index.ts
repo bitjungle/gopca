@@ -19,6 +19,7 @@ export { DataPreview } from './DataPreview';
 export { DataTransformDialog } from './DataTransformDialog';
 export { DocumentationViewer } from './DocumentationViewer';
 export { RenameDialog } from './RenameDialog';
+export { AboutDialog } from './AboutDialog';
 export {
     TargetColumnIcon,
     CategoryColumnIcon,
