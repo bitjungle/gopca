@@ -518,12 +518,14 @@ return;
             <header className="sticky top-0 z-50 bg-white dark:bg-gray-800 shadow-lg backdrop-blur-sm bg-opacity-95 dark:bg-opacity-95">
                 <div className="flex items-center justify-between max-w-7xl mx-auto px-4 py-3 h-20">
                     <div className="flex items-center gap-4">
-                        <img
-                            src={logo}
-                            alt="GoPCA - Principal Component Analysis Tool"
-                            className="h-12 cursor-pointer hover:opacity-90 transition-opacity flex-shrink-0"
-                            onClick={handleLogoClick}
-                        />
+                        <HelpWrapper helpKey="logo-about">
+                            <img
+                                src={logo}
+                                alt="GoPCA - Principal Component Analysis Tool"
+                                className="h-12 cursor-pointer hover:opacity-90 transition-opacity flex-shrink-0"
+                                onClick={handleLogoClick}
+                            />
+                        </HelpWrapper>
                     </div>
                     <div className="flex-1 mx-8 overflow-hidden">
                         <HelpDisplay
@@ -533,27 +535,29 @@ return;
                         />
                     </div>
                     <div className="flex items-center gap-2">
-                        <button
-                            onClick={() => setShowDocumentation(true)}
-                            className="p-2 rounded-lg bg-gray-200 dark:bg-gray-700 hover:bg-gray-300 dark:hover:bg-gray-600 transition-colors duration-200"
-                            aria-label="Open documentation"
-                        >
-                            {/* Book icon */}
-                            <svg
-                                xmlns="http://www.w3.org/2000/svg"
-                                fill="none"
-                                viewBox="0 0 24 24"
-                                strokeWidth={1.5}
-                                stroke="currentColor"
-                                className="w-5 h-5 text-gray-700 dark:text-gray-300"
+                        <HelpWrapper helpKey="documentation-button">
+                            <button
+                                onClick={() => setShowDocumentation(true)}
+                                className="p-2 rounded-lg bg-gray-200 dark:bg-gray-700 hover:bg-gray-300 dark:hover:bg-gray-600 transition-colors duration-200"
+                                aria-label="Open documentation"
                             >
-                                <path
-                                    strokeLinecap="round"
-                                    strokeLinejoin="round"
-                                    d="M12 6.042A8.967 8.967 0 006 3.75c-1.052 0-2.062.18-3 .512v14.25A8.987 8.987 0 016 18c2.305 0 4.408.867 6 2.292m0-14.25a8.966 8.966 0 016-2.292c1.052 0 2.062.18 3 .512v14.25A8.987 8.987 0 0018 18c-2.305 0-4.408.867-6 2.292m0-14.25v14.25"
-                                />
-                            </svg>
-                        </button>
+                                {/* Book icon */}
+                                <svg
+                                    xmlns="http://www.w3.org/2000/svg"
+                                    fill="none"
+                                    viewBox="0 0 24 24"
+                                    strokeWidth={1.5}
+                                    stroke="currentColor"
+                                    className="w-5 h-5 text-gray-700 dark:text-gray-300"
+                                >
+                                    <path
+                                        strokeLinecap="round"
+                                        strokeLinejoin="round"
+                                        d="M12 6.042A8.967 8.967 0 006 3.75c-1.052 0-2.062.18-3 .512v14.25A8.987 8.987 0 016 18c2.305 0 4.408.867 6 2.292m0-14.25a8.966 8.966 0 016-2.292c1.052 0 2.062.18 3 .512v14.25A8.987 8.987 0 0018 18c-2.305 0-4.408.867-6 2.292m0-14.25v14.25"
+                                    />
+                                </svg>
+                            </button>
+                        </HelpWrapper>
                         <ThemeToggle />
                     </div>
                 </div>
