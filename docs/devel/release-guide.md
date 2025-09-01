@@ -223,24 +223,131 @@ This is useful for:
 - Verifying Windows installer builds correctly
 - Checking cross-platform builds without creating releases
 
-## Hotfix Releases
+## Maintenance Releases
 
-For urgent fixes to the current release:
+For bug fixes to the current stable version while v1.1 development continues:
+
+### When to Create Maintenance Releases
+
+Create a maintenance release (e.g., v1.0.2, v1.0.3) when:
+- Bug affects current production users
+- Fix cannot wait for next minor release (v1.1.0)
+- Change is backward compatible (no breaking changes)
+- Fix has been tested thoroughly
+
+### Maintenance Release Process
 
 ```bash
-# 1. Create hotfix branch from tag
-git checkout v0.9.0
-git checkout -b hotfix-v0.9.1
+# 1. Work from maintenance branch (not main!)
+git checkout maintenance/v1.0.x
+git pull origin maintenance/v1.0.x
+
+# 2. Apply fixes (usually cherry-picked from develop)
+# Option A: Cherry-pick existing fix
+git cherry-pick <commit-hash-from-develop>
+
+# Option B: Create fix directly
+git checkout -b bugfix-critical-issue
+# ... make changes ...
+git commit -m "fix: critical bug in ..."
+git push -u origin bugfix-critical-issue
+gh pr create --base maintenance/v1.0.x
+
+# 3. After fixes are merged to maintenance branch
+git checkout maintenance/v1.0.x
+git pull origin maintenance/v1.0.x
+
+# 4. Prepare release
+./scripts/prepare-release.sh v1.0.2
+
+# 5. Create PR to main (not maintenance!)
+git push -u origin release-v1.0.2
+gh pr create --base main --title "Release v1.0.2"
+
+# 6. After PR is merged, create release
+git checkout main
+git pull origin main
+./scripts/release.sh v1.0.2
+
+# 7. Update maintenance branch with release
+git checkout maintenance/v1.0.x
+git merge main
+git push origin maintenance/v1.0.x
+```
+
+### Cherry-Picking Guidelines
+
+When cherry-picking fixes between branches:
+
+```bash
+# Cherry-pick with commit reference
+git cherry-pick -x <commit-hash>  # -x adds reference to original commit
+
+# If conflicts occur
+git status  # Check conflicted files
+# ... resolve conflicts ...
+git add .
+git cherry-pick --continue
+
+# Verify the fix works in this branch
+make test
+```
+
+## Hotfix Releases
+
+For emergency fixes when no maintenance branch exists or for critical security issues:
+
+```bash
+# 1. Create hotfix branch from main
+git checkout main
+git pull origin main
+git checkout -b hotfix-v1.0.2-security
 
 # 2. Make fixes and commit
 # ... make changes ...
-git commit -m "fix: critical bug in ..."
+git commit -m "fix(security): critical vulnerability"
 
-# 3. Prepare release (creates release branch)
-./scripts/prepare-release.sh v0.9.1
+# 3. Prepare release
+./scripts/prepare-release.sh v1.0.2
 
 # 4. Continue normal release process from Step 2
 ```
+
+After hotfix is released, merge back to develop and maintenance branches:
+
+```bash
+# Merge to develop
+git checkout develop
+git merge main
+git push origin develop
+
+# Merge to maintenance (if exists)
+git checkout maintenance/v1.0.x
+git merge main
+git push origin maintenance/v1.0.x
+```
+
+## Multi-Version Support
+
+When supporting multiple versions simultaneously (e.g., v1.0.x and v1.1.x):
+
+### Branch Structure
+- `main`: Latest stable release
+- `develop`: Next minor/major version (v1.1.0)
+- `maintenance/v1.0.x`: Bug fixes for v1.0 series
+- `maintenance/v1.1.x`: Created after v1.1.0 release
+
+### Version Decision Tree
+
+| Scenario | Target Branch | Release Type |
+|----------|--------------|--------------|
+| New feature | develop | Next minor (v1.1.0) |
+| Bug in v1.0.x only | maintenance/v1.0.x | Patch (v1.0.2) |
+| Bug in both versions | maintenance/v1.0.x + cherry-pick to develop | Patch + include in next minor |
+| Security issue | hotfix from main | Immediate patch |
+| Breaking change | develop | Next major (v2.0.0) |
+
+For comprehensive Git workflow documentation, see [git-workflow.md](git-workflow.md).
 
 ## Troubleshooting
 
