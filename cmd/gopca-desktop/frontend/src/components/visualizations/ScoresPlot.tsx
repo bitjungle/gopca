@@ -26,6 +26,9 @@ interface ScoresPlotProps {
   showRowLabels?: boolean;
   maxLabelsToShow?: number;
   fontScale?: number;
+  enableSelection?: boolean;
+  selectedIndices?: number[];
+  onSelectionChange?: (indices: number[]) => void;
 }
 
 export const ScoresPlot: React.FC<ScoresPlotProps> = ({
@@ -42,7 +45,10 @@ export const ScoresPlot: React.FC<ScoresPlotProps> = ({
   confidenceLevel = 0.95,
   showRowLabels = false,
   maxLabelsToShow = 10,
-  fontScale = 1.0
+  fontScale = 1.0,
+  enableSelection = false,
+  selectedIndices,
+  onSelectionChange
 }) => {
   const { theme } = useTheme();
   const { qualitativePalette, sequentialPalette, mode } = usePalette();
@@ -73,7 +79,9 @@ export const ScoresPlot: React.FC<ScoresPlotProps> = ({
     maxLabelsToShow,
     theme,
     colorScheme,
-    fontScale
+    fontScale,
+    enableSelection,
+    selectedIndices
   );
 
   return (
@@ -81,6 +89,7 @@ export const ScoresPlot: React.FC<ScoresPlotProps> = ({
       <PCAScoresPlot
         data={plotlyData}
         config={plotlyConfig}
+        onSelection={onSelectionChange}
       />
     </div>
   );

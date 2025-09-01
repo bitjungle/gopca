@@ -101,7 +101,9 @@ export function createScoresPlotConfig(
   maxLabelsToShow?: number,
   theme?: 'light' | 'dark',
   colorScheme?: string[],
-  fontScale?: number
+  fontScale?: number,
+  enableSelection?: boolean,
+  selectedIndices?: number[]
 ): ScoresPlotConfig {
   return {
     showEllipses,
@@ -110,7 +112,9 @@ export function createScoresPlotConfig(
     maxLabels: maxLabelsToShow,
     theme,
     colorScheme,
-    fontScale
+    fontScale,
+    enableSelection,
+    selectedIndices
   };
 }
 

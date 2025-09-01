@@ -93,6 +93,11 @@ function AppContent() {
     const [isCheckingGoCSV, setIsCheckingGoCSV] = useState(false);
     const [showGoCSVDownloadDialog, setShowGoCSVDownloadDialog] = useState(false);
 
+    // Plotly selection state
+    const [plotSelectedRows, setPlotSelectedRows] = useState<number[]>([]);
+    const [selectionMode, setSelectionMode] = useState<'add' | 'remove' | 'replace'>('replace');
+    const [enablePlotSelection, setEnablePlotSelection] = useState(false);
+
     const updateGammaForData = (data: FileData) => {
         if (data && data.data && data.data[0]) {
             const numFeatures = data.data[0].length;
@@ -316,6 +321,36 @@ return;
             setExcludedRows(excluded);
         }
     }, [fileData]);
+
+    // Handle plot selection changes
+    const handlePlotSelectionChange = React.useCallback((indices: number[]) => {
+        if (!fileData) return;
+        
+        const allIndices = Array.from({ length: fileData.data.length }, (_, i) => i);
+        let newSelectedRows: number[] = [];
+        
+        switch(selectionMode) {
+            case 'replace':
+                newSelectedRows = indices;
+                break;
+            case 'add':
+                // Get currently selected rows from exclusion list
+                const currentlySelected = allIndices.filter(i => !excludedRows.includes(i));
+                newSelectedRows = [...new Set([...currentlySelected, ...indices])];
+                break;
+            case 'remove':
+                // Get currently selected rows from exclusion list
+                const currentSelected = allIndices.filter(i => !excludedRows.includes(i));
+                newSelectedRows = currentSelected.filter(i => !indices.includes(i));
+                break;
+        }
+        
+        setPlotSelectedRows(indices);
+        
+        // Update excluded rows based on new selection
+        const newExcluded = allIndices.filter(i => !newSelectedRows.includes(i));
+        setExcludedRows(newExcluded);
+    }, [fileData, excludedRows, selectionMode]);
 
     const handleColumnSelectionChange = React.useCallback((selectedColumns: number[]) => {
         // Convert selected indices to excluded indices
@@ -1331,6 +1366,59 @@ return;
                                             </div>
                                         )}
 
+                                        {/* Interactive Selection Controls - Only for 2D Scores Plot */}
+                                        {selectedPlot === 'scores' && (
+                                            <div className="flex items-center gap-3 px-3 py-2 bg-gray-50 dark:bg-gray-800 rounded-lg">
+                                                <HelpWrapper helpKey="interactive-selection" className="flex items-center gap-2">
+                                                    <label className="text-sm text-gray-600 dark:text-gray-400">
+                                                        <input
+                                                            type="checkbox"
+                                                            checked={enablePlotSelection}
+                                                            onChange={(e) => setEnablePlotSelection(e.target.checked)}
+                                                            className="mr-1"
+                                                        />
+                                                        Interactive Selection
+                                                    </label>
+                                                </HelpWrapper>
+                                                {enablePlotSelection && (
+                                                    <>
+                                                        <CustomSelect
+                                                            value={selectionMode}
+                                                            onChange={(value) => setSelectionMode(value as 'add' | 'remove' | 'replace')}
+                                                            options={[
+                                                                { value: 'replace', label: 'Replace' },
+                                                                { value: 'add', label: 'Add to' },
+                                                                { value: 'remove', label: 'Remove from' }
+                                                            ]}
+                                                            className="w-28"
+                                                        />
+                                                        {plotSelectedRows.length > 0 && (
+                                                            <>
+                                                                <span className="text-sm text-gray-600 dark:text-gray-400">
+                                                                    {plotSelectedRows.length} selected
+                                                                </span>
+                                                                <button
+                                                                    onClick={() => {
+                                                                        setPlotSelectedRows([]);
+                                                                        handlePlotSelectionChange([]);
+                                                                    }}
+                                                                    className="text-sm px-2 py-1 bg-gray-200 dark:bg-gray-700 hover:bg-gray-300 dark:hover:bg-gray-600 rounded"
+                                                                >
+                                                                    Clear
+                                                                </button>
+                                                                <button
+                                                                    onClick={runPCA}
+                                                                    className="text-sm px-3 py-1 bg-blue-500 hover:bg-blue-600 text-white rounded"
+                                                                >
+                                                                    Apply & Re-run PCA
+                                                                </button>
+                                                            </>
+                                                        )}
+                                                    </>
+                                                )}
+                                            </div>
+                                        )}
+
                                         {/* Loadings Plot Component Selector */}
                                         {selectedPlot === 'loadings' && pcaResponse.result?.method !== 'kernel' && (
                                             <div className="flex items-center gap-3 px-3 py-2 bg-gray-50 dark:bg-gray-800 rounded-lg">
@@ -1391,6 +1479,9 @@ return;
                                                 confidenceLevel={confidenceLevel}
                                                 showRowLabels={showRowLabels}
                                                 maxLabelsToShow={maxLabelsToShow}
+                                                enableSelection={enablePlotSelection}
+                                                selectedIndices={plotSelectedRows}
+                                                onSelectionChange={handlePlotSelectionChange}
                                             />
                                         ) : selectedPlot === 'scores3d' && pcaResponse.result.scores.length > 0 && pcaResponse.result.scores[0].length >= 3 ? (
                                             <Scores3DPlot

@@ -39,6 +39,8 @@ export interface ScoresPlotConfig extends PlotlyVisualizationConfig {
   maxLabels?: number;
   showDensity?: boolean;
   colorScheme?: string[];
+  enableSelection?: boolean;
+  selectedIndices?: number[];
 }
 
 /**
@@ -136,7 +138,7 @@ export class PlotlyScoresPlot extends PlotlyVisualization<ScoresPlotData> {
           color: this.scoresConfig.colorScheme![groupIndex % this.scoresConfig.colorScheme!.length],
           opacity: 0.8
         },
-        selectedpoints: undefined,
+        selectedpoints: this.scoresConfig.selectedIndices?.filter(i => groupIndices.includes(i)),
         selected: {
           marker: {
             size: getScaledMarkerSize(12, this.config.fontScale || 1.0),
@@ -446,9 +448,16 @@ return;
    */
   public getPlotConfig(): Partial<Config> {
     const baseConfig = this.getAdvancedConfig();
+    const selectionButtons = this.scoresConfig.enableSelection 
+      ? [['select2d', 'lasso2d'] as any]
+      : [];
+    
     return {
       ...baseConfig,
-      modeBarButtonsToAdd: getExportMenuItems() as any
+      modeBarButtonsToAdd: [
+        ...selectionButtons,
+        ...getExportMenuItems()
+      ] as any
     };
   }
 }
@@ -460,13 +469,22 @@ export const PCAScoresPlot: React.FC<{
   data: ScoresPlotData;
   config?: ScoresPlotConfig;
   onSelection?: (indices: number[]) => void;
-}> = ({ data, config, onSelection }) => {
+  onDeselect?: () => void;
+}> = ({ data, config, onSelection, onDeselect }) => {
   const plot = useMemo(() => new PlotlyScoresPlot(data, config), [data, config]);
 
   const handleSelected = (event: any) => {
     if (onSelection && event?.points) {
       const indices = event.points.map((p: any) => p.pointIndex);
       onSelection(indices);
+    }
+  };
+
+  const handleDeselect = () => {
+    if (onDeselect) {
+      onDeselect();
+    } else if (onSelection) {
+      onSelection([]);
     }
   };
 
@@ -477,6 +495,7 @@ export const PCAScoresPlot: React.FC<{
       config={plot.getPlotConfig()}
       style={{ width: '100%', height: '100%' }}
       onSelected={handleSelected}
+      onDeselect={handleDeselect}
     />
   );
 };

@@ -14,6 +14,8 @@ interface SelectionTableProps {
   title?: string;
   onRowSelectionChange?: (selectedRows: number[]) => void;
   onColumnSelectionChange?: (selectedColumns: number[]) => void;
+  externalSelectedRows?: number[];
+  highlightExternalSelections?: boolean;
 }
 
 export const SelectionTable: React.FC<SelectionTableProps> = ({
@@ -22,7 +24,9 @@ export const SelectionTable: React.FC<SelectionTableProps> = ({
   data,
   title,
   onRowSelectionChange,
-  onColumnSelectionChange
+  onColumnSelectionChange,
+  externalSelectedRows,
+  highlightExternalSelections
 }) => {
   // Selection states
   const [rowSelection, setRowSelection] = React.useState<Record<number, boolean>>({});
@@ -46,6 +50,17 @@ export const SelectionTable: React.FC<SelectionTableProps> = ({
       setColumnSelection(initialColSelection);
     }
   }, [data.length, headers.length]);
+
+  // Update row selection when external selection changes
+  useEffect(() => {
+    if (externalSelectedRows && externalSelectedRows.length > 0) {
+      const newSelection: Record<number, boolean> = {};
+      rowNames.forEach((_, index) => {
+        newSelection[index] = externalSelectedRows.includes(index);
+      });
+      setRowSelection(newSelection);
+    }
+  }, [externalSelectedRows, rowNames.length]);
 
   // Notify parent of selection changes
   useEffect(() => {
@@ -178,7 +193,11 @@ return;
                     height: `${virtualRow.size}px`,
                     transform: `translateY(${virtualRow.start}px)`
                   }}
-                  className="flex items-center px-2 hover:bg-gray-50 dark:hover:bg-gray-700"
+                  className={`flex items-center px-2 hover:bg-gray-50 dark:hover:bg-gray-700 ${
+                    highlightExternalSelections && externalSelectedRows?.includes(virtualRow.index) 
+                      ? 'bg-blue-50 dark:bg-blue-900/30' 
+                      : ''
+                  }`}
                 >
                   <input
                     type="checkbox"
