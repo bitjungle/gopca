@@ -51,16 +51,16 @@ export const SelectionTable: React.FC<SelectionTableProps> = ({
     }
   }, [data.length, headers.length]);
 
-  // Update row selection when external selection changes
+  // Update internal state when external selection changes (one-way sync)
   useEffect(() => {
-    if (externalSelectedRows && externalSelectedRows.length > 0) {
+    if (externalSelectedRows !== undefined) {
       const newSelection: Record<number, boolean> = {};
       rowNames.forEach((_, index) => {
         newSelection[index] = externalSelectedRows.includes(index);
       });
       setRowSelection(newSelection);
     }
-  }, [externalSelectedRows, rowNames.length]);
+  }, [externalSelectedRows?.length]); // Only watch length to avoid deep comparison
 
   // Notify parent of selection changes
   useEffect(() => {

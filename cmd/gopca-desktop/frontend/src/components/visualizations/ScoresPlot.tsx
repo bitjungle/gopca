@@ -26,9 +26,8 @@ interface ScoresPlotProps {
   showRowLabels?: boolean;
   maxLabelsToShow?: number;
   fontScale?: number;
-  enableSelection?: boolean;
-  selectedIndices?: number[];
   onSelectionChange?: (indices: number[]) => void;
+  excludedRows?: number[]; // Indices of rows excluded from PCA
 }
 
 export const ScoresPlot: React.FC<ScoresPlotProps> = ({
@@ -46,9 +45,8 @@ export const ScoresPlot: React.FC<ScoresPlotProps> = ({
   showRowLabels = false,
   maxLabelsToShow = 10,
   fontScale = 1.0,
-  enableSelection = false,
-  selectedIndices,
-  onSelectionChange
+  onSelectionChange,
+  excludedRows = []
 }) => {
   const { theme } = useTheme();
   const { qualitativePalette, sequentialPalette, mode } = usePalette();
@@ -79,17 +77,24 @@ export const ScoresPlot: React.FC<ScoresPlotProps> = ({
     maxLabelsToShow,
     theme,
     colorScheme,
-    fontScale,
-    enableSelection,
-    selectedIndices
+    fontScale
   );
+
+  // Debug logging
+  const handleSelection = React.useCallback((indices: number[]) => {
+    console.log('ScoresPlot wrapper: Selection received', indices);
+    if (onSelectionChange) {
+      onSelectionChange(indices);
+    }
+  }, [onSelectionChange]);
 
   return (
     <div style={{ width: '100%', height: '100%' }}>
       <PCAScoresPlot
         data={plotlyData}
         config={plotlyConfig}
-        onSelection={onSelectionChange}
+        onSelection={handleSelection}
+        excludedRows={excludedRows}
       />
     </div>
   );

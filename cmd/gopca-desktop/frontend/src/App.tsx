@@ -95,8 +95,13 @@ function AppContent() {
 
     // Plotly selection state
     const [plotSelectedRows, setPlotSelectedRows] = useState<number[]>([]);
-    const [selectionMode, setSelectionMode] = useState<'add' | 'remove' | 'replace'>('replace');
-    const [enablePlotSelection, setEnablePlotSelection] = useState(false);
+    const [ignoreSelections, setIgnoreSelections] = useState(false);
+    const [pcaHasExclusions, setPcaHasExclusions] = useState(false);
+    
+    // Debug: Monitor excludedRows changes
+    useEffect(() => {
+        console.log('excludedRows state changed to:', excludedRows);
+    }, [excludedRows]);
 
     const updateGammaForData = (data: FileData) => {
         if (data && data.data && data.data[0]) {
@@ -324,33 +329,39 @@ return;
 
     // Handle plot selection changes
     const handlePlotSelectionChange = React.useCallback((indices: number[]) => {
-        if (!fileData) return;
-        
-        const allIndices = Array.from({ length: fileData.data.length }, (_, i) => i);
-        let newSelectedRows: number[] = [];
-        
-        switch(selectionMode) {
-            case 'replace':
-                newSelectedRows = indices;
-                break;
-            case 'add':
-                // Get currently selected rows from exclusion list
-                const currentlySelected = allIndices.filter(i => !excludedRows.includes(i));
-                newSelectedRows = [...new Set([...currentlySelected, ...indices])];
-                break;
-            case 'remove':
-                // Get currently selected rows from exclusion list
-                const currentSelected = allIndices.filter(i => !excludedRows.includes(i));
-                newSelectedRows = currentSelected.filter(i => !indices.includes(i));
-                break;
+        // Ignore selection events while PCA is loading or if flag is set
+        if (loading || ignoreSelections) {
+            console.log('Plot selection: Ignoring selection (loading:', loading, ', ignoreSelections:', ignoreSelections, ')');
+            return;
         }
         
-        setPlotSelectedRows(indices);
+        if (!fileData || indices.length === 0) {
+            console.log('Plot selection: Ignoring empty selection or no fileData');
+            return;
+        }
         
-        // Update excluded rows based on new selection
-        const newExcluded = allIndices.filter(i => !newSelectedRows.includes(i));
-        setExcludedRows(newExcluded);
-    }, [fileData, excludedRows, selectionMode]);
+        console.log('Plot selection: Received indices:', indices);
+        console.log('Current excludedRows before update:', excludedRows);
+        
+        // Add selected indices to excluded rows (toggle behavior)
+        setExcludedRows(prev => {
+            console.log('Updating excludedRows. Previous:', prev);
+            const newExcluded = new Set(prev);
+            indices.forEach(idx => {
+                if (newExcluded.has(idx)) {
+                    newExcluded.delete(idx); // Toggle off if already excluded
+                } else {
+                    newExcluded.add(idx); // Toggle on if not excluded
+                }
+            });
+            const result = Array.from(newExcluded);
+            console.log('New excludedRows:', result);
+            return result;
+        });
+        
+        // Clear the plot selection state since visual won't persist
+        setPlotSelectedRows([]);
+    }, [fileData, excludedRows, loading, ignoreSelections]);
 
     const handleColumnSelectionChange = React.useCallback((selectedColumns: number[]) => {
         // Convert selected indices to excluded indices
@@ -478,6 +489,10 @@ return;
                 calculateEigencorrelations: (fileData.numericTargetColumns && Object.keys(fileData.numericTargetColumns).length > 0) ||
                                           (fileData.categoricalColumns && Object.keys(fileData.categoricalColumns).length > 0)
             };
+            console.log('Running PCA with excluded rows:', excludedRows);
+            // Disable selection handling during PCA update
+            setIgnoreSelections(true);
+            
             const result = await RunPCA(request);
             if (result.success) {
                 setPcaResponse(result);
@@ -486,6 +501,55 @@ return;
                 setSelectedYComponent(1);
                 // Clear any previous errors
                 setPcaError(null);
+                
+                // If we had excluded rows, update fileData to reflect the filtered dataset
+                if (excludedRows.length > 0) {
+                    console.log('PCA completed. Updating fileData to remove', excludedRows.length, 'excluded samples');
+                    setPcaHasExclusions(true);  // Mark that this PCA was run with exclusions
+                    const includedIndices = fileData.data
+                        .map((_, i) => i)
+                        .filter(i => !excludedRows.includes(i));
+                    
+                    const filteredData = includedIndices.map(i => fileData.data[i]);
+                    const filteredRowNames = includedIndices.map(i => fileData.rowNames[i]);
+                    
+                    // Update categorical and numeric columns if they exist
+                    const filteredCategorical: Record<string, string[]> = {};
+                    const filteredNumeric: Record<string, number[]> = {};
+                    
+                    if (fileData.categoricalColumns) {
+                        Object.keys(fileData.categoricalColumns).forEach(col => {
+                            filteredCategorical[col] = includedIndices.map(i => 
+                                fileData.categoricalColumns![col][i]
+                            );
+                        });
+                    }
+                    
+                    if (fileData.numericTargetColumns) {
+                        Object.keys(fileData.numericTargetColumns).forEach(col => {
+                            filteredNumeric[col] = includedIndices.map(i => 
+                                fileData.numericTargetColumns![col][i]
+                            );
+                        });
+                    }
+                    
+                    // CRITICAL: Clear excluded rows FIRST before updating fileData
+                    console.log('Clearing excludedRows BEFORE updating fileData');
+                    setExcludedRows([]);
+                    setPlotSelectedRows([]);
+                    
+                    // Then update fileData with filtered dataset
+                    setFileData({
+                        ...fileData,
+                        data: filteredData,
+                        rowNames: filteredRowNames,
+                        categoricalColumns: Object.keys(filteredCategorical).length > 0 ? filteredCategorical : undefined,
+                        numericTargetColumns: Object.keys(filteredNumeric).length > 0 ? filteredNumeric : undefined
+                    });
+                } else {
+                    console.log('No excluded rows to process');
+                    setPcaHasExclusions(false);  // No exclusions in this PCA
+                }
 
                 // Check if Kernel PCA is selected with unsupported visualization
                 if (config.method === 'kernel' &&
@@ -502,10 +566,15 @@ return;
                         behavior: 'smooth',
                         block: 'start'
                     });
-                }, 100);
+                    // Re-enable selection handling after state has settled
+                    console.log('Re-enabling plot selection handling');
+                    setIgnoreSelections(false);
+                }, 500);
             } else {
                 setPcaError(result.error || 'PCA analysis failed');
                 setPcaResponse(null);
+                // Re-enable selection handling even on error
+                setIgnoreSelections(false);
                 // Smooth scroll to error
                 setTimeout(() => {
                     pcaErrorRef.current?.scrollIntoView({
@@ -516,6 +585,8 @@ return;
             }
         } catch (err) {
             setPcaError(`Failed to run PCA: ${err}`);
+            // Re-enable selection handling on error
+            setIgnoreSelections(false);
         } finally {
             setLoading(false);
         }
@@ -730,6 +801,8 @@ return;
                                     title="Input Data"
                                     onRowSelectionChange={handleRowSelectionChange}
                                     onColumnSelectionChange={handleColumnSelectionChange}
+                                    externalSelectedRows={fileData.data.map((_, i) => i).filter(i => !excludedRows.includes(i))}
+                                    highlightExternalSelections={true}
                                 />
                             ) : (
                                 <DataTable
@@ -742,6 +815,8 @@ return;
                                     enableColumnSelection={true}
                                     onRowSelectionChange={handleRowSelectionChange}
                                     onColumnSelectionChange={handleColumnSelectionChange}
+                                    externalSelectedRows={fileData.data.map((_, i) => i).filter(i => !excludedRows.includes(i))}
+                                    highlightExternalSelections={true}
                                 />
                             )}
                         </div>
@@ -1366,59 +1441,6 @@ return;
                                             </div>
                                         )}
 
-                                        {/* Interactive Selection Controls - Only for 2D Scores Plot */}
-                                        {selectedPlot === 'scores' && (
-                                            <div className="flex items-center gap-3 px-3 py-2 bg-gray-50 dark:bg-gray-800 rounded-lg">
-                                                <HelpWrapper helpKey="interactive-selection" className="flex items-center gap-2">
-                                                    <label className="text-sm text-gray-600 dark:text-gray-400">
-                                                        <input
-                                                            type="checkbox"
-                                                            checked={enablePlotSelection}
-                                                            onChange={(e) => setEnablePlotSelection(e.target.checked)}
-                                                            className="mr-1"
-                                                        />
-                                                        Interactive Selection
-                                                    </label>
-                                                </HelpWrapper>
-                                                {enablePlotSelection && (
-                                                    <>
-                                                        <CustomSelect
-                                                            value={selectionMode}
-                                                            onChange={(value) => setSelectionMode(value as 'add' | 'remove' | 'replace')}
-                                                            options={[
-                                                                { value: 'replace', label: 'Replace' },
-                                                                { value: 'add', label: 'Add to' },
-                                                                { value: 'remove', label: 'Remove from' }
-                                                            ]}
-                                                            className="w-28"
-                                                        />
-                                                        {plotSelectedRows.length > 0 && (
-                                                            <>
-                                                                <span className="text-sm text-gray-600 dark:text-gray-400">
-                                                                    {plotSelectedRows.length} selected
-                                                                </span>
-                                                                <button
-                                                                    onClick={() => {
-                                                                        setPlotSelectedRows([]);
-                                                                        handlePlotSelectionChange([]);
-                                                                    }}
-                                                                    className="text-sm px-2 py-1 bg-gray-200 dark:bg-gray-700 hover:bg-gray-300 dark:hover:bg-gray-600 rounded"
-                                                                >
-                                                                    Clear
-                                                                </button>
-                                                                <button
-                                                                    onClick={runPCA}
-                                                                    className="text-sm px-3 py-1 bg-blue-500 hover:bg-blue-600 text-white rounded"
-                                                                >
-                                                                    Apply & Re-run PCA
-                                                                </button>
-                                                            </>
-                                                        )}
-                                                    </>
-                                                )}
-                                            </div>
-                                        )}
-
                                         {/* Loadings Plot Component Selector */}
                                         {selectedPlot === 'loadings' && pcaResponse.result?.method !== 'kernel' && (
                                             <div className="flex items-center gap-3 px-3 py-2 bg-gray-50 dark:bg-gray-800 rounded-lg">
@@ -1461,6 +1483,7 @@ return;
                                     }>
                                         {selectedPlot === 'scores' && pcaResponse.result.scores.length > 0 && pcaResponse.result.scores[0].length >= 2 ? (
                                             <ScoresPlot
+                                                key={`scores-${pcaResponse.result.scores.length}-${excludedRows.length}`}
                                                 pcaResult={pcaResponse.result}
                                                 rowNames={fileData?.rowNames || []}
                                                 xComponent={selectedXComponent}
@@ -1479,9 +1502,8 @@ return;
                                                 confidenceLevel={confidenceLevel}
                                                 showRowLabels={showRowLabels}
                                                 maxLabelsToShow={maxLabelsToShow}
-                                                enableSelection={enablePlotSelection}
-                                                selectedIndices={plotSelectedRows}
                                                 onSelectionChange={handlePlotSelectionChange}
+                                                excludedRows={pcaHasExclusions ? [] : excludedRows}
                                             />
                                         ) : selectedPlot === 'scores3d' && pcaResponse.result.scores.length > 0 && pcaResponse.result.scores[0].length >= 3 ? (
                                             <Scores3DPlot

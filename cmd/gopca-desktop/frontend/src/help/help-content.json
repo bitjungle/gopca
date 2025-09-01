@@ -275,11 +275,6 @@
       "text": "Display sample IDs on plots. First column if non-numeric, else row numbers. Useful for identifying specific points.",
       "category": "visualization"
     },
-    "interactive-selection": {
-      "title": "Interactive Selection",
-      "text": "Enable Plotly's lasso and box selection tools to interactively select samples. Selected samples can be used to update the PCA model.",
-      "category": "visualization"
-    },
     "diagnostic-metrics": {
       "title": "Calculate Diagnostic Metrics",
       "text": "Compute T² (Hotelling) and Q (SPE) residuals for outlier detection. Not available for Kernel PCA.",
