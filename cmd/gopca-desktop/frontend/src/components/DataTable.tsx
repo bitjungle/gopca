@@ -88,13 +88,9 @@ return;
     }
   }, [externalSelectedRows?.length]); // Only watch length to avoid deep comparison
 
-  // Notify parent of row selection changes (skip if empty)
+  // Notify parent of row selection changes
   React.useEffect(() => {
-    if (Object.keys(rowSelection).length === 0) {
-return;
-}
-
-    if (onRowSelectionChange) {
+    if (onRowSelectionChange && Object.keys(rowSelection).length > 0) {
       const selectedIndices = Object.keys(rowSelection)
         .filter(key => rowSelection[key])
         .map(key => parseInt(key));
@@ -102,13 +98,9 @@ return;
     }
   }, [rowSelection, onRowSelectionChange]);
 
-  // Notify parent of column selection changes (skip if empty)
+  // Notify parent of column selection changes
   React.useEffect(() => {
-    if (Object.keys(columnSelection).length === 0) {
-return;
-}
-
-    if (onColumnSelectionChange) {
+    if (onColumnSelectionChange && Object.keys(columnSelection).length > 0) {
       const selectedIndices = headers
         .map((_, index) => index)
         .filter(index => columnSelection[`col${index}`] !== false);

@@ -64,11 +64,7 @@ export const SelectionTable: React.FC<SelectionTableProps> = ({
 
   // Notify parent of selection changes
   useEffect(() => {
-    if (Object.keys(rowSelection).length === 0) {
-return;
-}
-
-    if (onRowSelectionChange) {
+    if (onRowSelectionChange && Object.keys(rowSelection).length > 0) {
       const selectedIndices = Object.keys(rowSelection)
         .filter(key => rowSelection[Number(key)])
         .map(key => Number(key));
@@ -77,11 +73,7 @@ return;
   }, [rowSelection, onRowSelectionChange]);
 
   useEffect(() => {
-    if (Object.keys(columnSelection).length === 0) {
-return;
-}
-
-    if (onColumnSelectionChange) {
+    if (onColumnSelectionChange && Object.keys(columnSelection).length > 0) {
       const selectedIndices = Object.keys(columnSelection)
         .filter(key => columnSelection[Number(key)])
         .map(key => Number(key));

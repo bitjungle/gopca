@@ -466,32 +466,19 @@ export const PCAScoresPlot: React.FC<{
   const plot = useMemo(() => new PlotlyScoresPlot(data, config), [data, config]);
 
   const handleSelected = (event: any) => {
-    console.log('PlotlyScoresPlot: Selection event triggered', { 
-      pointCount: event?.points?.length || 0,
-      hasSelections: !!event?.selections,
-      eventType: event?.type || 'unknown',
-      timestamp: new Date().toISOString()
-    });
-    
     if (onSelection && event?.points && event.points.length > 0) {
       // Extract global indices from customdata
-      const indices = event.points.map((p: any) => {
-        // Use customdata (our global index) if available
-        return p.customdata !== undefined ? p.customdata : p.pointNumber;
-      });
-      console.log('PlotlyScoresPlot: Calling onSelection with indices:', indices);
+      const indices = event.points.map((p: any) => 
+        p.customdata !== undefined ? p.customdata : p.pointNumber
+      );
       onSelection(indices);
-    } else {
-      console.log('PlotlyScoresPlot: Ignoring selection event (no points or onSelection)');
     }
   };
 
   const handleDeselect = () => {
-    console.log('PlotlyScoresPlot: Deselect event received');
     if (onDeselect) {
       onDeselect();
     } else if (onSelection) {
-      console.log('PlotlyScoresPlot: Clearing selection');
       onSelection([]);
     }
   };
@@ -500,34 +487,25 @@ export const PCAScoresPlot: React.FC<{
   const modifiedTraces = useMemo(() => {
     const traces = plot.getOptimizedTraces();
     
-    // If no excluded rows, return traces as-is
     if (!excludedRows || excludedRows.length === 0) {
-      console.log('PlotlyScoresPlot: No excluded rows, using original traces');
       return traces;
     }
     
-    console.log('PlotlyScoresPlot: Applying exclusion visual to', excludedRows.length, 'rows:', excludedRows);
-    
-    // Create a Set for faster lookup
     const excludedSet = new Set(excludedRows);
     
     return traces.map((trace: any) => {
       // Only modify traces with customdata (scatter/scattergl point traces)
       if (trace.customdata && trace.marker) {
         // Create per-point opacity array based on customdata indices
-        const opacities = trace.customdata.map((globalIndex: number) => {
-          const isExcluded = excludedSet.has(globalIndex);
-          if (isExcluded) {
-            console.log('PlotlyScoresPlot: Dimming point with global index', globalIndex);
-          }
-          return isExcluded ? 0.2 : 0.8;
-        });
+        const opacities = trace.customdata.map((globalIndex: number) => 
+          excludedSet.has(globalIndex) ? 0.2 : 0.8
+        );
         
         return {
           ...trace,
           marker: {
             ...trace.marker,
-            opacity: opacities // Use per-point opacity array
+            opacity: opacities
           }
         };
       }

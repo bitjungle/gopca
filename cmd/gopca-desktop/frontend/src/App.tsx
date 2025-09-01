@@ -93,15 +93,8 @@ function AppContent() {
     const [isCheckingGoCSV, setIsCheckingGoCSV] = useState(false);
     const [showGoCSVDownloadDialog, setShowGoCSVDownloadDialog] = useState(false);
 
-    // Plotly selection state
-    const [plotSelectedRows, setPlotSelectedRows] = useState<number[]>([]);
-    const [ignoreSelections, setIgnoreSelections] = useState(false);
+    // Track if current PCA result was generated with exclusions applied
     const [pcaHasExclusions, setPcaHasExclusions] = useState(false);
-    
-    // Debug: Monitor excludedRows changes
-    useEffect(() => {
-        console.log('excludedRows state changed to:', excludedRows);
-    }, [excludedRows]);
 
     const updateGammaForData = (data: FileData) => {
         if (data && data.data && data.data[0]) {
@@ -329,39 +322,23 @@ return;
 
     // Handle plot selection changes
     const handlePlotSelectionChange = React.useCallback((indices: number[]) => {
-        // Ignore selection events while PCA is loading or if flag is set
-        if (loading || ignoreSelections) {
-            console.log('Plot selection: Ignoring selection (loading:', loading, ', ignoreSelections:', ignoreSelections, ')');
+        if (loading || !fileData || indices.length === 0) {
             return;
         }
         
-        if (!fileData || indices.length === 0) {
-            console.log('Plot selection: Ignoring empty selection or no fileData');
-            return;
-        }
-        
-        console.log('Plot selection: Received indices:', indices);
-        console.log('Current excludedRows before update:', excludedRows);
-        
-        // Add selected indices to excluded rows (toggle behavior)
+        // Toggle selected indices in excluded rows
         setExcludedRows(prev => {
-            console.log('Updating excludedRows. Previous:', prev);
             const newExcluded = new Set(prev);
             indices.forEach(idx => {
                 if (newExcluded.has(idx)) {
-                    newExcluded.delete(idx); // Toggle off if already excluded
+                    newExcluded.delete(idx);
                 } else {
-                    newExcluded.add(idx); // Toggle on if not excluded
+                    newExcluded.add(idx);
                 }
             });
-            const result = Array.from(newExcluded);
-            console.log('New excludedRows:', result);
-            return result;
+            return Array.from(newExcluded);
         });
-        
-        // Clear the plot selection state since visual won't persist
-        setPlotSelectedRows([]);
-    }, [fileData, excludedRows, loading, ignoreSelections]);
+    }, [fileData, loading]);
 
     const handleColumnSelectionChange = React.useCallback((selectedColumns: number[]) => {
         // Convert selected indices to excluded indices
@@ -489,10 +466,6 @@ return;
                 calculateEigencorrelations: (fileData.numericTargetColumns && Object.keys(fileData.numericTargetColumns).length > 0) ||
                                           (fileData.categoricalColumns && Object.keys(fileData.categoricalColumns).length > 0)
             };
-            console.log('Running PCA with excluded rows:', excludedRows);
-            // Disable selection handling during PCA update
-            setIgnoreSelections(true);
-            
             const result = await RunPCA(request);
             if (result.success) {
                 setPcaResponse(result);
@@ -504,7 +477,6 @@ return;
                 
                 // If we had excluded rows, update fileData to reflect the filtered dataset
                 if (excludedRows.length > 0) {
-                    console.log('PCA completed. Updating fileData to remove', excludedRows.length, 'excluded samples');
                     setPcaHasExclusions(true);  // Mark that this PCA was run with exclusions
                     const includedIndices = fileData.data
                         .map((_, i) => i)
@@ -533,10 +505,8 @@ return;
                         });
                     }
                     
-                    // CRITICAL: Clear excluded rows FIRST before updating fileData
-                    console.log('Clearing excludedRows BEFORE updating fileData');
+                    // Clear excluded rows before updating fileData
                     setExcludedRows([]);
-                    setPlotSelectedRows([]);
                     
                     // Then update fileData with filtered dataset
                     setFileData({
@@ -547,7 +517,6 @@ return;
                         numericTargetColumns: Object.keys(filteredNumeric).length > 0 ? filteredNumeric : undefined
                     });
                 } else {
-                    console.log('No excluded rows to process');
                     setPcaHasExclusions(false);  // No exclusions in this PCA
                 }
 
@@ -566,15 +535,10 @@ return;
                         behavior: 'smooth',
                         block: 'start'
                     });
-                    // Re-enable selection handling after state has settled
-                    console.log('Re-enabling plot selection handling');
-                    setIgnoreSelections(false);
-                }, 500);
+                }, 100);
             } else {
                 setPcaError(result.error || 'PCA analysis failed');
                 setPcaResponse(null);
-                // Re-enable selection handling even on error
-                setIgnoreSelections(false);
                 // Smooth scroll to error
                 setTimeout(() => {
                     pcaErrorRef.current?.scrollIntoView({
@@ -585,8 +549,6 @@ return;
             }
         } catch (err) {
             setPcaError(`Failed to run PCA: ${err}`);
-            // Re-enable selection handling on error
-            setIgnoreSelections(false);
         } finally {
             setLoading(false);
         }
