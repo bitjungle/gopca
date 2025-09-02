@@ -350,6 +350,68 @@ func runAnalyze(opts *AnalyzeOptions, inputFile string) error {
 		config.ExcludedColumns = parseExcludeColumns(opts.ExcludeColumns, data.Headers)
 	}
 
+	// Apply row and column exclusions to the data
+	if len(config.ExcludedRows) > 0 || len(config.ExcludedColumns) > 0 {
+		// Create a map for quick lookup of excluded rows
+		excludedRowMap := make(map[int]bool)
+		for _, row := range config.ExcludedRows {
+			excludedRowMap[row] = true
+		}
+
+		// Create a map for quick lookup of excluded columns
+		excludedColMap := make(map[int]bool)
+		for _, col := range config.ExcludedColumns {
+			excludedColMap[col] = true
+		}
+
+		// Filter rows
+		filteredMatrix := make([][]float64, 0)
+		filteredRowNames := make([]string, 0)
+		for i, row := range data.Matrix {
+			if !excludedRowMap[i] {
+				// Filter columns from this row
+				filteredRow := make([]float64, 0)
+				for j, val := range row {
+					if !excludedColMap[j] {
+						filteredRow = append(filteredRow, val)
+					}
+				}
+				filteredMatrix = append(filteredMatrix, filteredRow)
+				if len(data.RowNames) > i {
+					filteredRowNames = append(filteredRowNames, data.RowNames[i])
+				}
+			}
+		}
+
+		// Filter column headers
+		filteredHeaders := make([]string, 0)
+		for i, header := range data.Headers {
+			if !excludedColMap[i] {
+				filteredHeaders = append(filteredHeaders, header)
+			}
+		}
+
+		// Update data with filtered results
+		originalRows := data.Rows
+		originalCols := data.Columns
+		data.Matrix = filteredMatrix
+		data.Rows = len(filteredMatrix)
+		data.Columns = len(filteredHeaders)
+		data.Headers = filteredHeaders
+		data.RowNames = filteredRowNames
+
+		if opts.Verbose {
+			if len(config.ExcludedRows) > 0 {
+				fmt.Printf("Excluded %d rows (keeping %d of %d rows)\n",
+					len(config.ExcludedRows), data.Rows, originalRows)
+			}
+			if len(config.ExcludedColumns) > 0 {
+				fmt.Printf("Excluded %d columns (keeping %d of %d columns)\n",
+					len(config.ExcludedColumns), data.Columns, originalCols)
+			}
+		}
+	}
+
 	// Create preprocessor
 	preprocessor := core.NewPreprocessorWithScaleOnly(
 		config.MeanCenter,
