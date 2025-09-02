@@ -93,6 +93,9 @@ function AppContent() {
     const [isCheckingGoCSV, setIsCheckingGoCSV] = useState(false);
     const [showGoCSVDownloadDialog, setShowGoCSVDownloadDialog] = useState(false);
 
+    // Track if current PCA result was generated with exclusions applied
+    const [pcaHasExclusions, setPcaHasExclusions] = useState(false);
+
     const updateGammaForData = (data: FileData) => {
         if (data && data.data && data.data[0]) {
             const numFeatures = data.data[0].length;
@@ -317,6 +320,26 @@ return;
         }
     }, [fileData]);
 
+    // Handle plot selection changes
+    const handlePlotSelectionChange = React.useCallback((indices: number[]) => {
+        if (loading || !fileData || indices.length === 0) {
+            return;
+        }
+        
+        // Toggle selected indices in excluded rows
+        setExcludedRows(prev => {
+            const newExcluded = new Set(prev);
+            indices.forEach(idx => {
+                if (newExcluded.has(idx)) {
+                    newExcluded.delete(idx);
+                } else {
+                    newExcluded.add(idx);
+                }
+            });
+            return Array.from(newExcluded);
+        });
+    }, [fileData, loading]);
+
     const handleColumnSelectionChange = React.useCallback((selectedColumns: number[]) => {
         // Convert selected indices to excluded indices
         if (fileData) {
@@ -451,6 +474,51 @@ return;
                 setSelectedYComponent(1);
                 // Clear any previous errors
                 setPcaError(null);
+                
+                // If we had excluded rows, update fileData to reflect the filtered dataset
+                if (excludedRows.length > 0) {
+                    setPcaHasExclusions(true);  // Mark that this PCA was run with exclusions
+                    const includedIndices = fileData.data
+                        .map((_, i) => i)
+                        .filter(i => !excludedRows.includes(i));
+                    
+                    const filteredData = includedIndices.map(i => fileData.data[i]);
+                    const filteredRowNames = includedIndices.map(i => fileData.rowNames[i]);
+                    
+                    // Update categorical and numeric columns if they exist
+                    const filteredCategorical: Record<string, string[]> = {};
+                    const filteredNumeric: Record<string, number[]> = {};
+                    
+                    if (fileData.categoricalColumns) {
+                        Object.keys(fileData.categoricalColumns).forEach(col => {
+                            filteredCategorical[col] = includedIndices.map(i => 
+                                fileData.categoricalColumns![col][i]
+                            );
+                        });
+                    }
+                    
+                    if (fileData.numericTargetColumns) {
+                        Object.keys(fileData.numericTargetColumns).forEach(col => {
+                            filteredNumeric[col] = includedIndices.map(i => 
+                                fileData.numericTargetColumns![col][i]
+                            );
+                        });
+                    }
+                    
+                    // Clear excluded rows before updating fileData
+                    setExcludedRows([]);
+                    
+                    // Then update fileData with filtered dataset
+                    setFileData({
+                        ...fileData,
+                        data: filteredData,
+                        rowNames: filteredRowNames,
+                        categoricalColumns: Object.keys(filteredCategorical).length > 0 ? filteredCategorical : undefined,
+                        numericTargetColumns: Object.keys(filteredNumeric).length > 0 ? filteredNumeric : undefined
+                    });
+                } else {
+                    setPcaHasExclusions(false);  // No exclusions in this PCA
+                }
 
                 // Check if Kernel PCA is selected with unsupported visualization
                 if (config.method === 'kernel' &&
@@ -695,6 +763,8 @@ return;
                                     title="Input Data"
                                     onRowSelectionChange={handleRowSelectionChange}
                                     onColumnSelectionChange={handleColumnSelectionChange}
+                                    externalSelectedRows={fileData.data.map((_, i) => i).filter(i => !excludedRows.includes(i))}
+                                    highlightExternalSelections={true}
                                 />
                             ) : (
                                 <DataTable
@@ -707,6 +777,8 @@ return;
                                     enableColumnSelection={true}
                                     onRowSelectionChange={handleRowSelectionChange}
                                     onColumnSelectionChange={handleColumnSelectionChange}
+                                    externalSelectedRows={fileData.data.map((_, i) => i).filter(i => !excludedRows.includes(i))}
+                                    highlightExternalSelections={true}
                                 />
                             )}
                         </div>
@@ -1373,6 +1445,7 @@ return;
                                     }>
                                         {selectedPlot === 'scores' && pcaResponse.result.scores.length > 0 && pcaResponse.result.scores[0].length >= 2 ? (
                                             <ScoresPlot
+                                                key={`scores-${pcaResponse.result.scores.length}-${excludedRows.length}`}
                                                 pcaResult={pcaResponse.result}
                                                 rowNames={fileData?.rowNames || []}
                                                 xComponent={selectedXComponent}
@@ -1391,6 +1464,8 @@ return;
                                                 confidenceLevel={confidenceLevel}
                                                 showRowLabels={showRowLabels}
                                                 maxLabelsToShow={maxLabelsToShow}
+                                                onSelectionChange={handlePlotSelectionChange}
+                                                excludedRows={pcaHasExclusions ? [] : excludedRows}
                                             />
                                         ) : selectedPlot === 'scores3d' && pcaResponse.result.scores.length > 0 && pcaResponse.result.scores[0].length >= 3 ? (
                                             <Scores3DPlot

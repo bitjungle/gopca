@@ -129,25 +129,15 @@ export class PlotlyScoresPlot extends PlotlyVisualization<ScoresPlotData> {
         name: group,
         x: groupScores.map(s => s[pc1]),
         y: groupScores.map(s => s[pc2]),
+        customdata: groupIndices, // Add global indices as customdata
         hovertext: hovertext,
         hovertemplate: '%{hovertext}<extra></extra>',
         marker: {
           size: getScaledMarkerSize(8, this.config.fontScale || 1.0),
           color: this.scoresConfig.colorScheme![groupIndex % this.scoresConfig.colorScheme!.length],
           opacity: 0.8
-        },
-        selectedpoints: undefined,
-        selected: {
-          marker: {
-            size: getScaledMarkerSize(12, this.config.fontScale || 1.0),
-            opacity: 1
-          }
-        } as any,
-        unselected: {
-          marker: {
-            opacity: 0.3
-          }
-        } as any
+        }
+        // DO NOT set selectedpoints - let Plotly handle selection naturally
       });
 
       // Add confidence ellipse if enabled
@@ -265,6 +255,7 @@ export class PlotlyScoresPlot extends PlotlyVisualization<ScoresPlotData> {
       name: 'Samples',
       x: scores.map(s => s[pc1]),
       y: scores.map(s => s[pc2]),
+      customdata: scores.map((_, i) => i), // Add global indices
       hovertext: hovertext,
       hovertemplate: '%{hovertext}<extra></extra>',
       marker: {
@@ -283,6 +274,7 @@ export class PlotlyScoresPlot extends PlotlyVisualization<ScoresPlotData> {
         },
         opacity: 0.8
       }
+      // DO NOT set selectedpoints - let Plotly handle selection naturally
     });
 
     // Add text labels as a separate trace (if enabled)
@@ -416,7 +408,8 @@ return;
         scaleratio: this.config.maintainAspectRatio ? 1 : undefined
       },
       hovermode: 'closest',
-      dragmode: this.config.enableLasso ? 'lasso' : 'zoom'
+      dragmode: this.config.enableLasso !== false ? 'lasso' : 'zoom',
+      selectdirection: 'any' as any
     };
   }
 
@@ -446,10 +439,17 @@ return;
    */
   public getPlotConfig(): Partial<Config> {
     const baseConfig = this.getAdvancedConfig();
-    return {
+    const config = {
       ...baseConfig,
       modeBarButtonsToAdd: getExportMenuItems() as any
     };
+    
+    console.log('PlotlyScoresPlot Config:', {
+      modeBarButtons: config.modeBarButtonsToRemove,
+      enableLasso: this.config.enableLasso
+    });
+    
+    return config;
   }
 }
 
@@ -460,23 +460,67 @@ export const PCAScoresPlot: React.FC<{
   data: ScoresPlotData;
   config?: ScoresPlotConfig;
   onSelection?: (indices: number[]) => void;
-}> = ({ data, config, onSelection }) => {
+  onDeselect?: () => void;
+  excludedRows?: number[];
+}> = ({ data, config, onSelection, onDeselect, excludedRows = [] }) => {
   const plot = useMemo(() => new PlotlyScoresPlot(data, config), [data, config]);
 
   const handleSelected = (event: any) => {
-    if (onSelection && event?.points) {
-      const indices = event.points.map((p: any) => p.pointIndex);
+    if (onSelection && event?.points && event.points.length > 0) {
+      // Extract global indices from customdata
+      const indices = event.points.map((p: any) => 
+        p.customdata !== undefined ? p.customdata : p.pointNumber
+      );
       onSelection(indices);
     }
   };
 
+  const handleDeselect = () => {
+    if (onDeselect) {
+      onDeselect();
+    } else if (onSelection) {
+      onSelection([]);
+    }
+  };
+
+  // Modify traces to show excluded points with reduced opacity
+  const modifiedTraces = useMemo(() => {
+    const traces = plot.getOptimizedTraces();
+    
+    if (!excludedRows || excludedRows.length === 0) {
+      return traces;
+    }
+    
+    const excludedSet = new Set(excludedRows);
+    
+    return traces.map((trace: any) => {
+      // Only modify traces with customdata (scatter/scattergl point traces)
+      if (trace.customdata && trace.marker) {
+        // Create per-point opacity array based on customdata indices
+        const opacities = trace.customdata.map((globalIndex: number) => 
+          excludedSet.has(globalIndex) ? 0.2 : 0.8
+        );
+        
+        return {
+          ...trace,
+          marker: {
+            ...trace.marker,
+            opacity: opacities
+          }
+        };
+      }
+      return trace;
+    });
+  }, [plot, excludedRows]);
+
   return (
     <PlotlyWithFullscreen
-      data={plot.getOptimizedTraces()}
+      data={modifiedTraces}
       layout={plot.getPlotLayout()}
       config={plot.getPlotConfig()}
       style={{ width: '100%', height: '100%' }}
       onSelected={handleSelected}
+      onDeselect={handleDeselect}
     />
   );
 };

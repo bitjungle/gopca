@@ -28,6 +28,8 @@ interface DataTableProps {
   enableColumnSelection?: boolean;
   onRowSelectionChange?: (selectedRows: number[]) => void;
   onColumnSelectionChange?: (selectedColumns: number[]) => void;
+  externalSelectedRows?: number[];
+  highlightExternalSelections?: boolean;
 }
 
 export const DataTable: React.FC<DataTableProps> = ({
@@ -38,7 +40,9 @@ export const DataTable: React.FC<DataTableProps> = ({
   enableRowSelection = false,
   enableColumnSelection = false,
   onRowSelectionChange,
-  onColumnSelectionChange
+  onColumnSelectionChange,
+  externalSelectedRows,
+  highlightExternalSelections
 }) => {
   const hasRowNames = rowNames && rowNames.length > 0;
   const [rowSelection, setRowSelection] = React.useState<RowSelectionState>({});
@@ -73,13 +77,20 @@ return;
     }
   }, [data.length, headers.length, enableRowSelection, enableColumnSelection]);
 
-  // Notify parent of row selection changes (skip if empty)
+  // Update internal state when external selection changes (one-way sync)
   React.useEffect(() => {
-    if (Object.keys(rowSelection).length === 0) {
-return;
-}
+    if (externalSelectedRows !== undefined && enableRowSelection) {
+      const newSelection: RowSelectionState = {};
+      data.forEach((_, index) => {
+        newSelection[index] = externalSelectedRows.includes(index);
+      });
+      setRowSelection(newSelection);
+    }
+  }, [externalSelectedRows?.length]); // Only watch length to avoid deep comparison
 
-    if (onRowSelectionChange) {
+  // Notify parent of row selection changes
+  React.useEffect(() => {
+    if (onRowSelectionChange && Object.keys(rowSelection).length > 0) {
       const selectedIndices = Object.keys(rowSelection)
         .filter(key => rowSelection[key])
         .map(key => parseInt(key));
@@ -87,13 +98,9 @@ return;
     }
   }, [rowSelection, onRowSelectionChange]);
 
-  // Notify parent of column selection changes (skip if empty)
+  // Notify parent of column selection changes
   React.useEffect(() => {
-    if (Object.keys(columnSelection).length === 0) {
-return;
-}
-
-    if (onColumnSelectionChange) {
+    if (onColumnSelectionChange && Object.keys(columnSelection).length > 0) {
       const selectedIndices = headers
         .map((_, index) => index)
         .filter(index => columnSelection[`col${index}`] !== false);

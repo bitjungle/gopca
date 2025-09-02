@@ -14,6 +14,8 @@ interface SelectionTableProps {
   title?: string;
   onRowSelectionChange?: (selectedRows: number[]) => void;
   onColumnSelectionChange?: (selectedColumns: number[]) => void;
+  externalSelectedRows?: number[];
+  highlightExternalSelections?: boolean;
 }
 
 export const SelectionTable: React.FC<SelectionTableProps> = ({
@@ -22,7 +24,9 @@ export const SelectionTable: React.FC<SelectionTableProps> = ({
   data,
   title,
   onRowSelectionChange,
-  onColumnSelectionChange
+  onColumnSelectionChange,
+  externalSelectedRows,
+  highlightExternalSelections
 }) => {
   // Selection states
   const [rowSelection, setRowSelection] = React.useState<Record<number, boolean>>({});
@@ -47,13 +51,20 @@ export const SelectionTable: React.FC<SelectionTableProps> = ({
     }
   }, [data.length, headers.length]);
 
+  // Update internal state when external selection changes (one-way sync)
+  useEffect(() => {
+    if (externalSelectedRows !== undefined) {
+      const newSelection: Record<number, boolean> = {};
+      rowNames.forEach((_, index) => {
+        newSelection[index] = externalSelectedRows.includes(index);
+      });
+      setRowSelection(newSelection);
+    }
+  }, [externalSelectedRows?.length]); // Only watch length to avoid deep comparison
+
   // Notify parent of selection changes
   useEffect(() => {
-    if (Object.keys(rowSelection).length === 0) {
-return;
-}
-
-    if (onRowSelectionChange) {
+    if (onRowSelectionChange && Object.keys(rowSelection).length > 0) {
       const selectedIndices = Object.keys(rowSelection)
         .filter(key => rowSelection[Number(key)])
         .map(key => Number(key));
@@ -62,11 +73,7 @@ return;
   }, [rowSelection, onRowSelectionChange]);
 
   useEffect(() => {
-    if (Object.keys(columnSelection).length === 0) {
-return;
-}
-
-    if (onColumnSelectionChange) {
+    if (onColumnSelectionChange && Object.keys(columnSelection).length > 0) {
       const selectedIndices = Object.keys(columnSelection)
         .filter(key => columnSelection[Number(key)])
         .map(key => Number(key));
@@ -178,7 +185,11 @@ return;
                     height: `${virtualRow.size}px`,
                     transform: `translateY(${virtualRow.start}px)`
                   }}
-                  className="flex items-center px-2 hover:bg-gray-50 dark:hover:bg-gray-700"
+                  className={`flex items-center px-2 hover:bg-gray-50 dark:hover:bg-gray-700 ${
+                    highlightExternalSelections && externalSelectedRows?.includes(virtualRow.index) 
+                      ? 'bg-blue-50 dark:bg-blue-900/30' 
+                      : ''
+                  }`}
                 >
                   <input
                     type="checkbox"

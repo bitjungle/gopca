@@ -145,7 +145,8 @@ export const PlotlyWithFullscreen: React.FC<{
   config: any;
   style?: React.CSSProperties;
   onSelected?: (event: any) => void;
-}> = ({ data, layout, config, style, onSelected }) => {
+  onDeselect?: () => void;
+}> = ({ data, layout, config, style, onSelected, onDeselect }) => {
   const { openFullscreen, fullscreenModal } = usePlotlyFullscreen(data, layout, config);
 
   // Add fullscreen button to modebar
@@ -166,6 +167,7 @@ export const PlotlyWithFullscreen: React.FC<{
         style={style || { width: '100%', height: '100%' }}
         useResizeHandler={true}
         onSelected={onSelected}
+        onDeselect={onDeselect as any}
       />
       {fullscreenModal}
     </>
