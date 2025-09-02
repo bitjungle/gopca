@@ -390,6 +390,11 @@ func (t *TemporalPCAImpl) Fit(data types.Matrix, config types.PCAConfig) (*types
 	}
 
 	// Store the determined number of components
+	// Make sure we don't exceed the actual rank of the matrix
+	maxComponents := len(s)
+	if actualComponents > maxComponents {
+		actualComponents = maxComponents
+	}
 	t.nComponents = actualComponents
 	t.singularVals = s[:actualComponents]
 
@@ -405,7 +410,7 @@ func (t *TemporalPCAImpl) Fit(data types.Matrix, config types.PCAConfig) (*types
 	scores := mat.NewDense(effectiveRows, t.nComponents, nil)
 	for i := 0; i < effectiveRows; i++ {
 		for j := 0; j < t.nComponents; j++ {
-			scores.Set(i, j, u.At(i, j)*s[j])
+			scores.Set(i, j, u.At(i, j)*t.singularVals[j])
 		}
 	}
 

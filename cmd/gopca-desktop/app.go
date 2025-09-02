@@ -225,6 +225,9 @@ type PCARequest struct {
 	KernelGamma  float64 `json:"kernelGamma,omitempty"`
 	KernelDegree int     `json:"kernelDegree,omitempty"`
 	KernelCoef0  float64 `json:"kernelCoef0,omitempty"`
+	// Temporal PCA parameters
+	TemporalLags      int     `json:"temporalLags,omitempty"`
+	VarianceExplained float64 `json:"varianceExplained,omitempty"`
 	// Grouping parameters for confidence ellipses
 	GroupColumn string   `json:"groupColumn,omitempty"`
 	GroupLabels []string `json:"groupLabels,omitempty"`
@@ -535,6 +538,12 @@ func (a *App) RunPCA(request PCARequest) (response PCAResponse) {
 			config.StandardScale = false
 			config.RobustScale = false
 		}
+	}
+
+	// Add temporal parameters if using temporal PCA
+	if strings.ToLower(request.Method) == "temporal" {
+		config.TemporalLags = request.TemporalLags
+		config.VarianceExplained = request.VarianceExplained
 	}
 
 	// Perform PCA

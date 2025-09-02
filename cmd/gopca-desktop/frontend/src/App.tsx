@@ -111,7 +111,10 @@ function AppContent() {
         kernelType: 'rbf',
         kernelGamma: 1.0,
         kernelDegree: 3,
-        kernelCoef0: 0.0
+        kernelCoef0: 0.0,
+        // Temporal PCA parameters
+        temporalLags: 10,
+        varianceExplained: 0.0
         // Confidence ellipse parameters
     });
 
@@ -407,6 +410,14 @@ return;
             if (config.kernelType === 'polynomial' || config.kernelType === 'sigmoid') {
                 cmd += ` --kernel-degree ${config.kernelDegree}`;
                 cmd += ` --kernel-coef0 ${config.kernelCoef0}`;
+            }
+        }
+
+        // Add temporal parameters if using temporal PCA
+        if (config.method === 'temporal') {
+            cmd += ` --temporal-lags ${config.temporalLags}`;
+            if (config.varianceExplained > 0) {
+                cmd += ` --var-explained ${config.varianceExplained}`;
             }
         }
 
@@ -871,7 +882,8 @@ return;
                                             options={[
                                                 { value: 'SVD', label: 'SVD' },
                                                 { value: 'NIPALS', label: 'NIPALS' },
-                                                { value: 'kernel', label: 'Kernel PCA' }
+                                                { value: 'kernel', label: 'Kernel PCA' },
+                                                { value: 'temporal', label: 'Temporal PCA' }
                                             ]}
                                             className="w-full"
                                         />
@@ -1014,6 +1026,73 @@ return;
                                             </div>
                                             <p className="text-xs text-gray-500 dark:text-gray-400 mt-2">
                                                 Note: Kernel PCA uses its own centering in kernel space.
+                                            </p>
+                                        </div>
+                                    )}
+
+                                    {/* Temporal PCA Options */}
+                                    {config.method === 'temporal' && (
+                                        <div className="p-4 bg-purple-50 dark:bg-purple-900/20 rounded-lg space-y-4">
+                                            <h4 className="font-medium text-sm text-purple-900 dark:text-purple-100">Temporal PCA Options</h4>
+                                            
+                                            <div className="space-y-2 text-sm text-purple-800 dark:text-purple-200">
+                                                <p className="flex items-start">
+                                                    <span className="mr-2">•</span>
+                                                    <span>Time-Delay PCA for time-series analysis</span>
+                                                </p>
+                                                <p className="flex items-start">
+                                                    <span className="mr-2">•</span>
+                                                    <span>Captures temporal dynamics and dependencies</span>
+                                                </p>
+                                                <p className="flex items-start">
+                                                    <span className="mr-2">•</span>
+                                                    <span>Based on SSA (Singular Spectrum Analysis) methodology</span>
+                                                </p>
+                                            </div>
+                                            
+                                            <div className="space-y-4">
+                                                <HelpWrapper helpKey="temporal-lags">
+                                                    <label className="block text-sm font-medium mb-1">
+                                                        Number of Time Lags
+                                                    </label>
+                                                    <input
+                                                        type="number"
+                                                        value={config.temporalLags}
+                                                        min="2"
+                                                        max="100"
+                                                        onChange={(e) => {
+                                                            const value = parseInt(e.target.value);
+                                                            setConfig({ ...config, temporalLags: isNaN(value) || value < 2 ? 2 : value });
+                                                        }}
+                                                        className="w-full px-3 py-2 bg-gray-100 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg text-gray-900 dark:text-white"
+                                                    />
+                                                    <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                                                        Number of time points to include in lag matrix. Use 24 for daily cycles in hourly data, 7 for weekly patterns in daily data.
+                                                    </p>
+                                                </HelpWrapper>
+
+                                                <div className="p-3 bg-purple-100 dark:bg-purple-900/30 rounded-lg">
+                                                    <p className="text-xs text-purple-800 dark:text-purple-200">
+                                                        <strong>Lag Selection Guidelines:</strong><br/>
+                                                        • Hourly data with daily patterns: L = 24<br/>
+                                                        • Daily data with weekly patterns: L = 7<br/>
+                                                        • Monthly data with annual patterns: L = 12<br/>
+                                                        • General exploration: Start with T/4 (where T = number of samples)
+                                                    </p>
+                                                </div>
+
+                                                {fileData && fileData.data && config.temporalLags >= fileData.data.length && (
+                                                    <div className="p-3 bg-yellow-100 dark:bg-yellow-900/50 border border-yellow-300 dark:border-yellow-700 rounded-lg">
+                                                        <p className="text-sm text-yellow-800 dark:text-yellow-200">
+                                                            <strong>⚠️ Warning:</strong> Number of lags ({config.temporalLags}) should be less than the number of samples ({fileData.data.length}). 
+                                                            Recommended: {Math.floor(fileData.data.length / 4)} lags or less.
+                                                        </p>
+                                                    </div>
+                                                )}
+                                            </div>
+                                            
+                                            <p className="text-xs text-gray-500 dark:text-gray-400 mt-2">
+                                                Creates a lag matrix where each row contains L consecutive observations, enabling capture of temporal patterns.
                                             </p>
                                         </div>
                                     )}

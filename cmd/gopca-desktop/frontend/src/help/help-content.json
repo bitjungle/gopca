@@ -52,7 +52,7 @@
     },
     "pca-method": {
       "title": "PCA Method",
-      "text": "SVD: Fast, exact for complete data. NIPALS: Handles missing data, iterative. Kernel: Non-linear relationships.",
+      "text": "SVD: Fast, exact for complete data. NIPALS: Handles missing data, iterative. Kernel: Non-linear relationships. Temporal: Time-series analysis with lag matrix.",
       "category": "configuration"
     },
     "kernel-type": {
@@ -73,6 +73,11 @@
     "kernel-coef0": {
       "title": "Polynomial Coefficient",
       "text": "Independent term in polynomial kernel. Usually 0 or 1.",
+      "category": "configuration"
+    },
+    "temporal-lags": {
+      "title": "Number of Time Lags",
+      "text": "Number of time points to include in lag matrix for Temporal PCA. Should be at least as large as the dominant period in your data. Use 24 for daily cycles in hourly data, 7 for weekly patterns in daily data.",
       "category": "configuration"
     },
     "row-preprocessing": {

@@ -340,6 +340,8 @@ Both methods produce equivalent results for complete datasets but offer differen
 
 While classical PCA treats each observation as independent, time-series data has inherent temporal structure where the order and timing of observations carry crucial information. GoPCA Suite implements **Temporal PCA** (also known as Time-Delay PCA or SSA-style PCA), which captures these temporal dynamics by incorporating time dependencies directly into the analysis.
 
+> **⚠️ Important:** Temporal PCA is designed specifically for **time-series data** where observations represent sequential measurements over time. Do not use this method for spatial datasets (like Swiss Roll) or cross-sectional data where sample order is arbitrary. For such data, use standard PCA, Kernel PCA, or other appropriate methods.
+
 ### 10.1. The Limitation of Standard PCA for Time Series
 
 Imagine monitoring a manufacturing process with multiple sensors. At any moment, the system state depends not just on current readings but also on recent history—temperature trends, pressure changes, flow patterns. Standard PCA treats each time point independently and would miss these temporal relationships entirely.
