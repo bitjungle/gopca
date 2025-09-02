@@ -393,6 +393,62 @@ If self-hosted runner is offline:
 - Check runner status: Settings → Actions → Runners
 - The workflow will wait for runner to come online
 
+## Windows Code Signing (Manual Process)
+
+After the automated release workflow completes, the Windows installer needs to be manually signed to avoid security warnings.
+
+### Prerequisites
+
+- SignPath.io account (free tier works)
+- Access to the project's SignPath organization
+- Signing certificate configured in SignPath
+
+### Signing Process
+
+1. **Download the unsigned installer**
+   ```bash
+   # From the release page, download:
+   GoPCA-Setup-vX.X.X.exe
+   ```
+
+2. **Sign with SignPath**
+   - Go to [SignPath.io](https://app.signpath.io)
+   - Navigate to your organization
+   - Click "Upload and Sign"
+   - Select the downloaded installer file
+   - Choose the appropriate signing certificate
+   - Wait for signing to complete (usually ~1 minute)
+   - Download the signed file
+
+3. **Update the GitHub release**
+   ```bash
+   # Rename the signed file
+   mv GoPCA-Setup-vX.X.X.exe GoPCA-Setup-vX.X.X-signed.exe
+   
+   # Upload to the existing release
+   gh release upload vX.X.X GoPCA-Setup-vX.X.X-signed.exe
+   ```
+
+4. **Update release notes**
+   - Edit the release on GitHub
+   - Change the Windows installer download link from:
+     ```
+     GoPCA-Setup-vX.X.X.exe
+     ```
+     to:
+     ```
+     GoPCA-Setup-vX.X.X-signed.exe
+     ```
+   - Add a note: "(digitally signed)" next to the Windows installer link
+
+### Why Manual Signing?
+
+The free SignPath tier doesn't support automated GitHub Actions integration with repository-based policies. Manual signing through the web interface works reliably and only adds ~5 minutes to the release process.
+
+### Future Improvements
+
+If we upgrade to a paid SignPath plan, we can re-enable the automated signing in `.github/workflows/release.yml` (currently commented out).
+
 ## Version Information
 
 ### CLI
