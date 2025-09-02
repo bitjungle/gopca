@@ -545,6 +545,8 @@ return;
                         categoricalColumns: Object.keys(filteredCategorical).length > 0 ? filteredCategorical : undefined,
                         numericTargetColumns: Object.keys(filteredNumeric).length > 0 ? filteredNumeric : undefined
                     });
+                    // Force table components to reset their selection state for the new dataset
+                    setDatasetId(prev => prev + 1);
                 } else {
                     setPcaHasExclusions(false);  // No exclusions in this PCA
                 }
