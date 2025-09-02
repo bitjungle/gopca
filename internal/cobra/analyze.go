@@ -165,9 +165,9 @@ EXAMPLES:
 
 	// Exclude options
 	cmd.Flags().StringVar(&opts.ExcludeRows, "exclude-rows", "",
-		"Comma-separated list of row indices to exclude (1-based)")
+		"Row indices to exclude (1-based): e.g., '1,3,5' or '1-5,8-10'")
 	cmd.Flags().StringVar(&opts.ExcludeColumns, "exclude-columns", "",
-		"Comma-separated list of column names or indices to exclude")
+		"Column indices/names to exclude: e.g., '1,3' or '1-5' or 'col1,col2'")
 
 	// Verbose output
 	cmd.Flags().BoolVarP(&opts.Verbose, "verbose", "v", false,
@@ -389,37 +389,114 @@ func runAnalyze(opts *AnalyzeOptions, inputFile string) error {
 
 // Helper functions for parsing exclude options
 func parseExcludeIndices(excludeStr string) []int {
-	var indices []int
+	indexSet := make(map[int]bool)
 	parts := strings.Split(excludeStr, ",")
+
 	for _, part := range parts {
 		part = strings.TrimSpace(part)
-		var idx int
-		if _, err := fmt.Sscanf(part, "%d", &idx); err == nil {
-			indices = append(indices, idx-1) // Convert to 0-based
+
+		if strings.Contains(part, "-") {
+			// Parse range format "start-end"
+			rangeParts := strings.SplitN(part, "-", 2)
+			if len(rangeParts) == 2 {
+				var start, end int
+				if _, err := fmt.Sscanf(rangeParts[0], "%d", &start); err == nil {
+					if _, err := fmt.Sscanf(rangeParts[1], "%d", &end); err == nil {
+						// Add all indices in range (inclusive)
+						for i := start; i <= end; i++ {
+							if i > 0 { // Ensure positive indices
+								indexSet[i-1] = true // Convert to 0-based
+							}
+						}
+					}
+				}
+			}
+		} else {
+			// Parse individual number
+			var idx int
+			if _, err := fmt.Sscanf(part, "%d", &idx); err == nil && idx > 0 {
+				indexSet[idx-1] = true // Convert to 0-based
+			}
 		}
 	}
-	return indices
-}
 
-func parseExcludeColumns(excludeStr string, headers []string) []int {
-	var indices []int
-	parts := strings.Split(excludeStr, ",")
-	for _, part := range parts {
-		part = strings.TrimSpace(part)
+	// Convert map to sorted slice
+	indices := make([]int, 0, len(indexSet))
+	for idx := range indexSet {
+		indices = append(indices, idx)
+	}
 
-		// Try to parse as index first
-		var idx int
-		if _, err := fmt.Sscanf(part, "%d", &idx); err == nil {
-			indices = append(indices, idx-1) // Convert to 0-based
-		} else {
-			// Try to match by name
-			for i, header := range headers {
-				if header == part {
-					indices = append(indices, i)
-					break
+	// Sort the indices
+	if len(indices) > 1 {
+		// Simple bubble sort for small arrays
+		for i := 0; i < len(indices)-1; i++ {
+			for j := 0; j < len(indices)-i-1; j++ {
+				if indices[j] > indices[j+1] {
+					indices[j], indices[j+1] = indices[j+1], indices[j]
 				}
 			}
 		}
 	}
+
+	return indices
+}
+
+func parseExcludeColumns(excludeStr string, headers []string) []int {
+	indexSet := make(map[int]bool)
+	parts := strings.Split(excludeStr, ",")
+
+	for _, part := range parts {
+		part = strings.TrimSpace(part)
+
+		if strings.Contains(part, "-") {
+			// Parse range format "start-end" (only for numeric indices)
+			rangeParts := strings.SplitN(part, "-", 2)
+			if len(rangeParts) == 2 {
+				var start, end int
+				if _, err := fmt.Sscanf(rangeParts[0], "%d", &start); err == nil {
+					if _, err := fmt.Sscanf(rangeParts[1], "%d", &end); err == nil {
+						// Add all indices in range (inclusive)
+						for i := start; i <= end; i++ {
+							if i > 0 && i <= len(headers) { // Ensure valid range
+								indexSet[i-1] = true // Convert to 0-based
+							}
+						}
+					}
+				}
+			}
+		} else {
+			// Try to parse as index first
+			var idx int
+			if _, err := fmt.Sscanf(part, "%d", &idx); err == nil && idx > 0 && idx <= len(headers) {
+				indexSet[idx-1] = true // Convert to 0-based
+			} else {
+				// Try to match by name
+				for i, header := range headers {
+					if header == part {
+						indexSet[i] = true
+						break
+					}
+				}
+			}
+		}
+	}
+
+	// Convert map to sorted slice
+	indices := make([]int, 0, len(indexSet))
+	for idx := range indexSet {
+		indices = append(indices, idx)
+	}
+
+	// Sort the indices
+	if len(indices) > 1 {
+		for i := 0; i < len(indices)-1; i++ {
+			for j := 0; j < len(indices)-i-1; j++ {
+				if indices[j] > indices[j+1] {
+					indices[j], indices[j+1] = indices[j+1], indices[j]
+				}
+			}
+		}
+	}
+
 	return indices
 }
