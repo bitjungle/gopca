@@ -118,8 +118,8 @@ pca analyze [OPTIONS] <input.csv>
 **Note:** The `native` strategy is only available with the NIPALS method. When using SVD (default), you must choose a preprocessing strategy (drop, mean, median, or zero) if your data contains missing values.
 
 ##### Data Selection
-- `--exclude-rows <string>` - Comma-separated list of row indices to exclude (1-based)
-- `--exclude-columns <string>` - Comma-separated list of column names or indices to exclude
+- `--exclude-rows <string>` - Row indices to exclude (1-based). Supports individual indices and ranges: `1,3,5` or `1-5,8-10`
+- `--exclude-columns <string>` - Column indices/names to exclude. Supports ranges for indices: `1-3,5` or `col1,col2`
 - `--target-columns <string>` - Comma-separated list of target columns to exclude
 
 ##### Group and Correlation Analysis
@@ -196,7 +196,7 @@ When verbose mode is enabled, the CLI will report:
 # Exclude specific columns
 pca analyze --exclude-columns "id,timestamp" data.csv
 
-# Exclude specific rows
+# Exclude specific rows (individual and ranges)
 pca analyze --exclude-rows "1,5,10-15" data.csv
 
 # Exclude target columns
@@ -299,7 +299,7 @@ pca transform model.json new_data.csv
 # Save to specific file with JSON format
 pca transform -f json -o results/ model.json new_data.csv
 
-# Exclude specific rows
+# Exclude specific rows (using range syntax)
 pca transform --exclude-rows 1,5-10 model.json new_data.csv
 
 # Include diagnostic metrics
