@@ -32,6 +32,33 @@ import { FontSizeControl } from './components/FontSizeControl';
 import { config } from '../wailsjs/go/models';
 import logo from './assets/images/GoPCA-logo-1024-transp.png';
 
+// Utility function to optimize indices to range notation
+function optimizeToRanges(indices: number[]): string {
+    if (indices.length === 0) return '';
+    
+    // Sort indices first
+    const sorted = [...indices].sort((a, b) => a - b);
+    const ranges: string[] = [];
+    let start = sorted[0];
+    let end = sorted[0];
+    
+    for (let i = 1; i < sorted.length; i++) {
+        if (sorted[i] === end + 1) {
+            // Consecutive number, extend range
+            end = sorted[i];
+        } else {
+            // Non-consecutive, save current range and start new one
+            ranges.push(start === end ? `${start}` : `${start}-${end}`);
+            start = end = sorted[i];
+        }
+    }
+    
+    // Add the last range
+    ranges.push(start === end ? `${start}` : `${start}-${end}`);
+    
+    return ranges.join(',');
+}
+
 function AppContent() {
     const { currentHelp, currentHelpKey } = useHelp();
     const { setMode } = usePalette();
@@ -414,15 +441,17 @@ return;
         // Add excluded columns if any
         if (excludedColumns.length > 0) {
             // Convert 0-indexed to 1-indexed for CLI
-            const columnIndices = excludedColumns.map(c => c + 1).join(',');
-            cmd += ` --exclude-cols ${columnIndices}`;
+            const columnIndices = excludedColumns.map(c => c + 1);
+            const rangeStr = optimizeToRanges(columnIndices);
+            cmd += ` --exclude-cols ${rangeStr}`;
         }
 
         // Add excluded rows if any
         if (excludedRows.length > 0) {
             // Convert 0-indexed to 1-indexed for CLI
-            const rowIndices = excludedRows.map(r => r + 1).join(',');
-            cmd += ` --exclude-rows ${rowIndices}`;
+            const rowIndices = excludedRows.map(r => r + 1);
+            const rangeStr = optimizeToRanges(rowIndices);
+            cmd += ` --exclude-rows ${rangeStr}`;
         }
 
         return cmd;
