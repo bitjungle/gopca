@@ -47,6 +47,13 @@ func TestE2EBasicWorkflow(t *testing.T) {
 			components: 2,
 			preprocess: "standard",
 		},
+		{
+			name:       "SVD with row and column exclusions",
+			dataset:    "medium",
+			method:     "svd",
+			components: 2,
+			preprocess: "standard",
+		},
 	}
 
 	for _, test := range testCases {
@@ -71,6 +78,11 @@ func TestE2EBasicWorkflow(t *testing.T) {
 
 			if test.method == "nipals" && (test.dataset == "missing") {
 				args = append(args, "--missing-strategy", "drop")
+			}
+
+			// Add exclusion flags for the exclusion test
+			if strings.Contains(test.name, "exclusions") {
+				args = append(args, "--exclude-rows", "1-3,5", "--exclude-columns", "1,3")
 			}
 
 			// Input file must be last
@@ -138,6 +150,11 @@ func TestE2EBasicWorkflow(t *testing.T) {
 			expectedRows := dataset.Rows
 			if dataset.HasMissing && test.preprocess != "nipals" {
 				expectedRows-- // Some rows might be dropped
+			}
+
+			// Adjust expected rows for exclusion test
+			if strings.Contains(test.name, "exclusions") {
+				expectedRows = 46 // 50 - 4 excluded rows (1-3,5)
 			}
 
 			if len(scores) != expectedRows && !dataset.HasMissing {

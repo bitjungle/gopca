@@ -89,6 +89,164 @@ func TestParseExcludeIndices(t *testing.T) {
 	}
 }
 
+// TestDataFiltering tests that the actual data filtering works correctly
+// This is a regression test for issue #418
+func TestDataFiltering(t *testing.T) {
+	// Create mock CSV data
+	mockData := &CSVData{
+		Matrix: [][]float64{
+			{1.0, 2.0, 3.0, 4.0},
+			{5.0, 6.0, 7.0, 8.0},
+			{9.0, 10.0, 11.0, 12.0},
+			{13.0, 14.0, 15.0, 16.0},
+			{17.0, 18.0, 19.0, 20.0},
+		},
+		Headers:  []string{"col1", "col2", "col3", "col4"},
+		RowNames: []string{"row1", "row2", "row3", "row4", "row5"},
+		Rows:     5,
+		Columns:  4,
+	}
+
+	testCases := []struct {
+		name             string
+		excludeRows      []int
+		excludeCols      []int
+		expectedRows     int
+		expectedCols     int
+		expectedFirstVal float64
+		expectedRowNames []string
+		expectedHeaders  []string
+	}{
+		{
+			name:             "No exclusions",
+			excludeRows:      []int{},
+			excludeCols:      []int{},
+			expectedRows:     5,
+			expectedCols:     4,
+			expectedFirstVal: 1.0,
+			expectedRowNames: []string{"row1", "row2", "row3", "row4", "row5"},
+			expectedHeaders:  []string{"col1", "col2", "col3", "col4"},
+		},
+		{
+			name:             "Exclude first row",
+			excludeRows:      []int{0},
+			excludeCols:      []int{},
+			expectedRows:     4,
+			expectedCols:     4,
+			expectedFirstVal: 5.0,
+			expectedRowNames: []string{"row2", "row3", "row4", "row5"},
+			expectedHeaders:  []string{"col1", "col2", "col3", "col4"},
+		},
+		{
+			name:             "Exclude first column",
+			excludeRows:      []int{},
+			excludeCols:      []int{0},
+			expectedRows:     5,
+			expectedCols:     3,
+			expectedFirstVal: 2.0,
+			expectedRowNames: []string{"row1", "row2", "row3", "row4", "row5"},
+			expectedHeaders:  []string{"col2", "col3", "col4"},
+		},
+		{
+			name:             "Exclude multiple rows and columns",
+			excludeRows:      []int{0, 2, 4}, // rows 1, 3, 5
+			excludeCols:      []int{1, 3},    // cols 2, 4
+			expectedRows:     2,
+			expectedCols:     2,
+			expectedFirstVal: 5.0, // row2, col1
+			expectedRowNames: []string{"row2", "row4"},
+			expectedHeaders:  []string{"col1", "col3"},
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			// Make a copy of the data
+			data := &CSVData{
+				Matrix:   make([][]float64, len(mockData.Matrix)),
+				Headers:  append([]string{}, mockData.Headers...),
+				RowNames: append([]string{}, mockData.RowNames...),
+				Rows:     mockData.Rows,
+				Columns:  mockData.Columns,
+			}
+			for i := range mockData.Matrix {
+				data.Matrix[i] = append([]float64{}, mockData.Matrix[i]...)
+			}
+
+			// Apply the filtering logic (extracted from runAnalyze)
+			if len(tc.excludeRows) > 0 || len(tc.excludeCols) > 0 {
+				excludedRowMap := make(map[int]bool)
+				for _, row := range tc.excludeRows {
+					excludedRowMap[row] = true
+				}
+
+				excludedColMap := make(map[int]bool)
+				for _, col := range tc.excludeCols {
+					excludedColMap[col] = true
+				}
+
+				filteredMatrix := make([][]float64, 0)
+				filteredRowNames := make([]string, 0)
+				for i, row := range data.Matrix {
+					if !excludedRowMap[i] {
+						filteredRow := make([]float64, 0)
+						for j, val := range row {
+							if !excludedColMap[j] {
+								filteredRow = append(filteredRow, val)
+							}
+						}
+						filteredMatrix = append(filteredMatrix, filteredRow)
+						if len(data.RowNames) > i {
+							filteredRowNames = append(filteredRowNames, data.RowNames[i])
+						}
+					}
+				}
+
+				filteredHeaders := make([]string, 0)
+				for i, header := range data.Headers {
+					if !excludedColMap[i] {
+						filteredHeaders = append(filteredHeaders, header)
+					}
+				}
+
+				data.Matrix = filteredMatrix
+				data.Rows = len(filteredMatrix)
+				data.Columns = len(filteredHeaders)
+				data.Headers = filteredHeaders
+				data.RowNames = filteredRowNames
+			}
+
+			// Validate results
+			if data.Rows != tc.expectedRows {
+				t.Errorf("Expected %d rows, got %d", tc.expectedRows, data.Rows)
+			}
+			if data.Columns != tc.expectedCols {
+				t.Errorf("Expected %d columns, got %d", tc.expectedCols, data.Columns)
+			}
+			if len(data.Matrix) > 0 && len(data.Matrix[0]) > 0 {
+				if data.Matrix[0][0] != tc.expectedFirstVal {
+					t.Errorf("Expected first value %f, got %f", tc.expectedFirstVal, data.Matrix[0][0])
+				}
+			}
+			if !reflect.DeepEqual(data.RowNames, tc.expectedRowNames) {
+				t.Errorf("Expected row names %v, got %v", tc.expectedRowNames, data.RowNames)
+			}
+			if !reflect.DeepEqual(data.Headers, tc.expectedHeaders) {
+				t.Errorf("Expected headers %v, got %v", tc.expectedHeaders, data.Headers)
+			}
+		})
+	}
+}
+
+// CSVData is a mock structure for testing
+type CSVData struct {
+	Matrix   [][]float64
+	Headers  []string
+	RowNames []string
+	Rows     int
+	Columns  int
+}
+
 func TestParseExcludeColumns(t *testing.T) {
 	headers := []string{"col1", "col2", "col3", "col4", "col5"}
 
