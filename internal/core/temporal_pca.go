@@ -430,20 +430,37 @@ func (t *TemporalPCAImpl) Fit(data types.Matrix, config types.PCAConfig) (*types
 		cumulativeVar[i] = cumSum
 	}
 
+	// Generate variable labels for lags
+	variableLabels := make([]string, t.origVars*t.numLags)
+	for lag := 0; lag < t.numLags; lag++ {
+		for v := 0; v < t.origVars; v++ {
+			idx := lag*t.origVars + v
+			if t.origVars == 1 {
+				// For univariate series, use simple lag labels
+				variableLabels[idx] = fmt.Sprintf("Lag %d", lag)
+			} else {
+				// For multivariate series, include variable index
+				variableLabels[idx] = fmt.Sprintf("Var%d_Lag%d", v+1, lag)
+			}
+		}
+	}
+
 	// Prepare result
 	result := &types.PCAResult{
-		Scores:             utils.MatrixToSlice(scores),
-		Loadings:           utils.MatrixToSlice(t.loadings),
-		ExplainedVar:       t.explainedVar[:t.nComponents],
-		ExplainedVarRatio:  explainedVarRatio,
-		CumulativeVar:      cumulativeVar,
-		SingularValues:     t.singularVals,
-		Means:              t.laggedMeans,
-		StdDevs:            t.laggedScales,
-		Method:             "temporal",
-		ComponentsComputed: t.nComponents,
-		Config:             config,
-		AllEigenvalues:     allEigenvalues, // Store all eigenvalues for diagnostic purposes
+		Scores:               utils.MatrixToSlice(scores),
+		Loadings:             utils.MatrixToSlice(t.loadings),
+		ExplainedVar:         t.explainedVar[:t.nComponents],
+		ExplainedVarRatio:    explainedVarRatio,
+		CumulativeVar:        cumulativeVar,
+		SingularValues:       t.singularVals,
+		Means:                t.laggedMeans,
+		StdDevs:              t.laggedScales,
+		Method:               "temporal",
+		ComponentsComputed:   t.nComponents,
+		Config:               config,
+		VariableLabels:       variableLabels,
+		PreprocessingApplied: true,           // Temporal PCA always preprocesses the lag matrix
+		AllEigenvalues:       allEigenvalues, // Store all eigenvalues for diagnostic purposes
 	}
 
 	return result, nil
