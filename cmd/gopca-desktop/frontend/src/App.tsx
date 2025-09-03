@@ -209,8 +209,17 @@ function AppContent() {
     // Helper function to get column data and type
     const getColumnData = (columnName: string | null): { values?: string[] | number[], type?: 'categorical' | 'continuous' } => {
         if (!columnName || !fileData) {
-return {};
-}
+            return {};
+        }
+
+        // Handle special "Row Index" column
+        if (columnName === 'Row Index') {
+            // Generate 1-based row indices for the current data
+            // Use the actual number of samples in the PCA result if available
+            const numSamples = pcaResponse?.result?.scores?.length || fileData.data.length;
+            const indices = Array.from({length: numSamples}, (_, i) => i + 1);
+            return { values: indices, type: 'continuous' };
+        }
 
         // CRITICAL FIX: Use filtered data from PCA response when rows have been dropped
         // This ensures categorical/numeric column data aligns with the reduced scores matrix
@@ -1355,6 +1364,10 @@ return;
                                                             if (!selectedValue) {
                                                                 setMode('none');
                                                                 setShowEllipses(false);
+                                                            } else if (selectedValue === 'Row Index') {
+                                                                // Row Index is always continuous
+                                                                setMode('continuous');
+                                                                setShowEllipses(false); // Ellipses only work with categorical data
                                                             } else if (fileData.numericTargetColumns && selectedValue in fileData.numericTargetColumns) {
                                                                 setMode('continuous');
                                                                 setShowEllipses(false); // Ellipses only work with categorical data
@@ -1365,6 +1378,8 @@ return;
                                                         }}
                                                         options={[
                                                             { value: '', label: 'None' },
+                                                            // Row Index - always available as a continuous option
+                                                            { value: 'Row Index', label: '📊 Row Index', group: 'Continuous' },
                                                             // Categorical columns
                                                             ...(fileData.categoricalColumns && Object.keys(fileData.categoricalColumns).length > 0 
                                                                 ? Object.keys(fileData.categoricalColumns).map((colName) => ({
