@@ -242,8 +242,8 @@ func TestTemporalPCATransform(t *testing.T) {
 	assert.Equal(t, 2, len(transformedData[0])) // 2 components
 }
 
-// TestTemporalPCAEdgeCases tests edge cases
-func TestTemporalPCAEdgeCases(t *testing.T) {
+// TestTemporalPCABasicEdgeCases tests basic edge cases
+func TestTemporalPCABasicEdgeCases(t *testing.T) {
 	tests := []struct {
 		name        string
 		data        [][]float64
@@ -564,4 +564,168 @@ func TestNumericalStability(t *testing.T) {
 			assert.False(t, math.IsInf(val, 0), "score[%d][%d] is Inf", i, j)
 		}
 	}
+}
+
+// TestTemporalPCAEdgeCases tests edge cases and validation in temporal PCA
+func TestTemporalPCAEdgeCases(t *testing.T) {
+	engine := NewTemporalPCAEngine()
+
+	t.Run("transform with unfitted model", func(t *testing.T) {
+		data := types.Matrix{{1.0, 2.0}, {3.0, 4.0}}
+		_, err := engine.Transform(data)
+		assert.Error(t, err)
+		assert.Contains(t, err.Error(), "model not fitted")
+	})
+
+	t.Run("transform with empty data", func(t *testing.T) {
+		// First fit the model
+		trainingData := types.Matrix{
+			{1.0, 2.0},
+			{3.0, 4.0},
+			{5.0, 6.0},
+		}
+		config := types.PCAConfig{
+			Components:   1,
+			MeanCenter:   true,
+			TemporalLags: 2,
+		}
+		_, err := engine.Fit(trainingData, config)
+		require.NoError(t, err)
+
+		// Test transform with empty data
+		_, err = engine.Transform(types.Matrix{})
+		assert.Error(t, err)
+		assert.Contains(t, err.Error(), "empty data matrix")
+	})
+
+	t.Run("transform with wrong number of variables", func(t *testing.T) {
+		// First fit the model
+		trainingData := types.Matrix{
+			{1.0, 2.0},
+			{3.0, 4.0},
+			{5.0, 6.0},
+		}
+		config := types.PCAConfig{
+			Components:   1,
+			MeanCenter:   true,
+			TemporalLags: 2,
+		}
+		_, err := engine.Fit(trainingData, config)
+		require.NoError(t, err)
+
+		// Test transform with wrong number of variables
+		wrongData := types.Matrix{
+			{1.0, 2.0, 3.0}, // 3 variables instead of 2
+			{4.0, 5.0, 6.0},
+		}
+		_, err = engine.Transform(wrongData)
+		assert.Error(t, err)
+		assert.Contains(t, err.Error(), "doesn't match training data")
+	})
+
+	t.Run("transform with insufficient samples for lags", func(t *testing.T) {
+		// First fit the model with 3 lags
+		trainingData := types.Matrix{
+			{1.0, 2.0},
+			{3.0, 4.0},
+			{5.0, 6.0},
+			{7.0, 8.0},
+		}
+		config := types.PCAConfig{
+			Components:   1,
+			MeanCenter:   true,
+			TemporalLags: 3,
+		}
+		_, err := engine.Fit(trainingData, config)
+		require.NoError(t, err)
+
+		// Test transform with only 2 samples (insufficient for 3 lags)
+		smallData := types.Matrix{
+			{1.0, 2.0},
+			{3.0, 4.0},
+		}
+		_, err = engine.Transform(smallData)
+		assert.Error(t, err)
+		assert.Contains(t, err.Error(), "insufficient samples")
+	})
+
+	t.Run("lags equal to samples minus 1", func(t *testing.T) {
+		// Edge case: L = T - 1 (results in 2 effective samples)
+		data := types.Matrix{
+			{1.0, 2.0},
+			{3.0, 4.0},
+			{5.0, 6.0},
+			{7.0, 8.0},
+			{9.0, 10.0},
+		}
+		config := types.PCAConfig{
+			Components:   1,
+			MeanCenter:   true,
+			TemporalLags: 4, // T=5, L=4, effective samples = 2
+		}
+		result, err := engine.Fit(data, config)
+		assert.NoError(t, err)
+		assert.NotNil(t, result)
+		assert.Equal(t, 2, len(result.Scores)) // 5-4+1 = 2 effective samples
+	})
+
+	t.Run("all eigenvalues stored", func(t *testing.T) {
+		// Verify that AllEigenvalues field is populated
+		data := types.Matrix{
+			{1.0, 2.0, 3.0},
+			{4.0, 5.0, 6.0},
+			{7.0, 8.0, 9.0},
+			{10.0, 11.0, 12.0},
+			{13.0, 14.0, 15.0},
+		}
+		config := types.PCAConfig{
+			Components:   2,
+			MeanCenter:   true,
+			TemporalLags: 2,
+		}
+		result, err := engine.Fit(data, config)
+		require.NoError(t, err)
+		require.NotNil(t, result)
+
+		// AllEigenvalues should contain all eigenvalues, not just the retained ones
+		assert.NotEmpty(t, result.AllEigenvalues)
+		assert.GreaterOrEqual(t, len(result.AllEigenvalues), result.ComponentsComputed)
+
+		// Verify that eigenvalues are in descending order
+		for i := 1; i < len(result.AllEigenvalues); i++ {
+			assert.GreaterOrEqual(t, result.AllEigenvalues[i-1], result.AllEigenvalues[i])
+		}
+	})
+
+	t.Run("variance explained calculation", func(t *testing.T) {
+		// Test that variance explained sums correctly
+		data := types.Matrix{
+			{1.0, 2.0},
+			{3.0, 4.0},
+			{5.0, 6.0},
+			{7.0, 8.0},
+			{9.0, 10.0},
+			{11.0, 12.0},
+		}
+		config := types.PCAConfig{
+			Components:   3,
+			MeanCenter:   true,
+			TemporalLags: 2,
+		}
+		result, err := engine.Fit(data, config)
+		require.NoError(t, err)
+		require.NotNil(t, result)
+
+		// Sum of explained variance ratio should be <= 100
+		totalVar := 0.0
+		for _, v := range result.ExplainedVarRatio {
+			totalVar += v
+		}
+		assert.LessOrEqual(t, totalVar, 100.01) // Allow tiny floating point error
+
+		// Cumulative variance should be monotonically increasing
+		for i := 1; i < len(result.CumulativeVar); i++ {
+			assert.GreaterOrEqual(t, result.CumulativeVar[i], result.CumulativeVar[i-1])
+		}
+	})
 }

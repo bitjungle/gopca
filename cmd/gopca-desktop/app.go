@@ -559,31 +559,31 @@ func (a *App) RunPCA(request PCARequest) (response PCAResponse) {
 	// For temporal PCA, adjust row names and metadata to match reduced number of scores
 	if strings.ToLower(request.Method) == "temporal" && len(result.Scores) > 0 {
 		newRowCount := len(result.Scores)
-		
+
 		// Adjust row names - keep only the first newRowCount names
 		if len(request.RowNames) > newRowCount {
 			request.RowNames = request.RowNames[:newRowCount]
 		}
-		
+
 		// Adjust group labels if provided
 		if len(request.GroupLabels) > newRowCount {
 			request.GroupLabels = request.GroupLabels[:newRowCount]
 		}
-		
+
 		// Adjust metadata categorical columns
 		for colName, colData := range request.MetadataCategorical {
 			if len(colData) > newRowCount {
 				request.MetadataCategorical[colName] = colData[:newRowCount]
 			}
 		}
-		
+
 		// Adjust metadata numeric columns
 		for colName, colData := range request.MetadataNumeric {
 			if len(colData) > newRowCount {
 				request.MetadataNumeric[colName] = colData[:newRowCount]
 			}
 		}
-		
+
 	}
 
 	// Update component labels to use filtered headers if needed

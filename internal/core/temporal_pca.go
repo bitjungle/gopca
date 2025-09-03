@@ -77,6 +77,8 @@ func EstimateTemporalPCAMemory(samples, variables, lags int) (bytes int64, warni
 // Creates a matrix where each row contains the current observation and L-1 previous observations
 // Input: data [T × p], numLags L
 // Output: lagMatrix [(T-L+1) × (p·L)]
+//
+// Algorithm complexity: O(T × p × L) where T is number of samples, p is variables, L is lags
 func (t *TemporalPCAImpl) buildLagMatrix(data *mat.Dense) (*mat.Dense, error) {
 	rows, cols := data.Dims()
 	if t.numLags > rows {
@@ -208,6 +210,7 @@ func validateTemporalPCAInput(data types.Matrix, config types.PCAConfig) error {
 }
 
 // Fit trains the Temporal PCA model on the provided data
+// Algorithm complexity: O((T-L+1) × (p×L)²) for SVD computation where T is samples, p is variables, L is lags
 func (t *TemporalPCAImpl) Fit(data types.Matrix, config types.PCAConfig) (*types.PCAResult, error) {
 	// Validate input using temporal-specific validation
 	if err := validateTemporalPCAInput(data, config); err != nil {
@@ -337,41 +340,37 @@ func (t *TemporalPCAImpl) Fit(data types.Matrix, config types.PCAConfig) (*types
 	}
 
 	// Perform SVD on the preprocessed lag matrix
-	// Use thin SVD when d < n for better numerical stability
-	var u, vt *mat.Dense
-	var s []float64
-
-	if laggedCols < effectiveRows {
-		// Thin SVD: more efficient when p·L < T-L+1
-		var svd mat.SVD
-		ok := svd.Factorize(preprocessedData, mat.SVDThin)
-		if !ok {
-			return nil, fmt.Errorf("SVD factorization failed")
-		}
-		s = svd.Values(nil)
-		vt = mat.NewDense(len(s), laggedCols, nil)
-		svd.VTo(vt)
-		u = mat.NewDense(effectiveRows, len(s), nil)
-		svd.UTo(u)
-	} else {
-		// Full SVD
-		var svd mat.SVD
-		ok := svd.Factorize(preprocessedData, mat.SVDFull)
-		if !ok {
-			return nil, fmt.Errorf("SVD factorization failed")
-		}
-		s = svd.Values(nil)
-		minDim := utils.MinInt(effectiveRows, laggedCols)
-		vt = mat.NewDense(minDim, laggedCols, nil)
-		svd.VTo(vt)
-		u = mat.NewDense(effectiveRows, minDim, nil)
-		svd.UTo(u)
+	var svd mat.SVD
+	ok := svd.Factorize(preprocessedData, mat.SVDThin)
+	if !ok {
+		return nil, fmt.Errorf("SVD factorization failed")
 	}
 
+	s := svd.Values(nil)
+	minDim := len(s)
+
+	// Get V matrix - VTo returns V, not V^T
+	// V is [laggedCols × minDim] for thin SVD
+	v := mat.NewDense(laggedCols, minDim, nil)
+	svd.VTo(v)
+
+	// Transpose V to get V^T for loadings
+	vt := mat.NewDense(minDim, laggedCols, nil)
+	vt.Copy(v.T())
+
+	u := mat.NewDense(effectiveRows, minDim, nil)
+	svd.UTo(u)
+
 	// Calculate explained variance
+	// Store ALL eigenvalues for proper variance calculation
+	allEigenvalues := make([]float64, len(s))
+	for i, val := range s {
+		allEigenvalues[i] = val * val
+	}
+
 	totalVar := 0.0
-	for _, val := range s {
-		totalVar += val * val
+	for _, eigenval := range allEigenvalues {
+		totalVar += eigenval
 	}
 
 	t.explainedVar = make([]float64, len(s))
@@ -379,7 +378,7 @@ func (t *TemporalPCAImpl) Fit(data types.Matrix, config types.PCAConfig) (*types
 	actualComponents := targetComponents
 
 	for i := range s {
-		variance := (s[i] * s[i]) / totalVar
+		variance := allEigenvalues[i] / totalVar
 		t.explainedVar[i] = variance
 		cumVar += variance
 
@@ -444,6 +443,7 @@ func (t *TemporalPCAImpl) Fit(data types.Matrix, config types.PCAConfig) (*types
 		Method:             "temporal",
 		ComponentsComputed: t.nComponents,
 		Config:             config,
+		AllEigenvalues:     allEigenvalues, // Store all eigenvalues for diagnostic purposes
 	}
 
 	return result, nil
@@ -455,13 +455,25 @@ func (t *TemporalPCAImpl) Transform(data types.Matrix) (types.Matrix, error) {
 		return nil, fmt.Errorf("model not fitted")
 	}
 
+	// Validate input data
+	if len(data) == 0 {
+		return nil, fmt.Errorf("empty data matrix")
+	}
+	if len(data[0]) == 0 {
+		return nil, fmt.Errorf("empty data columns")
+	}
+
 	// Convert input data to gonum matrix
 	// types.Matrix is [][]float64
 	dataMatrix := utils.SliceToMatrix([][]float64(data))
-	_, cols := dataMatrix.Dims()
+	rows, cols := dataMatrix.Dims()
 
 	if cols != t.origVars {
 		return nil, fmt.Errorf("number of variables (%d) doesn't match training data (%d)", cols, t.origVars)
+	}
+
+	if rows < t.numLags {
+		return nil, fmt.Errorf("insufficient samples (%d) for %d lags", rows, t.numLags)
 	}
 
 	// Build lag matrix for new data
@@ -496,6 +508,7 @@ func (t *TemporalPCAImpl) FitTransform(data types.Matrix, config types.PCAConfig
 
 // ReconstructionError computes the reconstruction error for each sample
 // This is computed in the standardized lag space as per SSA methodology
+// Algorithm complexity: O((T-L+1) × (p×L) × k) where k is the number of components
 func (t *TemporalPCAImpl) ReconstructionError(data types.Matrix) ([]float64, error) {
 	if !t.fitted {
 		return nil, fmt.Errorf("model not fitted")
