@@ -324,13 +324,14 @@ func (t *TemporalPCAImpl) Fit(data types.Matrix, config types.PCAConfig) (*types
 		return &types.PCAResult{
 			Scores:             utils.MatrixToSlice(scores),
 			Loadings:           utils.MatrixToSlice(t.loadings),
-			ExplainedVariance:  t.explainedVar,
-			CumulativeVariance: []float64{1.0},
+			ExplainedVar:       t.explainedVar,
+			ExplainedVarRatio:  []float64{100.0}, // Single component explains 100%
+			CumulativeVar:      []float64{1.0},
 			SingularValues:     t.singularVals,
 			Method:             "temporal",
-			Mean:               t.laggedMeans,
-			Scale:              t.laggedScales,
-			Components:         1,
+			Means:              t.laggedMeans,
+			StdDevs:            t.laggedScales,
+			ComponentsComputed: 1,
 			Config:             config,
 		}, nil
 	}
@@ -416,25 +417,33 @@ func (t *TemporalPCAImpl) Fit(data types.Matrix, config types.PCAConfig) (*types
 
 	t.fitted = true
 
-	// Prepare result
-	result := &types.PCAResult{
-		Scores:            utils.MatrixToSlice(scores),
-		Loadings:          utils.MatrixToSlice(t.loadings),
-		ExplainedVariance: t.explainedVar[:t.nComponents],
-		SingularValues:    t.singularVals,
-		Mean:              t.laggedMeans,
-		Method:            "temporal",
-		Scale:             t.laggedScales,
-		Components:        t.nComponents,
-		Config:            config,
+	// Calculate explained variance ratio as percentages
+	explainedVarRatio := make([]float64, t.nComponents)
+	for i := 0; i < t.nComponents; i++ {
+		explainedVarRatio[i] = t.explainedVar[i] * 100.0 // Convert to percentage
 	}
 
 	// Calculate cumulative variance
-	result.CumulativeVariance = make([]float64, t.nComponents)
+	cumulativeVar := make([]float64, t.nComponents)
 	cumSum := 0.0
 	for i := 0; i < t.nComponents; i++ {
-		cumSum += result.ExplainedVariance[i]
-		result.CumulativeVariance[i] = cumSum
+		cumSum += t.explainedVar[i]
+		cumulativeVar[i] = cumSum
+	}
+
+	// Prepare result
+	result := &types.PCAResult{
+		Scores:             utils.MatrixToSlice(scores),
+		Loadings:           utils.MatrixToSlice(t.loadings),
+		ExplainedVar:       t.explainedVar[:t.nComponents],
+		ExplainedVarRatio:  explainedVarRatio,
+		CumulativeVar:      cumulativeVar,
+		SingularValues:     t.singularVals,
+		Means:              t.laggedMeans,
+		StdDevs:            t.laggedScales,
+		Method:             "temporal",
+		ComponentsComputed: t.nComponents,
+		Config:             config,
 	}
 
 	return result, nil

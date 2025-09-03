@@ -130,22 +130,23 @@ func TestTemporalPCAFit(t *testing.T) {
 	require.NotNil(t, result)
 
 	// Check dimensions
-	assert.Equal(t, 2, result.Components)
+	assert.Equal(t, 2, result.ComponentsComputed)
 	assert.Equal(t, 46, len(result.Scores))      // 50 - 5 + 1 = 46 effective samples
 	assert.Equal(t, 2, len(result.Scores[0]))    // 2 components
 	assert.Equal(t, 2, len(result.Loadings))     // 2 components
 	assert.Equal(t, 10, len(result.Loadings[0])) // 2 vars * 5 lags = 10
 
 	// Check explained variance
-	assert.Equal(t, 2, len(result.ExplainedVariance))
-	assert.Equal(t, 2, len(result.CumulativeVariance))
+	assert.Equal(t, 2, len(result.ExplainedVar))
+	assert.Equal(t, 2, len(result.ExplainedVarRatio))
+	assert.Equal(t, 2, len(result.CumulativeVar))
 
 	// First component should explain most variance for trend data
-	assert.Greater(t, result.ExplainedVariance[0], 0.7)
+	assert.Greater(t, result.ExplainedVar[0], 0.7)
 
 	// Cumulative variance should be increasing
-	assert.Less(t, result.CumulativeVariance[0], result.CumulativeVariance[1])
-	assert.LessOrEqual(t, result.CumulativeVariance[1], 1.0)
+	assert.Less(t, result.CumulativeVar[0], result.CumulativeVar[1])
+	assert.LessOrEqual(t, result.CumulativeVar[1], 1.0)
 }
 
 // TestTemporalPCAVarianceExplained tests the variance explained criterion
@@ -184,9 +185,9 @@ func TestTemporalPCAVarianceExplained(t *testing.T) {
 			result, err := engine.Fit(matrix, config)
 
 			require.NoError(t, err)
-			assert.LessOrEqual(t, result.Components, tt.expectedComps+1,
+			assert.LessOrEqual(t, result.ComponentsComputed, tt.expectedComps+1,
 				"should not use too many components")
-			assert.GreaterOrEqual(t, result.CumulativeVariance[result.Components-1],
+			assert.GreaterOrEqual(t, result.CumulativeVar[result.ComponentsComputed-1],
 				tt.varianceExplained, "should meet variance criterion")
 		})
 	}
