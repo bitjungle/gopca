@@ -18,7 +18,7 @@ func TestToJSONSafe_EmptyData(t *testing.T) {
 		RowNames: []string{},
 		Data:     [][]float64{},
 	}
-	
+
 	result := fd.ToJSONSafe()
 	if result == nil {
 		t.Fatal("Expected non-nil result for empty data")
@@ -38,7 +38,7 @@ func TestToJSONSafe_NoMissing(t *testing.T) {
 			{3.0, 4.0},
 		},
 	}
-	
+
 	result := fd.ToJSONSafe()
 	if result == nil {
 		t.Fatal("Expected non-nil result")
@@ -61,7 +61,7 @@ func TestToJSONSafe_WithMissing(t *testing.T) {
 			{4.0, 5.0, math.NaN()},
 		},
 	}
-	
+
 	result := fd.ToJSONSafe()
 	if result == nil {
 		t.Fatal("Expected non-nil result")
@@ -87,7 +87,7 @@ func TestToJSONSafe_LargeDatasetNoMissing(t *testing.T) {
 	data := make([][]float64, rows)
 	rowNames := make([]string, rows)
 	headers := make([]string, cols)
-	
+
 	for i := 0; i < rows; i++ {
 		data[i] = make([]float64, cols)
 		rowNames[i] = "Row" + string(rune(i))
@@ -95,17 +95,17 @@ func TestToJSONSafe_LargeDatasetNoMissing(t *testing.T) {
 			data[i][j] = float64(i*cols + j)
 		}
 	}
-	
+
 	for j := 0; j < cols; j++ {
 		headers[j] = "Col" + string(rune(j))
 	}
-	
+
 	fd := &FileData{
 		Headers:  headers,
 		RowNames: rowNames,
 		Data:     data,
 	}
-	
+
 	result := fd.ToJSONSafe()
 	if result == nil {
 		t.Fatal("Expected non-nil result")
@@ -122,11 +122,11 @@ func TestToJSONSafe_EarlyNaN(t *testing.T) {
 		Headers:  []string{"A", "B"},
 		RowNames: []string{"R1", "R2"},
 		Data: [][]float64{
-			{math.NaN(), 2.0},  // NaN in first position should trigger early exit
+			{math.NaN(), 2.0}, // NaN in first position should trigger early exit
 			{3.0, 4.0},
 		},
 	}
-	
+
 	result := fd.ToJSONSafe()
 	if result == nil {
 		t.Fatal("Expected non-nil result")
@@ -161,7 +161,7 @@ func TestToJSONSafe_NumericTargetsWithNaN(t *testing.T) {
 			"target": {1.0, math.NaN(), 3.0},
 		},
 	}
-	
+
 	result := fd.ToJSONSafe()
 	if result == nil {
 		t.Fatal("Expected non-nil result")
@@ -189,11 +189,11 @@ func BenchmarkToJSONSafe_NoMissing(b *testing.B) {
 			data[i][j] = float64(i*cols + j)
 		}
 	}
-	
+
 	fd := &FileData{
 		Data: data,
 	}
-	
+
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
 		_ = fd.ToJSONSafe()
@@ -214,11 +214,11 @@ func BenchmarkToJSONSafe_WithMissing(b *testing.B) {
 			}
 		}
 	}
-	
+
 	fd := &FileData{
 		Data: data,
 	}
-	
+
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
 		_ = fd.ToJSONSafe()

@@ -14,20 +14,20 @@ import (
 
 // FileDataJSON is a JSON-safe version of FileData
 type FileDataJSON struct {
-	Headers              []string                     `json:"headers"`
-	RowNames             []string                     `json:"rowNames"`
-	Data                 [][]types.JSONFloat64        `json:"data"`
-	MissingMask          [][]bool                     `json:"missingMask,omitempty"`
-	CategoricalColumns   map[string][]string          `json:"categoricalColumns,omitempty"`
+	Headers              []string                       `json:"headers"`
+	RowNames             []string                       `json:"rowNames"`
+	Data                 [][]types.JSONFloat64          `json:"data"`
+	MissingMask          [][]bool                       `json:"missingMask,omitempty"`
+	CategoricalColumns   map[string][]string            `json:"categoricalColumns,omitempty"`
 	NumericTargetColumns map[string][]types.JSONFloat64 `json:"numericTargetColumns,omitempty"`
 }
 
 // ToJSONSafe converts FileData to a JSON-safe version with optimized performance.
-// 
+//
 // Performance optimization: This method uses a two-pass approach to avoid unnecessary
 // memory allocations for the missing value mask. For large datasets without missing
 // values (like MET with ~100,000 data points), this avoids allocating ~100,000 booleans.
-// 
+//
 // Pass 1: Quick scan to detect if any NaN values exist (can exit early on first NaN)
 // Pass 2: Convert data and only build missing mask if needed
 //
@@ -56,7 +56,7 @@ func (fd *FileData) ToJSONSafe() *FileDataJSON {
 	// Second pass: convert float64 data to types.JSONFloat64
 	jsonData := make([][]types.JSONFloat64, len(fd.Data))
 	var missingMask [][]bool
-	
+
 	// Only allocate missing mask if we actually have missing values
 	// This is the key optimization for large datasets without missing values
 	if hasMissing {
@@ -68,7 +68,7 @@ func (fd *FileData) ToJSONSafe() *FileDataJSON {
 		if hasMissing {
 			missingMask[i] = make([]bool, len(row))
 		}
-		
+
 		// Convert row data
 		for j, val := range row {
 			jsonData[i][j] = types.JSONFloat64(val)
@@ -132,9 +132,9 @@ type PCAResultJSON struct {
 type EigencorrelationResultJSON struct {
 	Correlations map[string][]types.JSONFloat64 `json:"correlations"`
 	PValues      map[string][]types.JSONFloat64 `json:"pValues"`
-	Variables    []string                        `json:"variables"`
-	Components   []string                        `json:"components"`
-	Method       string                          `json:"method"`
+	Variables    []string                       `json:"variables"`
+	Components   []string                       `json:"components"`
+	Method       string                         `json:"method"`
 }
 
 // SampleMetricsJSON is a JSON-safe version of types.SampleMetrics
