@@ -1347,10 +1347,8 @@ return;
                                 {/* Tier 2: Context-Sensitive Controls */}
                                 <div className="mb-4">
                                     <div className="flex flex-wrap items-center gap-4">
-                                        {/* Data Display Group */}
-                                        {(selectedPlot === 'scores' || selectedPlot === 'scores3d' || selectedPlot === 'biplot' || selectedPlot === 'biplot3d') && fileData &&
-                                         ((fileData.categoricalColumns && Object.keys(fileData.categoricalColumns).length > 0) ||
-                                          (fileData.numericTargetColumns && Object.keys(fileData.numericTargetColumns).length > 0)) && (
+                                        {/* Data Display Group - Always show Color by control since Row Index is always available */}
+                                        {(selectedPlot === 'scores' || selectedPlot === 'scores3d' || selectedPlot === 'biplot' || selectedPlot === 'biplot3d') && fileData && (
                                             <div className="flex items-center gap-3 px-3 py-2 bg-gray-50 dark:bg-gray-800 rounded-lg">
                                                 <HelpWrapper helpKey="group-coloring" className="flex items-center gap-2">
                                                     <label className="text-sm text-gray-600 dark:text-gray-400">Color by:</label>
