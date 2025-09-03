@@ -280,6 +280,11 @@
       "text": "Display sample IDs on plots. First column if non-numeric, else row numbers. Useful for identifying specific points.",
       "category": "visualization"
     },
+    "group-coloring": {
+      "title": "Color by Column",
+      "text": "Color samples by categorical columns (discrete colors), continuous #target columns (gradient), or Row Index (gradient showing sample order, useful for time series).",
+      "category": "visualization"
+    },
     "diagnostic-metrics": {
       "title": "Calculate Diagnostic Metrics",
       "text": "Compute T² (Hotelling) and Q (SPE) residuals for outlier detection. Not available for Kernel PCA.",
