@@ -44,6 +44,10 @@ type PCAConfig struct {
 	KernelGamma  float64 `json:"kernel_gamma,omitempty"`  // RBF/Poly parameter
 	KernelDegree int     `json:"kernel_degree,omitempty"` // Poly parameter
 	KernelCoef0  float64 `json:"kernel_coef0,omitempty"`  // Poly parameter
+	// Temporal PCA specific parameters
+	TemporalLags      int     `json:"temporal_lags,omitempty"`      // Number of time lags for temporal PCA
+	VarianceExplained float64 `json:"variance_explained,omitempty"` // Target explained variance (0.0-1.0)
+	ImputeMethod      string  `json:"impute_method,omitempty"`      // "forward", "backward", "linear", "none"
 }
 
 // PCAResult contains the results of PCA analysis
@@ -72,6 +76,14 @@ type PCAResult struct {
 	Eigencorrelations *EigencorrelationResult `json:"eigencorrelations,omitempty"`
 	// All eigenvalues (including non-retained) for diagnostic calculations
 	AllEigenvalues []float64 `json:"all_eigenvalues,omitempty"`
+	// Additional fields for temporal PCA and other methods
+	ExplainedVariance  []float64 `json:"explained_variance_values,omitempty"`  // Raw explained variance values
+	CumulativeVariance []float64 `json:"cumulative_variance_values,omitempty"` // Cumulative explained variance
+	SingularValues     []float64 `json:"singular_values,omitempty"`            // Singular values from SVD
+	Mean               []float64 `json:"mean,omitempty"`                       // Feature means (for transform)
+	Scale              []float64 `json:"scale,omitempty"`                      // Feature scales (for transform)
+	Components         int       `json:"components,omitempty"`                 // Number of components retained
+	Config             PCAConfig `json:"config,omitempty"`                     // Configuration used for fitting
 }
 
 // EigencorrelationResult contains correlations between PC scores and metadata variables

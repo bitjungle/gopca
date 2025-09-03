@@ -37,6 +37,8 @@ func NewPCAEngineForMethod(method string) types.PCAEngine {
 	switch method {
 	case "kernel":
 		return NewKernelPCAEngine()
+	case "temporal":
+		return NewTemporalPCAEngine()
 	default:
 		return NewPCAEngine()
 	}

@@ -336,7 +336,127 @@ Both methods produce equivalent results for complete datasets but offer differen
 
 ---
 
-## 10. Assumptions, Limitations, and When PCA Can Fail
+## 10. Temporal PCA: Analysis for Time-Series Data
+
+While classical PCA treats each observation as independent, time-series data has inherent temporal structure where the order and timing of observations carry crucial information. GoPCA Suite implements **Temporal PCA** (also known as Time-Delay PCA or SSA-style PCA), which captures these temporal dynamics by incorporating time dependencies directly into the analysis.
+
+> **⚠️ Important:** Temporal PCA is designed specifically for **time-series data** where observations represent sequential measurements over time. Do not use this method for spatial datasets (like Swiss Roll) or cross-sectional data where sample order is arbitrary. For such data, use standard PCA, Kernel PCA, or other appropriate methods.
+
+### 10.1. The Limitation of Standard PCA for Time Series
+
+Imagine monitoring a manufacturing process with multiple sensors. At any moment, the system state depends not just on current readings but also on recent history—temperature trends, pressure changes, flow patterns. Standard PCA treats each time point independently and would miss these temporal relationships entirely.
+
+### 10.2. How Temporal PCA Works
+
+Temporal PCA addresses this by constructing a **lag matrix** (also called a trajectory or Hankel matrix), where each observation is augmented with its recent history. This clever transformation converts temporal patterns into spatial patterns that PCA can analyze.
+
+**Mathematically:**  
+For time series **X** ∈ ℝ^(T×p) with T time points and p variables, the lag matrix **Φ(X,L)** ∈ ℝ^((T-L+1)×(p·L)) is constructed where each row contains L consecutive observations:
+
+```
+Time t: [x₁(t), x₂(t), ..., xₚ(t), x₁(t-1), ..., xₚ(t-1), ..., x₁(t-L+1), ..., xₚ(t-L+1)]
+         └── current values ──┘  └── lag 1 values ──┘    └── lag L-1 values ──┘
+```
+
+Standard PCA via SVD is then applied to this expanded matrix, revealing temporal structure through the principal components.
+
+### 10.3. Strengths and Applications
+
+**Strengths:**
+- **Captures temporal dynamics:** Reveals how variables evolve and influence each other over time
+- **Identifies patterns:** Extracts trends, oscillations, and seasonal components
+- **Enables anomaly detection:** High reconstruction error indicates unusual temporal behavior
+- **Preserves time structure:** Unlike standard PCA, respects the sequential nature of data
+
+**Applications:**
+- **Process monitoring:** Quality control with temporal dependencies, shift-to-shift variations
+- **Signal processing:** Denoising while preserving temporal structure
+- **Predictive maintenance:** Early detection of equipment degradation patterns
+- **Climate analysis:** Separating trends from oscillatory modes (El Niño, seasonal cycles)
+- **Financial time series:** Identifying temporal factors in market data
+
+### 10.4. Choosing the Number of Lags
+
+The lag parameter L is crucial and depends on your data's temporal structure:
+
+**Practical Guidelines:**
+- **Hourly data with daily patterns:** L = 24
+- **Daily data with weekly patterns:** L = 7  
+- **Monthly data with annual patterns:** L = 12
+- **General exploration:** Start with L = T/4 and adjust based on results
+
+**Technical Considerations:**
+- L should be at least as large as the dominant period
+- Ensure T >> L for stability (minimum T > 4L)
+- Memory usage scales as O(T×p×L)
+- Use autocorrelation analysis to identify significant lags
+
+### 10.5. Interpreting Results
+
+**Temporal Loadings:**
+The loadings matrix has dimensions [components × (variables × lags)], encoding rich temporal information:
+- **High loading at lag 0:** Variable's current value important
+- **High loading at specific lag:** Delayed influence at that offset
+- **Pattern across lags:** Reveals decay, oscillation, or other temporal structure
+
+**Reconstruction Error:**
+Unlike standard PCA, reconstruction error in Temporal PCA specifically indicates deviation from normal temporal patterns, making it powerful for anomaly detection and change point identification.
+
+### 10.6. Implementation in GoPCA Suite
+
+**Using pca CLI:**
+```bash
+# Basic temporal PCA with 24 lags
+pca analyze --method temporal --temporal-lags 24 --components 5 data.csv
+
+# Automatic component selection via variance explained
+pca analyze --method temporal --temporal-lags 12 --var-explained 0.95 data.csv
+
+# With preprocessing for sensor data
+pca analyze --method temporal --temporal-lags 8 --scale standard sensor_data.csv
+```
+
+**Implementation Features:**
+- Efficient concurrent processing for large lag matrices
+- Automatic memory estimation with warnings
+- Variance explained criterion for component selection
+- Full integration with preprocessing pipeline
+- Comprehensive edge case handling
+
+**Practical Example - Manufacturing Quality Control:**
+```bash
+# Monitor production line with 8-hour window (one shift)
+pca analyze --method temporal --temporal-lags 8 \
+  --components 3 --scale standard production_sensors.csv
+```
+
+This might reveal:
+- PC1: Overall production level (trend)
+- PC2: Shift-to-shift variations  
+- PC3: Within-shift oscillations
+
+### 10.7. Comparison with Standard PCA
+
+| Aspect | Standard PCA | Temporal PCA |
+|--------|-------------|--------------|
+| **Input** | Data matrix [T×p] | Lag matrix [(T-L+1)×(p·L)] |
+| **Captures** | Static correlations | Temporal dynamics |
+| **Memory** | O(T·p) | O(T·p·L) |
+| **Use when** | Samples are independent | Sequential/time dependencies matter |
+| **Interpretation** | Variable relationships | Variable evolution over time |
+
+### 10.8. Mathematical Foundation
+
+This approach is grounded in dynamical systems reconstruction theory:
+- **Broomhead & King (1986):** Extracting qualitative dynamics from experimental data
+- **Golyandina et al. (2001):** Analysis of Time Series Structure: SSA and related techniques
+- **Ghil et al. (2002):** Advanced spectral methods for climatic time series
+
+The method is closely related to Singular Spectrum Analysis (SSA) and provides a bridge between time-series analysis and multivariate statistics.
+
+---
+
+## 11. Assumptions, Limitations, and When PCA Can Fail
 
 **Assumptions of PCA:**
 - Data is mean-centered (and preferably scaled).

@@ -225,6 +225,9 @@ type PCARequest struct {
 	KernelGamma  float64 `json:"kernelGamma,omitempty"`
 	KernelDegree int     `json:"kernelDegree,omitempty"`
 	KernelCoef0  float64 `json:"kernelCoef0,omitempty"`
+	// Temporal PCA parameters
+	TemporalLags      int     `json:"temporalLags,omitempty"`
+	VarianceExplained float64 `json:"varianceExplained,omitempty"`
 	// Grouping parameters for confidence ellipses
 	GroupColumn string   `json:"groupColumn,omitempty"`
 	GroupLabels []string `json:"groupLabels,omitempty"`
@@ -537,6 +540,12 @@ func (a *App) RunPCA(request PCARequest) (response PCAResponse) {
 		}
 	}
 
+	// Add temporal parameters if using temporal PCA
+	if strings.ToLower(request.Method) == "temporal" {
+		config.TemporalLags = request.TemporalLags
+		config.VarianceExplained = request.VarianceExplained
+	}
+
 	// Perform PCA
 	engine := core.NewPCAEngineForMethod(config.Method)
 	result, err := engine.Fit(dataToAnalyze, config)
@@ -547,10 +556,49 @@ func (a *App) RunPCA(request PCARequest) (response PCAResponse) {
 		}
 	}
 
+	// For temporal PCA, adjust row names and metadata to match reduced number of scores
+	if strings.ToLower(request.Method) == "temporal" && len(result.Scores) > 0 {
+		newRowCount := len(result.Scores)
+
+		// Adjust row names - keep only the first newRowCount names
+		if len(request.RowNames) > newRowCount {
+			request.RowNames = request.RowNames[:newRowCount]
+		}
+
+		// Adjust group labels if provided
+		if len(request.GroupLabels) > newRowCount {
+			request.GroupLabels = request.GroupLabels[:newRowCount]
+		}
+
+		// Adjust metadata categorical columns
+		for colName, colData := range request.MetadataCategorical {
+			if len(colData) > newRowCount {
+				request.MetadataCategorical[colName] = colData[:newRowCount]
+			}
+		}
+
+		// Adjust metadata numeric columns
+		for colName, colData := range request.MetadataNumeric {
+			if len(colData) > newRowCount {
+				request.MetadataNumeric[colName] = colData[:newRowCount]
+			}
+		}
+
+	}
+
 	// Update component labels to use filtered headers if needed
 	if len(result.ComponentLabels) == 0 {
-		result.ComponentLabels = make([]string, request.Components)
-		for i := 0; i < request.Components; i++ {
+		// Use ComponentsComputed if available (for temporal PCA), otherwise use requested components
+		numComponents := request.Components
+		if result.ComponentsComputed > 0 {
+			numComponents = result.ComponentsComputed
+		}
+		// Also ensure we don't exceed the actual number of score columns
+		if len(result.Scores) > 0 && len(result.Scores[0]) < numComponents {
+			numComponents = len(result.Scores[0])
+		}
+		result.ComponentLabels = make([]string, numComponents)
+		for i := 0; i < numComponents; i++ {
 			result.ComponentLabels[i] = fmt.Sprintf("PC%d", i+1)
 		}
 	}
@@ -564,8 +612,9 @@ func (a *App) RunPCA(request PCARequest) (response PCAResponse) {
 	}
 	result.VariableLabels = filteredHeaders
 
-	// Calculate diagnostic metrics (not applicable for Kernel PCA)
-	if strings.ToLower(request.Method) != "kernel" {
+	// Calculate diagnostic metrics (not applicable for Kernel PCA or Temporal PCA)
+	// Temporal PCA has different dimensions (n-lags+1) so metrics calculation would fail
+	if strings.ToLower(request.Method) != "kernel" && strings.ToLower(request.Method) != "temporal" {
 		// For RSS calculation, we need to use data preprocessed exactly as it was for PCA fitting
 		// This ensures the data and reconstruction are in the same space
 		preprocessedData := dataToAnalyze
@@ -736,13 +785,14 @@ func (a *App) RunPCA(request PCARequest) (response PCAResponse) {
 	}
 
 	// Prepare filtered categorical and numeric columns for the frontend
-	// If rows were dropped OR excluded, the metadata in the request has already been filtered above
+	// If rows were dropped OR excluded OR using temporal PCA, the metadata in the request has already been filtered above
 	// We pass it to the frontend so it can use properly aligned data when coloring by category
 	var filteredCategoricalCols map[string][]string
 	var filteredNumericTargetCols map[string][]float64
 
-	if (rowsDropped > 0 && request.MissingStrategy == "drop") || rowsExcluded > 0 {
+	if (rowsDropped > 0 && request.MissingStrategy == "drop") || rowsExcluded > 0 || strings.ToLower(request.Method) == "temporal" {
 		// Pass the already-filtered metadata columns
+		// For temporal PCA, these were adjusted in the adjustment block above
 		filteredCategoricalCols = request.MetadataCategorical
 		filteredNumericTargetCols = request.MetadataNumeric
 	}
