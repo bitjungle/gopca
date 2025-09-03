@@ -22,13 +22,23 @@ type FileDataJSON struct {
 	NumericTargetColumns map[string][]types.JSONFloat64 `json:"numericTargetColumns,omitempty"`
 }
 
-// ToJSONSafe converts FileData to a JSON-safe version with optimized performance
+// ToJSONSafe converts FileData to a JSON-safe version with optimized performance.
+// 
+// Performance optimization: This method uses a two-pass approach to avoid unnecessary
+// memory allocations for the missing value mask. For large datasets without missing
+// values (like MET with ~100,000 data points), this avoids allocating ~100,000 booleans.
+// 
+// Pass 1: Quick scan to detect if any NaN values exist (can exit early on first NaN)
+// Pass 2: Convert data and only build missing mask if needed
+//
+// The extra pass is worth it because memory allocation is expensive, especially for
+// large datasets where the missing mask would consume significant memory unnecessarily.
 func (fd *FileData) ToJSONSafe() *FileDataJSON {
 	if fd == nil {
 		return nil
 	}
 
-	// First, check if we have any missing values at all
+	// First pass: check if we have any missing values at all
 	// This prevents unnecessary allocation for the missing mask
 	hasMissing := false
 	for i := range fd.Data {
@@ -43,11 +53,12 @@ func (fd *FileData) ToJSONSafe() *FileDataJSON {
 		}
 	}
 
-	// Convert float64 data to types.JSONFloat64
+	// Second pass: convert float64 data to types.JSONFloat64
 	jsonData := make([][]types.JSONFloat64, len(fd.Data))
 	var missingMask [][]bool
 	
 	// Only allocate missing mask if we actually have missing values
+	// This is the key optimization for large datasets without missing values
 	if hasMissing {
 		missingMask = make([][]bool, len(fd.Data))
 	}
