@@ -559,7 +559,6 @@ func (a *App) RunPCA(request PCARequest) (response PCAResponse) {
 	// For temporal PCA, adjust row names and metadata to match reduced number of scores
 	if strings.ToLower(request.Method) == "temporal" && len(result.Scores) > 0 {
 		newRowCount := len(result.Scores)
-		origRowCount := len(request.RowNames)
 		
 		// Adjust row names - keep only the first newRowCount names
 		if len(request.RowNames) > newRowCount {
