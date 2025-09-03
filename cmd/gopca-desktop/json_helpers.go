@@ -14,33 +14,66 @@ import (
 
 // FileDataJSON is a JSON-safe version of FileData
 type FileDataJSON struct {
-	Headers              []string                       `json:"headers"`
-	RowNames             []string                       `json:"rowNames"`
-	Data                 [][]types.JSONFloat64          `json:"data"`
-	MissingMask          [][]bool                       `json:"missingMask,omitempty"`
-	CategoricalColumns   map[string][]string            `json:"categoricalColumns,omitempty"`
+	Headers              []string                     `json:"headers"`
+	RowNames             []string                     `json:"rowNames"`
+	Data                 [][]types.JSONFloat64        `json:"data"`
+	MissingMask          [][]bool                     `json:"missingMask,omitempty"`
+	CategoricalColumns   map[string][]string          `json:"categoricalColumns,omitempty"`
 	NumericTargetColumns map[string][]types.JSONFloat64 `json:"numericTargetColumns,omitempty"`
 }
 
-// ToJSONSafe converts FileData to a JSON-safe version
+// ToJSONSafe converts FileData to a JSON-safe version with optimized performance.
+// 
+// Performance optimization: This method uses a two-pass approach to avoid unnecessary
+// memory allocations for the missing value mask. For large datasets without missing
+// values (like MET with ~100,000 data points), this avoids allocating ~100,000 booleans.
+// 
+// Pass 1: Quick scan to detect if any NaN values exist (can exit early on first NaN)
+// Pass 2: Convert data and only build missing mask if needed
+//
+// The extra pass is worth it because memory allocation is expensive, especially for
+// large datasets where the missing mask would consume significant memory unnecessarily.
 func (fd *FileData) ToJSONSafe() *FileDataJSON {
 	if fd == nil {
 		return nil
 	}
 
-	// Convert float64 data to types.JSONFloat64 and build missing mask
-	jsonData := make([][]types.JSONFloat64, len(fd.Data))
-	missingMask := make([][]bool, len(fd.Data))
+	// First pass: check if we have any missing values at all
+	// This prevents unnecessary allocation for the missing mask
 	hasMissing := false
+	for i := range fd.Data {
+		for j := range fd.Data[i] {
+			if math.IsNaN(fd.Data[i][j]) {
+				hasMissing = true
+				break
+			}
+		}
+		if hasMissing {
+			break
+		}
+	}
+
+	// Second pass: convert float64 data to types.JSONFloat64
+	jsonData := make([][]types.JSONFloat64, len(fd.Data))
+	var missingMask [][]bool
+	
+	// Only allocate missing mask if we actually have missing values
+	// This is the key optimization for large datasets without missing values
+	if hasMissing {
+		missingMask = make([][]bool, len(fd.Data))
+	}
 
 	for i, row := range fd.Data {
 		jsonData[i] = make([]types.JSONFloat64, len(row))
-		missingMask[i] = make([]bool, len(row))
+		if hasMissing {
+			missingMask[i] = make([]bool, len(row))
+		}
+		
+		// Convert row data
 		for j, val := range row {
 			jsonData[i][j] = types.JSONFloat64(val)
-			if math.IsNaN(val) {
+			if hasMissing && math.IsNaN(val) {
 				missingMask[i][j] = true
-				hasMissing = true
 			}
 		}
 	}
@@ -99,9 +132,9 @@ type PCAResultJSON struct {
 type EigencorrelationResultJSON struct {
 	Correlations map[string][]types.JSONFloat64 `json:"correlations"`
 	PValues      map[string][]types.JSONFloat64 `json:"pValues"`
-	Variables    []string                       `json:"variables"`
-	Components   []string                       `json:"components"`
-	Method       string                         `json:"method"`
+	Variables    []string                        `json:"variables"`
+	Components   []string                        `json:"components"`
+	Method       string                          `json:"method"`
 }
 
 // SampleMetricsJSON is a JSON-safe version of types.SampleMetrics
@@ -112,7 +145,7 @@ type SampleMetricsJSON struct {
 	IsOutlier   bool              `json:"is_outlier"`
 }
 
-// ConvertPCAResultToJSON converts types.PCAResult to a JSON-safe version
+// ToJSONSafe converts types.PCAResult to a JSON-safe version
 func ConvertPCAResultToJSON(result *types.PCAResult) *PCAResultJSON {
 	if result == nil {
 		return nil
@@ -136,84 +169,25 @@ func ConvertPCAResultToJSON(result *types.PCAResult) *PCAResultJSON {
 		}
 	}
 
-	// Convert explained variance arrays
+	// Convert explained variance
 	explainedVar := make([]types.JSONFloat64, len(result.ExplainedVar))
 	for i, val := range result.ExplainedVar {
 		explainedVar[i] = types.JSONFloat64(val)
 	}
 
+	// Convert explained variance ratio
 	explainedVarRatio := make([]types.JSONFloat64, len(result.ExplainedVarRatio))
 	for i, val := range result.ExplainedVarRatio {
 		explainedVarRatio[i] = types.JSONFloat64(val)
 	}
 
+	// Convert cumulative variance
 	cumulativeVar := make([]types.JSONFloat64, len(result.CumulativeVar))
 	for i, val := range result.CumulativeVar {
 		cumulativeVar[i] = types.JSONFloat64(val)
 	}
 
-	// Convert means and stddevs
-	means := make([]types.JSONFloat64, len(result.Means))
-	for i, val := range result.Means {
-		means[i] = types.JSONFloat64(val)
-	}
-
-	stdDevs := make([]types.JSONFloat64, len(result.StdDevs))
-	for i, val := range result.StdDevs {
-		stdDevs[i] = types.JSONFloat64(val)
-	}
-
-	// Convert metrics
-	metrics := make([]SampleMetricsJSON, len(result.Metrics))
-	for i, m := range result.Metrics {
-		metrics[i] = SampleMetricsJSON{
-			HotellingT2: types.JSONFloat64(m.HotellingT2),
-			Mahalanobis: types.JSONFloat64(m.Mahalanobis),
-			RSS:         types.JSONFloat64(m.RSS),
-			IsOutlier:   m.IsOutlier,
-		}
-	}
-
-	// Convert eigencorrelations if present
-	var eigencorrelations *EigencorrelationResultJSON
-	if result.Eigencorrelations != nil {
-		eigencorrelations = &EigencorrelationResultJSON{
-			Variables:  result.Eigencorrelations.Variables,
-			Components: result.Eigencorrelations.Components,
-			Method:     result.Eigencorrelations.Method,
-		}
-
-		// Convert correlations map
-		eigencorrelations.Correlations = make(map[string][]types.JSONFloat64)
-		for variable, values := range result.Eigencorrelations.Correlations {
-			jsonValues := make([]types.JSONFloat64, len(values))
-			for i, val := range values {
-				jsonValues[i] = types.JSONFloat64(val)
-			}
-			eigencorrelations.Correlations[variable] = jsonValues
-		}
-
-		// Convert p-values map
-		eigencorrelations.PValues = make(map[string][]types.JSONFloat64)
-		for variable, values := range result.Eigencorrelations.PValues {
-			jsonValues := make([]types.JSONFloat64, len(values))
-			for i, val := range values {
-				jsonValues[i] = types.JSONFloat64(val)
-			}
-			eigencorrelations.PValues[variable] = jsonValues
-		}
-	}
-
-	// Convert all eigenvalues
-	var allEigenvalues []types.JSONFloat64
-	if result.AllEigenvalues != nil {
-		allEigenvalues = make([]types.JSONFloat64, len(result.AllEigenvalues))
-		for i, val := range result.AllEigenvalues {
-			allEigenvalues[i] = types.JSONFloat64(val)
-		}
-	}
-
-	return &PCAResultJSON{
+	jsonResult := &PCAResultJSON{
 		Scores:               scores,
 		Loadings:             loadings,
 		ExplainedVar:         explainedVar,
@@ -224,14 +198,83 @@ func ConvertPCAResultToJSON(result *types.PCAResult) *PCAResultJSON {
 		ComponentsComputed:   result.ComponentsComputed,
 		Method:               result.Method,
 		PreprocessingApplied: result.PreprocessingApplied,
-		Means:                means,
-		StdDevs:              stdDevs,
-		Metrics:              metrics,
-		T2Limit95:            types.JSONFloat64(result.T2Limit95),
-		T2Limit99:            types.JSONFloat64(result.T2Limit99),
-		QLimit95:             types.JSONFloat64(result.QLimit95),
-		QLimit99:             types.JSONFloat64(result.QLimit99),
-		Eigencorrelations:    eigencorrelations,
-		AllEigenvalues:       allEigenvalues,
 	}
+
+	// Convert means if present
+	if len(result.Means) > 0 {
+		jsonResult.Means = make([]types.JSONFloat64, len(result.Means))
+		for i, val := range result.Means {
+			jsonResult.Means[i] = types.JSONFloat64(val)
+		}
+	}
+
+	// Convert stddevs if present
+	if len(result.StdDevs) > 0 {
+		jsonResult.StdDevs = make([]types.JSONFloat64, len(result.StdDevs))
+		for i, val := range result.StdDevs {
+			jsonResult.StdDevs[i] = types.JSONFloat64(val)
+		}
+	}
+
+	// Convert metrics if present
+	if len(result.Metrics) > 0 {
+		jsonResult.Metrics = make([]SampleMetricsJSON, len(result.Metrics))
+		for i, metric := range result.Metrics {
+			jsonResult.Metrics[i] = SampleMetricsJSON{
+				HotellingT2: types.JSONFloat64(metric.HotellingT2),
+				Mahalanobis: types.JSONFloat64(metric.Mahalanobis),
+				RSS:         types.JSONFloat64(metric.RSS),
+				IsOutlier:   metric.IsOutlier,
+			}
+		}
+	}
+
+	// Convert confidence limits
+	jsonResult.T2Limit95 = types.JSONFloat64(result.T2Limit95)
+	jsonResult.T2Limit99 = types.JSONFloat64(result.T2Limit99)
+	jsonResult.QLimit95 = types.JSONFloat64(result.QLimit95)
+	jsonResult.QLimit99 = types.JSONFloat64(result.QLimit99)
+
+	// Convert eigencorrelations if present
+	if result.Eigencorrelations != nil {
+		jsonResult.Eigencorrelations = &EigencorrelationResultJSON{
+			Variables:  result.Eigencorrelations.Variables,
+			Components: result.Eigencorrelations.Components,
+			Method:     result.Eigencorrelations.Method,
+		}
+
+		// Convert correlations
+		if len(result.Eigencorrelations.Correlations) > 0 {
+			jsonResult.Eigencorrelations.Correlations = make(map[string][]types.JSONFloat64)
+			for key, values := range result.Eigencorrelations.Correlations {
+				jsonValues := make([]types.JSONFloat64, len(values))
+				for i, val := range values {
+					jsonValues[i] = types.JSONFloat64(val)
+				}
+				jsonResult.Eigencorrelations.Correlations[key] = jsonValues
+			}
+		}
+
+		// Convert p-values
+		if len(result.Eigencorrelations.PValues) > 0 {
+			jsonResult.Eigencorrelations.PValues = make(map[string][]types.JSONFloat64)
+			for key, values := range result.Eigencorrelations.PValues {
+				jsonValues := make([]types.JSONFloat64, len(values))
+				for i, val := range values {
+					jsonValues[i] = types.JSONFloat64(val)
+				}
+				jsonResult.Eigencorrelations.PValues[key] = jsonValues
+			}
+		}
+	}
+
+	// Convert all eigenvalues if present
+	if len(result.AllEigenvalues) > 0 {
+		jsonResult.AllEigenvalues = make([]types.JSONFloat64, len(result.AllEigenvalues))
+		for i, val := range result.AllEigenvalues {
+			jsonResult.AllEigenvalues[i] = types.JSONFloat64(val)
+		}
+	}
+
+	return jsonResult
 }
