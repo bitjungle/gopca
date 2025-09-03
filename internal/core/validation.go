@@ -95,12 +95,14 @@ func ValidatePCAInput(data types.Matrix, config types.PCAConfig) error {
 		return err
 	}
 
-	// Validate component count
-	n := len(data)
-	m := len(data[0])
-	maxComponents := CalculateMaxComponents(n, m)
-	if err := ValidateComponentCount(config.Components, maxComponents); err != nil {
-		return err
+	// Validate component count (skip if using variance explained criterion)
+	if config.VarianceExplained <= 0 {
+		n := len(data)
+		m := len(data[0])
+		maxComponents := CalculateMaxComponents(n, m)
+		if err := ValidateComponentCount(config.Components, maxComponents); err != nil {
+			return err
+		}
 	}
 
 	return nil

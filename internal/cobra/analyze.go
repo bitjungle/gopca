@@ -28,6 +28,11 @@ type AnalyzeOptions struct {
 	KernelDegree int
 	KernelCoef0  float64
 
+	// Temporal PCA parameters
+	TemporalLags      int
+	VarianceExplained float64
+	ImputeMethod      string
+
 	// Preprocessing options
 	MeanCenter      bool
 	Scale           string // "none", "standard", "robust"
@@ -93,6 +98,12 @@ EXAMPLES:
   # NIPALS with native missing value handling
   pca analyze --method nipals --missing-strategy native data.csv
 
+  # Temporal PCA with 24 lags (SSA-style)
+  pca analyze --method temporal --temporal-lags 24 --components 5 data.csv
+
+  # Temporal PCA with variance explained criterion
+  pca analyze --method temporal --temporal-lags 12 --var-explained 0.95 data.csv
+
   # Output to JSON with full results
   pca analyze -f json --output-dir results/ data.csv`,
 		Args: cobra.ExactArgs(1),
@@ -105,7 +116,7 @@ EXAMPLES:
 	cmd.Flags().IntVarP(&opts.Components, "components", "c", 2,
 		"Number of principal components")
 	cmd.Flags().StringVarP(&opts.Method, "method", "m", "svd",
-		"PCA method: svd, nipals, or kernel")
+		"PCA method: svd, nipals, kernel, or temporal")
 
 	// Kernel PCA parameters
 	cmd.Flags().StringVar(&opts.KernelType, "kernel-type", "rbf",
@@ -116,6 +127,14 @@ EXAMPLES:
 		"Degree for polynomial kernel")
 	cmd.Flags().Float64Var(&opts.KernelCoef0, "kernel-coef0", 0.0,
 		"Coef0 for polynomial kernel")
+
+	// Temporal PCA parameters
+	cmd.Flags().IntVar(&opts.TemporalLags, "temporal-lags", 0,
+		"Number of time lags for temporal PCA (SSA-style)")
+	cmd.Flags().Float64Var(&opts.VarianceExplained, "var-explained", 0.0,
+		"Target explained variance (0.0-1.0), alternative to --components")
+	cmd.Flags().StringVar(&opts.ImputeMethod, "impute-method", "none",
+		"Imputation method for temporal PCA: forward, backward, linear, none")
 
 	// Preprocessing options
 	cmd.Flags().BoolVar(&opts.NoMeanCentering, "no-mean-centering", false,
@@ -340,6 +359,23 @@ func runAnalyze(opts *AnalyzeOptions, inputFile string) error {
 		config.KernelGamma = opts.KernelGamma
 		config.KernelDegree = opts.KernelDegree
 		config.KernelCoef0 = opts.KernelCoef0
+	}
+
+	// Add temporal parameters if using temporal PCA
+	if opts.Method == "temporal" {
+		config.TemporalLags = opts.TemporalLags
+		config.VarianceExplained = opts.VarianceExplained
+		config.ImputeMethod = opts.ImputeMethod
+
+		// Validate temporal lags
+		if config.TemporalLags <= 0 {
+			return fmt.Errorf("temporal PCA requires --temporal-lags to be specified and positive")
+		}
+
+		// If using variance explained, don't require components
+		if config.VarianceExplained > 0 {
+			config.Components = 0 // Will be determined by variance explained
+		}
 	}
 
 	// Parse exclude options
