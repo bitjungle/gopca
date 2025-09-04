@@ -11,11 +11,16 @@ README.md                    # Project overview, quick start
 ├── docs/
 │   ├── cli_reference.md   # CLI command reference
 │   ├── data-format.md      # Data format specifications
-│   ├── intro_to_pca.md     # PCA theory and concepts
+│   ├── intro_to_pca.md     # PCA theory and concepts (master copy)
+│   ├── intro_to_data_prep.md # Data prep guide (master copy)
 │   └── devel/              # Developer documentation
 │       ├── api-guidelines.md
 │       ├── documentation-standards.md (this file)
 │       └── ...
+├── cmd/gopca-desktop/frontend/public/docs/  # Synced from docs/
+│   └── intro_to_pca.md     # Auto-synced copy for web serving
+├── cmd/gocsv/frontend/public/docs/          # Synced from docs/
+│   └── intro_to_data_prep.md # Auto-synced copy for web serving
 └── Package doc.go files    # Package-level documentation
 ```
 
@@ -192,6 +197,57 @@ External:
 ```markdown
 Based on [Scikit-learn's PCA](https://scikit-learn.org/stable/modules/generated/sklearn.decomposition.PCA.html)
 ```
+
+## Documentation Synchronization
+
+### Overview
+Documentation files that are displayed in frontend applications must be kept synchronized between the master location (`docs/`) and the frontend public directories.
+
+### Master Documentation Files
+- `docs/intro_to_pca.md` - PCA theory and concepts (for GoPCA Desktop)
+- `docs/intro_to_data_prep.md` - Data preparation guide (for GoCSV Desktop)
+
+### Synchronization Process
+
+#### Automatic Synchronization
+Documentation is automatically synchronized when:
+1. Running `make pca-dev` or `make csv-dev` (syncs before starting)
+2. Running `make pca-build` or `make csv-build` (syncs before building)
+3. Committing changes (pre-commit hook auto-syncs if needed)
+
+#### Manual Synchronization
+To manually sync documentation:
+```bash
+make sync-docs
+```
+
+Or directly:
+```bash
+./scripts/sync-docs.sh
+```
+
+### CI Validation
+Pull requests that modify documentation files will automatically check that:
+1. Master docs and frontend copies are in sync
+2. All required documentation files exist
+3. No orphaned documentation copies exist
+
+### Development Workflow
+
+When editing documentation:
+1. **Always edit the master file** in `docs/`
+2. **Never edit** the copies in `cmd/*/frontend/public/docs/`
+3. The sync will happen automatically via:
+   - Pre-commit hooks when you commit
+   - Make targets when you build/run
+   - Manual sync if needed
+
+### Troubleshooting
+
+If documentation appears outdated in the application:
+1. Run `make sync-docs` to force synchronization
+2. Restart the development server
+3. Clear browser cache if viewing in development mode
 
 ## Documentation Maintenance
 
