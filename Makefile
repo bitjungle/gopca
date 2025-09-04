@@ -123,8 +123,12 @@ build-all-parallel:
 	@$(MAKE) -j5 build-darwin-amd64 build-darwin-arm64 build-linux-amd64 build-linux-arm64 build-windows-amd64
 	@echo "All parallel pca CLI builds complete!"
 
+## sync-docs: Synchronize documentation files to frontend directories
+sync-docs:
+	@bash scripts/sync-docs.sh
+
 ## pca-dev: Run GoPCA Desktop in development mode with hot reload
-pca-dev:
+pca-dev: sync-docs
 	@if [ -x "$(WAILS)" ]; then \
 		echo "Starting GoPCA Desktop in development mode..."; \
 		cd $(DESKTOP_PATH) && $(WAILS) dev; \
@@ -135,7 +139,7 @@ pca-dev:
 	fi
 
 ## pca-build: Build GoPCA Desktop for production
-pca-build:
+pca-build: sync-docs
 	@if [ -x "$(WAILS)" ]; then \
 		echo "Building GoPCA Desktop..."; \
 		cd $(DESKTOP_PATH) && $(WAILS) build $(DESKTOP_LDFLAGS); \
@@ -166,7 +170,7 @@ pca-deps:
 	@echo "GoPCA Desktop dependencies installed"
 
 ## csv-dev: Run GoCSV Desktop in development mode with hot reload
-csv-dev:
+csv-dev: sync-docs
 	@if [ -x "$(WAILS)" ]; then \
 		echo "Starting CSV editor in development mode..."; \
 		cd $(CSV_PATH) && $(WAILS) dev; \
@@ -177,7 +181,7 @@ csv-dev:
 	fi
 
 ## csv-build: Build GoCSV Desktop for production
-csv-build:
+csv-build: sync-docs
 	@if [ -x "$(WAILS)" ]; then \
 		echo "Building CSV editor application..."; \
 		cd $(CSV_PATH) && $(WAILS) build $(DESKTOP_LDFLAGS); \
@@ -715,7 +719,7 @@ csv-build-all:
 	fi
 
 ## build-everything: Build all applications for all platforms
-build-everything: build-all pca-build-all csv-build-all
+build-everything: sync-docs build-all pca-build-all csv-build-all
 	@echo "All applications built for all platforms!"
 
 ## ci-build-desktop: Build GoPCA app in CI
