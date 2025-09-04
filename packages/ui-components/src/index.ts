@@ -15,6 +15,7 @@ export { InputDialog } from './components/InputDialog';
 export { SkipLinks } from './components/SkipLinks';
 export { KeyboardHelp } from './components/KeyboardHelp';
 export { CustomSelect } from './components/CustomSelect';
+export { MarkdownRenderer } from './components/MarkdownRenderer';
 
 // Component Types
 export type { ExportButtonProps, ExportConfig, ExportFormat } from './components/ExportButton';

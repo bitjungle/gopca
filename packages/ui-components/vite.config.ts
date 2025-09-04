@@ -31,7 +31,13 @@ export default defineConfig({
         'react-plotly.js',
         'plotly.js-dist-min',
         'plotly.js',
-        /^plotly\.js.*/
+        /^plotly\.js.*/,
+        'react-markdown',
+        'remark-math',
+        'remark-gfm',
+        'rehype-katex',
+        'katex',
+        /^katex\/.*/
       ],
       output: {
         globals: {
