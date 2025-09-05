@@ -423,11 +423,11 @@ func (t *TemporalPCAImpl) Fit(data types.Matrix, config types.PCAConfig) (*types
 		explainedVarRatio[i] = t.explainedVar[i] * 100.0 // Convert to percentage
 	}
 
-	// Calculate cumulative variance
+	// Calculate cumulative variance (as cumulative sum of percentages)
 	cumulativeVar := make([]float64, t.nComponents)
 	cumSum := 0.0
 	for i := 0; i < t.nComponents; i++ {
-		cumSum += t.explainedVar[i]
+		cumSum += explainedVarRatio[i]
 		cumulativeVar[i] = cumSum
 	}
 

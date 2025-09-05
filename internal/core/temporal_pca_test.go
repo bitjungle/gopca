@@ -144,9 +144,9 @@ func TestTemporalPCAFit(t *testing.T) {
 	// First component should explain most variance for trend data
 	assert.Greater(t, result.ExplainedVar[0], 0.7)
 
-	// Cumulative variance should be increasing
+	// Cumulative variance should be increasing (now in percentage scale 0-100)
 	assert.Less(t, result.CumulativeVar[0], result.CumulativeVar[1])
-	assert.LessOrEqual(t, result.CumulativeVar[1], 1.0)
+	assert.LessOrEqual(t, result.CumulativeVar[1], 100.0)
 }
 
 // TestTemporalPCAVarianceExplained tests the variance explained criterion

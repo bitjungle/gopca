@@ -1325,7 +1325,10 @@ return;
                                                     ...(pcaResponse.result.preprocessing_applied ? [{ value: 'biplot', label: 'Biplot' }] : []),
                                                     ...(pcaResponse.result.preprocessing_applied ? [{ value: 'biplot3d', label: '3D Biplot' }] : []),
                                                     ...(pcaResponse.result.preprocessing_applied ? [{ value: 'correlations', label: 'Circle of Correlations' }] : []),
-                                                    ...(pcaResponse.result.method !== 'kernel' ? [{ value: 'diagnostics', label: 'Diagnostic Plot' }] : []),
+                                                    // Diagnostic plot not available for:
+                                                    // - Kernel PCA: Works in transformed feature space, RSS calculation not meaningful
+                                                    // - Temporal PCA: Dimension mismatch - scores have n-lags+1 samples while original data has n samples
+                                                    ...(pcaResponse.result.method !== 'kernel' && pcaResponse.result.method !== 'temporal' ? [{ value: 'diagnostics', label: 'Diagnostic Plot' }] : []),
                                                     ...(pcaResponse.result.eigencorrelations && pcaResponse.result.method !== 'kernel' ? [{ value: 'eigencorrelation', label: 'Eigencorrelation Plot' }] : [])
                                                 ]}
                                                 className="min-w-[200px]"
@@ -1672,7 +1675,7 @@ return;
                                                 yComponent={selectedYComponent}
                                                 fontScale={plotFontScale}
                                             />
-                                        ) : selectedPlot === 'diagnostics' && pcaResponse.result.method !== 'kernel' ? (
+                                        ) : selectedPlot === 'diagnostics' && pcaResponse.result.method !== 'kernel' && pcaResponse.result.method !== 'temporal' ? (
                                             <DiagnosticScatterPlot
                                                 pcaResult={pcaResponse.result}
                                                 rowNames={fileData?.rowNames || []}
