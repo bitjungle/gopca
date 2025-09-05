@@ -22,7 +22,12 @@
     "@types/plotly.js": "^3.0.3",
     "lucide-react": "^0.539.0",
     "plotly.js-dist-min": "^2.35.3",
-    "react-plotly.js": "^2.6.0"
+    "react-plotly.js": "^2.6.0",
+    "react-markdown": "^10.1.0",
+    "remark-gfm": "^4.0.1",
+    "remark-math": "^6.0.0",
+    "rehype-katex": "^7.0.1",
+    "katex": "^0.16.0"
   },
   "devDependencies": {
     "@types/react": "^18.0.17",
