@@ -613,7 +613,8 @@ func (a *App) RunPCA(request PCARequest) (response PCAResponse) {
 	result.VariableLabels = filteredHeaders
 
 	// Calculate diagnostic metrics (not applicable for Kernel PCA or Temporal PCA)
-	// Temporal PCA has different dimensions (n-lags+1) so metrics calculation would fail
+	// Kernel PCA works in a different feature space, so RSS calculation is not directly applicable
+	// Temporal PCA has different dimensions (n-lags+1 samples) that don't match original data (n samples)
 	if strings.ToLower(request.Method) != "kernel" && strings.ToLower(request.Method) != "temporal" {
 		// For RSS calculation, we need to use data preprocessed exactly as it was for PCA fitting
 		// This ensures the data and reconstruction are in the same space

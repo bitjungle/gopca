@@ -325,17 +325,18 @@ func (t *TemporalPCAImpl) Fit(data types.Matrix, config types.PCAConfig) (*types
 		t.fitted = true
 
 		return &types.PCAResult{
-			Scores:             utils.MatrixToSlice(scores),
-			Loadings:           utils.MatrixToSlice(t.loadings),
-			ExplainedVar:       t.explainedVar,
-			ExplainedVarRatio:  []float64{100.0}, // Single component explains 100%
-			CumulativeVar:      []float64{1.0},
-			SingularValues:     t.singularVals,
-			Method:             "temporal",
-			Means:              t.laggedMeans,
-			StdDevs:            t.laggedScales,
-			ComponentsComputed: 1,
-			Config:             config,
+			Scores:               utils.MatrixToSlice(scores),
+			Loadings:             utils.MatrixToSlice(t.loadings),
+			ExplainedVar:         t.explainedVar,
+			ExplainedVarRatio:    []float64{100.0}, // Single component explains 100%
+			CumulativeVar:        []float64{1.0},
+			SingularValues:       t.singularVals,
+			Method:               "temporal",
+			Means:                t.laggedMeans,
+			StdDevs:              t.laggedScales,
+			ComponentsComputed:   1,
+			Config:               config,
+			PreprocessingApplied: config.MeanCenter || config.StandardScale || config.RobustScale || config.ScaleOnly,
 		}, nil
 	}
 
@@ -432,18 +433,19 @@ func (t *TemporalPCAImpl) Fit(data types.Matrix, config types.PCAConfig) (*types
 
 	// Prepare result
 	result := &types.PCAResult{
-		Scores:             utils.MatrixToSlice(scores),
-		Loadings:           utils.MatrixToSlice(t.loadings),
-		ExplainedVar:       t.explainedVar[:t.nComponents],
-		ExplainedVarRatio:  explainedVarRatio,
-		CumulativeVar:      cumulativeVar,
-		SingularValues:     t.singularVals,
-		Means:              t.laggedMeans,
-		StdDevs:            t.laggedScales,
-		Method:             "temporal",
-		ComponentsComputed: t.nComponents,
-		Config:             config,
-		AllEigenvalues:     allEigenvalues, // Store all eigenvalues for diagnostic purposes
+		Scores:               utils.MatrixToSlice(scores),
+		Loadings:             utils.MatrixToSlice(t.loadings),
+		ExplainedVar:         t.explainedVar[:t.nComponents],
+		ExplainedVarRatio:    explainedVarRatio,
+		CumulativeVar:        cumulativeVar,
+		SingularValues:       t.singularVals,
+		Means:                t.laggedMeans,
+		StdDevs:              t.laggedScales,
+		Method:               "temporal",
+		ComponentsComputed:   t.nComponents,
+		Config:               config,
+		AllEigenvalues:       allEigenvalues, // Store all eigenvalues for diagnostic purposes
+		PreprocessingApplied: config.MeanCenter || config.StandardScale || config.RobustScale || config.ScaleOnly,
 	}
 
 	return result, nil
