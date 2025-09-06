@@ -32,3 +32,6 @@ export type { EigencorrelationPlotData, EigencorrelationPlotConfig } from './Plo
 
 export { Plotly3DBiplot, PCA3DBiplot } from './Plotly3DBiplot';
 export type { Biplot3DData, Biplot3DConfig } from './Plotly3DBiplot';
+
+export { PlotlyTemporalLoadings, PCATemporalLoadingsPlot } from './PlotlyTemporalLoadings';
+export type { TemporalLoadingsPlotData, TemporalLoadingsPlotConfig } from './PlotlyTemporalLoadings';

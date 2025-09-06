@@ -99,6 +99,7 @@ export {
   PCACircleOfCorrelations,
   PCADiagnosticPlot,
   PCAEigencorrelationPlot,
+  PCATemporalLoadingsPlot,
   // Classes for advanced usage
   PlotlyScoresPlot,
   Plotly3DScoresPlot,
@@ -109,6 +110,7 @@ export {
   PlotlyCircleOfCorrelations,
   PlotlyDiagnosticPlot,
   PlotlyEigencorrelationPlot,
+  PlotlyTemporalLoadings,
   // Types
   type ScoresPlotData,
   type ScoresPlotConfig,
@@ -127,7 +129,9 @@ export {
   type DiagnosticPlotData,
   type DiagnosticPlotConfig,
   type EigencorrelationPlotData,
-  type EigencorrelationPlotConfig
+  type EigencorrelationPlotConfig,
+  type TemporalLoadingsPlotData,
+  type TemporalLoadingsPlotConfig
 } from './charts/pca';
 
 // Plotly Export Utils

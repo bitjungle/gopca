@@ -84,6 +84,8 @@ type PCAResult struct {
 	Scale              []float64 `json:"scale,omitempty"`                      // Feature scales (for transform)
 	Components         int       `json:"components,omitempty"`                 // Number of components retained
 	Config             PCAConfig `json:"config,omitempty"`                     // Configuration used for fitting
+	// Temporal PCA specific fields
+	TemporalEigenvectors Matrix `json:"temporal_eigenvectors,omitempty"` // U matrix from SVD (lags × components) for temporal PCA
 }
 
 // EigencorrelationResult contains correlations between PC scores and metadata variables

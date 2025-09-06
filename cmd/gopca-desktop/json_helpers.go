@@ -126,6 +126,7 @@ type PCAResultJSON struct {
 	QLimit99             types.JSONFloat64           `json:"q_limit_99,omitempty"`
 	Eigencorrelations    *EigencorrelationResultJSON `json:"eigencorrelations,omitempty"`
 	AllEigenvalues       []types.JSONFloat64         `json:"all_eigenvalues,omitempty"`
+	TemporalEigenvectors [][]types.JSONFloat64       `json:"temporal_eigenvectors,omitempty"`
 }
 
 // EigencorrelationResultJSON is a JSON-safe version of types.EigencorrelationResult
@@ -273,6 +274,17 @@ func ConvertPCAResultToJSON(result *types.PCAResult) *PCAResultJSON {
 		jsonResult.AllEigenvalues = make([]types.JSONFloat64, len(result.AllEigenvalues))
 		for i, val := range result.AllEigenvalues {
 			jsonResult.AllEigenvalues[i] = types.JSONFloat64(val)
+		}
+	}
+
+	// Convert temporal eigenvectors if present (for temporal PCA)
+	if len(result.TemporalEigenvectors) > 0 {
+		jsonResult.TemporalEigenvectors = make([][]types.JSONFloat64, len(result.TemporalEigenvectors))
+		for i, row := range result.TemporalEigenvectors {
+			jsonResult.TemporalEigenvectors[i] = make([]types.JSONFloat64, len(row))
+			for j, val := range row {
+				jsonResult.TemporalEigenvectors[i][j] = types.JSONFloat64(val)
+			}
 		}
 	}
 

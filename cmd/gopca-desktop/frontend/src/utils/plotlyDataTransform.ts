@@ -25,7 +25,9 @@ import type {
   DiagnosticPlotData,
   DiagnosticPlotConfig,
   EigencorrelationPlotData,
-  EigencorrelationPlotConfig
+  EigencorrelationPlotConfig,
+  TemporalLoadingsPlotData,
+  TemporalLoadingsPlotConfig
 } from '@gopca/ui-components';
 
 /**
@@ -513,5 +515,38 @@ export function createBiplot3DConfig(options: {
       center: { x: 0, y: 0, z: 0 }
     },
     theme
+  };
+}
+
+/**
+ * Transform temporal eigenvectors (U matrix) to TemporalLoadingsPlot data format
+ */
+export function transformToTemporalLoadingsPlotData(
+  pcaResult: PCAResult
+): TemporalLoadingsPlotData | null {
+  if (!pcaResult.temporal_eigenvectors || pcaResult.temporal_eigenvectors.length === 0) {
+    return null;
+  }
+
+  return {
+    temporalEigenvectors: pcaResult.temporal_eigenvectors,
+    explainedVariance: pcaResult.explained_variance_ratio
+  };
+}
+
+/**
+ * Create configuration for Temporal Loadings plot
+ */
+export function createTemporalLoadingsPlotConfig(
+  maxComponents: number = 5,
+  theme?: 'light' | 'dark',
+  colorScheme?: string[],
+  fontScale?: number
+): TemporalLoadingsPlotConfig {
+  return {
+    maxComponents,
+    theme,
+    colorScheme,
+    fontScale
   };
 }

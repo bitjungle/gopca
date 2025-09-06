@@ -610,20 +610,7 @@ func (a *App) RunPCA(request PCARequest) (response PCAResponse) {
 			filteredHeaders = append(filteredHeaders, header)
 		}
 	}
-	
-	// For temporal PCA, expand variable labels to include lag information
-	if strings.ToLower(request.Method) == "temporal" && request.TemporalLags > 0 {
-		// Create lagged variable labels: Var1_lag0, Var2_lag0, ..., Var1_lag1, Var2_lag1, ...
-		laggedLabels := make([]string, 0, len(filteredHeaders)*request.TemporalLags)
-		for lag := 0; lag < request.TemporalLags; lag++ {
-			for _, header := range filteredHeaders {
-				laggedLabels = append(laggedLabels, fmt.Sprintf("%s_lag%d", header, lag))
-			}
-		}
-		result.VariableLabels = laggedLabels
-	} else {
-		result.VariableLabels = filteredHeaders
-	}
+	result.VariableLabels = filteredHeaders
 
 	// Calculate diagnostic metrics (not applicable for Kernel PCA or Temporal PCA)
 	// Kernel PCA works in a different feature space, so RSS calculation is not directly applicable
