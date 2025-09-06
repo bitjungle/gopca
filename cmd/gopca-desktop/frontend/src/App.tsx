@@ -22,6 +22,7 @@ const Biplot3D = lazy(() => import('./components/visualizations/Biplot3D').then(
 const CircleOfCorrelations = lazy(() => import('./components/visualizations/CircleOfCorrelations').then(m => ({ default: m.CircleOfCorrelations })));
 const DiagnosticScatterPlot = lazy(() => import('./components/visualizations/DiagnosticScatterPlot').then(m => ({ default: m.DiagnosticScatterPlot })));
 const EigencorrelationPlot = lazy(() => import('./components/visualizations/EigencorrelationPlot').then(m => ({ default: m.EigencorrelationPlot })));
+const TemporalLoadingsPlot = lazy(() => import('./components/visualizations/TemporalLoadingsPlot').then(m => ({ default: m.TemporalLoadingsPlot })));
 import { FileData, PCARequest, PCAResponse } from './types';
 import { ThemeProvider, ThemeToggle, ConfirmDialog, CustomSelect, SelectOption } from '@gopca/ui-components';
 import { HelpProvider, useHelp } from './contexts/HelpContext';
@@ -74,7 +75,7 @@ function AppContent() {
     // Selection state
     const [excludedRows, setExcludedRows] = useState<number[]>([]);
     const [excludedColumns, setExcludedColumns] = useState<number[]>([]);
-    const [selectedPlot, setSelectedPlot] = useState<'scores' | 'scores3d' | 'scree' | 'loadings' | 'biplot' | 'biplot3d' | 'correlations' | 'diagnostics' | 'eigencorrelation'>('scores');
+    const [selectedPlot, setSelectedPlot] = useState<'scores' | 'scores3d' | 'scree' | 'loadings' | 'biplot' | 'biplot3d' | 'correlations' | 'diagnostics' | 'eigencorrelation' | 'temporal-loadings'>('scores');
     const [selectedXComponent, setSelectedXComponent] = useState(0);
     const [selectedYComponent, setSelectedYComponent] = useState(1);
     const [selectedZComponent, setSelectedZComponent] = useState(2);
@@ -1316,16 +1317,24 @@ return;
                                         <HelpWrapper helpKey={`${selectedPlot}-plot`}>
                                             <CustomSelect
                                                 value={selectedPlot}
-                                                onChange={(value) => setSelectedPlot(value as 'scores' | 'scores3d' | 'scree' | 'loadings' | 'biplot' | 'biplot3d' | 'correlations' | 'diagnostics' | 'eigencorrelation')}
+                                                onChange={(value) => setSelectedPlot(value as 'scores' | 'scores3d' | 'scree' | 'loadings' | 'biplot' | 'biplot3d' | 'correlations' | 'diagnostics' | 'eigencorrelation' | 'temporal-loadings')}
                                                 options={[
                                                     { value: 'scores', label: 'Scores Plot' },
                                                     { value: 'scores3d', label: '3D Scores Plot' },
                                                     { value: 'scree', label: 'Scree Plot' },
-                                                    ...(pcaResponse.result.method !== 'kernel' ? [{ value: 'loadings', label: 'Loadings Plot' }] : []),
+                                                    // Loadings plot not available for kernel PCA (different space) or temporal PCA (dimension mismatch)
+                                                    ...(pcaResponse.result.method !== 'kernel' && pcaResponse.result.method !== 'temporal' ? [{ value: 'loadings', label: 'Loadings Plot' }] : []),
+                                                    // Temporal loadings pattern - only for temporal PCA
+                                                    ...(pcaResponse.result.method === 'temporal' ? [{ value: 'temporal-loadings', label: 'Temporal Loadings Pattern' }] : []),
+                                                    // Biplot - available for standard PCA with preprocessing, and temporal PCA with preprocessing
                                                     ...(pcaResponse.result.preprocessing_applied ? [{ value: 'biplot', label: 'Biplot' }] : []),
-                                                    ...(pcaResponse.result.preprocessing_applied ? [{ value: 'biplot3d', label: '3D Biplot' }] : []),
-                                                    ...(pcaResponse.result.preprocessing_applied ? [{ value: 'correlations', label: 'Circle of Correlations' }] : []),
-                                                    ...(pcaResponse.result.method !== 'kernel' ? [{ value: 'diagnostics', label: 'Diagnostic Plot' }] : []),
+                                                    // 3D Biplot and Circle of Correlations - not available for temporal PCA due to high-dimensional loadings
+                                                    ...(pcaResponse.result.preprocessing_applied && pcaResponse.result.method !== 'temporal' ? [{ value: 'biplot3d', label: '3D Biplot' }] : []),
+                                                    ...(pcaResponse.result.preprocessing_applied && pcaResponse.result.method !== 'temporal' ? [{ value: 'correlations', label: 'Circle of Correlations' }] : []),
+                                                    // Diagnostic plot not available for:
+                                                    // - Kernel PCA: Works in transformed feature space, RSS calculation not meaningful
+                                                    // - Temporal PCA: Dimension mismatch - scores have n-lags+1 samples while original data has n samples
+                                                    ...(pcaResponse.result.method !== 'kernel' && pcaResponse.result.method !== 'temporal' ? [{ value: 'diagnostics', label: 'Diagnostic Plot' }] : []),
                                                     ...(pcaResponse.result.eigencorrelations && pcaResponse.result.method !== 'kernel' ? [{ value: 'eigencorrelation', label: 'Eigencorrelation Plot' }] : [])
                                                 ]}
                                                 className="min-w-[200px]"
@@ -1672,7 +1681,7 @@ return;
                                                 yComponent={selectedYComponent}
                                                 fontScale={plotFontScale}
                                             />
-                                        ) : selectedPlot === 'diagnostics' && pcaResponse.result.method !== 'kernel' ? (
+                                        ) : selectedPlot === 'diagnostics' && pcaResponse.result.method !== 'kernel' && pcaResponse.result.method !== 'temporal' ? (
                                             <DiagnosticScatterPlot
                                                 pcaResult={pcaResponse.result}
                                                 rowNames={fileData?.rowNames || []}
@@ -1683,6 +1692,11 @@ return;
                                             />
                                         ) : selectedPlot === 'eigencorrelation' ? (
                                             <EigencorrelationPlot
+                                                pcaResult={pcaResponse.result}
+                                                fontScale={plotFontScale}
+                                            />
+                                        ) : selectedPlot === 'temporal-loadings' ? (
+                                            <TemporalLoadingsPlot
                                                 pcaResult={pcaResponse.result}
                                                 fontScale={plotFontScale}
                                             />

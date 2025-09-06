@@ -399,6 +399,29 @@ The loadings matrix has dimensions [components × (variables × lags)], encoding
 - **High loading at specific lag:** Delayed influence at that offset
 - **Pattern across lags:** Reveals decay, oscillation, or other temporal structure
 
+**Visualizing Temporal Patterns:**
+GoPCA Desktop provides a specialized **Temporal Loadings Pattern** visualization that reveals the temporal structure captured by each principal component. Unlike standard loadings plots that show individual variable contributions, this visualization displays how each component's loadings evolve across lags for each variable.
+
+The plot shows:
+- **X-axis:** Lag index (0 to L-1), representing time offsets
+- **Y-axis:** Loading values, showing the contribution strength
+- **Lines:** Each principal component as a separate trace
+- **Subplots:** One for each original variable
+
+**Reading the Patterns:**
+- **Oscillating loadings:** Indicate periodic or cyclical components (e.g., sine-wave patterns suggest seasonal cycles)
+- **Monotonic decay:** Suggests trend components with diminishing influence over time
+- **Sharp peaks at specific lags:** Reveal delayed dependencies or memory effects
+- **Noisy patterns:** Typically indicate components capturing random variation
+
+**Example Interpretation:**
+In financial data analysis, you might observe:
+- PC1 showing smooth decay across lags → capturing overall market trend
+- PC2 with 5-lag oscillation → weekly trading cycle (5 business days)
+- PC3 with sharp peak at lag 20 → monthly effects (20 trading days)
+
+This visualization is essential for understanding what temporal structure each component has captured, making Temporal PCA interpretable and actionable for time-series analysis.
+
 **Reconstruction Error:**
 Unlike standard PCA, reconstruction error in Temporal PCA specifically indicates deviation from normal temporal patterns, making it powerful for anomaly detection and change point identification.
 
@@ -415,6 +438,22 @@ pca analyze --method temporal --temporal-lags 12 --var-explained 0.95 data.csv
 # With preprocessing for sensor data
 pca analyze --method temporal --temporal-lags 8 --scale standard sensor_data.csv
 ```
+
+**Using GoPCA Desktop:**
+1. Load your time-series CSV file
+2. Select "Temporal" as the PCA method
+3. Configure the number of lags based on your data's periodicity
+4. Choose preprocessing options if needed (centering/scaling)
+5. Run the analysis
+
+**Available Visualizations for Temporal PCA:**
+- **Scores Plot:** Shows sample trajectories in PC space, colored by time progression
+- **3D Scores Plot:** Three-dimensional view of temporal evolution
+- **Scree Plot:** Variance explained by each temporal component
+- **Temporal Loadings Pattern:** Specialized plot showing how loadings evolve across lags (unique to temporal PCA)
+- **Biplot:** Available when preprocessing is applied, overlays scores and loadings
+
+Note that some standard PCA visualizations (Circle of Correlations, Diagnostic Plot) are not available for temporal PCA due to the high-dimensional nature of the lagged feature space.
 
 **Implementation Features:**
 - Efficient concurrent processing for large lag matrices

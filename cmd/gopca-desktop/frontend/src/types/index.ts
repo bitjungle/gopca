@@ -66,6 +66,7 @@ export interface PCAResult {
   q_limit_95?: number;
   q_limit_99?: number;
   eigencorrelations?: EigencorrelationResult;
+  temporal_eigenvectors?: number[][];  // U matrix for temporal PCA (lags × components)
 }
 
 export interface EigencorrelationResult {
