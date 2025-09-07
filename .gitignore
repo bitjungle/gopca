@@ -37,6 +37,9 @@ CLAUDE.md.bak
 
 # Local documentation
 docs_tmp/
+# Keep reference summaries but ignore PDFs
+docs/references/*.pdf
+!docs/references/_summaries.txt
 
 # Build artifacts
 results/
