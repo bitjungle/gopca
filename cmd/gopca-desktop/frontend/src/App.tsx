@@ -24,7 +24,7 @@ const DiagnosticScatterPlot = lazy(() => import('./components/visualizations/Dia
 const EigencorrelationPlot = lazy(() => import('./components/visualizations/EigencorrelationPlot').then(m => ({ default: m.EigencorrelationPlot })));
 const TemporalLoadingsPlot = lazy(() => import('./components/visualizations/TemporalLoadingsPlot').then(m => ({ default: m.TemporalLoadingsPlot })));
 import { FileData, PCARequest, PCAResponse } from './types';
-import { ThemeProvider, ThemeToggle, ConfirmDialog, CustomSelect, SelectOption } from '@gopca/ui-components';
+import { ThemeProvider, ThemeToggle, ConfirmDialog, CustomSelect, SelectOption, ErrorBoundary, ErrorAlert, ErrorMessageTemplates } from '@gopca/ui-components';
 import { HelpProvider, useHelp } from './contexts/HelpContext';
 import { PaletteProvider, usePalette } from './contexts/PaletteContext';
 import { HelpDisplay } from './components/HelpDisplay';
@@ -796,9 +796,12 @@ return;
 
                     {/* File Error Display */}
                     {fileError && (
-                        <div className="bg-red-100 dark:bg-red-800 border border-red-300 dark:border-red-600 rounded-lg p-4">
-                            <p className="text-red-700 dark:text-red-200">{fileError}</p>
-                        </div>
+                        <ErrorAlert
+                            type="error"
+                            title="File Error"
+                            message={fileError}
+                            onDismiss={() => setFileError(null)}
+                        />
                     )}
 
                     {/* Data Display */}
@@ -819,12 +822,17 @@ return;
                                     highlightExternalSelections={true}
                                 />
                             ) : (
-                                <DataTable
-                                    key={`dataset-${datasetId}`}
-                                    headers={fileData.headers}
-                                    rowNames={fileData.rowNames}
-                                    data={fileData.data}
-                                    title="Input Data"
+                                <ErrorBoundary
+                                    onError={(error, errorInfo) => {
+                                        console.error('DataTable Error:', error, errorInfo);
+                                    }}
+                                >
+                                    <DataTable
+                                        key={`dataset-${datasetId}`}
+                                        headers={fileData.headers}
+                                        rowNames={fileData.rowNames}
+                                        data={fileData.data}
+                                        title="Input Data"
                                     enableRowSelection={true}
                                     enableColumnSelection={true}
                                     onRowSelectionChange={handleRowSelectionChange}
@@ -832,6 +840,7 @@ return;
                                     externalSelectedRows={fileData.data.map((_, i) => i).filter(i => !excludedRows.includes(i))}
                                     highlightExternalSelections={true}
                                 />
+                                </ErrorBoundary>
                             )}
                         </div>
                     )}
@@ -1251,8 +1260,14 @@ return;
 
                     {/* PCA Error Display - shown between Step 2 and Results */}
                     {pcaError && fileData && (
-                        <div ref={pcaErrorRef} className="bg-red-100 dark:bg-red-800 border border-red-300 dark:border-red-600 rounded-lg p-4">
-                            <p className="text-red-700 dark:text-red-200">{pcaError}</p>
+                        <div ref={pcaErrorRef}>
+                            <ErrorAlert
+                                type="error"
+                                title="Analysis Error"
+                                message={pcaError}
+                                suggestion="Please check your data and parameters, then try again"
+                                onDismiss={() => setPcaError(null)}
+                            />
                         </div>
                     )}
 
@@ -1567,14 +1582,19 @@ return;
                                 </div>
 
                                 <div className="bg-gray-50 dark:bg-gray-700 rounded-lg" style={{ height: '500px' }}>
-                                    <Suspense fallback={
-                                        <div className="w-full h-full flex items-center justify-center">
-                                            <div className="flex flex-col items-center gap-4">
-                                                <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
-                                                <p className="text-gray-600 dark:text-gray-400">Loading visualization...</p>
+                                    <ErrorBoundary
+                                        onError={(error, errorInfo) => {
+                                            console.error('Visualization Error:', error, errorInfo);
+                                        }}
+                                    >
+                                        <Suspense fallback={
+                                            <div className="w-full h-full flex items-center justify-center">
+                                                <div className="flex flex-col items-center gap-4">
+                                                    <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
+                                                    <p className="text-gray-600 dark:text-gray-400">Loading visualization...</p>
+                                                </div>
                                             </div>
-                                        </div>
-                                    }>
+                                        }>
                                         {selectedPlot === 'scores' && pcaResponse.result.scores.length > 0 && pcaResponse.result.scores[0].length >= 2 ? (
                                             <ScoresPlot
                                                 key={`scores-${pcaResponse.result.scores.length}-${excludedRows.length}`}
@@ -1713,7 +1733,8 @@ return;
                                                 <p>Not enough components for scores plot (minimum 2 required)</p>
                                             </div>
                                         )}
-                                    </Suspense>
+                                        </Suspense>
+                                    </ErrorBoundary>
                                 </div>
 
                                 {/* Export Model button - centered below plot */}
@@ -1774,7 +1795,13 @@ function App() {
         <ThemeProvider>
             <PaletteProvider>
                 <HelpProvider>
-                    <AppContent />
+                    <ErrorBoundary
+                        onError={(error, errorInfo) => {
+                            console.error('App Error Boundary:', error, errorInfo);
+                        }}
+                    >
+                        <AppContent />
+                    </ErrorBoundary>
                 </HelpProvider>
             </PaletteProvider>
         </ThemeProvider>
