@@ -29,6 +29,8 @@ interface BiplotProps {
   vectorScale?: number;
   maxVariables?: number; // Maximum number of loading vectors to display
   fontScale?: number;
+  onSelectionChange?: (indices: number[]) => void;
+  excludedRows?: number[]; // Indices of rows excluded from PCA
 }
 
 export const Biplot: React.FC<BiplotProps> = ({
@@ -48,7 +50,9 @@ export const Biplot: React.FC<BiplotProps> = ({
   showLoadings = true,
   vectorScale = 1.0,
   maxVariables = 100,
-  fontScale
+  fontScale,
+  onSelectionChange,
+  excludedRows = []
 }) => {
   const { theme } = useTheme();
   const { qualitativePalette, sequentialPalette } = usePalette();
@@ -85,11 +89,21 @@ export const Biplot: React.FC<BiplotProps> = ({
     maxVariables
   };
 
+  // Handle selection callback
+  const handleSelection = React.useCallback((indices: number[]) => {
+    console.log('Biplot wrapper: Selection received', indices);
+    if (onSelectionChange) {
+      onSelectionChange(indices);
+    }
+  }, [onSelectionChange]);
+
   return (
     <div style={{ width: '100%', height: '100%' }}>
       <PCABiplot
         data={plotlyData}
         config={plotlyConfig}
+        onSelection={handleSelection}
+        excludedRows={excludedRows}
       />
     </div>
   );
