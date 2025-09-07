@@ -2565,3 +2565,424 @@ Analyzed four marine sediment cores using oxygen isotope ratio ($\delta^{18}O$) 
 
 ---
 
+# Matrix Computations, 4th edition. Chapter 1 – Matrix Multiplication
+
+**APA7 reference:** Golub, G. H., & Loan, C. F. V. (2013). Matrix Computations. JHU Press.
+
+**Filename:** 'Golub og Loan - 2013 - Matrix Computations.pdf'
+
+## **1. Purpose and Scope**
+
+* To introduce **matrix multiplication** as the central operation underlying nearly all factorizations and algorithms in numerical linear algebra.
+* To show that while the basic algebraic definition is simple, **algorithmic and implementation choices** profoundly affect performance.
+* To prepare the reader for later chapters (LU, QR, SVD, eigenvalue problems) where multiplication and block partitioning are used extensively.
+
+---
+
+## **2. Mathematical Preliminaries**
+
+* Defines **matrix multiplication** formally:
+
+  $$
+  (AB)_{ij} = \sum_{k=1}^n a_{ik} b_{kj}
+  $$
+* Emphasizes associativity: $(AB)C = A(BC)$, crucial for algorithm restructuring.
+* Introduces **block matrix notation**: partitioning matrices into submatrices to express large operations in terms of smaller ones.
+
+  * Example: If $A$ and $B$ are block-partitioned, multiplication can be expressed as a sum of block products.
+  * Block notation is heavily used in LU/QR/Cholesky factorization algorithms.
+
+---
+
+## **3. Algorithms for Matrix Multiplication**
+
+### **Naïve multiplication**
+
+* Cost: $O(n^3)$ operations.
+* Straightforward triple-loop algorithm is simple but not efficient on modern architectures.
+
+### **Block algorithms**
+
+* Reorganize computation to work on **submatrices** (blocks).
+* Reduce memory traffic by exploiting cache locality.
+* Basis for **BLAS (Basic Linear Algebra Subprograms)** — levels 1 (vector-vector), 2 (matrix-vector), and 3 (matrix-matrix).
+* **Level 3 BLAS** (matrix-matrix) is critical: higher arithmetic intensity, more efficient use of modern CPUs/GPUs.
+
+### **Fast matrix multiplication**
+
+* **Strassen’s algorithm**: reduces exponent from 3 to \~2.807.
+
+  * Recursively partitions matrices into 2×2 blocks.
+  * Achieves asymptotic speedup but introduces **stability and implementation complexity issues**.
+* Later algorithms (Coppersmith–Winograd, etc.) reduce exponent further (\~2.37), but impractical for moderate sizes.
+* Message: asymptotic results are interesting but in practice **numerical stability and memory hierarchy matter more**.
+
+---
+
+## **4. Special Structures**
+
+* **Symmetric matrices**: exploit symmetry to halve computations.
+* **Triangular matrices**: multiplication simplified because half entries are zero.
+* **Banded matrices**: only nearby diagonals are nonzero, reducing cost to $O(nb^2)$ for bandwidth $b$.
+* These cases foreshadow structured solvers in Chapters 3–4.
+
+---
+
+## **5. Matrix–Vector and Vector–Vector Products**
+
+* Introduces **matrix-vector multiplication** ($Ax$), which costs $O(n^2)$.
+* Highlights importance in iterative solvers (e.g., CG, GMRES in Chapters 10–11).
+* Vector inner products and outer products as fundamental operations.
+
+---
+
+## **6. Kronecker Product**
+
+* Defined as:
+
+  $$
+  A \otimes B = \begin{bmatrix}
+  a_{11}B & \dots & a_{1n}B \\
+  \vdots & \ddots & \vdots \\
+  a_{m1}B & \dots & a_{mn}B
+  \end{bmatrix}
+  $$
+* Useful for expressing structured linear systems and tensor computations (later in Chapter 12).
+* Important in control theory, signal processing, and multiway data analysis.
+
+---
+
+## **7. Fast Matrix–Vector Multiplication**
+
+* Certain structured matrices (e.g., circulant, Toeplitz) allow multiplication via **FFT in $O(n \log n)$** instead of $O(n^2)$.
+* Connects linear algebra to signal processing (convolutions, filtering).
+* Example: circulant matrix–vector multiplication corresponds to cyclic convolution.
+
+---
+
+## **8. Computational Considerations**
+
+### **Arithmetic cost vs. memory cost**
+
+* Naïve flop counts (e.g., $2n^3$ for multiplication) underestimate the real challenge: **data movement** between memory levels dominates runtime.
+* **Cache-aware algorithms** (blocking, tiling) minimize memory traffic.
+
+### **Parallelism**
+
+* **Shared-memory systems**: multiple threads can operate on blocks.
+* **Distributed systems**: require communication-efficient partitioning.
+* Block-cyclic distributions balance load across processors.
+
+### **Communication lower bounds**
+
+* Theoretical results show that communication (moving data between memory hierarchies) can cost more than arithmetic.
+* Optimal algorithms minimize both **flops** and **memory transfers**.
+
+---
+
+## **9. Matrix Multiplication in Practice**
+
+* LAPACK and ScaLAPACK rely on **highly optimized Level 3 BLAS** for speed.
+* Performance portability: matrix multiplication kernels must be tuned to hardware (vector instructions, GPU accelerators).
+* Example: in practice, the performance of LU/QR/SVD is bounded by the efficiency of GEMM (general matrix multiply).
+
+---
+
+---
+
+# Matrix Computations, 4th edition. Chapter 2 – Matrix Analysis
+
+**APA7 reference:** Golub, G. H., & Loan, C. F. V. (2013). Matrix Computations. JHU Press.
+
+**Filename:** 'Golub og Loan - 2013 - Matrix Computations.pdf'
+
+## **1. Purpose and Scope**
+
+* To provide the **mathematical tools** needed to assess the sensitivity and stability of matrix algorithms.
+* Focuses on **matrix norms, condition numbers, singular values, and perturbation theory**.
+* Establishes a clear separation between:
+
+  1. **Problem conditioning** (how sensitive the mathematical problem is to data errors),
+  2. **Algorithm stability** (how faithfully an algorithm solves the intended problem in finite precision).
+
+---
+
+## **2. Norms**
+
+### **Vector norms**
+
+* Definitions: $p$-norms ($\|x\|_1, \|x\|_2, \|x\|_\infty$).
+* **Euclidean norm** ($l_2$) is most common; invariant under orthogonal transformations.
+* Equivalent norms: in finite dimensions, all norms are equivalent up to constants, but choice affects analysis.
+
+### **Matrix norms**
+
+* **Induced (operator) norms**:
+
+  $$
+  \|A\|_p = \max_{x \neq 0} \frac{\|Ax\|_p}{\|x\|_p}
+  $$
+* Special cases:
+
+  * $\|A\|_1 = \max_j \sum_i |a_{ij}|$ (max column sum),
+  * $\|A\|_\infty = \max_i \sum_j |a_{ij}|$ (max row sum),
+  * $\|A\|_2 = \sigma_{\max}(A)$ (largest singular value).
+
+### **Frobenius norm**
+
+* Defined as
+
+  $$
+  \|A\|_F = \sqrt{\sum_{i,j} |a_{ij}|^2}
+  $$
+* Equivalent to vectorizing matrix into $\mathbb{R}^{mn}$.
+* Convenient for analysis and computation (unitarily invariant).
+
+---
+
+## **3. Singular Value Decomposition (SVD)**
+
+* Statement: any $A \in \mathbb{R}^{m \times n}$ can be written as
+
+  $$
+  A = U \Sigma V^T
+  $$
+
+  with $U, V$ orthogonal and $\Sigma$ diagonal with singular values $\sigma_1 \ge \cdots \ge \sigma_p \ge 0$.
+* SVD is central for:
+
+  * Computing induced 2-norms,
+  * Rank determination,
+  * Pseudoinverse,
+  * Perturbation theory.
+
+---
+
+## **4. Conditioning**
+
+### **Condition numbers**
+
+* For a function $f(A)$, conditioning measures how perturbations in $A$ affect $f(A)$.
+* **Linear systems**:
+
+  $$
+  \kappa(A) = \|A\| \cdot \|A^{-1}\|
+  $$
+
+  * With 2-norm, this simplifies to $\kappa_2(A) = \sigma_{\max}/\sigma_{\min}$.
+* Large $\kappa$: small data errors produce large solution errors (ill-conditioned problem).
+* Example: Hilbert matrices have enormous condition numbers.
+
+### **Perturbation bounds**
+
+* For $Ax=b$, with perturbations $\delta A, \delta b$:
+
+  $$
+  \frac{\|\delta x\|}{\|x\|} \le \kappa(A)\left(\frac{\|\delta A\|}{\|A\|} + \frac{\|\delta b\|}{\|b\|}\right)
+  $$
+* Shows role of condition number as amplification factor.
+
+---
+
+## **5. Perturbation of Subspaces**
+
+* Focus on sensitivity of eigenvectors and invariant subspaces.
+* **Angles between subspaces** defined via singular values (principal angles).
+* **CS decomposition**: relates two subspaces via orthogonal matrices and cos–sin diagonal form.
+* Important for analyzing iterative methods and eigenvalue problems.
+
+---
+
+## **6. Sensitivity of Singular Values**
+
+* Singular values are **Lipschitz continuous** with respect to perturbations:
+
+  $$
+  |\sigma_i(A) - \sigma_i(A+E)| \le \|E\|_2
+  $$
+* This provides robust error bounds for SVD-based methods.
+
+---
+
+## **7. Conditioning vs. Stability**
+
+* **Conditioning**: property of the problem.
+* **Stability**: property of the algorithm.
+* **Backward stability**: an algorithm is backward stable if it returns the exact solution to a slightly perturbed input.
+
+  * E.g., Householder QR is backward stable, Gaussian elimination with partial pivoting is “usually” backward stable.
+* Backward error analysis: standard tool for evaluating algorithms throughout the book.
+
+---
+
+## **8. Backward Error Analysis: Examples**
+
+* Example: solving $Ax=b$ with floating-point arithmetic.
+
+  * If computed $\hat{x}$ satisfies $(A+\delta A)\hat{x}=b$, with small $\delta A$, then algorithm is backward stable.
+* Shows that **small backward error + well-conditioned problem ⇒ accurate solution**.
+
+---
+
+## **9. Connections to Later Chapters**
+
+* Conditioning and error analysis recur in every algorithm (LU, QR, SVD, eigenvalues).
+* Norms and SVD properties form the basis of Chapters 5–9.
+* Subspace perturbation results underpin Krylov methods (Chapters 10–11).
+
+---
+
+# Matrix Computations, 4th edition. Chapter 3 – General Linear Systems
+
+**APA7 reference:** Golub, G. H., & Loan, C. F. V. (2013). Matrix Computations. JHU Press.
+
+**Filename:** 'Golub og Loan - 2013 - Matrix Computations.pdf'
+
+## **1. Purpose and Scope**
+
+* To present algorithms for solving dense, general (nonsymmetric, non-structured) linear systems.
+* To explain the **LU factorization** framework, its computation, numerical properties, and stability.
+* To highlight the role of **pivoting** and **growth factors** in controlling numerical error.
+* To set up the groundwork for structured (Chapter 4), least squares (Chapters 5–6), and iterative (Chapters 10–11) solvers.
+
+---
+
+## **2. Triangular Systems**
+
+* First step: solving $Ux = b$ (upper triangular) or $Lx = b$ (lower triangular).
+* Algorithm: **forward substitution** (for $L$) and **back substitution** (for $U$).
+* Cost: $O(n^2)$.
+* Properties: backward stable if arithmetic is in floating point with rounding errors of size $\epsilon$.
+
+---
+
+## **3. LU Factorization**
+
+### **Definition**
+
+* For square $A \in \mathbb{R}^{n \times n}$:
+
+  $$
+  A = LU
+  $$
+
+  where $L$ is lower triangular (unit diagonal) and $U$ is upper triangular.
+
+### **Existence**
+
+* LU exists without pivoting if all leading principal minors of $A$ are nonzero.
+* In practice, pivoting is usually required.
+
+### **Algorithm**
+
+* Derived from **Gaussian elimination**:
+
+  * Subtract multiples of one row from subsequent rows to eliminate entries.
+  * Multipliers form entries of $L$.
+  * Remaining entries form $U$.
+
+### **Cost**
+
+* Factorization: $\frac{2}{3}n^3$ flops.
+* Solve (with forward/back substitution): $2n^2$ flops.
+
+---
+
+## **4. Gaussian Elimination**
+
+* Equivalent to LU factorization.
+* Standard algorithm for solving linear systems.
+* Process:
+
+  1. Choose pivot element (diagonal entry).
+  2. Eliminate entries below pivot.
+  3. Proceed column by column.
+
+---
+
+## **5. Pivoting**
+
+### **Need for pivoting**
+
+* Without pivoting, elimination can fail due to division by small pivots → catastrophic error amplification.
+
+### **Partial pivoting (GEPP)**
+
+* Pivot element is chosen as the largest (by magnitude) in the current column.
+* Ensures numerical stability in practice for most problems.
+
+### **Complete pivoting (GECP)**
+
+* Pivot chosen as largest in entire submatrix.
+* More stable but too expensive (search costs $O(n^3)$).
+
+### **Growth factor**
+
+* Measures how entries of $U$ can grow during elimination.
+* For GEPP, growth factor $\rho$ is bounded in theory by $2^{n-1}$, but in practice rarely exceeds small multiples of $n$.
+* Error bounds for GEPP:
+
+  $$
+  \frac{\|\delta x\|}{\|x\|} \le \kappa(A) \cdot O(\epsilon) \cdot \rho
+  $$
+
+---
+
+## **6. Stability Analysis**
+
+* GE with partial pivoting is **backward stable in practice** (though not guaranteed in worst case).
+* Example matrices (e.g., Kahan matrix) show possible large growth factor.
+* Empirically: GEPP almost always works reliably.
+
+---
+
+## **7. Refinement and Error Estimation**
+
+### **Iterative refinement**
+
+* Improves solution accuracy by correcting with residuals:
+
+  1. Compute residual $r = b - Ax$.
+  2. Solve $Ad = r$ using LU factors.
+  3. Update solution $x \leftarrow x + d$.
+* Effective if LU is computed in lower precision and refinement in higher precision (mixed precision strategy).
+
+### **Error estimation**
+
+* Condition number estimation via **Hager’s algorithm** or related 1-norm estimation.
+* Provides user with confidence in solution accuracy.
+
+---
+
+## **8. Variants of LU**
+
+* **Block LU factorization**:
+
+  * Uses block partitions and Level 3 BLAS operations for efficiency.
+  * Critical for LAPACK implementations.
+* **Sparse LU**: modifications for sparse systems (covered more in Chapter 11).
+* **Parallel LU**: block-cyclic data distribution and communication optimization (foreshadowed here, detailed in later chapters).
+
+---
+
+## **9. Practical Implementation (Software Libraries)**
+
+* LAPACK routines (e.g., `dgetrf`, `dgetrs`) implement LU with partial pivoting.
+* Designed for cache and parallel efficiency.
+* ScaLAPACK provides distributed memory implementations.
+* Iterative refinement integrated into libraries for high accuracy.
+
+---
+
+## **10. Connections to Later Topics**
+
+* LU factorization is the **prototype decomposition**:
+
+  * Basis for structured system solvers (Chapter 4).
+  * Parallelized via block algorithms (Chapter 1 concepts reused).
+  * Conditioning and stability results (Chapter 2) applied here.
+* QR and Cholesky (Chapters 5–6) are more stable alternatives in least squares and SPD systems.
+* Iterative refinement connects to **mixed precision arithmetic**, now a hot topic in modern HPC (GPUs, exascale computing).
+
+---
+
