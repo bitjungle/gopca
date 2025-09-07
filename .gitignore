@@ -71,3 +71,4 @@ Screenshot*.png
 # Misc. temp files
 _tmp/
 testdata/wine/plotly/
+testdata/validation/reference_results
