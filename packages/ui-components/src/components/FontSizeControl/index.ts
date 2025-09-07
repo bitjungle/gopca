@@ -1,0 +1,1 @@
+export { FontSizeControl } from './FontSizeControl';

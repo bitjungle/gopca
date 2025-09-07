@@ -17,6 +17,12 @@ export { KeyboardHelp } from './components/KeyboardHelp';
 export { CustomSelect } from './components/CustomSelect';
 export { DocumentationViewer } from './components/DocumentationViewer';
 export { MarkdownRenderer } from './components/MarkdownRenderer';
+export { FontSizeControl } from './components/FontSizeControl';
+export { LoadingSpinner } from './components/LoadingSpinner';
+export { ErrorBoundary } from './components/ErrorBoundary';
+
+// Dialogs
+export { AboutDialog } from './dialogs/AboutDialog';
 
 // Component Types
 export type { ExportButtonProps, ExportConfig, ExportFormat } from './components/ExportButton';
