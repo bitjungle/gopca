@@ -7,7 +7,7 @@
 import React, { useState, useRef, useEffect } from 'react';
 import './App.css';
 import { CSVGrid, ValidationResults, MissingValueSummary, MissingValueDialog, DataQualityDashboard, UndoRedoControls, ImportWizard, DataTransformDialog, DocumentationViewer, AboutDialog } from './components';
-import { ConfirmDialog } from '@gopca/ui-components';
+import { ConfirmDialog, ErrorBoundary, ErrorAlert } from '@gopca/ui-components';
 import { ThemeProvider, ThemeToggle } from '@gopca/ui-components';
 import logo from './assets/images/GoCSV-logo-1024-transp.png';
 import { LoadCSV, SaveCSV, SaveExcel, ValidateForGoPCA, AnalyzeMissingValues, FillMissingValues, AnalyzeDataQuality, CheckGoPCAStatus, OpenInGoPCA, DownloadGoPCA, ExecuteCellEdit, ExecuteHeaderEdit, ExecuteFillMissingValues, ClearHistory, GetVersion } from '../wailsjs/go/main/App';
@@ -135,7 +135,6 @@ function AppContent() {
             }
         } catch (error) {
             console.error('Error loading dropped file:', error);
-            alert(`Error loading file: ${error}`);
         } finally {
             setIsLoading(false);
         }
@@ -492,15 +491,20 @@ return;
                             </div>
 
                             <div className="h-[600px] w-full">
-                                <CSVGrid
-                                    ref={gridRef}
-                                    data={fileData.data}
-                                    headers={fileData.headers}
-                                    rowNames={fileData.rowNames}
-                                    fileData={fileData}
-                                    onDataChange={handleDataChange}
-                                    onHeaderChange={handleHeaderChange}
-                                    onRowNameChange={(rowIndex, newRowName) => {
+                                <ErrorBoundary
+                                    onError={(error, errorInfo) => {
+                                        console.error('CSVGrid Error:', error, errorInfo);
+                                    }}
+                                >
+                                    <CSVGrid
+                                        ref={gridRef}
+                                        data={fileData.data}
+                                        headers={fileData.headers}
+                                        rowNames={fileData.rowNames}
+                                        fileData={fileData}
+                                        onDataChange={handleDataChange}
+                                        onHeaderChange={handleHeaderChange}
+                                        onRowNameChange={(rowIndex, newRowName) => {
                                         if (fileData && fileData.rowNames) {
                                             const newRowNames = [...fileData.rowNames];
                                             newRowNames[rowIndex] = newRowName;
@@ -523,7 +527,8 @@ return;
                                             setValidationResult(null);
                                         }
                                     }}
-                                />
+                                    />
+                                </ErrorBoundary>
                             </div>
                         </div>
                     )}
@@ -700,7 +705,13 @@ return;
 function App() {
     return (
         <ThemeProvider>
-            <AppContent />
+            <ErrorBoundary
+                onError={(error, errorInfo) => {
+                    console.error('App Error Boundary:', error, errorInfo);
+                }}
+            >
+                <AppContent />
+            </ErrorBoundary>
         </ThemeProvider>
     );
 }
