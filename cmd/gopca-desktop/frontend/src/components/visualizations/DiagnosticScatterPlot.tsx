@@ -9,13 +9,15 @@ import {
   createDiagnosticPlotConfig
 } from '../../utils/plotlyDataTransform';
 import { usePalette } from '../../contexts/PaletteContext';
-import { getQualitativePalette } from '../../utils/colorPalettes';
+import { getQualitativePalette, getSequentialPalette } from '../../utils/colorPalettes';
 
 interface DiagnosticScatterPlotProps {
   pcaResult: PCAResult;
   rowNames: string[];
   groupColumn?: string | null;
   groupLabels?: string[];
+  groupValues?: number[]; // For continuous columns
+  groupType?: 'categorical' | 'continuous';
   showThresholds?: boolean;
   confidenceLevel?: number;
   showRowLabels?: boolean;
@@ -30,6 +32,8 @@ export const DiagnosticScatterPlot: React.FC<DiagnosticScatterPlotProps> = ({
   rowNames,
   groupColumn,
   groupLabels,
+  groupValues,
+  groupType = 'categorical',
   showThresholds = true,
   confidenceLevel = 0.95,
   showRowLabels = false,
@@ -39,16 +43,20 @@ export const DiagnosticScatterPlot: React.FC<DiagnosticScatterPlotProps> = ({
   excludedRows = []
 }) => {
   const { theme } = useTheme();
-  const { qualitativePalette } = usePalette();
+  const { qualitativePalette, sequentialPalette } = usePalette();
 
-  // Get the color scheme from the current palette
-  const colorScheme = getQualitativePalette(qualitativePalette);
+  // Get the appropriate color scheme based on group type
+  const colorScheme = groupType === 'continuous'
+    ? getSequentialPalette(sequentialPalette)
+    : getQualitativePalette(qualitativePalette);
 
   // Transform data to Plotly format
   const plotlyData = transformToDiagnosticPlotData(
     pcaResult,
     rowNames,
-    groupLabels
+    groupLabels,
+    groupValues,
+    groupType
   );
 
   // Select appropriate thresholds based on confidence level
@@ -71,7 +79,9 @@ export const DiagnosticScatterPlot: React.FC<DiagnosticScatterPlotProps> = ({
       fontScale
     ),
     showLabels: showRowLabels,
-    labelThreshold: maxLabelsToShow
+    labelThreshold: maxLabelsToShow,
+    groupColumn,
+    groupType
   };
 
   // Handle selection callback

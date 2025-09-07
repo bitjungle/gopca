@@ -348,7 +348,9 @@ export function createCircleOfCorrelationsConfig(
 export function transformToDiagnosticPlotData(
   pcaResult: PCAResult,
   rowNames: string[],
-  groupLabels?: string[]
+  groupLabels?: string[],
+  groupValues?: number[],
+  groupType?: 'categorical' | 'continuous'
 ): DiagnosticPlotData {
   // Extract Mahalanobis distances and RSS from metrics if available
   const metrics = pcaResult.metrics || [];
@@ -357,7 +359,9 @@ export function transformToDiagnosticPlotData(
     mahalanobisDistances: metrics.map(m => m.mahalanobis || 0),
     residualSumOfSquares: metrics.map(m => m.rss || 0),
     sampleNames: rowNames,
-    groups: groupLabels
+    groups: groupLabels,
+    groupValues,
+    groupType
   };
 }
 
