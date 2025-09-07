@@ -21,6 +21,8 @@ interface DiagnosticScatterPlotProps {
   showRowLabels?: boolean;
   maxLabelsToShow?: number;
   fontScale?: number;
+  onSelectionChange?: (indices: number[]) => void;
+  excludedRows?: number[]; // Indices of rows excluded from PCA
 }
 
 export const DiagnosticScatterPlot: React.FC<DiagnosticScatterPlotProps> = ({
@@ -32,7 +34,9 @@ export const DiagnosticScatterPlot: React.FC<DiagnosticScatterPlotProps> = ({
   confidenceLevel = 0.95,
   showRowLabels = false,
   maxLabelsToShow = 10,
-  fontScale
+  fontScale,
+  onSelectionChange,
+  excludedRows = []
 }) => {
   const { theme } = useTheme();
   const { qualitativePalette } = usePalette();
@@ -70,11 +74,21 @@ export const DiagnosticScatterPlot: React.FC<DiagnosticScatterPlotProps> = ({
     labelThreshold: maxLabelsToShow
   };
 
+  // Handle selection callback
+  const handleSelection = React.useCallback((indices: number[]) => {
+    console.log('DiagnosticScatterPlot wrapper: Selection received', indices);
+    if (onSelectionChange) {
+      onSelectionChange(indices);
+    }
+  }, [onSelectionChange]);
+
   return (
     <div style={{ width: '100%', height: '100%' }}>
       <PCADiagnosticPlot
         data={plotlyData}
         config={plotlyConfig}
+        onSelection={handleSelection}
+        excludedRows={excludedRows}
       />
     </div>
   );

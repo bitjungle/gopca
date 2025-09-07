@@ -162,6 +162,7 @@ export class PlotlyBiplot {
           name: 'Scores',
           hovertext: hovertext,
           hovertemplate: '%{hovertext}<extra></extra>',
+          customdata: scoresX.map((_, i) => [i]), // Add global indices for selection
           marker: {
             size: getScaledMarkerSize(this.config.pointSize || 8, this.config.fontScale || 1.0),
             color: groupValues, // Use raw numeric values
@@ -197,6 +198,7 @@ export class PlotlyBiplot {
             x: groupX,
             y: groupY,
             name: group,
+            customdata: indices.map(idx => [idx]), // Add global indices for selection
             marker: {
               color: this.config.colorScheme
                 ? this.config.colorScheme[i % this.config.colorScheme.length]
@@ -248,6 +250,7 @@ export class PlotlyBiplot {
           x: scoresX,
           y: scoresY,
           name: 'Scores',
+          customdata: scoresX.map((_, i) => [i]), // Add global indices for selection
           marker: {
             color: this.config.colorScheme?.[0] || '#3b82f6',
             size: getScaledMarkerSize(this.config.pointSize || 8, this.config.fontScale || 1.0),
@@ -500,15 +503,67 @@ return { x: 0, y: 0 };
 export const PCABiplot: React.FC<{
   data: BiplotData;
   config?: BiplotConfig;
-}> = ({ data, config }) => {
+  onSelection?: (indices: number[]) => void;
+  excludedRows?: number[];
+}> = ({ data, config, onSelection, excludedRows = [] }) => {
   const plot = useMemo(() => new PlotlyBiplot(data, config), [data, config]);
+  
+  // Apply opacity to excluded rows
+  const tracesWithOpacity = useMemo(() => {
+    const traces = plot.getTraces();
+    if (excludedRows.length > 0 && traces.length > 0) {
+      // The first trace is typically the scores/points
+      const scoresTrace: any = { ...traces[0] };
+      if (scoresTrace.marker) {
+        const numPoints = (scoresTrace.x as number[]).length;
+        const opacity = new Array(numPoints).fill(1);
+        excludedRows.forEach(idx => {
+          if (idx < numPoints) {
+            opacity[idx] = 0.2;
+          }
+        });
+        scoresTrace.marker = {
+          ...scoresTrace.marker,
+          opacity
+        };
+      }
+      return [scoresTrace, ...traces.slice(1)];
+    }
+    return traces;
+  }, [plot, excludedRows]);
+
+  // Handle selection events
+  const handlePlotlyEvent = React.useCallback((event: any) => {
+    if (event?.points && onSelection) {
+      const indices = event.points.map((point: any) => {
+        // Use customdata if available, otherwise use pointIndex
+        return point.customdata?.[0] ?? point.pointIndex;
+      }).filter((idx: number) => idx !== undefined && idx !== null);
+      
+      if (indices.length > 0) {
+        console.log('PCABiplot: Selection event', indices);
+        onSelection(indices);
+      }
+    }
+  }, [onSelection]);
+
+  // Get layout with lasso selection enabled
+  const layoutWithSelection = useMemo(() => {
+    const baseLayout = plot.getEnhancedLayout();
+    return {
+      ...baseLayout,
+      dragmode: 'lasso' as const,
+      selectdirection: 'diagonal' as const
+    };
+  }, [plot]);
 
   return (
     <PlotlyWithFullscreen
-      data={plot.getTraces()}
-      layout={plot.getEnhancedLayout()}
+      data={tracesWithOpacity}
+      layout={layoutWithSelection}
       config={plot.getConfig()}
       style={{ width: '100%', height: '100%' }}
+      onSelected={handlePlotlyEvent}
     />
   );
 };

@@ -1650,6 +1650,8 @@ return;
                                                 }
                                                 showEllipses={showEllipses && !!selectedGroupColumn && getColumnData(selectedGroupColumn).type === 'categorical'}
                                                 confidenceLevel={confidenceLevel}
+                                                onSelectionChange={handlePlotSelectionChange}
+                                                excludedRows={pcaHasExclusions ? [] : excludedRows}
                                             />
                                         ) : selectedPlot === 'biplot3d' ? (
                                             <Biplot3D
@@ -1689,6 +1691,8 @@ return;
                                                 maxLabelsToShow={maxLabelsToShow}
                                                 confidenceLevel={confidenceLevel === 0.90 ? 0.95 : confidenceLevel}
                                                 fontScale={plotFontScale}
+                                                onSelectionChange={handlePlotSelectionChange}
+                                                excludedRows={pcaHasExclusions ? [] : excludedRows}
                                             />
                                         ) : selectedPlot === 'eigencorrelation' ? (
                                             <EigencorrelationPlot

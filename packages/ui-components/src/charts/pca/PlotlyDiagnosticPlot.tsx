@@ -128,6 +128,7 @@ return;
         x: cat.indices.map(i => mahalanobisDistances[i]),
         y: cat.indices.map(i => residualSumOfSquares[i]),
         name: cat.name,
+        customdata: cat.indices.map(i => [i]), // Add global indices for selection
         marker: {
           color: cat.color,
           size: getScaledMarkerSize(this.config.pointSize || 8, this.config.fontScale || 1.0),
@@ -365,15 +366,76 @@ return;
 export const PCADiagnosticPlot: React.FC<{
   data: DiagnosticPlotData;
   config?: DiagnosticPlotConfig;
-}> = ({ data, config }) => {
+  onSelection?: (indices: number[]) => void;
+  excludedRows?: number[];
+}> = ({ data, config, onSelection, excludedRows = [] }) => {
   const plot = useMemo(() => new PlotlyDiagnosticPlot(data, config), [data, config]);
+  
+  // Apply opacity to excluded rows
+  const tracesWithOpacity = useMemo(() => {
+    const traces = plot.getTraces();
+    if (excludedRows.length > 0) {
+      return traces.map(trace => {
+        const traceAny = trace as any;
+        if (traceAny.customdata) {
+          const updatedTrace: any = { ...trace };
+          const numPoints = (traceAny.x as number[]).length;
+          const opacity = new Array(numPoints).fill(1);
+          
+          // Get the global indices from customdata
+          const globalIndices = (traceAny.customdata as number[][]).map(cd => cd[0]);
+          globalIndices.forEach((globalIdx, localIdx) => {
+            if (excludedRows.includes(globalIdx)) {
+              opacity[localIdx] = 0.2;
+            }
+          });
+          
+          if (updatedTrace.marker) {
+            updatedTrace.marker = {
+              ...updatedTrace.marker,
+              opacity
+            };
+          }
+          return updatedTrace;
+        }
+        return trace;
+      });
+    }
+    return traces;
+  }, [plot, excludedRows]);
+
+  // Handle selection events
+  const handlePlotlyEvent = React.useCallback((event: any) => {
+    if (event?.points && onSelection) {
+      const indices = event.points.map((point: any) => {
+        // Use customdata if available, otherwise use pointIndex
+        return point.customdata?.[0] ?? point.pointIndex;
+      }).filter((idx: number) => idx !== undefined && idx !== null);
+      
+      if (indices.length > 0) {
+        console.log('PCADiagnosticPlot: Selection event', indices);
+        onSelection(indices);
+      }
+    }
+  }, [onSelection]);
+
+  // Get layout with lasso selection enabled
+  const layoutWithSelection = useMemo(() => {
+    const baseLayout = plot.getEnhancedLayout();
+    return {
+      ...baseLayout,
+      dragmode: 'lasso' as const,
+      selectdirection: 'diagonal' as const
+    };
+  }, [plot]);
 
   return (
     <PlotlyWithFullscreen
-      data={plot.getTraces()}
-      layout={plot.getEnhancedLayout()}
+      data={tracesWithOpacity}
+      layout={layoutWithSelection}
       config={plot.getConfig()}
       style={{ width: '100%', height: '100%' }}
+      onSelected={handlePlotlyEvent}
     />
   );
 };
