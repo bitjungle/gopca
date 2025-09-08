@@ -236,9 +236,11 @@ def main():
         full_path = os.path.join(os.path.dirname(os.path.dirname(__file__)), dataset_path)
         df = pd.read_csv(full_path, index_col=0)
         
-        # Get numeric columns only
+        # Get numeric columns only, excluding target columns (those with #target suffix)
         numeric_cols = df.select_dtypes(include=[np.number]).columns
-        X = df[numeric_cols].values
+        # Exclude columns that end with #target
+        feature_cols = [col for col in numeric_cols if not col.endswith('#target')]
+        X = df[feature_cols].values
         
         for preprocessing in preprocessing_methods:
             print(f"  - Preprocessing: {preprocessing}")
