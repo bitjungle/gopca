@@ -2986,3 +2986,161 @@ Analyzed four marine sediment cores using oxygen isotope ratio ($\delta^{18}O$) 
 
 ---
 
+# Unsupervised and Supervised Principal Component Analysis
+
+**APA7 reference:** Ghojogh, B., & Crowley, M. (2022). Unsupervised and Supervised Principal Component Analysis: Tutorial (No. arXiv:1906.03148). arXiv. https://doi.org/10.48550/arXiv.1906.03148
+
+**Filename:** 'Golub og Loan - 2013 - Matrix Computations.pdf'
+
+## **1. Introduction**
+
+* Defines dataset $\{(x_i, y_i)\}_{i=1}^n$, with $x_i \in \mathbb{R}^d$ (features) and $y_i \in \mathbb{R}^\ell$ (labels).
+* PCA: a **linear subspace learning method** for dimensionality reduction (Pearson, 1901).
+* Kernel PCA (Schölkopf et al., 1997) handles **nonlinear manifolds** by mapping data to high-dimensional feature spaces.
+* Supervised PCA (SPCA): incorporates label information (e.g., via feature scoring or Hilbert-Schmidt Independence Criterion).
+* Applications include **eigenfaces**, kernel eigenfaces, image orientation detection, and bioinformatics.
+
+---
+
+## **2. Principal Component Analysis (PCA)**
+
+### **2.1. Projection Formulation**
+
+* Data point $x \in \mathbb{R}^d$ projected onto subspace spanned by $U \in \mathbb{R}^{d \times p}$.
+* Projection: $\tilde{x} = U^\top (x - \mu)$.
+* Reconstruction: $\hat{x} = U \tilde{x} + \mu$.
+* Projection matrix: $\Pi = UU^\top$.
+* Centering is essential (unless in applications like text, e.g., LSA/LSI).
+
+### **2.2. PCA via Eigen-Decomposition**
+
+* Variance maximization perspective: maximize $u^\top S u$ subject to $\|u\|=1$.
+* Leads to eigen-decomposition of covariance matrix $S = X_c X_c^\top$.
+* Eigenvectors = principal directions, eigenvalues = variances explained.
+
+### **2.3. Properties of PCA Subspace**
+
+* Rank of covariance matrix depends on number of samples vs. dimension.
+* PCA can be seen as **rotation of coordinate system** (if rank = full).
+* Truncation: keep leading eigenvectors to capture most variance.
+
+### **2.4. Reconstruction Error**
+
+* PCA minimizes Frobenius-norm reconstruction error.
+* Equivalent to **least-squares optimal linear projection**.
+* Connection to autoencoders: linear autoencoder with one hidden layer and identity activation reduces to PCA.
+
+### **2.5. PCA via SVD**
+
+* Instead of eigen-decomposition of covariance matrix, apply SVD:
+  $X_c = U \Sigma V^\top$.
+* $U$: eigenvectors of $X_c X_c^\top$, $V$: eigenvectors of $X_c^\top X_c$.
+* SVD formulation often computationally superior.
+
+### **2.6. Choosing Number of Components**
+
+* Methods: scree plot, explained variance ratio, Bayesian model selection.
+
+---
+
+## **3. Dual PCA**
+
+* For high-dimensional, low-sample-size data ($d \gg n$).
+* Work with $X_c^\top X_c \in \mathbb{R}^{n \times n}$ instead of $X_c X_c^\top \in \mathbb{R}^{d \times d}$.
+* Provides same projections but cheaper computation.
+* Key for kernelization: inner products $X_c^\top x$ appear naturally.
+
+---
+
+## **4. Kernel PCA**
+
+* Addresses nonlinear manifolds by mapping data via $\phi(x)$ into feature space.
+* Kernel trick: compute only $k(x_i, x_j) = \phi(x_i)^\top \phi(x_j)$.
+* Common kernels: linear, polynomial, Gaussian (RBF), sigmoid.
+* Requires **double-centering** of kernel matrix for mean adjustment.
+* Projection in kernel PCA obtained via eigen-decomposition of centered kernel matrix.
+* Limitation: **cannot reconstruct data**, since $\phi(x)$ is implicit.
+* Despite limitations, kernel PCA provides theoretical unification with MDS, Isomap, LLE, Laplacian Eigenmaps.
+
+---
+
+## **5. Supervised PCA (Scoring Method)**
+
+* Early SPCA (Bair et al., 2006):
+
+  * Score features by correlation with labels.
+  * Select top-ranked features, then apply PCA.
+* Popular in **bioinformatics** (e.g., gene expression analysis).
+* Simple but ad hoc: PCA is not truly a special case of this method.
+
+---
+
+## **6. Supervised PCA (Hilbert-Schmidt Independence Criterion, HSIC)**
+
+* Modern SPCA (Barshan et al., 2011):
+
+  * Defines dependence between projections and labels using **HSIC**.
+  * HSIC is based on kernelized cross-covariance operators.
+  * Objective: maximize dependence between $U^\top X$ and $Y$.
+
+### **6.1. Formulation**
+
+* Optimization:
+
+  $$
+  \max_{U} \ \text{tr}(X^\top U U^\top X H K_y H), \quad \text{s.t. } U^\top U = I
+  $$
+* Leads to eigen-decomposition of $X H K_y H X^\top$.
+* Special case: if label kernel $K_y = I$, SPCA reduces to unsupervised PCA.
+
+### **6.2. Dual SPCA**
+
+* Uses smaller matrices ($n \times n$), efficient when $d \gg n$.
+* Similar computational benefits as dual PCA.
+
+---
+
+## **7. Kernel SPCA**
+
+* Two approaches: direct or dual.
+* Direct: represent SPCA directions in terms of kernel expansions.
+* Dual: apply HSIC formulation in feature space via kernel matrices.
+* Leads to generalized eigenvalue problems of the form:
+
+  $$
+  K_x H K_y H K_x \theta = \lambda K_x \theta
+  $$
+* As in kernel PCA, **projection possible, but reconstruction not available**.
+
+---
+
+## **8. Practical Considerations**
+
+* Centering: critical in PCA and kernel PCA (achieved via centering matrix $H$).
+* Out-of-sample extension: dual formulations provide formulae for projecting test points.
+* Choosing kernels: performance depends on appropriate kernel selection.
+* SPCA advantages: can be used for both **classification** (label kernels via delta kernels) and **regression** (linear kernels over real labels).
+
+---
+
+## **9. Experiments**
+
+* Demonstrated on **Frey face dataset** and **AT\&T face dataset**.
+* Results illustrate:
+
+  * PCA captures major variance but not always discriminative features.
+  * Kernel PCA better captures nonlinear structures.
+  * SPCA and kernel SPCA align components more closely with class discrimination.
+
+---
+
+# **Key Takeaways**
+
+1. **PCA** = optimal linear projection minimizing reconstruction error, equivalent to linear autoencoder.
+2. **Dual PCA** = efficient when $d \gg n$, and paves the way for kernelization.
+3. **Kernel PCA** = nonlinear extension via kernel trick; cannot reconstruct but unifies with manifold learning.
+4. **SPCA (HSIC-based)** = principled supervised extension; PCA is a special case when label information is ignored.
+5. **Kernel SPCA** = combines kernels with supervision for powerful feature extraction, at the cost of interpretability.
+6. Provides both **geometric interpretations** (projection, reconstruction, subspaces) and **statistical interpretations** (variance, dependence with labels).
+
+---
