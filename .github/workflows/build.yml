@@ -124,7 +124,7 @@ jobs:
           # Run sklearn validation tests if reference files exist
           if [ -d "testdata/validation/reference_results" ]; then
             echo "Running sklearn validation tests..."
-            go test -v -timeout 10m ./internal/core -run "TestValidate|TestSklearn"
+            go test -v -timeout 10m ./internal/core -run "TestValidate|TestNIPALS|TestMath"
           fi
           go test -v -race -timeout 10m -skip "TestValidateOutputPath" ./internal/utils
           # Test GoCSV commands separately (skip app tests that require Wails context)

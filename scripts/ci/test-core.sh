@@ -38,7 +38,7 @@ fi
 if [ -d "testdata/validation/reference_results" ]; then
     echo ""
     echo "=== Running sklearn validation tests ==="
-    if ! go test -v -timeout 10m ./internal/core -run "TestValidate|TestSklean"; then
+    if ! go test -v -timeout 10m ./internal/core -run "TestValidate|TestNIPALS|TestMath"; then
         echo "✗ Validation tests failed"
         # Don't exit with error for now as these tests are new
         echo "Note: Validation test failures are currently non-blocking"
