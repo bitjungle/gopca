@@ -1,19 +1,19 @@
 name: Build and Test
 
 # Workflow triggers are optimized to prevent duplicate runs:
-# - Push events: Only on direct pushes to main (not feature branches)
-# - Pull requests: Run for all PRs targeting main
+# - Push events: Direct pushes to main and develop branches
+# - Pull requests: All PRs targeting main or develop branches
 # - This prevents double runs when pushing to a feature branch with an open PR
 on:
   push:
-    branches: [ main ]  # Only run on direct pushes to main
+    branches: [ main, develop ]  # Run on pushes to main and develop
     paths-ignore:
       - '**.md'
       - 'docs/**'
       - '.gitignore'
       - 'LICENSE'
   pull_request:
-    branches: [ main ]
+    branches: [ main, develop ]  # Run on PRs to main and develop
     paths-ignore:
       - '**.md'
       - 'docs/**'
@@ -58,6 +58,55 @@ jobs:
     - name: Download dependencies
       run: go mod download
     
+    - name: Set up Python for validation
+      uses: actions/setup-python@v5
+      with:
+        python-version: '3.9'
+        
+    - name: Cache Python dependencies
+      uses: actions/cache@v4
+      with:
+        path: ~/.cache/pip
+        key: ${{ runner.os }}-pip-${{ hashFiles('testdata/validation/*.py') }}
+        restore-keys: |
+          ${{ runner.os }}-pip-
+    
+    - name: Generate sklearn validation references
+      run: |
+        cd testdata
+        python -m venv .venv
+        
+        # Activate virtual environment based on OS
+        if [ "$RUNNER_OS" == "Windows" ]; then
+          source .venv/Scripts/activate
+        else
+          source .venv/bin/activate
+        fi
+        
+        # Install required packages
+        pip install --upgrade pip
+        pip install numpy pandas scikit-learn
+        
+        # Generate reference results
+        cd validation
+        echo "Generating PCA reference results..."
+        python generate_reference_pca.py
+        
+        echo "Generating Kernel PCA reference results..."
+        python generate_kernel_pca_reference.py
+        
+        # Only generate temporal PCA on non-Windows (issues with some dependencies)
+        if [ "$RUNNER_OS" != "Windows" ]; then
+          echo "Generating Temporal PCA reference results..."
+          python generate_temporal_pca_reference.py
+        fi
+        
+        # List generated files for verification
+        echo "Generated reference files:"
+        ls -la reference_results/*.json | head -10
+      shell: bash
+      continue-on-error: true  # Don't fail the build if reference generation has issues
+    
     - name: Run tests
       run: |
         if [ "$RUNNER_OS" == "Windows" ]; then
@@ -71,6 +120,12 @@ jobs:
           # Note: Use explicit list to avoid Windows issues with packages without tests
           # Skip TestValidateOutputPath on Windows as it uses Unix-specific paths
           go test -v -race -timeout 10m ./internal/cli ./internal/core ./pkg/types ./cmd/gopca-desktop
+          
+          # Run sklearn validation tests if reference files exist
+          if [ -d "testdata/validation/reference_results" ]; then
+            echo "Running sklearn validation tests..."
+            go test -v -timeout 10m ./internal/core -run "TestValidate|TestSklearn"
+          fi
           go test -v -race -timeout 10m -skip "TestValidateOutputPath" ./internal/utils
           # Test GoCSV commands separately (skip app tests that require Wails context)
           cd cmd/gocsv && go test -v -race -timeout 10m -run "TestMultiStepUndoRedo|TestUndoRedoState" . && cd ../..
@@ -136,7 +191,7 @@ jobs:
   build-cli:
     name: Build pca CLI
     needs: test
-    if: github.ref == 'refs/heads/main' && github.event_name == 'push' || github.ref == 'refs/heads/160-macos-signing'
+    if: (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/develop') && github.event_name == 'push' || github.ref == 'refs/heads/160-macos-signing'
     runs-on: self-hosted
     # Fallback: runs-on: ubuntu-latest  # Use if self-hosted runner unavailable
     
@@ -175,7 +230,7 @@ jobs:
   build-desktop:
     name: Build GoPCA Desktop
     needs: test
-    if: github.ref == 'refs/heads/main' && github.event_name == 'push' || github.ref == 'refs/heads/160-macos-signing'
+    if: (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/develop') && github.event_name == 'push' || github.ref == 'refs/heads/160-macos-signing'
     strategy:
       fail-fast: false  # Continue building other platforms even if one fails
       matrix:
@@ -263,7 +318,7 @@ jobs:
   build-gocsv:
     name: Build GoCSV Desktop
     needs: test
-    if: github.ref == 'refs/heads/main' && github.event_name == 'push' || github.ref == 'refs/heads/160-macos-signing'
+    if: (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/develop') && github.event_name == 'push' || github.ref == 'refs/heads/160-macos-signing'
     strategy:
       fail-fast: false  # Continue building other platforms even if one fails
       matrix:
