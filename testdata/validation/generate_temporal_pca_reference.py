@@ -347,6 +347,10 @@ def main():
     """
     print("Generating Temporal PCA (SSA) reference results...")
     
+    # Ensure output directory exists
+    output_dir = os.path.join(os.path.dirname(__file__), 'reference_results')
+    os.makedirs(output_dir, exist_ok=True)
+    
     # Test with stock data (time series)
     stocks_path = os.path.join(os.path.dirname(os.path.dirname(__file__)), 
                                'stocks', 'stock-data-AAPL.csv')
