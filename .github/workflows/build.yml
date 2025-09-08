@@ -84,7 +84,7 @@ jobs:
         fi
         
         # Install required packages
-        pip install --upgrade pip
+        python -m pip install --upgrade pip
         pip install numpy pandas scikit-learn
         
         # Generate reference results
