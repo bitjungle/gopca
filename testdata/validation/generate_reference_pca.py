@@ -220,6 +220,10 @@ def main():
     """
     print("Generating PCA reference results...")
     
+    # Ensure output directory exists
+    output_dir = os.path.join(os.path.dirname(__file__), 'reference_results')
+    os.makedirs(output_dir, exist_ok=True)
+    
     # Test standard datasets
     datasets = [
         ('iris', 'iris/iris.csv', 4),
