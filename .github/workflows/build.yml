@@ -58,6 +58,55 @@ jobs:
     - name: Download dependencies
       run: go mod download
     
+    - name: Set up Python for validation
+      uses: actions/setup-python@v5
+      with:
+        python-version: '3.9'
+        
+    - name: Cache Python dependencies
+      uses: actions/cache@v4
+      with:
+        path: ~/.cache/pip
+        key: ${{ runner.os }}-pip-${{ hashFiles('testdata/validation/*.py') }}
+        restore-keys: |
+          ${{ runner.os }}-pip-
+    
+    - name: Generate sklearn validation references
+      run: |
+        cd testdata
+        python -m venv .venv
+        
+        # Activate virtual environment based on OS
+        if [ "$RUNNER_OS" == "Windows" ]; then
+          source .venv/Scripts/activate
+        else
+          source .venv/bin/activate
+        fi
+        
+        # Install required packages
+        pip install --upgrade pip
+        pip install numpy pandas scikit-learn
+        
+        # Generate reference results
+        cd validation
+        echo "Generating PCA reference results..."
+        python generate_reference_pca.py
+        
+        echo "Generating Kernel PCA reference results..."
+        python generate_kernel_pca_reference.py
+        
+        # Only generate temporal PCA on non-Windows (issues with some dependencies)
+        if [ "$RUNNER_OS" != "Windows" ]; then
+          echo "Generating Temporal PCA reference results..."
+          python generate_temporal_pca_reference.py
+        fi
+        
+        # List generated files for verification
+        echo "Generated reference files:"
+        ls -la reference_results/*.json | head -10
+      shell: bash
+      continue-on-error: true  # Don't fail the build if reference generation has issues
+    
     - name: Run tests
       run: |
         if [ "$RUNNER_OS" == "Windows" ]; then
@@ -71,6 +120,12 @@ jobs:
           # Note: Use explicit list to avoid Windows issues with packages without tests
           # Skip TestValidateOutputPath on Windows as it uses Unix-specific paths
           go test -v -race -timeout 10m ./internal/cli ./internal/core ./pkg/types ./cmd/gopca-desktop
+          
+          # Run sklearn validation tests if reference files exist
+          if [ -d "testdata/validation/reference_results" ]; then
+            echo "Running sklearn validation tests..."
+            go test -v -timeout 10m ./internal/core -run "TestValidate|TestSklean"
+          fi
           go test -v -race -timeout 10m -skip "TestValidateOutputPath" ./internal/utils
           # Test GoCSV commands separately (skip app tests that require Wails context)
           cd cmd/gocsv && go test -v -race -timeout 10m -run "TestMultiStepUndoRedo|TestUndoRedoState" . && cd ../..
