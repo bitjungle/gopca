@@ -53,6 +53,26 @@ Tests platform-specific behaviors:
 - Build artifacts validation
 - GUI application structure
 
+### 5. Sklearn Validation Tests
+Located in `internal/core/sklearn_validation_test.go`
+
+Validates mathematical correctness against scikit-learn reference implementation:
+- **Datasets**: Uses real data (iris, wine, corn) from `testdata/`
+- **Methods**: Validates SVD and NIPALS algorithms
+- **Properties**: Tests orthogonality, eigenvalue ordering, variance preservation
+- **Preprocessing**: Validates mean-centering and standardization
+- **Sign Ambiguity**: Handles eigenvector sign indeterminacy
+
+Reference generation:
+```bash
+cd testdata
+source .venv/bin/activate
+cd validation
+python generate_reference_pca.py
+```
+
+See [validation-methodology.md](validation-methodology.md) for complete details.
+
 ## Running Tests
 
 ### Quick Start
@@ -69,6 +89,9 @@ go test -cover ./internal/integration/...
 
 # Run platform-specific tests
 ./scripts/ci/test-platforms.sh
+
+# Run sklearn validation tests
+go test -v -run TestSklearn ./internal/core/...
 ```
 
 ### Test Scripts

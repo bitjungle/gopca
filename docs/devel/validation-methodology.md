@@ -8,8 +8,17 @@ This document describes the validation methodology used to ensure GoPCA's implem
 
 ### 1. Reference Data Generation
 
-Python scripts in `testdata/validation/` generate reference results using scikit-learn:
+Python scripts in `testdata/validation/` generate reference results using scikit-learn.
 
+**Important**: A Python virtual environment is available at `testdata/.venv/` for running validation tests. Always use this environment:
+```bash
+cd testdata
+source .venv/bin/activate
+cd validation
+python generate_reference_pca.py
+```
+
+Available scripts:
 - **`generate_reference_pca.py`**: Standard PCA validation
 - **`generate_kernel_pca_reference.py`**: Kernel PCA validation  
 - **`generate_temporal_pca_reference.py`**: SSA/Temporal PCA validation
@@ -135,6 +144,22 @@ func resolveSignAmbiguity(gopca, sklearn [][]float64) [][]float64 {
 }
 ```
 
+## Unit Conventions
+
+### Percentage vs Fraction
+
+GoPCA and sklearn use different conventions for explained variance ratios:
+- **sklearn**: Returns fractions (0.0 to 1.0)
+- **GoPCA**: Returns percentages (0.0 to 100.0)
+
+The validation framework automatically handles this conversion:
+```go
+// Convert sklearn fractions to GoPCA percentages
+gopcaValue := sklearnValue * 100.0
+```
+
+This difference is intentional and provides more intuitive values for end users (e.g., "92.4%" instead of "0.924").
+
 ## Algorithm Differences
 
 ### SVD vs Eigendecomposition
@@ -221,10 +246,14 @@ go test ./internal/core -run TestValidate -v
 
 ### In CI/CD
 
-Automatically runs on:
-- Every PR to main/develop
-- Nightly builds
-- Release candidates
+The validation tests are integrated into the GitHub Actions workflow (`.github/workflows/build.yml`) and automatically run on:
+- Direct pushes to main branch
+- Direct pushes to develop branch
+- Pull requests targeting main branch
+- Pull requests targeting develop branch
+- Manual workflow dispatch
+
+The tests execute as part of the "Test" job, generating fresh reference data and comparing against GoPCA's output.
 
 ### Monitoring
 

@@ -1,19 +1,19 @@
 name: Build and Test
 
 # Workflow triggers are optimized to prevent duplicate runs:
-# - Push events: Only on direct pushes to main (not feature branches)
-# - Pull requests: Run for all PRs targeting main
+# - Push events: Direct pushes to main and develop branches
+# - Pull requests: All PRs targeting main or develop branches
 # - This prevents double runs when pushing to a feature branch with an open PR
 on:
   push:
-    branches: [ main ]  # Only run on direct pushes to main
+    branches: [ main, develop ]  # Run on pushes to main and develop
     paths-ignore:
       - '**.md'
       - 'docs/**'
       - '.gitignore'
       - 'LICENSE'
   pull_request:
-    branches: [ main ]
+    branches: [ main, develop ]  # Run on PRs to main and develop
     paths-ignore:
       - '**.md'
       - 'docs/**'
@@ -191,7 +191,7 @@ jobs:
   build-cli:
     name: Build pca CLI
     needs: test
-    if: github.ref == 'refs/heads/main' && github.event_name == 'push' || github.ref == 'refs/heads/160-macos-signing'
+    if: (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/develop') && github.event_name == 'push' || github.ref == 'refs/heads/160-macos-signing'
     runs-on: self-hosted
     # Fallback: runs-on: ubuntu-latest  # Use if self-hosted runner unavailable
     
@@ -230,7 +230,7 @@ jobs:
   build-desktop:
     name: Build GoPCA Desktop
     needs: test
-    if: github.ref == 'refs/heads/main' && github.event_name == 'push' || github.ref == 'refs/heads/160-macos-signing'
+    if: (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/develop') && github.event_name == 'push' || github.ref == 'refs/heads/160-macos-signing'
     strategy:
       fail-fast: false  # Continue building other platforms even if one fails
       matrix:
@@ -318,7 +318,7 @@ jobs:
   build-gocsv:
     name: Build GoCSV Desktop
     needs: test
-    if: github.ref == 'refs/heads/main' && github.event_name == 'push' || github.ref == 'refs/heads/160-macos-signing'
+    if: (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/develop') && github.event_name == 'push' || github.ref == 'refs/heads/160-macos-signing'
     strategy:
       fail-fast: false  # Continue building other platforms even if one fails
       matrix:
