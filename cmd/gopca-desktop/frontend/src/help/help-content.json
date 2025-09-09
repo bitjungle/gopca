@@ -235,6 +235,21 @@
       "text": "Zoom in/out, reset view, or fullscreen. Drag to pan when zoomed.",
       "category": "visualization"
     },
+    "kernel-summary-plot": {
+      "title": "Kernel PCA Summary",
+      "text": "Overview of kernel PCA model including kernel type, parameters, and variance explained. Shows how the kernel transformation affects the analysis.",
+      "category": "visualization"
+    },
+    "kernel-matrix-plot": {
+      "title": "Kernel Matrix Heatmap",
+      "text": "Visualizes pairwise similarities between samples in kernel space. Bright areas indicate high similarity. Helps understand data structure after kernel transformation.",
+      "category": "visualization"
+    },
+    "sample-contributions-plot": {
+      "title": "Sample Contributions",
+      "text": "Shows which training samples contribute most to each principal component. Useful for identifying influential samples and understanding PC meaning in kernel space.",
+      "category": "visualization"
+    },
     "data-selection": {
       "title": "Data Selection",
       "text": "Click rows/columns to exclude from analysis. Useful for outlier investigation.",

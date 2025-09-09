@@ -127,6 +127,11 @@ type PCAResultJSON struct {
 	Eigencorrelations    *EigencorrelationResultJSON `json:"eigencorrelations,omitempty"`
 	AllEigenvalues       []types.JSONFloat64         `json:"all_eigenvalues,omitempty"`
 	TemporalEigenvectors [][]types.JSONFloat64       `json:"temporal_eigenvectors,omitempty"`
+	// Kernel PCA specific fields
+	KernelType         string                       `json:"kernel_type,omitempty"`
+	KernelParams       map[string]types.JSONFloat64 `json:"kernel_params,omitempty"`
+	KernelMatrix       [][]types.JSONFloat64        `json:"kernel_matrix,omitempty"`
+	KernelEigenvectors [][]types.JSONFloat64        `json:"kernel_eigenvectors,omitempty"`
 }
 
 // EigencorrelationResultJSON is a JSON-safe version of types.EigencorrelationResult
@@ -284,6 +289,39 @@ func ConvertPCAResultToJSON(result *types.PCAResult) *PCAResultJSON {
 			jsonResult.TemporalEigenvectors[i] = make([]types.JSONFloat64, len(row))
 			for j, val := range row {
 				jsonResult.TemporalEigenvectors[i][j] = types.JSONFloat64(val)
+			}
+		}
+	}
+
+	// Convert kernel PCA specific fields
+	jsonResult.KernelType = result.KernelType
+
+	// Convert kernel parameters if present
+	if len(result.KernelParams) > 0 {
+		jsonResult.KernelParams = make(map[string]types.JSONFloat64)
+		for key, val := range result.KernelParams {
+			jsonResult.KernelParams[key] = types.JSONFloat64(val)
+		}
+	}
+
+	// Convert kernel matrix if present
+	if len(result.KernelMatrix) > 0 {
+		jsonResult.KernelMatrix = make([][]types.JSONFloat64, len(result.KernelMatrix))
+		for i, row := range result.KernelMatrix {
+			jsonResult.KernelMatrix[i] = make([]types.JSONFloat64, len(row))
+			for j, val := range row {
+				jsonResult.KernelMatrix[i][j] = types.JSONFloat64(val)
+			}
+		}
+	}
+
+	// Convert kernel eigenvectors if present
+	if len(result.KernelEigenvectors) > 0 {
+		jsonResult.KernelEigenvectors = make([][]types.JSONFloat64, len(result.KernelEigenvectors))
+		for i, row := range result.KernelEigenvectors {
+			jsonResult.KernelEigenvectors[i] = make([]types.JSONFloat64, len(row))
+			for j, val := range row {
+				jsonResult.KernelEigenvectors[i][j] = types.JSONFloat64(val)
 			}
 		}
 	}

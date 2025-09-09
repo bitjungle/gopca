@@ -343,6 +343,38 @@ func (kpca *KernelPCAImpl) Fit(data types.Matrix, config types.PCAConfig) (*type
 		componentLabels[i] = fmt.Sprintf("PC%d", i+1)
 	}
 
+	// Prepare kernel parameters map
+	kernelParams := make(map[string]float64)
+	switch kpca.kernelType {
+	case KernelRBF:
+		kernelParams["gamma"] = kpca.config.KernelGamma
+	case KernelPoly:
+		kernelParams["gamma"] = kpca.config.KernelGamma
+		kernelParams["degree"] = float64(kpca.config.KernelDegree)
+		kernelParams["coef0"] = kpca.config.KernelCoef0
+	}
+
+	// Convert eigenvectors to Matrix type for contribution analysis
+	eigenvectorsMatrix := make(types.Matrix, nSamples)
+	for i := 0; i < nSamples; i++ {
+		eigenvectorsMatrix[i] = make([]float64, config.Components)
+		for j := 0; j < config.Components; j++ {
+			eigenvectorsMatrix[i][j] = eigvecs.At(i, j)
+		}
+	}
+
+	// Optionally include kernel matrix for visualization (limit to small datasets for memory safety)
+	var kernelMatrixData types.Matrix
+	if nSamples <= 500 { // Only include for reasonably sized datasets
+		kernelMatrixData = make(types.Matrix, nSamples)
+		for i := 0; i < nSamples; i++ {
+			kernelMatrixData[i] = make([]float64, nSamples)
+			for j := 0; j < nSamples; j++ {
+				kernelMatrixData[i][j] = Kc.At(i, j)
+			}
+		}
+	}
+
 	return &types.PCAResult{
 		Scores:               scoresMatrix,
 		Loadings:             loadings,
@@ -354,6 +386,10 @@ func (kpca *KernelPCAImpl) Fit(data types.Matrix, config types.PCAConfig) (*type
 		Method:               "kernel",
 		PreprocessingApplied: config.ScaleOnly || config.SNV || config.VectorNorm,
 		AllEigenvalues:       allEigvals,
+		KernelType:           string(kpca.kernelType),
+		KernelParams:         kernelParams,
+		KernelMatrix:         kernelMatrixData,
+		KernelEigenvectors:   eigenvectorsMatrix,
 	}, nil
 }
 
