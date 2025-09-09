@@ -20,7 +20,7 @@ import (
 
 // outputTableFormat outputs PCA results in table format
 func outputTableFormat(result *types.PCAResult, data *pkgcsv.Data,
-	outputScores, outputLoadings, outputVariance, includeMetrics bool) error {
+	outputScores, outputLoadings, outputVariance, includeMetrics bool, varianceExplained float64) error {
 
 	// Calculate metrics if requested (skip for kernel PCA as it doesn't have loadings)
 	var metrics []types.SampleMetrics
@@ -181,6 +181,14 @@ func outputTableFormat(result *types.PCAResult, data *pkgcsv.Data,
 				result.ComponentLabels[i],
 				result.ExplainedVarRatio[i],
 				result.CumulativeVar[i])
+		}
+
+		// Add feedback when variance explained criterion was used
+		if varianceExplained > 0 {
+			fmt.Printf("\n✓ Selected %d components to achieve %.1f%% cumulative variance (target: %.1f%%)\n",
+				len(result.ComponentLabels),
+				result.CumulativeVar[len(result.ComponentLabels)-1],
+				varianceExplained*100)
 		}
 	}
 
