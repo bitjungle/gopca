@@ -2,7 +2,7 @@
 
 **APA7 reference:** Brereton, R. G. (2015). The Mahalanobis distance and its relationship to principal component scores. Journal of Chemometrics, 29(3), 143–145. https://doi.org/10.1002/cem.2692
 
-**Filename:** 'Brereton - 2015 - The Mahalanobis distance and its relationship to principal component scores.pdf'
+**Filename:** `Brereton - 2015 - The Mahalanobis distance and its relationship to principal component scores.pdf`
 
 ### **1. Introduction**
 
@@ -118,7 +118,7 @@ where $t_i$ are standardized principal component scores.
 
 **APA7 reference:** Bro, R., & K. Smilde, A. (2014). Principal component analysis. Analytical Methods, 6(9), 2812–2831. https://doi.org/10.1039/C3AY41907J
 
-**Filename:** 'Bro & Smilde - 2014 - Principal component analysis.pdf'
+**Filename:** `Bro & Smilde - 2014 - Principal component analysis.pdf`
 
 ### **1. Purpose and Context**
 
@@ -269,7 +269,7 @@ where $t_i$ are standardized principal component scores.
 
 **APA7 reference:** Broomhead, D. S., & King, G. P. (1986). Extracting qualitative dynamics from experimental data. Physica D: Nonlinear Phenomena, 20(2–3), 217–236. https://doi.org/10.1016/0167-2789(86)90031-X
 
-**Filename:** 'Broomhead og King - 1986 - Extracting qualitative dynamics from experimental data.pdf'
+**Filename:** `Broomhead og King - 1986 - Extracting qualitative dynamics from experimental data.pdf`
 
 ### **1. Aim of the Paper**
 
@@ -388,7 +388,7 @@ where $t_i$ are standardized principal component scores.
 
 **APA7 reference:** Esbensen, K. H., Guyot, D., Westad, F., & Houmoller, L. P. (2002). Multivariate Data Analysis -in Practice: An Introduction to Multivariate Data Analysis and Experimental Design. CAMO AS. https://books.google.no/books?id=Qsn6yjRXOaMC&lpg=PP1&dq=Qsn6yjRXOaMC
 
-**Filename:** 'Esbensen et al. - 2002 - Multivariate Data Analysis -in Practice  - chapter 3.pdf'
+**Filename:** `Esbensen et al. - 2002 - Multivariate Data Analysis -in Practice  - chapter 3.pdf`
 
 ### **1. Purpose and Philosophy**
 
@@ -541,7 +541,7 @@ where $t_i$ are standardized principal component scores.
 
 **APA7 reference:** Esbensen, K. H., Guyot, D., Westad, F., & Houmoller, L. P. (2002). Multivariate Data Analysis -in Practice: An Introduction to Multivariate Data Analysis and Experimental Design. CAMO AS. https://books.google.no/books?id=Qsn6yjRXOaMC&lpg=PP1&dq=Qsn6yjRXOaMC
 
-**Filename:** 'Esbensen et al. - 2002 - Multivariate Data Analysis -in Practice  - chapter 4.pdf'
+**Filename:** `Esbensen et al. - 2002 - Multivariate Data Analysis -in Practice  - chapter 4.pdf`
 
 ## **1. Purpose of the Chapter**
 
@@ -700,7 +700,7 @@ Nine common mistakes:
 
 **APA7 reference:** Gallagher, N. B., O’Sullivan, D., & Palacios, M. (2020). The Effect of Data Centering on PCA Models [White Paper].
 
-**Filename:** 'Gallagher et al. - 2020 - The Effect of Data Centering on PCA Models.pdf'
+**Filename:** `Gallagher et al. - 2020 - The Effect of Data Centering on PCA Models.pdf`
 
 ## **1. Purpose**
 
@@ -834,7 +834,7 @@ For a dataset $X$ with $M$ samples and $N$ variables:
 
 **APA7 reference:** Ghil, M., Allen, M. R., Dettinger, M. D., Ide, K., Kondrashov, D., Mann, M. E., Robertson, A. W., Saunders, A., Tian, Y., Varadi, F., & Yiou, P. (2002). Advanced Spectral Methods for Climatic Time Series. Reviews of Geophysics, 40(1), 3-1-3–41. https://doi.org/10.1029/2000RG000092
 
-**Filename:** 'Ghil et al. - 2002 - Advanced Spectral Methods for Climatic Time Series.pdf'
+**Filename:** `Ghil et al. - 2002 - Advanced Spectral Methods for Climatic Time Series.pdf`
 
 ## **1. Purpose and Motivation**
 
@@ -978,7 +978,7 @@ For a dataset $X$ with $M$ samples and $N$ variables:
 
 **APA7 reference:** Golyandina, N. (2020). Particularities and commonalities of singular spectrum analysis as a method of time series analysis and signal processing. WIREs Computational Statistics, 12(4), e1487. https://doi.org/10.1002/wics.1487
 
-**Filename:** 'Golyandina - 2020 - Particularities and commonalities of singular spectrum analysis as a method of time series analysis.pdf'
+**Filename:** `Golyandina - 2020 - Particularities and commonalities of singular spectrum analysis as a method of time series analysis.pdf`
 
 ## **1. Aim of the Paper**
 
@@ -1100,7 +1100,7 @@ For a dataset $X$ with $M$ samples and $N$ variables:
 
 **APA7 reference:** Golyandina, N., Korobeynikov, A., Shlemov, A., & Usevich, K. (2015). Multivariate and 2D Extensions of Singular Spectrum Analysis with the Rssa Package. Journal of Statistical Software, 67, 1–78. https://doi.org/10.18637/jss.v067.i02
 
-**Filename:** 'Golyandina et al. - 2015 - Multivariate and 2D Extensions of Singular Spectrum Analysis with the Rssa Package.pdf'
+**Filename:** `Golyandina et al. - 2015 - Multivariate and 2D Extensions of Singular Spectrum Analysis with the Rssa Package.pdf`
 
 ## **1. Purpose of the Paper**
 
@@ -1237,7 +1237,7 @@ SSA and its extensions follow a **four-step scheme**:
 
 **APA7 reference:** Jolliffe, I. T., & Cadima, J. (2016). Principal component analysis: A review and recent developments. Philosophical Transactions of the Royal Society A: Mathematical, Physical and Engineering Sciences, 374(2065), 20150202. https://doi.org/10.1098/rsta.2015.0202
 
-**Filename:** 'Jolliffe & Cadima - 2016 - Principal component analysis a review and recent .pdf'
+**Filename:** `Jolliffe & Cadima - 2016 - Principal component analysis a review and recent .pdf`
 
 ## **1. Introduction**
 
@@ -1388,7 +1388,7 @@ SSA and its extensions follow a **four-step scheme**:
 
 **APA7 reference:** Mika, S., Schölkopf, B., Smola, A., Müller, K.-R., Scholz, M., & Rätsch, G. (1998). Kernel PCA and De-Noising in Feature Spaces. Advances in Neural Information Processing Systems, 11. https://proceedings.neurips.cc/paper_files/paper/1998/hash/226d1f15ecd35f784d2a20c3ecf56d7f-Abstract.html
 
-**Filename:** 'Mika et al. - 1998 - Kernel PCA and De-Noising in Feature Spaces.pdf'
+**Filename:** `Mika et al. - 1998 - Kernel PCA and De-Noising in Feature Spaces.pdf`
 
 ## **1. Aim of the Paper**
 
@@ -1514,7 +1514,7 @@ SSA and its extensions follow a **four-step scheme**:
 
 **APA7 reference:** Shlens, J. (2014). A Tutorial on Principal Component Analysis (No. arXiv:1404.1100). arXiv. https://doi.org/10.48550/arXiv.1404.1100
 
-**Filename:** 'Shlens - 2014 - A Tutorial on Principal Component Analysis.pdf'
+**Filename:** `Shlens - 2014 - A Tutorial on Principal Component Analysis.pdf`
 
 ## **1. Purpose**
 
@@ -1672,7 +1672,7 @@ SSA and its extensions follow a **four-step scheme**:
 
 **APA7 reference:**Ilin, A., & Raiko, T. (2010). Practical Approaches to Principal Component Analysis in the Presence of Missing Values. Journal of Machine Learning Research, 11(66), 1957–2000.
 
-**Filename:** 'Ilin og Raiko - 2010 - Practical Approaches to Principal Component Analysis in the Presence of Missing Values.pdf'
+**Filename:** `Ilin og Raiko - 2010 - Practical Approaches to Principal Component Analysis in the Presence of Missing Values.pdf`
 
 ## **1. Purpose and Motivation**
 
@@ -1846,7 +1846,7 @@ SSA and its extensions follow a **four-step scheme**:
 
 **APA7 reference:** Wold, S., Esbensen, K., & Geladi, P. (1987). Principal component analysis. Chemometrics and Intelligent Laboratory Systems, 2(1), 37–52. https://doi.org/10.1016/0169-7439(87)80084-9
 
-**Filename:** 'Wold et al. - 1987 - Principal component analysis.pdf'
+**Filename:** `Wold et al. - 1987 - Principal component analysis.pdf`
 
 ## **1. Purpose and Significance**
 
@@ -2036,7 +2036,7 @@ SSA and its extensions follow a **four-step scheme**:
 
 **APA7 reference:**Halko, N., Martinsson, P. G., & Tropp, J. A. (2011). Finding Structure with Randomness: Probabilistic Algorithms for Constructing Approximate Matrix Decompositions. SIAM Review, 53(2), 217–288. https://doi.org/10.1137/090771806
 
-**Filename:** 'Halko et al. - 2011 - Finding Structure with Randomness Probabilistic Algorithms for Constructing Approximate Matrix Deco.pdf'
+**Filename:** `Halko et al. - 2011 - Finding Structure with Randomness Probabilistic Algorithms for Constructing Approximate Matrix Deco.pdf`
 
 ## **1. Purpose**
 
@@ -2195,7 +2195,7 @@ SSA and its extensions follow a **four-step scheme**:
 
 **APA7 reference:** Schölkopf, B., Smola, A., & Müller, K.-R. (1998). Nonlinear Component Analysis as a Kernel Eigenvalue Problem. Neural Computation, 10(5), 1299–1319. https://doi.org/10.1162/089976698300017467
 
-**Filename:** 'Schölkopf et al. - 1998 - Nonlinear Component Analysis as a Kernel Eigenvalue Problem.pdf'
+**Filename:** `Schölkopf et al. - 1998 - Nonlinear Component Analysis as a Kernel Eigenvalue Problem.pdf`
 
 ## **1. Purpose**
 
@@ -2342,7 +2342,7 @@ SSA and its extensions follow a **four-step scheme**:
 
 **APA7 reference:** Vautard, R., & Ghil, M. (1989). Singular spectrum analysis in nonlinear dynamics, with applications to paleoclimatic time series. Physica D: Nonlinear Phenomena, 35, 395–424. https://doi.org/10.1016/0167-2789(89)90077-8
 
-**Filename:** 'Vautard og Ghil - 1989 - Singular spectrum analysis in nonlinear dynamics, with applications to paleoclimatic time series.pdf'
+**Filename:** `Vautard og Ghil - 1989 - Singular spectrum analysis in nonlinear dynamics, with applications to paleoclimatic time series.pdf`
 
 ## **1. Purpose and Motivation**
 
@@ -2439,7 +2439,7 @@ Analyzed four marine sediment cores using oxygen isotope ratio ($\delta^{18}O$) 
 
 **APA7 reference:** Hannachi, A., Jolliffe, I. T., & Stephenson, D. B. (2007). Empirical orthogonal functions and related techniques in atmospheric science: A review. International Journal of Climatology, 27(9), 1119–1152. https://doi.org/10.1002/joc.1499
 
-**Filename:** 'Hannachi et al. - 2007 - Empirical orthogonal functions and related techniques in atmospheric science A review.pdf'
+**Filename:** `Hannachi et al. - 2007 - Empirical orthogonal functions and related techniques in atmospheric science A review.pdf`
 
 ## **1. Purpose**
 
@@ -2569,7 +2569,7 @@ Analyzed four marine sediment cores using oxygen isotope ratio ($\delta^{18}O$) 
 
 **APA7 reference:** Golub, G. H., & Loan, C. F. V. (2013). Matrix Computations. JHU Press.
 
-**Filename:** 'Golub og Loan - 2013 - Matrix Computations.pdf'
+**Filename:** `Golub og Loan - 2013 - Matrix Computations.pdf`
 
 ## **1. Purpose and Scope**
 
@@ -2694,7 +2694,7 @@ Analyzed four marine sediment cores using oxygen isotope ratio ($\delta^{18}O$) 
 
 **APA7 reference:** Golub, G. H., & Loan, C. F. V. (2013). Matrix Computations. JHU Press.
 
-**Filename:** 'Golub og Loan - 2013 - Matrix Computations.pdf'
+**Filename:** `Golub og Loan - 2013 - Matrix Computations.pdf`
 
 ## **1. Purpose and Scope**
 
@@ -2836,7 +2836,7 @@ Analyzed four marine sediment cores using oxygen isotope ratio ($\delta^{18}O$) 
 
 **APA7 reference:** Golub, G. H., & Loan, C. F. V. (2013). Matrix Computations. JHU Press.
 
-**Filename:** 'Golub og Loan - 2013 - Matrix Computations.pdf'
+**Filename:** `Golub og Loan - 2013 - Matrix Computations.pdf`
 
 ## **1. Purpose and Scope**
 
@@ -2990,7 +2990,7 @@ Analyzed four marine sediment cores using oxygen isotope ratio ($\delta^{18}O$) 
 
 **APA7 reference:** Ghojogh, B., & Crowley, M. (2022). Unsupervised and Supervised Principal Component Analysis: Tutorial (No. arXiv:1906.03148). arXiv. https://doi.org/10.48550/arXiv.1906.03148
 
-**Filename:** 'Golub og Loan - 2013 - Matrix Computations.pdf'
+**Filename:** `Golub og Loan - 2013 - Matrix Computations.pdf`
 
 ## **1. Introduction**
 
@@ -3142,5 +3142,88 @@ Analyzed four marine sediment cores using oxygen isotope ratio ($\delta^{18}O$) 
 4. **SPCA (HSIC-based)** = principled supervised extension; PCA is a special case when label information is ignored.
 5. **Kernel SPCA** = combines kernels with supervision for powerful feature extraction, at the cost of interpretability.
 6. Provides both **geometric interpretations** (projection, reconstruction, subspaces) and **statistical interpretations** (variance, dependence with labels).
+
+---
+
+# Kernel principal component analysis
+
+**APA7 reference:** Schölkopf, B., Smola, A., & Müller, K.-R. (1997). Kernel principal component analysis. I W. Gerstner, A. Germond, M. Hasler, & J.-D. Nicoud (Red.), Artificial Neural Networks—ICANN’97 (s. 583–588). Springer. https://doi.org/10.1007/BFb0020217
+
+**Filename:** `Schölkopf et al. - 1997 - Kernel principal component analysis.pdf`
+
+## **1. Objective and Contribution**
+
+This seminal paper introduces **Kernel Principal Component Analysis (Kernel PCA or KPCA)**, a nonlinear extension of PCA that enables the discovery of principal components in high-dimensional feature spaces without explicitly computing those spaces. The core insight is using **kernel functions** to implicitly perform PCA in a transformed feature space, allowing modeling of **nonlinear structures** inherent in the data.
+
+---
+
+## **2. Background and Motivation**
+
+* Traditional PCA identifies linear projections capturing the greatest variance by diagonalizing the covariance matrix $C = \frac{1}{\ell} \sum_j x_j x_j^T$.
+* To address nonlinear relationships, the method applies a **nonlinear mapping** $\phi: \mathbb{R}^N \rightarrow F$ (potentially infinite-dimensional), and then performs PCA in $F$. However, computing directly in $F$ is typically infeasible.([graphics.stanford.edu][2])
+
+---
+
+## **3. Kernel Trick and Formulation**
+
+* The authors demonstrate that the PCA problem in $F$ can be reformulated purely in terms of **inner products** $\phi(x_i) \cdot \phi(x_j)$, which are efficiently computed via a **kernel function** $k(x_i, x_j)$.
+* This reformulation leads to an eigenvalue problem involving the kernel (Gram) matrix $K$:
+
+  $$
+  \ell \lambda \alpha = K \alpha
+  $$
+
+  where $K$ is $\ell \times \ell$, $\alpha$ are eigenvectors, and $\lambda$ eigenvalues.
+* Thus, KPCA calculates principal components in feature space **implicitly**, avoiding explicit computation of $\phi$.
+
+---
+
+## **4. Technical Details**
+
+1. **Mapping and Kernel Construction**: Data are nonlinearly transformed via $\phi$, but calculations are done via $k(x, y) = \phi(x) \cdot \phi(y)$.
+2. **Zero-Centering in Feature Space**: Since feature space centering is critical for PCA, the kernel matrix is centered using:
+
+   $$
+   K' = K - \mathbf{1}K - K\mathbf{1} + \mathbf{1}K\mathbf{1}
+   $$
+
+   where $\mathbf{1}$ indicates averaging matrices.([Wikipedia][3])
+3. **Eigen-decomposition**: Solve $\ell \lambda \alpha = K' \alpha$, then normalize eigenvectors so that $\|\alpha\| = 1$.
+4. **Projection of New Data**: A new point $x$ projects onto component $k$ via:
+
+   $$
+   \sum_{i=1}^\ell \alpha_i^{(k)} k(x_i, x)
+   $$
+
+---
+
+## **5. Key Properties and Implications**
+
+* **Nonlinear Feature Extraction**: KPCA captures principal directions in a high-dimensional feature space, enabling nonlinear dimensionality reduction.
+* **Richer Feature Set**: Unlike linear PCA, the number of nonzero components can reach $\ell$, introducing flexibility.
+* **Affine Invariance**: Retains core PCA properties—variance maximization and dimensionality reduction—but in a transformed space.
+* **Limitations**: Reconstruction (pre-image problem) is nontrivial because $\phi$ is implicit. Engineers later developed approximate pre-image methods (e.g., Mika et al. 1998).
+
+---
+
+## **6. Experiments and Demonstrations**
+
+* **Synthetic toy data**: KPCA is shown to capture nonlinear structures (e.g., circles or spirals) that linear PCA misses.
+* **Face recognition**: KPCA coupled with linear classifiers outperformed linear PCA in class-separability tasks.
+
+---
+
+## **7. Relevance and Legacy**
+
+* This work solidified **Kernel PCA** as a powerful tool for **nonlinear dimensionality reduction**, especially in pattern recognition, image analysis, and manifold learning.
+* It inspired later innovations, including methods to reconstruct approximate pre-images, robust KPCA, and widespread use in machine learning pipelines.
+
+---
+
+## **Conclusion**
+
+* **Kernel PCA** generalizes PCA into RKHS via the kernel trick, enabling effective nonlinear feature extraction.
+* It bypasses explicit mapping to potentially infinite-dimensional spaces, solving an eigenproblem over the kernel matrix efficiently.
+* While projection is readily available, reconstructing input space representations remains a challenge—a topic addressed in subsequent research.
 
 ---
