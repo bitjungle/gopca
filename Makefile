@@ -605,6 +605,21 @@ test-regression:
 	@echo "Running regression tests..."
 	$(GOTEST) -v -run TestRegression ./internal/integration/...
 
+## generate-sklearn-reference: Generate sklearn reference data for validation tests
+generate-sklearn-reference:
+	@echo "Generating sklearn reference data..."
+	@if [ ! -d "testdata/.venv" ]; then \
+		echo "Python virtual environment not found at testdata/.venv"; \
+		echo "Please create it with:"; \
+		echo "  cd testdata && python3 -m venv .venv && source .venv/bin/activate && pip install numpy pandas scikit-learn"; \
+		exit 1; \
+	fi
+	@cd testdata && \
+		. .venv/bin/activate && \
+		cd validation && \
+		python generate_reference_pca.py && \
+		echo "Sklearn reference data generated successfully in testdata/validation/reference_results/"
+
 ## fmt: Format all Go code
 fmt:
 	@echo "Formatting Go code..."
