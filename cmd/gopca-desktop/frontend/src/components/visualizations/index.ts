@@ -12,3 +12,5 @@ export { Biplot } from './Biplot';
 export { CircleOfCorrelations } from './CircleOfCorrelations';
 export { DiagnosticScatterPlot } from './DiagnosticScatterPlot';
 export { EigencorrelationPlot } from './EigencorrelationPlot';
+export { KernelMatrixHeatmap } from './KernelMatrixHeatmap';
+export { SampleContributionPlot } from './SampleContributionPlot';

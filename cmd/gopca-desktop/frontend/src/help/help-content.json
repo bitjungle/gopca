@@ -155,6 +155,26 @@
       "text": "Cumulative variance explained by recommended components. Higher percentage means more original information retained.",
       "category": "results"
     },
+    "kernel-type": {
+      "title": "Kernel Type",
+      "text": "The kernel function used to map data to higher-dimensional space. RBF for non-linear patterns, Linear for linear relationships, Polynomial for curved boundaries.",
+      "category": "results"
+    },
+    "kernel-components": {
+      "title": "Kernel Components",
+      "text": "Number of principal components computed. Shows the variance explained by the first component, indicating the main direction of variation in kernel space.",
+      "category": "results"
+    },
+    "kernel-variance": {
+      "title": "Top Components",
+      "text": "Cumulative variance explained by the first three principal components. Higher values indicate that fewer components capture most of the non-linear structure.",
+      "category": "results"
+    },
+    "kernel-matrix-size": {
+      "title": "Kernel Matrix",
+      "text": "Dimensions of the similarity matrix. Each element represents the similarity between two samples in kernel space.",
+      "category": "results"
+    },
     "scores-plot": {
       "title": "Scores Plot",
       "text": "Shows samples in PC space. Similar samples cluster together. Look for groups and outliers.",
@@ -233,6 +253,16 @@
     "zoom-controls": {
       "title": "Zoom Controls",
       "text": "Zoom in/out, reset view, or fullscreen. Drag to pan when zoomed.",
+      "category": "visualization"
+    },
+    "kernel-matrix-plot": {
+      "title": "Kernel Matrix Heatmap",
+      "text": "Visualizes pairwise similarities between samples in kernel space. Bright areas indicate high similarity. Helps understand data structure after kernel transformation.",
+      "category": "visualization"
+    },
+    "sample-contributions-plot": {
+      "title": "Sample Contributions",
+      "text": "Shows which training samples contribute most to each principal component. Useful for identifying influential samples and understanding PC meaning in kernel space.",
       "category": "visualization"
     },
     "data-selection": {

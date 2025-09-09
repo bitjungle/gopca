@@ -6,6 +6,8 @@
 
 package config
 
+import "github.com/bitjungle/gopca/pkg/security"
+
 // GUIConfig holds configuration for the GUI application
 type GUIConfig struct {
 	// Visualization configuration
@@ -38,6 +40,9 @@ type VisualizationConfig struct {
 
 	// Default confidence level for ellipses
 	DefaultConfidenceLevel float64 `json:"default_confidence_level"`
+
+	// Maximum samples for kernel matrix visualization
+	MaxKernelMatrixSamples int `json:"max_kernel_matrix_samples"`
 }
 
 // UIConfig holds UI-related configuration
@@ -64,6 +69,7 @@ func DefaultGUIConfig() *GUIConfig {
 			MahalanobisThreshold:      3.0,
 			RSSThreshold:              0.03,
 			DefaultConfidenceLevel:    0.95,
+			MaxKernelMatrixSamples:    security.MaxKernelMatrixVisualization,
 		},
 		UI: UIConfig{
 			DataPreviewMaxRows: 10,
