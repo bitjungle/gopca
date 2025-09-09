@@ -33,7 +33,18 @@ export const ModelOverview: React.FC<ModelOverviewProps> = ({ pcaResult, selecte
 
   useEffect(() => {
     const fetchMetrics = async () => {
-      if (!pcaResult || !pcaResult.loadings || pcaResult.method === 'kernel') {
+      if (!pcaResult) {
+        setLoading(false);
+        return;
+      }
+
+      // Skip backend call for Kernel PCA - we'll handle it client-side
+      if (pcaResult.method === 'kernel') {
+        setLoading(false);
+        return;
+      }
+
+      if (!pcaResult.loadings) {
         setLoading(false);
         return;
       }
@@ -75,9 +86,124 @@ export const ModelOverview: React.FC<ModelOverviewProps> = ({ pcaResult, selecte
     fetchMetrics();
   }, [pcaResult, selectedPC, standardScale, originalData]);
 
-  // Don't render for Kernel PCA as it doesn't have loadings
+  // Render special Kernel PCA overview
   if (pcaResult?.method === 'kernel') {
-    return null;
+    const kernelType = pcaResult.kernel_type || 'unknown';
+    const kernelParams = pcaResult.kernel_params || {};
+    const nComponents = pcaResult.components_computed;
+    const totalVariance = pcaResult.cumulative_variance?.[nComponents - 1] || 0;
+    
+    // Find optimal components based on variance explained
+    let optimalComponents = nComponents;
+    if (pcaResult.cumulative_variance) {
+      for (let i = 0; i < pcaResult.cumulative_variance.length; i++) {
+        if (pcaResult.cumulative_variance[i] >= 80) {
+          optimalComponents = i + 1;
+          break;
+        }
+      }
+    }
+
+    // Format kernel parameters for display
+    const formatKernelParams = () => {
+      switch (kernelType) {
+        case 'rbf':
+          return `γ = ${kernelParams.gamma?.toFixed(4) || 'auto'}`;
+        case 'polynomial':
+          return `degree = ${kernelParams.degree || 3}, γ = ${kernelParams.gamma?.toFixed(4) || 'auto'}`;
+        case 'sigmoid':
+          return `γ = ${kernelParams.gamma?.toFixed(4) || 'auto'}, c₀ = ${kernelParams.coef0 || 0}`;
+        case 'linear':
+          return 'no parameters';
+        default:
+          return '';
+      }
+    };
+
+    // Get kernel description
+    const getKernelDescription = () => {
+      switch (kernelType) {
+        case 'rbf':
+          return 'Radial Basis Function';
+        case 'polynomial':
+          return 'Polynomial';
+        case 'sigmoid':
+          return 'Sigmoid';
+        case 'linear':
+          return 'Linear';
+        default:
+          return 'Unknown';
+      }
+    };
+
+    return (
+      <HelpWrapper helpKey="model-overview">
+        <div className="bg-gray-100 dark:bg-gray-700 rounded-lg p-4 h-full flex flex-col">
+          <div className="mb-2">
+            <h3 className="text-lg font-semibold">Model Overview</h3>
+          </div>
+          <div className="space-y-2 flex-grow">
+            <HelpWrapper helpKey="kernel-type">
+              <div className="flex justify-between items-start">
+                <span>Kernel:</span>
+                <div className="text-right">
+                  <span className="font-medium">
+                    {getKernelDescription()}
+                  </span>
+                  <div className="text-xs text-gray-500 dark:text-gray-400">
+                    {formatKernelParams()}
+                  </div>
+                </div>
+              </div>
+            </HelpWrapper>
+            
+            <HelpWrapper helpKey="kernel-components">
+              <div className="flex justify-between items-start">
+                <span>Components:</span>
+                <div className="text-right">
+                  <span className="font-medium">
+                    {nComponents} extracted
+                  </span>
+                  <div className="text-xs text-gray-500 dark:text-gray-400">
+                    {optimalComponents} for 80% variance
+                  </div>
+                </div>
+              </div>
+            </HelpWrapper>
+
+            <HelpWrapper helpKey="kernel-variance">
+              <div className="flex justify-between items-start">
+                <span>Total variance:</span>
+                <div className="text-right">
+                  <span className="font-medium">
+                    {totalVariance.toFixed(1)}%
+                  </span>
+                  <div className="text-xs text-gray-500 dark:text-gray-400">
+                    captured by {nComponents} PCs
+                  </div>
+                </div>
+              </div>
+            </HelpWrapper>
+
+            {pcaResult.kernel_matrix && (
+              <HelpWrapper helpKey="kernel-matrix-size">
+                <div className="flex justify-between items-start">
+                  <span>Kernel matrix:</span>
+                  <div className="text-right">
+                    <span className="font-medium">
+                      {pcaResult.kernel_matrix.length} × {pcaResult.kernel_matrix.length}
+                    </span>
+                    <div className="text-xs text-gray-500 dark:text-gray-400">
+                      similarity matrix
+                    </div>
+                  </div>
+                </div>
+              </HelpWrapper>
+            )}
+          </div>
+        </div>
+      </HelpWrapper>
+    );
   }
 
   if (loading) {

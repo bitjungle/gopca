@@ -155,6 +155,26 @@
       "text": "Cumulative variance explained by recommended components. Higher percentage means more original information retained.",
       "category": "results"
     },
+    "kernel-type": {
+      "title": "Kernel Type",
+      "text": "The kernel function used to map data to higher-dimensional space. RBF for non-linear patterns, Linear for linear relationships, Polynomial for curved boundaries.",
+      "category": "results"
+    },
+    "kernel-components": {
+      "title": "Kernel Components",
+      "text": "Number of principal components extracted from kernel space. Shows how many are needed to capture 80% of variance in transformed space.",
+      "category": "results"
+    },
+    "kernel-variance": {
+      "title": "Kernel Variance",
+      "text": "Total variance captured in kernel space. Indicates how well the kernel PCA model represents the non-linear structure of your data.",
+      "category": "results"
+    },
+    "kernel-matrix-size": {
+      "title": "Kernel Matrix",
+      "text": "Dimensions of the similarity matrix. Each element represents the similarity between two samples in kernel space.",
+      "category": "results"
+    },
     "scores-plot": {
       "title": "Scores Plot",
       "text": "Shows samples in PC space. Similar samples cluster together. Look for groups and outliers.",
