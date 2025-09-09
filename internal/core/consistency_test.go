@@ -60,7 +60,7 @@ func TestMethodConsistencyAcrossDatasets(t *testing.T) {
 
 					// Create PCA engine
 					engine := NewPCAEngine()
-					
+
 					// Run PCA
 					result, err := engine.Fit(data, config)
 					require.NoError(t, err)
@@ -146,7 +146,6 @@ func TestTransformConsistency(t *testing.T) {
 
 	methods := []string{"svd", "nipals"}
 
-	var results []*types.PCAResult
 	var engines []types.PCAEngine
 
 	// Fit models with different methods
@@ -159,10 +158,9 @@ func TestTransformConsistency(t *testing.T) {
 		}
 
 		engine := NewPCAEngine()
-		result, err := engine.Fit(trainData, config)
+		_, err := engine.Fit(trainData, config)
 		require.NoError(t, err)
 
-		results = append(results, result)
 		engines = append(engines, engine)
 	}
 
@@ -199,7 +197,7 @@ func TestMissingValueHandling(t *testing.T) {
 	}
 
 	engine := NewPCAEngine()
-	
+
 	// PCA should reject data with NaN values
 	_, err := engine.Fit(dataWithNaN, config)
 	assert.Error(t, err, "PCA should reject data with NaN values")
@@ -224,7 +222,7 @@ func verifyPCAProperties(t *testing.T, result *types.PCAResult, method, dataset 
 
 	// Check explained variance sums to <= 100
 	totalVar := result.CumulativeVar[len(result.CumulativeVar)-1]
-	assert.LessOrEqual(t, totalVar, 100.0, 
+	assert.LessOrEqual(t, totalVar, 100.0,
 		"%s on %s: Total variance should not exceed 100%%", method, dataset)
 
 	// Check explained variance is decreasing
@@ -240,7 +238,7 @@ func verifyPCAProperties(t *testing.T, result *types.PCAResult, method, dataset 
 	}
 
 	// Check loadings orthogonality (if applicable)
-	if result.Loadings != nil && len(result.Loadings) > 0 {
+	if len(result.Loadings) > 0 {
 		checkLoadingsOrthogonality(t, result.Loadings, 1e-10, method, dataset)
 	}
 }
@@ -254,7 +252,7 @@ func checkLoadingsOrthogonality(t *testing.T, loadings types.Matrix, tolerance f
 	}
 
 	nComponents := len(loadings[0])
-	
+
 	// Check that loading vectors are orthogonal
 	for i := 0; i < nComponents; i++ {
 		for j := i + 1; j < nComponents; j++ {
@@ -350,7 +348,7 @@ func compareTransformedData(t *testing.T, data1, data2 types.Matrix, tolerance f
 		for i := 0; i < len(data1); i++ {
 			sum += data1[i][j] * data2[i][j]
 		}
-		
+
 		sign := 1.0
 		if sum < 0 {
 			sign = -1.0

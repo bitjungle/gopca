@@ -78,7 +78,7 @@ func TestSVDvsNIPALS(t *testing.T) {
 				StandardScale: true,
 				Method:        "svd",
 			}
-			
+
 			svdEngine := NewPCAEngine()
 			svdResult, err := svdEngine.Fit(data, config)
 			require.NoError(t, err)
@@ -139,7 +139,7 @@ func TestPreprocessingConsistency(t *testing.T) {
 							"Mean[%d] should be identical across methods", j)
 					}
 				}
-				
+
 				if prep.standardScale && results[0].StdDevs != nil && results[i].StdDevs != nil {
 					for j := range results[0].StdDevs {
 						assert.InDelta(t, results[0].StdDevs[j], results[i].StdDevs[j], 1e-10,
@@ -158,7 +158,7 @@ func TestTemporalPCAVsStandard(t *testing.T) {
 	n := 100
 	timeSeries := make(types.Matrix, n)
 	for i := 0; i < n; i++ {
-		timeSeries[i] = []float64{math.Sin(float64(i) * 0.1) + 0.1*float64(i)}
+		timeSeries[i] = []float64{math.Sin(float64(i)*0.1) + 0.1*float64(i)}
 	}
 
 	// Run Temporal PCA
@@ -202,10 +202,10 @@ func TestComponentSelectionConsistency(t *testing.T) {
 	require.NoError(t, err)
 
 	tests := []struct {
-		name              string
-		config            types.PCAConfig
-		expectedMinComps  int
-		expectedMaxComps  int
+		name             string
+		config           types.PCAConfig
+		expectedMinComps int
+		expectedMaxComps int
 	}{
 		{
 			name: "fixed_components",
@@ -302,7 +302,7 @@ func compareMethodResults(t *testing.T, result1, result2 *types.PCAResult, toler
 			for i := 0; i < r1; i++ {
 				sum += result1.Scores[i][j] * result2.Scores[i][j]
 			}
-			
+
 			sign := 1.0
 			if sum < 0 {
 				sign = -1.0
@@ -322,7 +322,7 @@ func compareMethodResults(t *testing.T, result1, result2 *types.PCAResult, toler
 func generateConditionedMatrix(rows, cols int, condition float64) types.Matrix {
 	// Create a matrix with controlled singular values
 	data := make(types.Matrix, rows)
-	
+
 	// Generate random orthogonal matrices using QR decomposition
 	A := mat.NewDense(rows, cols, nil)
 	for i := 0; i < rows; i++ {
@@ -330,12 +330,12 @@ func generateConditionedMatrix(rows, cols int, condition float64) types.Matrix {
 			A.Set(i, j, normalRand())
 		}
 	}
-	
+
 	var qr mat.QR
 	qr.Factorize(A)
 	var Q mat.Dense
 	qr.QTo(&Q)
-	
+
 	// Create diagonal matrix with controlled singular values
 	singularValues := make([]float64, cols)
 	singularValues[0] = 1.0
@@ -344,7 +344,7 @@ func generateConditionedMatrix(rows, cols int, condition float64) types.Matrix {
 		singularValues[i] = 1.0 - float64(i)*((1.0-1.0/condition)/float64(cols-1))
 	}
 	singularValues[cols-1] = 1.0 / condition
-	
+
 	// Construct the matrix: Q * S * Q^T
 	for i := 0; i < rows; i++ {
 		data[i] = make([]float64, cols)
@@ -356,7 +356,7 @@ func generateConditionedMatrix(rows, cols int, condition float64) types.Matrix {
 			data[i][j] = sum
 		}
 	}
-	
+
 	return data
 }
 
@@ -366,7 +366,7 @@ func createLagMatrix(timeSeries types.Matrix, lags int) types.Matrix {
 	if n <= lags || len(timeSeries[0]) != 1 {
 		return nil
 	}
-	
+
 	// Create lag matrix where each row contains [x(t), x(t-1), ..., x(t-lags)]
 	lagMatrix := make(types.Matrix, n-lags)
 	for i := lags; i < n; i++ {
@@ -376,7 +376,7 @@ func createLagMatrix(timeSeries types.Matrix, lags int) types.Matrix {
 		}
 		lagMatrix[i-lags] = row
 	}
-	
+
 	return lagMatrix
 }
 
