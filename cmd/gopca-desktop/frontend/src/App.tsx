@@ -804,6 +804,7 @@ return;
                                             value={config.method}
                                             onChange={(value) => {
                                                 const newMethod = value;
+                                                const oldMethod = config.method;
                                                 const newConfig = { ...config, method: newMethod };
 
                                                 // If switching to kernel PCA and current preprocessing is invalid
@@ -818,6 +819,16 @@ return;
                                                         newConfig.scaleOnly = false;
                                                     }
                                                     // scaleOnly is valid, so we keep it as-is
+                                                }
+                                                // When switching FROM kernel PCA to other methods, restore default preprocessing
+                                                // This prevents the bug where SVD runs on uncentered data after using kernel PCA
+                                                else if (oldMethod === 'kernel' && newMethod !== 'kernel') {
+                                                    // Restore default preprocessing for standard PCA methods
+                                                    // Mean centering is the default and most important for SVD/NIPALS
+                                                    newConfig.meanCenter = true;
+                                                    newConfig.standardScale = false;
+                                                    newConfig.robustScale = false;
+                                                    newConfig.scaleOnly = false;
                                                 }
 
                                                 setConfig(newConfig);
