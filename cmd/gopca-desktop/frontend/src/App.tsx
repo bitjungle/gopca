@@ -702,6 +702,15 @@ return;
                                             MET
                                         </button>
                                     </HelpWrapper>
+                                    <HelpWrapper helpKey="sample-dataset-stocks">
+                                        <button
+                                            onClick={() => loadDataset('stocks.csv')}
+                                            className="w-full px-4 py-2 text-sm bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors"
+                                            disabled={loading}
+                                        >
+                                            STOCKS
+                                        </button>
+                                    </HelpWrapper>
                                 </div>
                             </div>
                         </div>

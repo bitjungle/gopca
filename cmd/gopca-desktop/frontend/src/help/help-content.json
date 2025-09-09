@@ -40,6 +40,11 @@
       "text": "A long time series of meteorological measurements from two measuring stations located a few kilometers apart. Also includes missing data.",
       "category": "data-input"
     },
+    "sample-dataset-stocks": {
+      "title": "Stocks (PYPL) Dataset",
+      "text": "Ten years of daily trading data for PayPal (PYPL) including open, high, low, close prices and trading volume. Useful for demonstrating PCA on financial time-series data.",
+      "category": "data-input"
+    },
     "gocsv-integration": {
       "title": "GoCSV Data Editor",
       "text": "GoCSV is a companion app for data preparation. Click to install GoCSV if not available, and open your data file in GoCSV for editing and cleaning.",
