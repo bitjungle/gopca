@@ -7,6 +7,7 @@ package core
 import (
 	"testing"
 
+	"github.com/bitjungle/gopca/pkg/security"
 	"github.com/bitjungle/gopca/pkg/types"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -121,35 +122,65 @@ func TestKernelPCAVisualizationFields(t *testing.T) {
 
 // TestKernelMatrixSizeLimit tests that kernel matrix is not included for large datasets
 func TestKernelMatrixSizeLimit(t *testing.T) {
-	// Create large test data (501 samples to exceed the 500 limit)
-	nSamples := 501
-	nFeatures := 3
-	data := make(types.Matrix, nSamples)
-	for i := 0; i < nSamples; i++ {
-		data[i] = make([]float64, nFeatures)
-		for j := 0; j < nFeatures; j++ {
-			data[i][j] = float64(i*nFeatures + j)
+	// Test that maximum allowed samples includes the matrix
+	t.Run("max samples - should include matrix", func(t *testing.T) {
+		nSamples := security.MaxKernelMatrixVisualization
+		nFeatures := 3
+		data := make(types.Matrix, nSamples)
+		for i := 0; i < nSamples; i++ {
+			data[i] = make([]float64, nFeatures)
+			for j := 0; j < nFeatures; j++ {
+				data[i][j] = float64(i*nFeatures + j)
+			}
 		}
-	}
 
-	config := types.PCAConfig{
-		Components: 2,
-		Method:     "kernel",
-		KernelType: "rbf",
-	}
+		config := types.PCAConfig{
+			Components: 2,
+			Method:     "kernel",
+			KernelType: "rbf",
+		}
 
-	engine := NewKernelPCAEngine()
-	result, err := engine.Fit(data, config)
-	require.NoError(t, err)
-	require.NotNil(t, result)
+		engine := NewKernelPCAEngine()
+		result, err := engine.Fit(data, config)
+		require.NoError(t, err)
+		require.NotNil(t, result)
 
-	// Kernel matrix should NOT be included for large datasets
-	assert.Nil(t, result.KernelMatrix, "Kernel matrix should not be included for datasets > 500 samples")
+		// Kernel matrix SHOULD be included for max allowed samples
+		assert.NotNil(t, result.KernelMatrix, "Kernel matrix should be included for datasets with max allowed samples")
+		assert.Equal(t, security.MaxKernelMatrixVisualization, len(result.KernelMatrix), "Kernel matrix should have correct number of rows")
+	})
 
-	// But other fields should still be present
-	assert.Equal(t, "rbf", result.KernelType)
-	assert.NotNil(t, result.KernelParams)
-	assert.NotNil(t, result.KernelEigenvectors)
+	// Test that exceeding max samples excludes the matrix
+	t.Run("max+1 samples - should exclude matrix", func(t *testing.T) {
+		nSamples := security.MaxKernelMatrixVisualization + 1
+		nFeatures := 3
+		data := make(types.Matrix, nSamples)
+		for i := 0; i < nSamples; i++ {
+			data[i] = make([]float64, nFeatures)
+			for j := 0; j < nFeatures; j++ {
+				data[i][j] = float64(i*nFeatures + j)
+			}
+		}
+
+		config := types.PCAConfig{
+			Components: 2,
+			Method:     "kernel",
+			KernelType: "rbf",
+		}
+
+		engine := NewKernelPCAEngine()
+		result, err := engine.Fit(data, config)
+		require.NoError(t, err)
+		require.NotNil(t, result)
+
+		// Kernel matrix should NOT be included for large datasets
+		assert.Nil(t, result.KernelMatrix, "Kernel matrix should not be included for datasets exceeding the limit")
+
+		// But other fields should still be present
+		assert.Equal(t, "rbf", result.KernelType)
+		assert.NotNil(t, result.KernelParams)
+		assert.NotNil(t, result.KernelEigenvectors)
+	})
 }
 
 // TestKernelPCAVisualizationConsistency tests that visualization data is consistent

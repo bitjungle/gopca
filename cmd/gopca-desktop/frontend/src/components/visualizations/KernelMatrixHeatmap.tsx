@@ -32,7 +32,8 @@ export const KernelMatrixHeatmap: React.FC<KernelMatrixHeatmapProps> = ({
         <div className={`text-center p-8 ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>
           <p className="text-lg mb-2">Kernel matrix not available</p>
           <p className="text-sm">
-            The kernel matrix is only computed for datasets with 500 or fewer samples to conserve memory.
+            {/* TODO: Get this limit from backend config instead of hardcoding */}
+            The kernel matrix is only computed for datasets with 1000 or fewer samples to conserve memory.
           </p>
         </div>
       </div>

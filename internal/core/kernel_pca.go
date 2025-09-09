@@ -365,7 +365,7 @@ func (kpca *KernelPCAImpl) Fit(data types.Matrix, config types.PCAConfig) (*type
 
 	// Optionally include kernel matrix for visualization (limit to small datasets for memory safety)
 	var kernelMatrixData types.Matrix
-	if nSamples <= 500 { // Only include for reasonably sized datasets
+	if nSamples <= security.MaxKernelMatrixVisualization { // Only include for reasonably sized datasets
 		kernelMatrixData = make(types.Matrix, nSamples)
 		for i := 0; i < nSamples; i++ {
 			kernelMatrixData[i] = make([]float64, nSamples)
