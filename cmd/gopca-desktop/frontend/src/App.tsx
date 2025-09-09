@@ -23,7 +23,6 @@ const CircleOfCorrelations = lazy(() => import('./components/visualizations/Circ
 const DiagnosticScatterPlot = lazy(() => import('./components/visualizations/DiagnosticScatterPlot').then(m => ({ default: m.DiagnosticScatterPlot })));
 const EigencorrelationPlot = lazy(() => import('./components/visualizations/EigencorrelationPlot').then(m => ({ default: m.EigencorrelationPlot })));
 const TemporalLoadingsPlot = lazy(() => import('./components/visualizations/TemporalLoadingsPlot').then(m => ({ default: m.TemporalLoadingsPlot })));
-const KernelPCASummary = lazy(() => import('./components/visualizations/KernelPCASummary').then(m => ({ default: m.KernelPCASummary })));
 const KernelMatrixHeatmap = lazy(() => import('./components/visualizations/KernelMatrixHeatmap').then(m => ({ default: m.KernelMatrixHeatmap })));
 const SampleContributionPlot = lazy(() => import('./components/visualizations/SampleContributionPlot').then(m => ({ default: m.SampleContributionPlot })));
 import { FileData, PCARequest, PCAResponse } from './types';
@@ -53,7 +52,7 @@ function AppContent() {
     // Selection state
     const [excludedRows, setExcludedRows] = useState<number[]>([]);
     const [excludedColumns, setExcludedColumns] = useState<number[]>([]);
-    const [selectedPlot, setSelectedPlot] = useState<'scores' | 'scores3d' | 'scree' | 'loadings' | 'biplot' | 'biplot3d' | 'correlations' | 'diagnostics' | 'eigencorrelation' | 'temporal-loadings' | 'kernel-summary' | 'kernel-matrix' | 'sample-contributions'>('scores');
+    const [selectedPlot, setSelectedPlot] = useState<'scores' | 'scores3d' | 'scree' | 'loadings' | 'biplot' | 'biplot3d' | 'correlations' | 'diagnostics' | 'eigencorrelation' | 'temporal-loadings' | 'kernel-matrix' | 'sample-contributions'>('scores');
     const [selectedXComponent, setSelectedXComponent] = useState(0);
     const [selectedYComponent, setSelectedYComponent] = useState(1);
     const [selectedZComponent, setSelectedZComponent] = useState(2);
@@ -1257,7 +1256,7 @@ return;
                                         <HelpWrapper helpKey={`${selectedPlot}-plot`}>
                                             <CustomSelect
                                                 value={selectedPlot}
-                                                onChange={(value) => setSelectedPlot(value as 'scores' | 'scores3d' | 'scree' | 'loadings' | 'biplot' | 'biplot3d' | 'correlations' | 'diagnostics' | 'eigencorrelation' | 'temporal-loadings' | 'kernel-summary' | 'kernel-matrix' | 'sample-contributions')}
+                                                onChange={(value) => setSelectedPlot(value as 'scores' | 'scores3d' | 'scree' | 'loadings' | 'biplot' | 'biplot3d' | 'correlations' | 'diagnostics' | 'eigencorrelation' | 'temporal-loadings' | 'kernel-matrix' | 'sample-contributions')}
                                                 options={[
                                                     { value: 'scores', label: 'Scores Plot' },
                                                     { value: 'scores3d', label: '3D Scores Plot' },
@@ -1278,7 +1277,6 @@ return;
                                                     ...(pcaResponse.result.eigencorrelations && pcaResponse.result.method !== 'kernel' ? [{ value: 'eigencorrelation', label: 'Eigencorrelation Plot' }] : []),
                                                     // Kernel PCA specific visualizations
                                                     ...(pcaResponse.result.method === 'kernel' ? [
-                                                        { value: 'kernel-summary', label: 'Kernel PCA Summary' },
                                                         { value: 'kernel-matrix', label: 'Kernel Matrix Heatmap' },
                                                         { value: 'sample-contributions', label: 'Sample Contributions' }
                                                     ] : [])
@@ -1658,10 +1656,6 @@ return;
                                             <TemporalLoadingsPlot
                                                 pcaResult={pcaResponse.result}
                                                 fontScale={plotFontScale}
-                                            />
-                                        ) : selectedPlot === 'kernel-summary' ? (
-                                            <KernelPCASummary
-                                                pcaResult={pcaResponse.result}
                                             />
                                         ) : selectedPlot === 'kernel-matrix' ? (
                                             <KernelMatrixHeatmap
