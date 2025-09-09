@@ -102,7 +102,11 @@ export const KernelMatrixHeatmap: React.FC<KernelMatrixHeatmapProps> = ({
       },
       showticklabels: n <= 100, // Hide labels for large matrices
       gridcolor: isDark ? '#374151' : '#E5E7EB',
-      zerolinecolor: isDark ? '#4B5563' : '#9CA3AF'
+      zerolinecolor: isDark ? '#4B5563' : '#9CA3AF',
+      // Kernel matrix is always square (n×n), so we enforce a 1:1 aspect ratio
+      // to avoid misleading rectangular representation
+      scaleanchor: 'y', // Link x and y axis scales
+      scaleratio: 1 // Enforce 1:1 aspect ratio
     },
     yaxis: {
       title: 'Samples',
@@ -117,7 +121,8 @@ export const KernelMatrixHeatmap: React.FC<KernelMatrixHeatmapProps> = ({
       showticklabels: n <= 100, // Hide labels for large matrices
       gridcolor: isDark ? '#374151' : '#E5E7EB',
       zerolinecolor: isDark ? '#4B5563' : '#9CA3AF',
-      autorange: 'reversed' as const
+      autorange: 'reversed' as const,
+      scaleanchor: 'x' // Link to x axis
     },
     paper_bgcolor: isDark ? '#1F2937' : '#FFFFFF',
     plot_bgcolor: isDark ? '#111827' : '#F9FAFB',
