@@ -86,7 +86,6 @@ export const DiagnosticScatterPlot: React.FC<DiagnosticScatterPlotProps> = ({
 
   // Handle selection callback
   const handleSelection = React.useCallback((indices: number[]) => {
-    console.log('DiagnosticScatterPlot wrapper: Selection received', indices);
     if (onSelectionChange) {
       onSelectionChange(indices);
     }

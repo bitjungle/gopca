@@ -195,7 +195,6 @@ func TestPCAMemoryUsage(t *testing.T) {
 
 			// Cleanup
 			_ = result
-			data = nil
 			runtime.GC()
 		})
 	}

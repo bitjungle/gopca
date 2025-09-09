@@ -55,12 +55,6 @@ var (
 		IllConditioned: 1e-6,
 		NearSingular:   1e-4,
 	}
-
-	orthogonalityTolerance = ValidationTolerance{
-		Base:           1e-10,
-		IllConditioned: 1e-8,
-		NearSingular:   1e-6,
-	}
 )
 
 // loadSklearnReference loads a reference result from JSON file
@@ -371,7 +365,7 @@ func TestValidateScoresAndLoadings(t *testing.T) {
 	t.Run("Reconstruction", func(t *testing.T) {
 		// Skip reconstruction test if means are not available
 		// (not all PCA implementations store the mean)
-		if result.Means == nil || len(result.Means) == 0 {
+		if len(result.Means) == 0 {
 			t.Skip("Means not available in PCA result, skipping reconstruction test")
 		}
 
@@ -565,7 +559,9 @@ func loadTestDataAsMatrix(path string) (types.Matrix, error) {
 	if err != nil {
 		return nil, fmt.Errorf("failed to open CSV file %s: %w", path, err)
 	}
-	defer file.Close()
+	defer func() {
+		_ = file.Close()
+	}()
 
 	// Use mixed parser to handle both numeric and categorical columns
 	format := types.DefaultCSVFormat()
@@ -578,7 +574,7 @@ func loadTestDataAsMatrix(path string) (types.Matrix, error) {
 	}
 
 	// Return the numeric matrix (excludes categorical and target columns)
-	if csvData.Matrix == nil || len(csvData.Matrix) == 0 {
+	if len(csvData.Matrix) == 0 {
 		return nil, fmt.Errorf("no numeric data found in %s", path)
 	}
 
