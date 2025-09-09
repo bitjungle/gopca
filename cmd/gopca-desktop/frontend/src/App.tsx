@@ -1254,11 +1254,11 @@ return;
                                                     ...(pcaResponse.result.method !== 'kernel' && pcaResponse.result.method !== 'temporal' ? [{ value: 'loadings', label: 'Loadings Plot' }] : []),
                                                     // Temporal loadings pattern - only for temporal PCA
                                                     ...(pcaResponse.result.method === 'temporal' ? [{ value: 'temporal-loadings', label: 'Temporal Loadings Pattern' }] : []),
-                                                    // Biplot - available for standard PCA with preprocessing, and temporal PCA with preprocessing
-                                                    ...(pcaResponse.result.preprocessing_applied ? [{ value: 'biplot', label: 'Biplot' }] : []),
-                                                    // 3D Biplot and Circle of Correlations - not available for temporal PCA due to high-dimensional loadings
-                                                    ...(pcaResponse.result.preprocessing_applied && pcaResponse.result.method !== 'temporal' ? [{ value: 'biplot3d', label: '3D Biplot' }] : []),
-                                                    ...(pcaResponse.result.preprocessing_applied && pcaResponse.result.method !== 'temporal' ? [{ value: 'correlations', label: 'Circle of Correlations' }] : []),
+                                                    // Biplot - available for standard PCA with preprocessing (not for kernel PCA or temporal PCA)
+                                                    ...(pcaResponse.result.preprocessing_applied && pcaResponse.result.method !== 'kernel' && pcaResponse.result.method !== 'temporal' ? [{ value: 'biplot', label: 'Biplot' }] : []),
+                                                    // 3D Biplot and Circle of Correlations - not available for kernel PCA or temporal PCA
+                                                    ...(pcaResponse.result.preprocessing_applied && pcaResponse.result.method !== 'kernel' && pcaResponse.result.method !== 'temporal' ? [{ value: 'biplot3d', label: '3D Biplot' }] : []),
+                                                    ...(pcaResponse.result.preprocessing_applied && pcaResponse.result.method !== 'kernel' && pcaResponse.result.method !== 'temporal' ? [{ value: 'correlations', label: 'Circle of Correlations' }] : []),
                                                     // Diagnostic plot not available for:
                                                     // - Kernel PCA: Works in transformed feature space, RSS calculation not meaningful
                                                     // - Temporal PCA: Dimension mismatch - scores have n-lags+1 samples while original data has n samples
