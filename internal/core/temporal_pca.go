@@ -336,12 +336,16 @@ func (t *TemporalPCAImpl) Fit(data types.Matrix, config types.PCAConfig) (*types
 			temporalEigenvectors.Set(i, 0, 1.0/math.Sqrt(float64(t.numLags))) // Normalized vector
 		}
 
+		// Generate component labels for single component
+		componentLabels := []string{"PC1"}
+
 		return &types.PCAResult{
 			Scores:               utils.MatrixToSlice(scores),
 			Loadings:             utils.MatrixToSlice(t.loadings),
 			ExplainedVar:         t.explainedVar,
 			ExplainedVarRatio:    []float64{100.0}, // Single component explains 100%
-			CumulativeVar:        []float64{1.0},
+			CumulativeVar:        []float64{100.0}, // Cumulative should also be 100%
+			ComponentLabels:      componentLabels,
 			SingularValues:       t.singularVals,
 			Method:               "temporal",
 			Means:                nil, // Not applicable for temporal PCA with SSA approach
@@ -453,6 +457,12 @@ func (t *TemporalPCAImpl) Fit(data types.Matrix, config types.PCAConfig) (*types
 		}
 	}
 
+	// Generate component labels
+	componentLabels := make([]string, t.nComponents)
+	for i := 0; i < t.nComponents; i++ {
+		componentLabels[i] = fmt.Sprintf("PC%d", i+1)
+	}
+
 	// Prepare result
 	result := &types.PCAResult{
 		Scores:               utils.MatrixToSlice(scores),
@@ -460,6 +470,7 @@ func (t *TemporalPCAImpl) Fit(data types.Matrix, config types.PCAConfig) (*types
 		ExplainedVar:         t.explainedVar[:t.nComponents],
 		ExplainedVarRatio:    explainedVarRatio,
 		CumulativeVar:        cumulativeVar,
+		ComponentLabels:      componentLabels,
 		SingularValues:       t.singularVals,
 		Means:                nil, // Not applicable for temporal PCA with SSA approach
 		StdDevs:              nil, // Not applicable for temporal PCA with SSA approach

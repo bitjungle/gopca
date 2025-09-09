@@ -116,9 +116,9 @@ func outputTableFormat(result *types.PCAResult, data *pkgcsv.Data,
 		}
 	}
 
-	// Output loadings table (skip for kernel PCA which doesn't have loadings)
+	// Output loadings table (skip for kernel PCA and temporal PCA which have different loading structures)
 	if outputLoadings {
-		if result.Method != "kernel" {
+		if result.Method != "kernel" && result.Method != "temporal" {
 			fmt.Println("\nPCA Loadings:")
 			fmt.Println("──────────────────────────────────────────────────────────────")
 
@@ -162,8 +162,10 @@ func outputTableFormat(result *types.PCAResult, data *pkgcsv.Data,
 			if nFeatures > 25 {
 				fmt.Printf("\nShowing first 20 and last 5 of %d features\n", nFeatures)
 			}
-		} else {
+		} else if result.Method == "kernel" {
 			fmt.Println("\nNote: Loadings are not available for Kernel PCA")
+		} else if result.Method == "temporal" {
+			fmt.Println("\nNote: Temporal PCA loadings have a different structure (components × lagged features)")
 		}
 	}
 
