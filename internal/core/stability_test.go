@@ -88,50 +88,6 @@ func generateMatrixWithConditionNumber(rows, cols int, condition float64) *mat.D
 	return mat.NewDense(r, c, result.RawMatrix().Data)
 }
 
-// getToleranceForCondition returns appropriate tolerance based on matrix condition number
-// Following numerical analysis best practices for ill-conditioned problems.
-//
-// Reference: Higham (2002), Accuracy and Stability of Numerical Algorithms
-func getToleranceForCondition(condition float64) float64 {
-	switch {
-	case condition < 100:
-		return 1e-10 // Well-conditioned
-	case condition < 1e4:
-		return 1e-8 // Moderately ill-conditioned
-	case condition < 1e6:
-		return 1e-6 // Ill-conditioned
-	case condition < 1e8:
-		return 1e-4 // Severely ill-conditioned
-	default:
-		return 1e-2 // Extremely ill-conditioned
-	}
-}
-
-// computeConditionNumber calculates the condition number of a matrix
-func computeConditionNumber(m *mat.Dense) float64 {
-	var svd mat.SVD
-	ok := svd.Factorize(m, mat.SVDNone)
-	if !ok {
-		return math.Inf(1)
-	}
-
-	values := svd.Values(nil)
-	if len(values) == 0 {
-		return math.Inf(1)
-	}
-
-	// Find max and min non-zero singular values
-	maxVal := values[0]
-	minVal := values[len(values)-1]
-
-	// Check for near-zero minimum value
-	if math.Abs(minVal) < 1e-14 {
-		return math.Inf(1)
-	}
-
-	return maxVal / minVal
-}
-
 // TestPCAStabilityWithIllConditionedMatrices tests PCA with matrices of varying condition numbers
 func TestPCAStabilityWithIllConditionedMatrices(t *testing.T) {
 	testCases := []struct {

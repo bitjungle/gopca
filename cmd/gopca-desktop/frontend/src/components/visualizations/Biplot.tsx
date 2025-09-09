@@ -91,7 +91,6 @@ export const Biplot: React.FC<BiplotProps> = ({
 
   // Handle selection callback
   const handleSelection = React.useCallback((indices: number[]) => {
-    console.log('Biplot wrapper: Selection received', indices);
     if (onSelectionChange) {
       onSelectionChange(indices);
     }

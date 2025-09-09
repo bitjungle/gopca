@@ -145,14 +145,7 @@ function AppContent() {
         setIsLoading(true);
         try {
             const result = await LoadCSV('');
-            console.log('Loaded file data:', result);
             if (result && result.data && result.data.length > 0) {
-                console.log('Setting file data:', {
-                    headers: result.headers?.length,
-                    rows: result.rows,
-                    columns: result.columns,
-                    dataLength: result.data?.length
-                });
                 setFileData(result);
                 setFileLoaded(true);
                 // Filename will be set by the event from backend

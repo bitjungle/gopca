@@ -35,8 +35,6 @@ type TemporalPCAImpl struct {
 	// Temporal-specific parameters
 	numLags      int       // Number of time lags (L)
 	origVars     int       // Original number of variables (p)
-	laggedMeans  []float64 // Mean of each lagged feature for centering
-	laggedScales []float64 // Scale of each lagged feature for standardization
 	singularVals []float64 // Singular values from SVD
 	explainedVar []float64 // Explained variance ratio for each component
 

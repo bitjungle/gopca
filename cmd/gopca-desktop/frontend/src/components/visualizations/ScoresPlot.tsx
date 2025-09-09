@@ -80,9 +80,8 @@ export const ScoresPlot: React.FC<ScoresPlotProps> = ({
     fontScale
   );
 
-  // Debug logging
+  // Handle selection callback
   const handleSelection = React.useCallback((indices: number[]) => {
-    console.log('ScoresPlot wrapper: Selection received', indices);
     if (onSelectionChange) {
       onSelectionChange(indices);
     }
