@@ -24,6 +24,11 @@ go test -race ./...
 
 # Run specific test suites that often fail in CI
 go test -v -timeout 10m ./internal/core -run "TestValidate|TestNIPALS|TestMath"
+
+# Run numerical stability tests (Phase 2)
+go test -v -run TestPCAStability ./internal/core/
+go test -v -run TestPCAWith ./internal/core/  # Edge cases
+go test -v -run TestPCAPerformance ./internal/core/ -short  # Performance tests
 ```
 
 ### 3. Sklearn Validation Tests (if modified)

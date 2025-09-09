@@ -6,6 +6,14 @@ This document describes the validation methodology used to ensure GoPCA's implem
 
 ## Validation Framework Architecture
 
+The validation framework consists of multiple phases, each targeting specific aspects of PCA reliability.
+
+### Phase 1: sklearn Validation (Completed)
+Validates mathematical correctness against scikit-learn reference implementations.
+
+### Phase 2: Numerical Stability Testing (Completed)
+Tests behavior under challenging numerical conditions and edge cases.
+
 ### 1. Reference Data Generation
 
 Python scripts in `testdata/validation/` generate reference results using scikit-learn.
@@ -85,6 +93,44 @@ GitHub Actions workflow automatically:
 
 **Test**: RMSE of reconstruction < 1e-6 for full component reconstruction
 
+## Phase 2: Numerical Stability Testing
+
+### Overview
+Phase 2 introduces comprehensive tests for numerical stability, edge cases, and performance characteristics. These tests ensure GoPCA handles challenging conditions gracefully.
+
+### Test Categories
+
+#### 1. Stability Tests (`internal/core/stability_test.go`)
+- **Ill-conditioned matrices**: Tests with condition numbers from 10² to 10¹⁰
+- **Near-singular matrices**: Rank-deficient and nearly rank-deficient data
+- **Method consistency**: Verifies SVD and NIPALS produce similar results for well-conditioned data
+- **Mahalanobis distance**: Validates relationship between PC scores and Mahalanobis distance
+
+#### 2. Edge Case Tests (`internal/core/edgecase_test.go`)
+- **Empty data handling**: nil, 0x0, Nx0, 0xN matrices
+- **Single dimension**: Single row or column matrices
+- **Zero variance**: Constant columns and near-zero variance
+- **Extreme values**: Near machine epsilon and overflow conditions
+- **Wide matrices**: More variables than samples
+- **Invalid values**: NaN and Inf handling
+- **Preprocessing edge cases**: Standardization with zero variance
+
+#### 3. Performance Tests (`internal/core/performance_test.go`)
+- **Benchmarks**: Various matrix sizes (100x10 to 10,000x100)
+- **Memory profiling**: Validates linear memory scaling
+- **Performance scaling**: Ensures non-exponential time complexity
+- **Stress tests**: Large matrices up to 10,000 x 1,000
+
+### Matrix Generation Utilities
+
+The `generateMatrixWithConditionNumber` function creates test matrices with controlled condition numbers:
+```go
+// Generate a 50x10 matrix with condition number 1e6
+matrix := generateMatrixWithConditionNumber(50, 10, 1e6)
+```
+
+This uses SVD reconstruction: A = U * S * V^T where S contains logarithmically interpolated singular values.
+
 ## Tolerance Strategy
 
 ### Base Tolerances
@@ -97,9 +143,13 @@ GitHub Actions workflow automatically:
 
 ### Condition Number Thresholds
 
-- **Well-conditioned**: κ < 10⁶
-- **Ill-conditioned**: 10⁶ ≤ κ < 10¹²
-- **Near-singular**: κ ≥ 10¹²
+The tolerance strategy is now implemented in `getToleranceForCondition`:
+
+- **Well-conditioned**: κ < 10² → tolerance = 1e-10
+- **Moderately ill-conditioned**: 10² ≤ κ < 10⁴ → tolerance = 1e-8
+- **Ill-conditioned**: 10⁴ ≤ κ < 10⁶ → tolerance = 1e-6
+- **Severely ill-conditioned**: 10⁶ ≤ κ < 10⁸ → tolerance = 1e-4
+- **Extremely ill-conditioned**: κ ≥ 10⁸ → tolerance = 1e-2
 
 Where κ = σ_max / σ_min (ratio of largest to smallest singular value)
 
@@ -236,12 +286,18 @@ graph TD
 ### In Development
 
 ```bash
-# Generate references locally
+# Phase 1: sklearn validation
 cd testdata/validation
 python generate_reference_pca.py
-
-# Run validation tests
 go test ./internal/core -run TestValidate -v
+
+# Phase 2: Numerical stability tests
+go test ./internal/core -run TestPCAStability -v
+go test ./internal/core -run TestPCAWith -v  # Edge cases
+go test -bench=BenchmarkPCA ./internal/core  # Performance
+
+# Run all validation tests
+go test ./internal/core -v
 ```
 
 ### In CI/CD
