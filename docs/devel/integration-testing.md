@@ -43,7 +43,17 @@ Validates that existing functionality remains intact:
 - Numerical stability
 - Performance baselines
 
-### 4. Platform-Specific Tests
+### 4. Numerical Stability Tests (Phase 2)
+Located in `internal/core/stability_test.go`, `edgecase_test.go`, `performance_test.go`
+
+Comprehensive testing of numerical robustness:
+- **Ill-conditioned matrices**: Condition numbers from 10² to 10¹⁰
+- **Edge cases**: Empty data, single dimensions, zero variance
+- **Extreme values**: Near machine epsilon and overflow
+- **Performance benchmarks**: Memory and time complexity validation
+- **Method consistency**: SVD vs NIPALS comparison
+
+### 5. Platform-Specific Tests
 Script: `scripts/ci/test-platforms.sh`
 
 Tests platform-specific behaviors:
