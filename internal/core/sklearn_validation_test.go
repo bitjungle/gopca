@@ -84,6 +84,23 @@ func loadSklearnReference(path string) (*SklearnReference, error) {
 	return &ref, nil
 }
 
+// checkReferenceFiles checks if sklearn reference files exist and skips the test if not
+func checkReferenceFiles(t *testing.T) {
+	t.Helper()
+
+	// Check if the reference results directory exists
+	refDir := filepath.Join("..", "..", "testdata", "validation", "reference_results")
+	if _, err := os.Stat(refDir); os.IsNotExist(err) {
+		t.Skip("Sklearn reference files not found. Generate them with: make generate-sklearn-reference")
+	}
+
+	// Check if at least one reference file exists
+	testFile := filepath.Join(refDir, "iris_pca_mean_center.json")
+	if _, err := os.Stat(testFile); os.IsNotExist(err) {
+		t.Skip("Sklearn reference files not found. Generate them with: make generate-sklearn-reference")
+	}
+}
+
 // getTolerance returns the appropriate tolerance based on condition number
 func getTolerance(conditionNumber float64, tol ValidationTolerance) float64 {
 	if conditionNumber > 1e12 {
@@ -216,6 +233,9 @@ func compareMatrices(gopca, sklearn [][]float64, tolerance float64, name string)
 // This is the main validation test that ensures mathematical correctness
 // Reference: sklearn.decomposition.PCA - the industry standard implementation
 func TestValidateAgainstSklearn(t *testing.T) {
+	// Check if reference files exist, skip if not
+	checkReferenceFiles(t)
+
 	// Test configurations
 	datasets := []string{"iris", "wine", "corn"}
 	preprocessingMethods := []string{"mean_center", "standardize"}
@@ -302,6 +322,9 @@ func TestValidateAgainstSklearn(t *testing.T) {
 // TestValidateScoresAndLoadings validates the scores and loadings matrices
 // Handles sign ambiguity and validates reconstruction
 func TestValidateScoresAndLoadings(t *testing.T) {
+	// Check if reference files exist, skip if not
+	checkReferenceFiles(t)
+
 	// Focus on well-conditioned iris dataset for detailed validation
 	refPath := filepath.Join("..", "..", "testdata", "validation", "reference_results",
 		"iris_pca_mean_center.json")
@@ -386,6 +409,9 @@ func TestValidateScoresAndLoadings(t *testing.T) {
 
 // TestNIPALSValidation tests that NIPALS gives same results as SVD for complete data
 func TestNIPALSValidation(t *testing.T) {
+	// Check if reference files exist, skip if not
+	checkReferenceFiles(t)
+
 	// NIPALS should produce identical results to SVD for complete data (no missing values)
 	// Reference: Wold, H. (1966). Estimation of principal components by iterative least squares.
 
@@ -456,6 +482,9 @@ func TestNIPALSValidation(t *testing.T) {
 // TestMathematicalProperties validates fundamental mathematical properties
 // Based on academic references from docs/references/_summaries.txt
 func TestMathematicalProperties(t *testing.T) {
+	// Check if reference files exist, skip if not
+	checkReferenceFiles(t)
+
 	refPath := filepath.Join("..", "..", "testdata", "validation", "reference_results",
 		"iris_pca_standardize.json")
 
