@@ -57,7 +57,7 @@ export class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundarySt
 
       return (
         <div className="min-h-[200px] flex items-center justify-center p-8">
-          <div className="max-w-md w-full bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg p-6">
+          <div className="max-w-2xl w-full bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg p-6">
             <div className="flex items-start space-x-3">
               <div className="flex-shrink-0">
                 <svg
@@ -86,7 +86,7 @@ export class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundarySt
                       <summary className="cursor-pointer text-xs underline">
                         Show details
                       </summary>
-                      <pre className="mt-2 text-xs overflow-auto bg-red-100 dark:bg-red-900/30 p-2 rounded">
+                      <pre className="mt-2 text-xs overflow-auto max-w-full break-all bg-red-100 dark:bg-red-900/30 p-2 rounded">
                         {this.state.error.toString()}
                         {this.state.errorInfo && (
                           <>
