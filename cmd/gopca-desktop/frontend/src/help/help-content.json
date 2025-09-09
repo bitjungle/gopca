@@ -162,12 +162,12 @@
     },
     "kernel-components": {
       "title": "Kernel Components",
-      "text": "Number of principal components extracted from kernel space. Shows how many are needed to capture 80% of variance in transformed space.",
+      "text": "Number of principal components computed. Shows the variance explained by the first component, indicating the main direction of variation in kernel space.",
       "category": "results"
     },
     "kernel-variance": {
-      "title": "Kernel Variance",
-      "text": "Total variance captured in kernel space. Indicates how well the kernel PCA model represents the non-linear structure of your data.",
+      "title": "Top Components",
+      "text": "Cumulative variance explained by the first three principal components. Higher values indicate that fewer components capture most of the non-linear structure.",
       "category": "results"
     },
     "kernel-matrix-size": {

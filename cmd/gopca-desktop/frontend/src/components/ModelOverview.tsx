@@ -93,16 +93,10 @@ export const ModelOverview: React.FC<ModelOverviewProps> = ({ pcaResult, selecte
     const nComponents = pcaResult.components_computed;
     const totalVariance = pcaResult.cumulative_variance?.[nComponents - 1] || 0;
     
-    // Find optimal components based on variance explained
-    let optimalComponents = nComponents;
-    if (pcaResult.cumulative_variance) {
-      for (let i = 0; i < pcaResult.cumulative_variance.length; i++) {
-        if (pcaResult.cumulative_variance[i] >= 80) {
-          optimalComponents = i + 1;
-          break;
-        }
-      }
-    }
+    // Get the first few eigenvalues for display
+    const firstPC = pcaResult.explained_variance_ratio?.[0] || 0;
+    const secondPC = pcaResult.explained_variance_ratio?.[1] || 0;
+    const thirdPC = pcaResult.explained_variance_ratio?.[2] || 0;
 
     // Format kernel parameters for display
     const formatKernelParams = () => {
@@ -162,10 +156,10 @@ export const ModelOverview: React.FC<ModelOverviewProps> = ({ pcaResult, selecte
                 <span>Components:</span>
                 <div className="text-right">
                   <span className="font-medium">
-                    {nComponents} extracted
+                    {nComponents} computed
                   </span>
                   <div className="text-xs text-gray-500 dark:text-gray-400">
-                    {optimalComponents} for 80% variance
+                    PC1: {firstPC.toFixed(1)}% variance
                   </div>
                 </div>
               </div>
@@ -173,13 +167,13 @@ export const ModelOverview: React.FC<ModelOverviewProps> = ({ pcaResult, selecte
 
             <HelpWrapper helpKey="kernel-variance">
               <div className="flex justify-between items-start">
-                <span>Total variance:</span>
+                <span>Top 3 PCs:</span>
                 <div className="text-right">
                   <span className="font-medium">
-                    {totalVariance.toFixed(1)}%
+                    {(firstPC + secondPC + thirdPC).toFixed(1)}%
                   </span>
                   <div className="text-xs text-gray-500 dark:text-gray-400">
-                    captured by {nComponents} PCs
+                    cumulative variance
                   </div>
                 </div>
               </div>
