@@ -259,6 +259,11 @@ export function transformToBiplotData(
   groupValues?: number[],
   groupType?: 'categorical' | 'continuous'
 ): BiplotData {
+  // Check if loadings exist (e.g., not available for Kernel PCA)
+  if (!pcaResult.loadings || pcaResult.loadings.length === 0) {
+    throw new Error('Biplot visualization requires loadings data, which is not available for this PCA method.');
+  }
+
   // Backend stores loadings as [variables][components], but frontend expects [components][variables]
   const transposedLoadings = transposeMatrix(pcaResult.loadings);
 
@@ -309,6 +314,11 @@ export function createBiplotConfig(
 export function transformToCircleOfCorrelationsData(
   pcaResult: PCAResult
 ): CircleOfCorrelationsData {
+  // Check if loadings exist (e.g., not available for Kernel PCA)
+  if (!pcaResult.loadings || pcaResult.loadings.length === 0) {
+    throw new Error('Circle of Correlations visualization requires loadings data, which is not available for this PCA method.');
+  }
+
   // Backend stores loadings as [variables][components], but frontend expects [components][variables]
   const transposedLoadings = transposeMatrix(pcaResult.loadings);
 
@@ -461,6 +471,11 @@ export function transformToBiplot3DData(
   pc2?: number,
   pc3?: number
 ): Biplot3DData {
+  // Check if loadings exist (e.g., not available for Kernel PCA)
+  if (!pcaResult.loadings || pcaResult.loadings.length === 0) {
+    throw new Error('3D Biplot visualization requires loadings data, which is not available for this PCA method.');
+  }
+
   // Backend stores loadings as [variables][components], but frontend expects [components][variables]
   const transposedLoadings = transposeMatrix(pcaResult.loadings);
 
