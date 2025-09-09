@@ -2,7 +2,8 @@
 // Sample Contribution Plot - Shows which samples contribute most to each PC
 
 import React, { useState, useMemo } from 'react';
-import { PlotlyBarChart, useTheme } from '@gopca/ui-components';
+import Plot from 'react-plotly.js';
+import { useTheme } from '@gopca/ui-components';
 import { PCAResult } from '../../types';
 import { usePalette } from '../../contexts/PaletteContext';
 import { getQualitativePalette } from '../../utils/colorPalettes';
@@ -101,7 +102,7 @@ export const SampleContributionPlot: React.FC<SampleContributionPlotProps> = ({
   };
 
   // Prepare layout
-  const layout = {
+  const layout: any = {
     title: {
       text: `Sample Contributions to ${pcaResult.component_labels?.[currentComponent] || `PC${currentComponent + 1}`}`,
       font: {
@@ -148,7 +149,7 @@ export const SampleContributionPlot: React.FC<SampleContributionPlotProps> = ({
     autosize: true
   };
 
-  const config = {
+  const config: any = {
     responsive: true,
     displayModeBar: true,
     displaylogo: false,
@@ -196,10 +197,12 @@ export const SampleContributionPlot: React.FC<SampleContributionPlotProps> = ({
 
       {/* Bar chart */}
       <div className="flex-1" style={{ minHeight: '400px' }}>
-        <PlotlyBarChart
+        <Plot
           data={[trace]}
           layout={layout}
           config={config}
+          style={{ width: '100%', height: '100%' }}
+          useResizeHandler={true}
         />
       </div>
     </div>
