@@ -53,7 +53,7 @@ export const FileSelector: React.FC<FileSelectorProps> = ({ onFileSelect, isLoad
 
         // Note: Due to Wails limitations, we can't directly handle dropped files
         // Show a message to use the browse button instead
-        alert('Please use the "Browse Files" button to select files. Drag and drop is not supported in the file dialog.');
+        alert('Please use the "Choose File" button to select files. Drag and drop is not supported in the file dialog.');
     }, []);
 
     return (
@@ -86,7 +86,7 @@ export const FileSelector: React.FC<FileSelectorProps> = ({ onFileSelect, isLoad
                                 disabled={isLoading}
                                 className="font-medium text-blue-600 dark:text-blue-400 hover:text-blue-500 dark:hover:text-blue-300"
                             >
-                                browse
+                                choose file
                             </button>
                         </span>
                     )}
@@ -96,14 +96,14 @@ export const FileSelector: React.FC<FileSelectorProps> = ({ onFileSelect, isLoad
                 </p>
             </div>
 
-            {/* Browse button */}
+            {/* Choose file button */}
             <div className="text-center">
                 <button
                     onClick={handleBrowse}
                     disabled={isLoading}
                     className="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
                 >
-                    {isLoading ? 'Loading...' : 'Browse Files'}
+                    {isLoading ? 'Loading...' : 'Choose File'}
                 </button>
             </div>
 
