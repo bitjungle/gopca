@@ -695,22 +695,13 @@ return;
                                             Swiss Roll
                                         </button>
                                     </HelpWrapper>
-                                    <HelpWrapper helpKey="sample-dataset-met">
-                                        <button
-                                            onClick={() => loadDataset('met.csv')}
-                                            className="w-full px-4 py-2 text-sm bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors"
-                                            disabled={loading}
-                                        >
-                                            MET
-                                        </button>
-                                    </HelpWrapper>
                                     <HelpWrapper helpKey="sample-dataset-stocks">
                                         <button
                                             onClick={() => loadDataset('stocks.csv')}
                                             className="w-full px-4 py-2 text-sm bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors"
                                             disabled={loading}
                                         >
-                                            STOCKS
+                                            Stocks
                                         </button>
                                     </HelpWrapper>
                                 </div>

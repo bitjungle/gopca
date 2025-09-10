@@ -27,9 +27,6 @@ var (
 	//go:embed swiss_roll.csv.gz
 	SwissRollCSVGZ []byte
 
-	//go:embed met.csv.gz
-	MetCSVGZ []byte
-
 	//go:embed stocks.csv.gz
 	StocksCSVGZ []byte
 )
@@ -48,8 +45,6 @@ func GetDataset(filename string) (string, bool) {
 		compressedData = WineCSVGZ
 	case "swiss_roll.csv":
 		compressedData = SwissRollCSVGZ
-	case "met.csv":
-		compressedData = MetCSVGZ
 	case "stocks.csv":
 		compressedData = StocksCSVGZ
 	default:
