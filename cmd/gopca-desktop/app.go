@@ -1056,8 +1056,8 @@ func (a *App) LoadIrisDataset() (*FileDataJSON, error) {
 	return a.ParseCSV(modifiedContent)
 }
 
-// SelectCSVFile opens a native file dialog for selecting CSV files
-func (a *App) SelectCSVFile() (string, string, error) {
+// SelectCSVFile opens a native file dialog for selecting CSV files and returns parsed data
+func (a *App) SelectCSVFile() (*FileDataJSON, error) {
 	dialogOptions := runtime.OpenDialogOptions{
 		Title: "Select CSV File",
 		Filters: []runtime.FileFilter{
@@ -1074,21 +1074,22 @@ func (a *App) SelectCSVFile() (string, string, error) {
 
 	filePath, err := runtime.OpenFileDialog(a.ctx, dialogOptions)
 	if err != nil {
-		return "", "", fmt.Errorf("failed to open file dialog: %w", err)
+		return nil, fmt.Errorf("failed to open file dialog: %w", err)
 	}
 
 	// User cancelled
 	if filePath == "" {
-		return "", "", nil
+		return nil, nil
 	}
 
 	// Read the file content
 	content, err := os.ReadFile(filePath)
 	if err != nil {
-		return "", "", fmt.Errorf("failed to read file: %w", err)
+		return nil, fmt.Errorf("failed to read file: %w", err)
 	}
 
-	return filePath, string(content), nil
+	// Parse the CSV content and return the result
+	return a.ParseCSV(string(content))
 }
 
 // LoadDatasetFile loads a CSV file from the embedded data
