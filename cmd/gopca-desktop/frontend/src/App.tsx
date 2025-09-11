@@ -6,7 +6,7 @@
 
 import React, { useState, useRef, useEffect, lazy, Suspense } from 'react';
 import './App.css';
-import { ParseCSV, RunPCA, LoadDatasetFile, GetVersion, GetGUIConfig, LoadCSVFile, CheckGoCSVStatus, OpenInGoCSV, LaunchGoCSV, DownloadGoCSV, SaveFile, SelectCSVFile } from '../wailsjs/go/main/App';
+import { RunPCA, LoadDatasetFile, GetVersion, GetGUIConfig, LoadCSVFile, CheckGoCSVStatus, OpenInGoCSV, LaunchGoCSV, DownloadGoCSV, SaveFile, SelectCSVFile } from '../wailsjs/go/main/App';
 import { Copy, Check } from 'lucide-react';
 import { EventsOn } from '../wailsjs/runtime/runtime';
 import { DataTable, SelectionTable, MatrixIllustration, HelpWrapper, DocumentationViewer, ModelOverview, AboutDialog } from './components';
@@ -263,38 +263,6 @@ function AppContent() {
             updateGammaForData(result);
         } catch (err) {
             setFileError(`Failed to load ${filename}: ${err}`);
-        } finally {
-            setLoading(false);
-        }
-    };
-
-    const _handleFileUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
-        const file = event.target.files?.[0];
-        if (!file) {
-return;
-}
-
-        setLoading(true);
-        setFileError(null);
-        setPcaError(null); // Clear any previous PCA errors
-        setFileName(file.name); // Store the file name
-
-        try {
-            const content = await file.text();
-            const result = await ParseCSV(content);
-            setFileData(result);
-            setPcaResponse(null);
-            // Reset exclusions and selections when loading new data
-            setExcludedRows([]);
-            setExcludedColumns([]);
-            setSelectedGroupColumn(null);
-            setMode('none'); // Reset palette mode
-            setDatasetId(prev => prev + 1); // Force DataTable re-render
-
-            // Calculate and set default gamma for kernel PCA
-            updateGammaForData(result);
-        } catch (err) {
-            setFileError(`Failed to parse CSV: ${err}`);
         } finally {
             setLoading(false);
         }
