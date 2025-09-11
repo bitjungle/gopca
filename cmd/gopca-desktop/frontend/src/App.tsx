@@ -1297,7 +1297,7 @@ return;
                                                     // Loadings plot not available for kernel PCA (different space) or temporal PCA (dimension mismatch)
                                                     ...(pcaResponse.result.method !== 'kernel' && pcaResponse.result.method !== 'temporal' ? [{ value: 'loadings', label: 'Loadings Plot' }] : []),
                                                     // Temporal loadings pattern - only for temporal PCA
-                                                    ...(pcaResponse.result.method === 'temporal' ? [{ value: 'temporal-loadings', label: 'Temporal Loadings Pattern' }] : []),
+                                                    ...(pcaResponse.result.method === 'temporal' ? [{ value: 'temporal-loadings', label: 'Temporal Loadings' }] : []),
                                                     // Biplot - available for standard PCA with preprocessing (not for kernel PCA or temporal PCA)
                                                     ...(pcaResponse.result.preprocessing_applied && pcaResponse.result.method !== 'kernel' && pcaResponse.result.method !== 'temporal' ? [{ value: 'biplot', label: 'Biplot' }] : []),
                                                     // 3D Biplot and Circle of Correlations - not available for kernel PCA or temporal PCA
