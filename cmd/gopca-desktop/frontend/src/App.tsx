@@ -306,19 +306,16 @@ return;
         setPcaError(null); // Clear any previous PCA errors
 
         try {
-            const result = await SelectCSVFile();
-            // Result is a tuple: [filePath, content, error]
-            if (!result || !result[0]) {
-                // User cancelled
+            const parseResult = await SelectCSVFile();
+            
+            // User cancelled
+            if (!parseResult) {
                 setLoading(false);
                 return;
             }
 
-            const [filePath, content] = result;
-            const fileName = filePath.split(/[\\/]/).pop() || 'unknown.csv';
-            setFileName(fileName);
-
-            const parseResult = await ParseCSV(content);
+            // Set a generic filename for display purposes
+            setFileName('Selected File');
             setFileData(parseResult);
             setPcaResponse(null);
             // Reset exclusions and selections when loading new data
