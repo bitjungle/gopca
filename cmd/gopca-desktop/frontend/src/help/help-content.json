@@ -230,6 +230,11 @@
       "text": "Shows how each component's loadings evolve across time lags for each variable. Reveals temporal patterns and dependencies captured by principal components.",
       "category": "visualization"
     },
+    "temporal-variable-importance": {
+      "title": "Variable Importance",
+      "text": "Displays aggregated variable contributions across all time lags for each temporal principal component. Uses RMS (Root Mean Square) aggregation to capture overall contribution strength. Helps identify which original variables drive temporal patterns in your data.",
+      "category": "visualization"
+    },
     "component-selector": {
       "title": "Component Selection",
       "text": "Choose which PCs to plot. PC1 usually most important. Try different combinations.",

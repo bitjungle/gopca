@@ -27,7 +27,9 @@ import type {
   EigencorrelationPlotData,
   EigencorrelationPlotConfig,
   TemporalLoadingsPlotData,
-  TemporalLoadingsPlotConfig
+  TemporalLoadingsPlotConfig,
+  TemporalVariableImportanceData,
+  TemporalVariableImportancePlotConfig
 } from '@gopca/ui-components';
 
 /**
@@ -578,5 +580,57 @@ export function createTemporalLoadingsPlotConfig(
     theme,
     colorScheme,
     fontScale
+  };
+}
+
+/**
+ * Transform temporal variable importance data to plot format
+ */
+export function transformToTemporalVariableImportancePlotData(
+  pcaResult: PCAResult
+): TemporalVariableImportanceData | null {
+  if (!pcaResult.temporal_variable_importance || pcaResult.temporal_variable_importance.length === 0) {
+    return null;
+  }
+
+  // Get variable names or generate default ones
+  const variableNames = pcaResult.variable_labels ||
+    Array.from({ length: pcaResult.temporal_variable_importance[0].length }, (_, i) => `Var${i + 1}`);
+
+  return {
+    importance: pcaResult.temporal_variable_importance,
+    variableNames,
+    explainedVariance: pcaResult.explained_variance_ratio
+  };
+}
+
+/**
+ * Create configuration for Temporal Variable Importance plot
+ */
+export function createTemporalVariableImportancePlotConfig(
+  maxComponents: number = 10,
+  theme?: 'light' | 'dark',
+  colorScheme?: string[],
+  fontScale?: number
+): TemporalVariableImportancePlotConfig {
+  // Convert color array to Plotly colorscale format
+  let colorScale: any = 'Blues'; // Default fallback
+  if (colorScheme && colorScheme.length > 0) {
+    // Create a Plotly colorscale from the palette colors
+    colorScale = colorScheme.map((color, index) => [
+      index / (colorScheme.length - 1),
+      color
+    ]);
+  }
+  
+  return {
+    maxComponents,
+    theme,
+    colorScheme,
+    fontScale,
+    showValues: true,
+    valueFormat: '.3f',
+    annotationThreshold: 0.01,
+    colorScale
   };
 }

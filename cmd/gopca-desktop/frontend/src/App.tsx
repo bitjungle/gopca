@@ -23,6 +23,7 @@ const CircleOfCorrelations = lazy(() => import('./components/visualizations/Circ
 const DiagnosticScatterPlot = lazy(() => import('./components/visualizations/DiagnosticScatterPlot').then(m => ({ default: m.DiagnosticScatterPlot })));
 const EigencorrelationPlot = lazy(() => import('./components/visualizations/EigencorrelationPlot').then(m => ({ default: m.EigencorrelationPlot })));
 const TemporalLoadingsPlot = lazy(() => import('./components/visualizations/TemporalLoadingsPlot').then(m => ({ default: m.TemporalLoadingsPlot })));
+const TemporalVariableImportancePlot = lazy(() => import('./components/visualizations/TemporalVariableImportancePlot').then(m => ({ default: m.TemporalVariableImportancePlot })));
 const KernelMatrixHeatmap = lazy(() => import('./components/visualizations/KernelMatrixHeatmap').then(m => ({ default: m.KernelMatrixHeatmap })));
 const SampleContributionPlot = lazy(() => import('./components/visualizations/SampleContributionPlot').then(m => ({ default: m.SampleContributionPlot })));
 import { FileData, PCARequest, PCAResponse } from './types';
@@ -52,7 +53,7 @@ function AppContent() {
     // Selection state
     const [excludedRows, setExcludedRows] = useState<number[]>([]);
     const [excludedColumns, setExcludedColumns] = useState<number[]>([]);
-    const [selectedPlot, setSelectedPlot] = useState<'scores' | 'scores3d' | 'scree' | 'loadings' | 'biplot' | 'biplot3d' | 'correlations' | 'diagnostics' | 'eigencorrelation' | 'temporal-loadings' | 'kernel-matrix' | 'sample-contributions'>('scores');
+    const [selectedPlot, setSelectedPlot] = useState<'scores' | 'scores3d' | 'scree' | 'loadings' | 'biplot' | 'biplot3d' | 'correlations' | 'diagnostics' | 'eigencorrelation' | 'temporal-loadings' | 'temporal-variable-importance' | 'kernel-matrix' | 'sample-contributions'>('scores');
     const [selectedXComponent, setSelectedXComponent] = useState(0);
     const [selectedYComponent, setSelectedYComponent] = useState(1);
     const [selectedZComponent, setSelectedZComponent] = useState(2);
@@ -1298,6 +1299,8 @@ return;
                                                     ...(pcaResponse.result.method !== 'kernel' && pcaResponse.result.method !== 'temporal' ? [{ value: 'loadings', label: 'Loadings Plot' }] : []),
                                                     // Temporal loadings pattern - only for temporal PCA
                                                     ...(pcaResponse.result.method === 'temporal' ? [{ value: 'temporal-loadings', label: 'Temporal Loadings' }] : []),
+                                                    // Variable importance plot - only for temporal PCA
+                                                    ...(pcaResponse.result.method === 'temporal' ? [{ value: 'temporal-variable-importance', label: 'Variable Importance' }] : []),
                                                     // Biplot - available for standard PCA with preprocessing (not for kernel PCA or temporal PCA)
                                                     ...(pcaResponse.result.preprocessing_applied && pcaResponse.result.method !== 'kernel' && pcaResponse.result.method !== 'temporal' ? [{ value: 'biplot', label: 'Biplot' }] : []),
                                                     // 3D Biplot and Circle of Correlations - not available for kernel PCA or temporal PCA
@@ -1687,6 +1690,11 @@ return;
                                             />
                                         ) : selectedPlot === 'temporal-loadings' ? (
                                             <TemporalLoadingsPlot
+                                                pcaResult={pcaResponse.result}
+                                                fontScale={plotFontScale}
+                                            />
+                                        ) : selectedPlot === 'temporal-variable-importance' ? (
+                                            <TemporalVariableImportancePlot
                                                 pcaResult={pcaResponse.result}
                                                 fontScale={plotFontScale}
                                             />

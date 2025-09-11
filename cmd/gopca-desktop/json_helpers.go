@@ -124,9 +124,10 @@ type PCAResultJSON struct {
 	T2Limit99            types.JSONFloat64           `json:"t2_limit_99,omitempty"`
 	QLimit95             types.JSONFloat64           `json:"q_limit_95,omitempty"`
 	QLimit99             types.JSONFloat64           `json:"q_limit_99,omitempty"`
-	Eigencorrelations    *EigencorrelationResultJSON `json:"eigencorrelations,omitempty"`
-	AllEigenvalues       []types.JSONFloat64         `json:"all_eigenvalues,omitempty"`
-	TemporalEigenvectors [][]types.JSONFloat64       `json:"temporal_eigenvectors,omitempty"`
+	Eigencorrelations          *EigencorrelationResultJSON `json:"eigencorrelations,omitempty"`
+	AllEigenvalues             []types.JSONFloat64         `json:"all_eigenvalues,omitempty"`
+	TemporalEigenvectors       [][]types.JSONFloat64       `json:"temporal_eigenvectors,omitempty"`
+	TemporalVariableImportance [][]types.JSONFloat64       `json:"temporal_variable_importance,omitempty"`
 	// Kernel PCA specific fields
 	KernelType         string                       `json:"kernel_type,omitempty"`
 	KernelParams       map[string]types.JSONFloat64 `json:"kernel_params,omitempty"`
@@ -289,6 +290,17 @@ func ConvertPCAResultToJSON(result *types.PCAResult) *PCAResultJSON {
 			jsonResult.TemporalEigenvectors[i] = make([]types.JSONFloat64, len(row))
 			for j, val := range row {
 				jsonResult.TemporalEigenvectors[i][j] = types.JSONFloat64(val)
+			}
+		}
+	}
+	
+	// Convert temporal variable importance if present (for temporal PCA)
+	if len(result.TemporalVariableImportance) > 0 {
+		jsonResult.TemporalVariableImportance = make([][]types.JSONFloat64, len(result.TemporalVariableImportance))
+		for i, row := range result.TemporalVariableImportance {
+			jsonResult.TemporalVariableImportance[i] = make([]types.JSONFloat64, len(row))
+			for j, val := range row {
+				jsonResult.TemporalVariableImportance[i][j] = types.JSONFloat64(val)
 			}
 		}
 	}
