@@ -225,6 +225,11 @@
       "text": "3D biplot combining scores and loadings. Interactive rotation reveals sample-variable relationships.",
       "category": "visualization"
     },
+    "temporal-loadings-plot": {
+      "title": "Temporal Loadings",
+      "text": "Shows how each component's loadings evolve across time lags for each variable. Reveals temporal patterns and dependencies captured by principal components.",
+      "category": "visualization"
+    },
     "component-selector": {
       "title": "Component Selection",
       "text": "Choose which PCs to plot. PC1 usually most important. Try different combinations.",
