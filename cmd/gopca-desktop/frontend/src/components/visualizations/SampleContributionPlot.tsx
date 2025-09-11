@@ -55,7 +55,7 @@ export const SampleContributionPlot: React.FC<SampleContributionPlotProps> = ({
     }
     const eigenvalue = pcaResult.explained_variance[currentComponent] || 1;
     const n = eigenvectors.length;
-    
+
     // Calculate absolute contributions (normalized by eigenvalue)
     const contribData = eigenvectors.map((row, i) => {
       const contribution = Math.abs(row[currentComponent] || 0) * Math.sqrt(eigenvalue);
@@ -93,7 +93,7 @@ export const SampleContributionPlot: React.FC<SampleContributionPlotProps> = ({
       size: 10 * fontScale,
       color: isDark ? '#9CA3AF' : '#4B5563'
     },
-    hovertemplate: 
+    hovertemplate:
       '<b>%{x}</b><br>' +
       'Contribution: %{y:.4f}<br>' +
       'Sign: %{customdata}<br>' +
@@ -175,8 +175,8 @@ export const SampleContributionPlot: React.FC<SampleContributionPlotProps> = ({
             value={currentComponent}
             onChange={(e) => setCurrentComponent(Number(e.target.value))}
             className={`ml-2 px-3 py-1 rounded border ${
-              isDark 
-                ? 'bg-gray-700 border-gray-600 text-gray-200' 
+              isDark
+                ? 'bg-gray-700 border-gray-600 text-gray-200'
                 : 'bg-white border-gray-300 text-gray-900'
             }`}
           >
@@ -187,7 +187,7 @@ export const SampleContributionPlot: React.FC<SampleContributionPlotProps> = ({
             ))}
           </select>
         </div>
-        
+
         <div className="mt-2 text-sm">
           <span className={isDark ? 'text-gray-400' : 'text-gray-600'}>
             Showing top {contributions.length} samples by absolute contribution

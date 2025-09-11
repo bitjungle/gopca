@@ -132,10 +132,10 @@ export function transformToScores3DPlotData(
   zComponent: number = 2
 ): Scores3DPlotData {
   // Ensure we always have groups - if none provided, create a single default group
-  const groups = groupLabels && groupLabels.length > 0 
-    ? groupLabels 
+  const groups = groupLabels && groupLabels.length > 0
+    ? groupLabels
     : Array(pcaResult.scores.length).fill('All samples');
-    
+
   return {
     scores: pcaResult.scores,
     sampleNames: rowNames,
@@ -622,7 +622,7 @@ export function createTemporalVariableImportancePlotConfig(
       color
     ]);
   }
-  
+
   return {
     maxComponents,
     theme,
