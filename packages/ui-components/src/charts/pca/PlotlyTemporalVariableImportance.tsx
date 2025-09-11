@@ -50,6 +50,7 @@ export class PlotlyTemporalVariableImportance {
       valueFormat: '.3f',
       annotationThreshold: 0.01,
       theme: 'light',
+      showWatermark: true,  // Enable watermark by default for consistency
       ...config
     };
   }
