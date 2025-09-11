@@ -100,11 +100,12 @@ export class Plotly3DScoresPlot {
         return `<b>${label}</b><br>Value: ${valueStr}<br>PC${pc1 + 1}: ${x.toFixed(2)}<br>PC${pc2 + 1}: ${scoresY[i].toFixed(2)}<br>PC${pc3 + 1}: ${scoresZ[i].toFixed(2)}`;
       });
 
-      // Prepare text labels if enabled
-      const textLabels = this.config.showLabels && sampleNames
-        ? sampleNames.slice(0, this.config.maxLabels || 10)
-        : [];
-      const showText = textLabels.length > 0;
+      // Prepare text labels if enabled (limit to maxLabels)
+      const maxLabels = this.config.maxLabels || 10;
+      const textLabels = this.config.showLabels && sampleNames && scoresX.length > 0
+        ? scoresX.map((_, i) => i < maxLabels ? (sampleNames[i] || '') : '')
+        : undefined;
+      const showText = !!textLabels;
 
       traces.push({
         type: 'scatter3d',
@@ -113,7 +114,7 @@ export class Plotly3DScoresPlot {
         x: scoresX,
         y: scoresY,
         z: scoresZ,
-        text: showText ? sampleNames : undefined,
+        text: textLabels,
         textposition: 'top center' as any,
         textfont: showText ? {
           size: Math.round(10 * (this.config.fontScale || 1.0)),
@@ -155,12 +156,12 @@ export class Plotly3DScoresPlot {
         });
 
         // Prepare text labels if enabled (limit per group)
-        const groupSampleNames = groupIndices.map(i => sampleNames?.[i] || `Sample ${i}`);
         const maxLabelsPerGroup = Math.ceil((this.config.maxLabels || 10) / uniqueGroups.length);
-        const textLabels = this.config.showLabels && sampleNames
-          ? groupSampleNames.slice(0, maxLabelsPerGroup)
-          : [];
-        const showText = textLabels.length > 0;
+        const groupSampleNames = groupIndices.map(i => sampleNames?.[i] || `Sample ${i}`);
+        const textLabels = this.config.showLabels && sampleNames && groupSampleNames.length > 0
+          ? groupSampleNames.map((name, idx) => idx < maxLabelsPerGroup ? name : '')
+          : undefined;
+        const showText = !!textLabels;
 
         traces.push({
           type: 'scatter3d',
@@ -169,7 +170,7 @@ export class Plotly3DScoresPlot {
           x: groupScores.map(s => s[pc1]),
           y: groupScores.map(s => s[pc2]),
           z: groupScores.map(s => s[pc3]),
-          text: showText ? groupSampleNames : undefined,
+          text: textLabels,
           textposition: 'top center' as any,
           textfont: showText ? {
             size: Math.round(10 * (this.config.fontScale || 1.0)),
