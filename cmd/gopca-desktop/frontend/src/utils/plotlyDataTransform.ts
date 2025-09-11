@@ -613,6 +613,16 @@ export function createTemporalVariableImportancePlotConfig(
   colorScheme?: string[],
   fontScale?: number
 ): TemporalVariableImportancePlotConfig {
+  // Convert color array to Plotly colorscale format
+  let colorScale: any = 'Blues'; // Default fallback
+  if (colorScheme && colorScheme.length > 0) {
+    // Create a Plotly colorscale from the palette colors
+    colorScale = colorScheme.map((color, index) => [
+      index / (colorScheme.length - 1),
+      color
+    ]);
+  }
+  
   return {
     maxComponents,
     theme,
@@ -621,6 +631,6 @@ export function createTemporalVariableImportancePlotConfig(
     showValues: true,
     valueFormat: '.3f',
     annotationThreshold: 0.01,
-    colorScale: 'Blues'
+    colorScale
   };
 }

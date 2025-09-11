@@ -9,7 +9,7 @@ import {
   createTemporalVariableImportancePlotConfig
 } from '../../utils/plotlyDataTransform';
 import { usePalette } from '../../contexts/PaletteContext';
-import { getQualitativePalette } from '../../utils/colorPalettes';
+import { getSequentialPalette } from '../../utils/colorPalettes';
 
 interface TemporalVariableImportancePlotProps {
   pcaResult: PCAResult;
@@ -23,10 +23,10 @@ export const TemporalVariableImportancePlot: React.FC<TemporalVariableImportance
   fontScale = 1.0
 }) => {
   const { theme } = useTheme();
-  const { qualitativePalette } = usePalette();
+  const { sequentialPalette } = usePalette();
 
-  // Get the color scheme from the current palette
-  const colorScheme = getQualitativePalette(qualitativePalette);
+  // Get the sequential palette colors
+  const paletteColors = getSequentialPalette(sequentialPalette);
 
   // Transform data to Plotly format
   const plotlyData = transformToTemporalVariableImportancePlotData(pcaResult);
@@ -44,7 +44,7 @@ export const TemporalVariableImportancePlot: React.FC<TemporalVariableImportance
   const plotlyConfig = createTemporalVariableImportancePlotConfig(
     maxComponents,
     theme,
-    colorScheme,
+    paletteColors,
     fontScale
   );
 

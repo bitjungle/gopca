@@ -9,7 +9,6 @@
 import React, { useMemo } from 'react';
 import { Data, Layout } from 'plotly.js';
 import { getExportMenuItems } from '../utils/plotlyExport';
-import { PLOT_CONFIG } from '../config/plotConfig';
 import { PlotlyWithFullscreen } from '../utils/plotlyFullscreen';
 import { getWatermarkDataUrlSync } from '../assets/watermark';
 import { PlotlyVisualizationConfig } from '../core/PlotlyVisualization';
@@ -192,13 +191,13 @@ export class PlotlyTemporalVariableImportance {
         automargin: true
       },
       annotations,
-      height: PLOT_CONFIG.export.presentation.height,
-      width: PLOT_CONFIG.export.presentation.width * 1.2,  // Wider for better readability
+      // Remove fixed width/height to allow responsive sizing
+      autosize: true,
       margin: {
         l: 120,
         r: 80,
         t: 80,
-        b: 120
+        b: 140  // Slightly more bottom margin for rotated labels
       },
       paper_bgcolor: isDarkMode ? '#1a1a1a' : 'white',
       plot_bgcolor: isDarkMode ? '#1a1a1a' : 'white',
