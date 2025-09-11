@@ -393,34 +393,67 @@ The lag parameter L is crucial and depends on your data's temporal structure:
 
 ### 10.5. Interpreting Results
 
-**Temporal Loadings:**
-The loadings matrix has dimensions [components × (variables × lags)], encoding rich temporal information:
-- **High loading at lag 0:** Variable's current value important
-- **High loading at specific lag:** Delayed influence at that offset
-- **Pattern across lags:** Reveals decay, oscillation, or other temporal structure
+**Understanding Temporal Structure Through Eigenvectors:**
 
-**Visualizing Temporal Patterns:**
-GoPCA Desktop provides a specialized **Temporal Loadings Pattern** visualization that reveals the temporal structure captured by each principal component. Unlike standard loadings plots that show individual variable contributions, this visualization displays how each component's loadings evolve across lags for each variable.
+In Temporal PCA, which is based on Singular Spectrum Analysis (SSA), the decomposition reveals not just variable relationships but temporal patterns. The loadings matrix has dimensions [components × (variables × lags)], but there's something even more insightful we can examine: the temporal eigenvectors.
 
-The plot shows:
-- **X-axis:** Lag index (0 to L-1), representing time offsets
-- **Y-axis:** Loading values, showing the contribution strength
-- **Lines:** Each principal component as a separate trace
-- **Subplots:** One for each original variable
+When we perform SVD on the lag matrix, we obtain what SSA researchers call the **U matrix** or **temporal Empirical Orthogonal Functions (EOFs)**. These are the fundamental temporal patterns that, when combined, can reconstruct your time series. Think of them as the "temporal building blocks" discovered in your data.
 
-**Reading the Patterns:**
-- **Oscillating loadings:** Indicate periodic or cyclical components (e.g., sine-wave patterns suggest seasonal cycles)
-- **Monotonic decay:** Suggests trend components with diminishing influence over time
-- **Sharp peaks at specific lags:** Reveal delayed dependencies or memory effects
-- **Noisy patterns:** Typically indicate components capturing random variation
+**The Temporal Loadings Pattern Visualization:**
 
-**Example Interpretation:**
-In financial data analysis, you might observe:
-- PC1 showing smooth decay across lags → capturing overall market trend
-- PC2 with 5-lag oscillation → weekly trading cycle (5 business days)
-- PC3 with sharp peak at lag 20 → monthly effects (20 trading days)
+GoPCA Desktop provides a specialized visualization that displays these temporal eigenvectors. While we call it "Temporal Loadings Pattern" for consistency with PCA terminology, it's actually showing you the columns of the U matrix from the SVD decomposition—the temporal EOFs that capture how patterns evolve across your chosen time window.
 
-This visualization is essential for understanding what temporal structure each component has captured, making Temporal PCA interpretable and actionable for time-series analysis.
+Here's what you're seeing in this plot:
+- **X-axis:** Lag index (0, 1, 2, ..., L-1), representing consecutive time steps in your window
+- **Y-axis:** Eigenvector values, showing the strength and direction of the pattern
+- **Each line:** One temporal eigenvector (EOF), representing a fundamental temporal pattern
+- **Legend:** Shows which principal component each line represents, along with its explained variance
+
+**Interpreting Temporal Patterns—A Practical Guide:**
+
+Reading these patterns takes a bit of practice, but once you understand what to look for, they become incredibly informative:
+
+1. **Smooth, Monotonic Curves** 
+   - What they show: Trends or slow-varying patterns
+   - Example: A gradually declining curve might indicate a cooling process or market downturn captured within your lag window
+   - Typically found in: PC1 or PC2 for trending data
+
+2. **Oscillating Patterns**
+   - What they show: Periodic or cyclical components
+   - Count the peaks: If you see n peaks across L lags, the period is approximately L/n time units
+   - Example: In daily data with L=30, six peaks suggest a 5-day cycle (perhaps a business week pattern)
+   - Look for pairs: Components with similar variance often come in sine/cosine pairs representing the same oscillation
+
+3. **Sharp Peaks or Valleys**
+   - What they show: Specific lag dependencies or memory effects
+   - Example: A spike at lag 7 in daily data might reveal weekly effects
+   - Useful for: Identifying delayed responses or feedback loops
+
+4. **Rapidly Varying, Noisy Patterns**
+   - What they show: High-frequency variations or noise
+   - Typically found in: Higher-numbered components
+   - Use these to assess: Where signal ends and noise begins
+
+**A Concrete Example—Understanding Manufacturing Cycles:**
+
+Imagine you're analyzing hourly temperature readings from an industrial process with L=24 (one day). Your temporal loadings might reveal:
+
+- **PC1:** A smooth U-shaped curve → The daily heating/cooling cycle of the facility
+- **PC2 & PC3:** Sine and cosine waves with 3 cycles → 8-hour shift patterns (24/3 = 8 hours)
+- **PC4:** Sharp peak at lag 12 → Lunch-break effect exactly 12 hours ago
+- **PC5+:** Increasingly erratic patterns → Random variations and measurement noise
+
+This tells you that your process is dominated by daily temperature cycles, with clear shift patterns and even a detectable lunch-break signature!
+
+**Why This Matters:**
+
+Unlike standard PCA loadings that show which variables are important, these temporal patterns show *how* your system evolves through time. They're particularly powerful for:
+- Detecting hidden periodicities you might not have suspected
+- Understanding system memory (how long past events influence the present)
+- Identifying the temporal scales at which your system operates
+- Separating signal from noise based on temporal structure rather than just variance
+
+Remember, these patterns are the actual basis functions extracted from your data. When multiplied by their corresponding scores and summed, they reconstruct your original time series—but now you understand the fundamental temporal modes that comprise it.
 
 **Reconstruction Error:**
 Unlike standard PCA, reconstruction error in Temporal PCA specifically indicates deviation from normal temporal patterns, making it powerful for anomaly detection and change point identification.
@@ -491,7 +524,7 @@ This approach is grounded in dynamical systems reconstruction theory:
 - **Golyandina et al. (2001):** Analysis of Time Series Structure: SSA and related techniques
 - **Ghil et al. (2002):** Advanced spectral methods for climatic time series
 
-The method is closely related to Singular Spectrum Analysis (SSA) and provides a bridge between time-series analysis and multivariate statistics.
+The method is closely related to Singular Spectrum Analysis (SSA) and provides a bridge between time-series analysis and multivariate statistics. In fact, what GoPCA implements as Temporal PCA is essentially SSA applied through the PCA framework, making it accessible to users familiar with standard PCA while providing the full power of SSA for time-series decomposition.
 
 ---
 
