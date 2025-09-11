@@ -6,7 +6,7 @@
 
 import React, { useState, useRef, useEffect, lazy, Suspense } from 'react';
 import './App.css';
-import { ParseCSV, RunPCA, LoadIrisDataset, LoadDatasetFile, GetVersion, CalculateEllipses, GetGUIConfig, LoadCSVFile, CheckGoCSVStatus, OpenInGoCSV, LaunchGoCSV, DownloadGoCSV, SaveFile } from '../wailsjs/go/main/App';
+import { ParseCSV, RunPCA, LoadIrisDataset, LoadDatasetFile, GetVersion, CalculateEllipses, GetGUIConfig, LoadCSVFile, CheckGoCSVStatus, OpenInGoCSV, LaunchGoCSV, DownloadGoCSV, SaveFile, SelectCSVFile } from '../wailsjs/go/main/App';
 import { Copy, Check } from 'lucide-react';
 import { EventsOn } from '../wailsjs/runtime/runtime';
 import { DataTable, SelectionTable, MatrixIllustration, HelpWrapper, DocumentationViewer, ModelOverview, AboutDialog } from './components';
@@ -295,6 +295,45 @@ return;
             updateGammaForData(result);
         } catch (err) {
             setFileError(`Failed to parse CSV: ${err}`);
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    const handleNativeFileSelect = async () => {
+        setLoading(true);
+        setFileError(null);
+        setPcaError(null); // Clear any previous PCA errors
+
+        try {
+            const result = await SelectCSVFile();
+            // Result is a tuple: [filePath, content, error]
+            if (!result || !result[0]) {
+                // User cancelled
+                setLoading(false);
+                return;
+            }
+
+            const [filePath, content] = result;
+            const fileName = filePath.split(/[\\/]/).pop() || 'unknown.csv';
+            setFileName(fileName);
+
+            const parseResult = await ParseCSV(content);
+            setFileData(parseResult);
+            setPcaResponse(null);
+            // Reset exclusions and selections when loading new data
+            setExcludedRows([]);
+            setExcludedColumns([]);
+            setSelectedGroupColumn(null);
+            setMode('none'); // Reset palette mode
+            setDatasetId(prev => prev + 1); // Force DataTable re-render
+
+            // Calculate and set default gamma for kernel PCA
+            updateGammaForData(parseResult);
+        } catch (err) {
+            console.error('File selection failed:', err);
+            setFileError(`Failed to load file: ${err}`);
+            setFileData(null);
         } finally {
             setLoading(false);
         }
@@ -612,18 +651,13 @@ return;
                                     Upload Your CSV File
                                 </label>
                                 <HelpWrapper helpKey="choose-file">
-                                    <input
-                                        type="file"
-                                        accept=".csv"
-                                        onChange={handleFileUpload}
-                                        className="block w-full text-sm text-gray-700 dark:text-gray-300
-                                            file:mr-4 file:py-2 file:px-4
-                                            file:rounded-full file:border-0
-                                            file:text-sm file:font-semibold
-                                            file:bg-blue-600 file:text-white
-                                            hover:file:bg-blue-700
-                                            file:transition-colors"
-                                    />
+                                    <button
+                                        onClick={handleNativeFileSelect}
+                                        disabled={loading}
+                                        className="w-full px-4 py-2 text-sm font-semibold text-white bg-blue-600 rounded-full hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                                    >
+                                        {loading ? 'Loading...' : 'Choose File'}
+                                    </button>
                                 </HelpWrapper>
                                 <p className="mt-2 text-xs text-gray-500 dark:text-gray-400">
                                     Accepts CSV files with headers

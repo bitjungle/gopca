@@ -359,7 +359,7 @@ return;
                                         disabled={isLoading}
                                         className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
                                     >
-                                        {isLoading ? 'Loading...' : 'Browse for File'}
+                                        {isLoading ? 'Loading...' : 'Choose File'}
                                     </button>
                                     <button
                                         onClick={() => setShowImportWizard(true)}
@@ -370,7 +370,7 @@ return;
                                     </button>
                                 </div>
                                 <div className="text-xs text-gray-500 dark:text-gray-400 space-y-1">
-                                    <p><span className="font-medium">Browse for File:</span> Quick file picker for standard CSV/TSV files with automatic format detection</p>
+                                    <p><span className="font-medium">Choose File:</span> Quick file picker for standard CSV/TSV files with automatic format detection</p>
                                     <p><span className="font-medium">Import with Wizard:</span> Advanced options for Excel sheets, custom delimiters, header rows, and column selection</p>
                                 </div>
                             </div>
