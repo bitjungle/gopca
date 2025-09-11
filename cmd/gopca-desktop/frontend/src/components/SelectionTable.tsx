@@ -186,8 +186,8 @@ export const SelectionTable: React.FC<SelectionTableProps> = ({
                     transform: `translateY(${virtualRow.start}px)`
                   }}
                   className={`flex items-center px-2 hover:bg-gray-50 dark:hover:bg-gray-700 ${
-                    highlightExternalSelections && externalSelectedRows?.includes(virtualRow.index) 
-                      ? 'bg-blue-50 dark:bg-blue-900/30' 
+                    highlightExternalSelections && externalSelectedRows?.includes(virtualRow.index)
+                      ? 'bg-blue-50 dark:bg-blue-900/30'
                       : ''
                   }`}
                 >
