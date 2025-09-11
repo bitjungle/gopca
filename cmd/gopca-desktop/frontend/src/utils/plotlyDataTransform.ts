@@ -154,17 +154,21 @@ export function createScores3DPlotConfig(
   _xComponent: number = 0,
   _yComponent: number = 1,
   _zComponent: number = 2,
-  _showRowLabels?: boolean,
-  _maxLabelsToShow?: number,
+  showRowLabels?: boolean,
+  maxLabelsToShow?: number,
   theme?: 'light' | 'dark',
-  colorScheme?: string[]
+  colorScheme?: string[],
+  fontScale?: number
 ): Scores3DPlotConfig {
   return {
     colorScheme,
     markerSize: 5,
     opacity: 0.8,
     showProjections: false,
-    theme
+    theme,
+    showLabels: showRowLabels || false,
+    maxLabels: maxLabelsToShow || 10,
+    fontScale
   };
 }
 
@@ -504,8 +508,10 @@ export function createBiplot3DConfig(options: {
   showScores?: boolean;
   showLoadings?: boolean;
   showLabels?: boolean;
+  maxLabels?: number;
   vectorScale?: number;
   maxVariables?: number;
+  fontScale?: number;
 }): Biplot3DConfig {
   const {
     theme,
@@ -513,14 +519,18 @@ export function createBiplot3DConfig(options: {
     showScores = true,
     showLoadings = true,
     showLabels = false,
+    maxLabels = 10,
     vectorScale = 1.0,
-    maxVariables = 50
+    maxVariables = 50,
+    fontScale
   } = options;
 
   return {
     scalingType: 'correlation',
     showScores,
     showLoadings,
+    showLabels,
+    maxLabels,
     maxVariables,
     vectorScale,
     colorScheme,
@@ -533,7 +543,8 @@ export function createBiplot3DConfig(options: {
       eye: { x: 1.5, y: 1.5, z: 1.5 },
       center: { x: 0, y: 0, z: 0 }
     },
-    theme
+    theme,
+    fontScale
   };
 }
 

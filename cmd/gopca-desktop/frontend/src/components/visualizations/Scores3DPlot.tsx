@@ -42,7 +42,8 @@ export const Scores3DPlot: React.FC<Scores3DPlotProps> = ({
   groupValues,
   groupType = 'categorical',
   showRowLabels = false,
-  maxLabelsToShow = 10
+  maxLabelsToShow = 10,
+  fontScale = 1.0
 }) => {
   const { theme } = useTheme();
   const { qualitativePalette, sequentialPalette, mode } = usePalette();
@@ -72,7 +73,8 @@ export const Scores3DPlot: React.FC<Scores3DPlotProps> = ({
     showRowLabels,
     maxLabelsToShow,
     theme,
-    colorScheme
+    colorScheme,
+    fontScale
   );
 
   return (

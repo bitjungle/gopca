@@ -32,6 +32,8 @@ export interface Biplot3DConfig {
   scalingType?: 'correlation' | 'symmetric' | 'pca';
   showScores?: boolean;
   showLoadings?: boolean;
+  showLabels?: boolean;  // Whether to show sample labels
+  maxLabels?: number;     // Maximum number of labels to display
   maxVariables?: number;  // Maximum number of loading vectors to display
   vectorScale?: number;  // Manual scaling adjustment
   colorScheme?: string[];
@@ -194,13 +196,25 @@ export class Plotly3DBiplot {
           return `<b>${label}</b><br>Value: ${valueStr}<br>PC${pc1 + 1}: ${x.toFixed(2)}<br>PC${pc2 + 1}: ${scoresY[i].toFixed(2)}<br>PC${pc3 + 1}: ${scoresZ[i].toFixed(2)}`;
         });
 
+        // Prepare text labels if enabled
+        const textLabels = this.config.showLabels && sampleNames
+          ? sampleNames.slice(0, this.config.maxLabels || 10)
+          : [];
+        const showText = textLabels.length > 0;
+
         traces.push({
           type: 'scatter3d',
-          mode: 'markers',
+          mode: (showText ? 'markers+text' : 'markers') as any,
           x: scoresX,
           y: scoresY,
           z: scoresZ,
           name: 'Scores',
+          text: showText ? sampleNames : undefined,
+          textposition: 'top center' as any,
+          textfont: showText ? {
+            size: Math.round(10 * (this.config.fontScale || 1.0)),
+            color: 'currentColor'
+          } : undefined,
           hovertext: hovertext,
           hovertemplate: '%{hovertext}<extra></extra>',
           marker: {
@@ -236,13 +250,27 @@ export class Plotly3DBiplot {
             return `<b>${label}</b><br>Group: ${group}<br>PC${pc1 + 1}: ${scoresX[i].toFixed(2)}<br>PC${pc2 + 1}: ${scoresY[i].toFixed(2)}<br>PC${pc3 + 1}: ${scoresZ[i].toFixed(2)}`;
           });
 
+          // Prepare text labels if enabled (limit per group)
+          const groupSampleNames = indices.map(i => sampleNames?.[i] || `Sample ${i}`);
+          const maxLabelsPerGroup = Math.ceil((this.config.maxLabels || 10) / uniqueGroups.length);
+          const textLabels = this.config.showLabels && sampleNames
+            ? groupSampleNames.slice(0, maxLabelsPerGroup)
+            : [];
+          const showText = textLabels.length > 0;
+
           traces.push({
             type: 'scatter3d',
-            mode: 'markers',
+            mode: (showText ? 'markers+text' : 'markers') as any,
             name: group,
             x: groupX,
             y: groupY,
             z: groupZ,
+            text: showText ? groupSampleNames : undefined,
+            textposition: 'top center' as any,
+            textfont: showText ? {
+              size: Math.round(10 * (this.config.fontScale || 1.0)),
+              color: 'currentColor'
+            } : undefined,
             hovertext: hovertext,
             hovertemplate: '%{hovertext}<extra></extra>',
             marker: {
@@ -259,13 +287,25 @@ export class Plotly3DBiplot {
           return `<b>${label}</b><br>PC${pc1 + 1}: ${x.toFixed(2)}<br>PC${pc2 + 1}: ${scoresY[i].toFixed(2)}<br>PC${pc3 + 1}: ${scoresZ[i].toFixed(2)}`;
         });
 
+        // Prepare text labels if enabled
+        const textLabels = this.config.showLabels && sampleNames
+          ? sampleNames.slice(0, this.config.maxLabels || 10)
+          : [];
+        const showText = textLabels.length > 0;
+
         traces.push({
           type: 'scatter3d',
-          mode: 'markers',
+          mode: (showText ? 'markers+text' : 'markers') as any,
           x: scoresX,
           y: scoresY,
           z: scoresZ,
           name: 'Scores',
+          text: showText ? sampleNames : undefined,
+          textposition: 'top center' as any,
+          textfont: showText ? {
+            size: Math.round(10 * (this.config.fontScale || 1.0)),
+            color: 'currentColor'
+          } : undefined,
           hovertext: hovertext,
           hovertemplate: '%{hovertext}<extra></extra>',
           marker: {
