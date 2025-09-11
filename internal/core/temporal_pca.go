@@ -337,21 +337,34 @@ func (t *TemporalPCAImpl) Fit(data types.Matrix, config types.PCAConfig) (*types
 		// Generate component labels for single component
 		componentLabels := []string{"PC1"}
 
+		// For single sample, compute trivial variable importance
+		variableImportance := make([][]float64, 1)
+		variableImportance[0] = make([]float64, t.origVars)
+		for var_ := 0; var_ < t.origVars; var_++ {
+			sumSquared := 0.0
+			for lag := 0; lag < t.numLags; lag++ {
+				loading, _ := t.GetLoadingForLag(var_, lag, 0)
+				sumSquared += loading * loading
+			}
+			variableImportance[0][var_] = math.Sqrt(sumSquared / float64(t.numLags))
+		}
+
 		return &types.PCAResult{
-			Scores:               utils.MatrixToSlice(scores),
-			Loadings:             utils.MatrixToSlice(t.loadings),
-			ExplainedVar:         t.explainedVar,
-			ExplainedVarRatio:    []float64{100.0}, // Single component explains 100%
-			CumulativeVar:        []float64{100.0}, // Cumulative should also be 100%
-			ComponentLabels:      componentLabels,
-			SingularValues:       t.singularVals,
-			Method:               "temporal",
-			Means:                nil, // Not applicable for temporal PCA with SSA approach
-			StdDevs:              nil, // Not applicable for temporal PCA with SSA approach
-			ComponentsComputed:   1,
-			Config:               config,
-			PreprocessingApplied: config.MeanCenter || config.StandardScale || config.RobustScale || config.ScaleOnly,
-			TemporalEigenvectors: utils.MatrixToSlice(temporalEigenvectors), // Add trivial U matrix for single sample case
+			Scores:                     utils.MatrixToSlice(scores),
+			Loadings:                   utils.MatrixToSlice(t.loadings),
+			ExplainedVar:               t.explainedVar,
+			ExplainedVarRatio:          []float64{100.0}, // Single component explains 100%
+			CumulativeVar:              []float64{100.0}, // Cumulative should also be 100%
+			ComponentLabels:            componentLabels,
+			SingularValues:             t.singularVals,
+			Method:                     "temporal",
+			Means:                      nil, // Not applicable for temporal PCA with SSA approach
+			StdDevs:                    nil, // Not applicable for temporal PCA with SSA approach
+			ComponentsComputed:         1,
+			Config:                     config,
+			PreprocessingApplied:       config.MeanCenter || config.StandardScale || config.RobustScale || config.ScaleOnly,
+			TemporalEigenvectors:       utils.MatrixToSlice(temporalEigenvectors), // Add trivial U matrix for single sample case
+			TemporalVariableImportance: types.Matrix(variableImportance),          // Add variable importance for single sample case
 		}, nil
 	}
 
@@ -461,23 +474,32 @@ func (t *TemporalPCAImpl) Fit(data types.Matrix, config types.PCAConfig) (*types
 		componentLabels[i] = fmt.Sprintf("PC%d", i+1)
 	}
 
+	// Compute variable importance (aggregated loadings across lags)
+	variableImportance, err := t.ComputeVariableImportance()
+	if err != nil {
+		// Log but don't fail - variable importance is optional
+		fmt.Printf("Warning: failed to compute variable importance: %v\n", err)
+		variableImportance = nil
+	}
+
 	// Prepare result
 	result := &types.PCAResult{
-		Scores:               utils.MatrixToSlice(scores),
-		Loadings:             utils.MatrixToSlice(t.loadings),
-		ExplainedVar:         t.explainedVar[:t.nComponents],
-		ExplainedVarRatio:    explainedVarRatio,
-		CumulativeVar:        cumulativeVar,
-		ComponentLabels:      componentLabels,
-		SingularValues:       t.singularVals,
-		Means:                nil, // Not applicable for temporal PCA with SSA approach
-		StdDevs:              nil, // Not applicable for temporal PCA with SSA approach
-		Method:               "temporal",
-		ComponentsComputed:   t.nComponents,
-		Config:               config,
-		AllEigenvalues:       allEigenvalues, // Store all eigenvalues for diagnostic purposes
-		PreprocessingApplied: config.MeanCenter || config.StandardScale || config.RobustScale || config.ScaleOnly,
-		TemporalEigenvectors: utils.MatrixToSlice(temporalEigenvectors), // Add U matrix for temporal loadings visualization
+		Scores:                     utils.MatrixToSlice(scores),
+		Loadings:                   utils.MatrixToSlice(t.loadings),
+		ExplainedVar:               t.explainedVar[:t.nComponents],
+		ExplainedVarRatio:          explainedVarRatio,
+		CumulativeVar:              cumulativeVar,
+		ComponentLabels:            componentLabels,
+		SingularValues:             t.singularVals,
+		Means:                      nil, // Not applicable for temporal PCA with SSA approach
+		StdDevs:                    nil, // Not applicable for temporal PCA with SSA approach
+		Method:                     "temporal",
+		ComponentsComputed:         t.nComponents,
+		Config:                     config,
+		AllEigenvalues:             allEigenvalues, // Store all eigenvalues for diagnostic purposes
+		PreprocessingApplied:       config.MeanCenter || config.StandardScale || config.RobustScale || config.ScaleOnly,
+		TemporalEigenvectors:       utils.MatrixToSlice(temporalEigenvectors), // Add U matrix for temporal loadings visualization
+		TemporalVariableImportance: types.Matrix(variableImportance),          // Add variable importance for temporal PCA
 	}
 
 	return result, nil
@@ -637,6 +659,34 @@ func (t *TemporalPCAImpl) GetLagContributions() ([][]float64, error) {
 	}
 
 	return contributions, nil
+}
+
+// ComputeVariableImportance aggregates loadings across lags to show variable importance
+// Returns a matrix where rows are components and columns are original variables
+// Uses RMS (Root Mean Square) aggregation to capture overall contribution strength
+func (t *TemporalPCAImpl) ComputeVariableImportance() ([][]float64, error) {
+	if !t.fitted {
+		return nil, fmt.Errorf("model not fitted")
+	}
+
+	// Create importance matrix [components × variables]
+	importance := make([][]float64, t.nComponents)
+	for comp := 0; comp < t.nComponents; comp++ {
+		importance[comp] = make([]float64, t.origVars)
+
+		for var_ := 0; var_ < t.origVars; var_++ {
+			// Aggregate loadings across all lags using RMS
+			sumSquared := 0.0
+			for lag := 0; lag < t.numLags; lag++ {
+				loading, _ := t.GetLoadingForLag(var_, lag, comp)
+				sumSquared += loading * loading
+			}
+			// RMS aggregation
+			importance[comp][var_] = math.Sqrt(sumSquared / float64(t.numLags))
+		}
+	}
+
+	return importance, nil
 }
 
 // ComputeAutoCorrelation computes the autocorrelation function for lag selection guidance

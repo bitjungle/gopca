@@ -116,6 +116,7 @@ export {
   PCADiagnosticPlot,
   PCAEigencorrelationPlot,
   PCATemporalLoadingsPlot,
+  PCATemporalVariableImportancePlot,
   // Classes for advanced usage
   PlotlyScoresPlot,
   Plotly3DScoresPlot,
@@ -127,6 +128,7 @@ export {
   PlotlyDiagnosticPlot,
   PlotlyEigencorrelationPlot,
   PlotlyTemporalLoadings,
+  PlotlyTemporalVariableImportance,
   // Types
   type ScoresPlotData,
   type ScoresPlotConfig,
@@ -147,7 +149,9 @@ export {
   type EigencorrelationPlotData,
   type EigencorrelationPlotConfig,
   type TemporalLoadingsPlotData,
-  type TemporalLoadingsPlotConfig
+  type TemporalLoadingsPlotConfig,
+  type TemporalVariableImportanceData,
+  type TemporalVariableImportancePlotConfig
 } from './charts/pca';
 
 // Plotly Export Utils

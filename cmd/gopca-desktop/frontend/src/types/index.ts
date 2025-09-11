@@ -67,6 +67,7 @@ export interface PCAResult {
   q_limit_99?: number;
   eigencorrelations?: EigencorrelationResult;
   temporal_eigenvectors?: number[][];  // U matrix for temporal PCA (lags × components)
+  temporal_variable_importance?: number[][];  // Variable importance for temporal PCA (components × variables)
   // Kernel PCA specific fields
   kernel_type?: string;
   kernel_params?: { [key: string]: number };
