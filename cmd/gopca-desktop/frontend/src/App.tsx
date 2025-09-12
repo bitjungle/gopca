@@ -55,8 +55,8 @@ const PLOT_PALETTE_CONFIG: Record<string, PlotPaletteConfig> = {
     'eigencorrelation': { hasPalette: true, paletteType: 'continuous' },
     'temporal-loadings': { hasPalette: true, paletteType: 'categorical' },
     'temporal-variable-importance': { hasPalette: true, paletteType: 'continuous' },
-    'kernel-matrix': { hasPalette: true, paletteType: 'continuous' },
-    'sample-contributions': { hasPalette: true, paletteType: 'continuous' }
+    'kernel-matrix': { hasPalette: false, paletteType: 'continuous' }, // Uses fixed colorscale
+    'sample-contributions': { hasPalette: true, paletteType: 'categorical' } // Actually uses categorical
 };
 
 function AppContent() {
