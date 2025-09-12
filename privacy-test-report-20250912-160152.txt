@@ -1,0 +1,11 @@
+GoPCA Privacy Test Report
+Generated: Fri Sep 12 16:01:52 CEST 2025
+
+Tests performed:
+  - Binary symbol analysis
+  - String content analysis
+  - Network isolation testing
+  - DNS query monitoring
+  - Port listening checks
+
+Results: See console output above
