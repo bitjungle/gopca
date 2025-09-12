@@ -125,22 +125,20 @@ export class PlotlyCircleOfCorrelations {
       });
     }
 
-    // Add correlation vectors - use palette colors
+    // Add correlation vectors - assign each variable a color from the palette
     filteredNames.forEach((name, i) => {
       let color: string;
-      if (this.config.colorByMagnitude && this.config.colorScheme && this.config.colorScheme.length > 0) {
-        // Use palette colors for gradient based on magnitude
-        const paletteIndex = Math.min(
-          Math.floor(magnitudes[i] * this.config.colorScheme.length),
-          this.config.colorScheme.length - 1
-        );
+      if (this.config.colorScheme && this.config.colorScheme.length > 0) {
+        // Assign each variable its own color from the palette
+        // Use modulo to cycle through palette if more variables than colors
+        const paletteIndex = i % this.config.colorScheme.length;
         color = this.config.colorScheme[paletteIndex];
       } else if (this.config.colorByMagnitude) {
-        // Fallback to HSL gradient if no palette
+        // Fallback to HSL gradient based on magnitude if no palette
         color = `hsl(${240 - magnitudes[i] * 240}, 70%, 50%)`;  // Blue to red gradient
       } else {
-        // Use fixed color from palette
-        color = (this.config.colorScheme?.[1] || '#ef4444');  // Use index 1 like Biplot
+        // Default fallback color
+        color = '#ef4444';
       }
 
       // Vector line

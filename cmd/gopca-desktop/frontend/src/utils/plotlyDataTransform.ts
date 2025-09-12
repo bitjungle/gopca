@@ -353,7 +353,7 @@ export function createCircleOfCorrelationsConfig(
     showGrid: true,
     showLabels: true,
     minVectorLength: 0.1,
-    colorByMagnitude: true,
+    colorByMagnitude: false,  // Use palette colors for each variable
     ...createBaseVisualizationConfig(theme, colorScheme, fontScale)
   };
 }
