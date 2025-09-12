@@ -3227,3 +3227,100 @@ This seminal paper introduces **Kernel Principal Component Analysis (Kernel PCA 
 * While projection is readily available, reconstructing input space representations remains a challenge—a topic addressed in subsequent research.
 
 ---
+
+# Multivariate data analysis as a discriminating method of the origin of wines
+
+**APA7 reference:** Forina, M., Armanino, C., Castino, M., & Ubigli, M. (1986). Multivariate data analysis as a discriminating method of the origin of wines. VITIS - Journal of Grapevine Research, 25(3), 189–189. https://doi.org/10.5073/vitis.1986.25.189-201
+
+**Filename:** `Forina et al. - 1986 - Multivariate data analysis as a discriminating method of the origin of wines.pdf`
+
+## **1. Purpose and Motivation**
+
+* The paper investigates whether **multivariate data analysis (MDA)** can objectively distinguish wines from Piedmont (Italy) according to their **grape variety origin**.
+* Motivation: wine origin certification (e.g., *V.Q.P.R.D.*) requires reliable tools to ensure authenticity. Traditional **sensory analysis** is useful but subjective; chemical/physicochemical analyses are objective but may not be sufficient if used in isolation.
+
+---
+
+## **2. Data and Variables**
+
+* **178 wine samples** analyzed, belonging to three varieties:
+
+  * Barolo (59 samples),
+  * Grignolino (71 samples),
+  * Barbera (48 samples).
+* Each sample described by **28 chemical/physico-chemical variables** (Table 1 in paper), including:
+
+  * Alcohol, extract, acidity, pH, ash content, mineral ions (K, Ca, Mg, phosphate, chloride, sulfate),
+  * Phenolic compounds (total phenols, flavanoids, nonflavanoid phenols, proanthocyanins),
+  * Color indices (intensity, hue, absorbance ratios),
+  * Nitrogen compounds (total nitrogen, proline),
+  * Glycerol, 2,3-butanediol, methanol, etc.
+
+---
+
+## **3. Feature Selection**
+
+* **Fisher weights** (ratio of interclass to intraclass variance) were calculated.
+* **8 key variables** selected for classification due to highest discriminant power:
+
+  * Alcohol, total phenols, flavanoids, color intensity, hue, OD$_{280}/$OD$_{315}$ ratios, and proline.
+* Sulfates discarded (possible contamination from winemaking equipment).
+* Stepwise Bayesian feature selection confirmed robustness of these variables.
+
+---
+
+## **4. Correlation Analysis**
+
+* Strong correlations observed (e.g., phenols vs. flavanoids, OD ratios vs. color intensity).
+* Indicated that the **true dimensionality is lower than 28 variables**.
+* Each wine category had unique correlation patterns, e.g., Barolo showed specific flavanoid–color correlations absent in others.
+
+---
+
+## **5. Principal Component Analysis (PCA)**
+
+* Autoscaled data analyzed.
+* First two principal components explained \~80% of variance.
+* **Score plots**: good separation of three wine classes.
+* **Loading plots**: chromatic variables contributed to Barbera/Grignolino separation, chemical variables contributed to Barolo/Grignolino separation.
+
+---
+
+## **6. Linear Discriminant Analysis (LDA)**
+
+* Despite simplified assumptions (equal covariance matrices), LDA achieved excellent discrimination.
+* Plots in canonical variable space showed clear separation, with only a few misclassifications.
+* Cross-validation with training/test splits: recognition and predictive ability \~97–98%.
+
+---
+
+## **7. Modelling Approaches**
+
+* Beyond classification, **modeling methods** (Bayesian analysis and SIMCA – Soft Independent Modeling of Class Analogy) were used to:
+
+  * Identify **outliers** (non-typical wines within each variety).
+  * Build class-specific “boxes” or hyperellipsoids in feature space.
+  * Allow flexible definition of class boundaries (95% vs. 98% confidence).
+* Bayesian method: class models as centroids with ellipsoidal confidence regions.
+* SIMCA: class models based on principal components; classification based on projection distances.
+* Both methods highlighted outliers (16 in Bayesian, 9 in SIMCA after second cycle).
+
+---
+
+## **8. Results**
+
+* **Classification success rate**: \~98% correct overall.
+* Only a handful of samples consistently misclassified (some Barolo and Grignolino).
+* Modeling methods confirmed high discriminant ability, while also **flagging atypical wines** that standard classifiers force into categories.
+
+---
+
+## **9. Conclusions**
+
+1. **Few chemical variables** (especially phenolics and chromatic indices) are sufficient for strong discrimination of Piedmontese wines by grape variety.
+2. Multivariate methods (PCA, LDA, Bayesian, SIMCA) provided **objective, quantitative tools** that complement sensory analysis.
+3. The approach is robust for **wine authentication and classification**, supporting certification systems like *V.Q.P.R.D.*.
+4. Future improvements could integrate **sensorial variables** for even more comprehensive classification.
+
+---
+
