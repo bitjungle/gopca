@@ -631,6 +631,7 @@ export function createTemporalVariableImportancePlotConfig(
     showValues: true,
     valueFormat: '.3f',
     annotationThreshold: 0.01,
-    colorScale
+    colorScale,
+    showWatermark: true  // Enable watermark for consistency with other plots
   };
 }

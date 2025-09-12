@@ -12,6 +12,7 @@ import { getExportMenuItems } from '../utils/plotlyExport';
 import { PlotlyWithFullscreen } from '../utils/plotlyFullscreen';
 import { getWatermarkDataUrlSync } from '../assets/watermark';
 import { PlotlyVisualizationConfig } from '../core/PlotlyVisualization';
+import { PLOT_CONFIG } from '../config/plotConfig';
 
 export interface TemporalVariableImportanceData {
   importance: number[][];  // [n_components][n_variables]
@@ -50,6 +51,7 @@ export class PlotlyTemporalVariableImportance {
       valueFormat: '.3f',
       annotationThreshold: 0.01,
       theme: 'light',
+      showWatermark: true,  // Enable watermark by default for consistency
       ...config
     };
   }
@@ -206,22 +208,23 @@ export class PlotlyTemporalVariableImportance {
       }
     };
 
-    // Add watermark
-    if (this.config.showWatermark) {
+    // Add watermark using consistent config
+    if (this.config.showWatermark && PLOT_CONFIG.watermark.enabled) {
       const watermarkDataUrl = getWatermarkDataUrlSync();
       if (watermarkDataUrl) {
         layout.images = [{
           source: watermarkDataUrl,
-          xref: 'paper',
-          yref: 'paper',
-          x: 0.5,
-          y: 0.5,
-          sizex: 0.3,
-          sizey: 0.3,
-          xanchor: 'center',
-          yanchor: 'middle',
-          opacity: 0.1,
-          layer: 'below'
+          xref: PLOT_CONFIG.watermark.position.xref,
+          yref: PLOT_CONFIG.watermark.position.yref,
+          x: PLOT_CONFIG.watermark.position.x,
+          y: PLOT_CONFIG.watermark.position.y,
+          sizex: PLOT_CONFIG.watermark.size.width / 400,  // Normalize to plot units
+          sizey: PLOT_CONFIG.watermark.size.height / 400, // Normalize to plot units
+          xanchor: PLOT_CONFIG.watermark.position.xanchor,
+          yanchor: PLOT_CONFIG.watermark.position.yanchor,
+          sizing: 'contain',
+          opacity: PLOT_CONFIG.watermark.opacity,
+          layer: 'above'  // Changed from 'below' to match working implementations
         }];
       }
     }
