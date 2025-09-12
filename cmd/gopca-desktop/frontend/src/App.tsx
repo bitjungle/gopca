@@ -37,6 +37,28 @@ import { config } from '../wailsjs/go/models';
 import logo from './assets/images/GoPCA-logo-1024-transp.png';
 import { generateCLICommand as generateCLICommandUtil } from './utils/cliCommandGenerator';
 
+// Plot-specific palette configuration
+type PlotPaletteConfig = {
+    hasPalette: boolean;
+    paletteType: 'categorical' | 'continuous' | 'dynamic'; // dynamic means depends on Color by selection
+};
+
+const PLOT_PALETTE_CONFIG: Record<string, PlotPaletteConfig> = {
+    'scores': { hasPalette: true, paletteType: 'dynamic' },
+    'scores3d': { hasPalette: true, paletteType: 'dynamic' },
+    'scree': { hasPalette: true, paletteType: 'categorical' },
+    'loadings': { hasPalette: true, paletteType: 'categorical' },
+    'biplot': { hasPalette: true, paletteType: 'dynamic' },
+    'biplot3d': { hasPalette: true, paletteType: 'dynamic' },
+    'correlations': { hasPalette: true, paletteType: 'categorical' },
+    'diagnostics': { hasPalette: true, paletteType: 'dynamic' },
+    'eigencorrelation': { hasPalette: true, paletteType: 'continuous' },
+    'temporal-loadings': { hasPalette: true, paletteType: 'categorical' },
+    'temporal-variable-importance': { hasPalette: true, paletteType: 'continuous' },
+    'kernel-matrix': { hasPalette: false, paletteType: 'continuous' }, // Uses fixed colorscale
+    'sample-contributions': { hasPalette: true, paletteType: 'categorical' } // Actually uses categorical
+};
+
 function AppContent() {
     const { currentHelp, currentHelpKey } = useHelp();
     const { setMode } = usePalette();
@@ -183,6 +205,37 @@ function AppContent() {
             }
         }
     }, [pcaResponse, selectedPlot]);
+
+    // Update palette mode based on selected plot type
+    useEffect(() => {
+        // Only update palette mode if we have a PCA result
+        if (!pcaResponse || !pcaResponse.result) {
+            return;
+        }
+
+        const plotConfig = PLOT_PALETTE_CONFIG[selectedPlot];
+        if (!plotConfig || !plotConfig.hasPalette) {
+            setMode('none');
+            return;
+        }
+
+        // For plots with fixed palette types, set the mode immediately
+        if (plotConfig.paletteType === 'categorical') {
+            setMode('categorical');
+        } else if (plotConfig.paletteType === 'continuous') {
+            setMode('continuous');
+        } else if (plotConfig.paletteType === 'dynamic') {
+            // For dynamic plots, the mode is controlled by the Color by selection
+            // Don't change the mode here to avoid conflicts with the Color by control
+            // If no group column is selected and plot needs a palette, set a default
+            if (!selectedGroupColumn) {
+                // For dynamic plots without a selection, we still want to show the palette control
+                // Set to categorical as a reasonable default that works for most plots
+                setMode('categorical');
+            }
+            // Otherwise, let the Color by control handle the mode
+        }
+    }, [selectedPlot, pcaResponse, setMode, selectedGroupColumn]);
 
     // Helper function to get column data and type
     const getColumnData = (columnName: string | null): { values?: string[] | number[], type?: 'categorical' | 'continuous' } => {
@@ -1256,7 +1309,7 @@ return;
                                         <HelpWrapper helpKey={`${selectedPlot}-plot`}>
                                             <CustomSelect
                                                 value={selectedPlot}
-                                                onChange={(value) => setSelectedPlot(value as 'scores' | 'scores3d' | 'scree' | 'loadings' | 'biplot' | 'biplot3d' | 'correlations' | 'diagnostics' | 'eigencorrelation' | 'temporal-loadings' | 'kernel-matrix' | 'sample-contributions')}
+                                                onChange={(value) => setSelectedPlot(value as 'scores' | 'scores3d' | 'scree' | 'loadings' | 'biplot' | 'biplot3d' | 'correlations' | 'diagnostics' | 'eigencorrelation' | 'temporal-loadings' | 'temporal-variable-importance' | 'kernel-matrix' | 'sample-contributions')}
                                                 options={[
                                                     { value: 'scores', label: 'Scores Plot' },
                                                     { value: 'scores3d', label: '3D Scores Plot' },
