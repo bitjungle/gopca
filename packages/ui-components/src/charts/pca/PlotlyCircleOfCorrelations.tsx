@@ -125,15 +125,7 @@ export class PlotlyCircleOfCorrelations {
       });
     }
 
-    // Build arrays for consolidated traces
-    const vectorX: (number | null)[] = [];
-    const vectorY: (number | null)[] = [];
-    const dotX: number[] = [];
-    const dotY: number[] = [];
-    const dotColors: string[] = [];
-    const hoverTexts: string[] = [];
-
-    // Process each variable
+    // Add correlation vectors - assign each variable a color from the palette
     filteredNames.forEach((name, i) => {
       let color: string;
       if (this.config.colorScheme && this.config.colorScheme.length > 0) {
@@ -149,60 +141,38 @@ export class PlotlyCircleOfCorrelations {
         color = '#ef4444';
       }
 
-      // Add vector line coordinates with null separator
-      vectorX.push(0, correlationsX[i], null);
-      vectorY.push(0, correlationsY[i], null);
-
-      // Add dot coordinates and colors
-      dotX.push(correlationsX[i]);
-      dotY.push(correlationsY[i]);
-      dotColors.push(color);
-      
-      // Hover text for dots
-      hoverTexts.push(
-        `<b>${name}</b><br>` +
-        `PC${(this.config.pcX || 1)}: ${correlationsX[i].toFixed(3)}<br>` +
-        `PC${(this.config.pcY || 2)}: ${correlationsY[i].toFixed(3)}<br>` +
-        `Magnitude: ${magnitudes[i].toFixed(3)}`
-      );
-    });
-
-    // Add single trace for all vector lines
-    if (vectorX.length > 0) {
+      // Vector line
       traces.push({
         type: 'scatter',
         mode: 'lines',
-        x: vectorX,
-        y: vectorY,
+        x: [0, correlationsX[i]],
+        y: [0, correlationsY[i]],
         line: {
-          color: dotColors[0], // This won't vary per segment in this approach
+          color: color,
           width: this.config.arrowWidth || 2
+        },
+        showlegend: false,
+        hovertemplate: `<b>${name}</b><br>` +
+                       `PC${(this.config.pcX || 1)}: ${correlationsX[i].toFixed(3)}<br>` +
+                       `PC${(this.config.pcY || 2)}: ${correlationsY[i].toFixed(3)}<br>` +
+                       `Magnitude: ${magnitudes[i].toFixed(3)}<extra></extra>`
+      });
+
+      // Arrowhead marker
+      traces.push({
+        type: 'scatter',
+        mode: 'markers',
+        x: [correlationsX[i]],
+        y: [correlationsY[i]],
+        marker: {
+          symbol: 'circle',
+          size: getScaledMarkerSize(6, this.config.fontScale || 1.0),
+          color: color
         },
         showlegend: false,
         hoverinfo: 'skip'
       });
-    }
-
-    // Add single trace for all dots with individual colors
-    if (dotX.length > 0) {
-      traces.push({
-        type: 'scatter',
-        mode: 'markers',
-        x: dotX,
-        y: dotY,
-        marker: {
-          symbol: 'circle',
-          size: getScaledMarkerSize(6, this.config.fontScale || 1.0),
-          color: dotColors, // Array of colors - one per dot
-          line: {
-            width: 0
-          }
-        },
-        hovertemplate: '%{hovertext}<extra></extra>',
-        hovertext: hoverTexts,
-        showlegend: false
-      });
-    }
+    });
 
     // Add labels
     if (this.config.showLabels) {
