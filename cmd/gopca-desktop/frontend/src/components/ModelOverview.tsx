@@ -92,7 +92,7 @@ export const ModelOverview: React.FC<ModelOverviewProps> = ({ pcaResult, selecte
     const kernelParams = pcaResult.kernel_params || {};
     const nComponents = pcaResult.components_computed;
     const totalVariance = pcaResult.cumulative_variance?.[nComponents - 1] || 0;
-    
+
     // Get the first few eigenvalues for display
     const firstPC = pcaResult.explained_variance_ratio?.[0] || 0;
     const secondPC = pcaResult.explained_variance_ratio?.[1] || 0;
@@ -150,7 +150,7 @@ export const ModelOverview: React.FC<ModelOverviewProps> = ({ pcaResult, selecte
                 </div>
               </div>
             </HelpWrapper>
-            
+
             <HelpWrapper helpKey="kernel-components">
               <div className="flex justify-between items-start">
                 <span>Components:</span>
@@ -226,17 +226,19 @@ export const ModelOverview: React.FC<ModelOverviewProps> = ({ pcaResult, selecte
 
   // Format the recommendation subtitle
   const getRecommendationSubtitle = () => {
-    if (!metrics) return '';
-    
+    if (!metrics) {
+return '';
+}
+
     const varianceText = `${metrics.varianceCaptured.toFixed(1)}% variance`;
-    
+
     // If standardized and Kaiser is available and matches, show it
     if (standardScale && metrics.kaiserComponents > 0 && metrics.kaiserComponents === metrics.recommendedComponents) {
       return `${varianceText} (Kaiser agrees)`;
     } else if (standardScale && metrics.kaiserComponents > 0) {
       return `${varianceText} (Kaiser: ${metrics.kaiserComponents})`;
     }
-    
+
     return varianceText;
   };
 
@@ -260,7 +262,7 @@ export const ModelOverview: React.FC<ModelOverviewProps> = ({ pcaResult, selecte
               </div>
             </div>
           </HelpWrapper>
-          
+
           <HelpWrapper helpKey="recommended-components">
             <div className="flex justify-between items-start">
               <span>

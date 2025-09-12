@@ -6,7 +6,7 @@
 
 import React, { useState, useRef, useEffect, lazy, Suspense } from 'react';
 import './App.css';
-import { ParseCSV, RunPCA, LoadIrisDataset, LoadDatasetFile, GetVersion, CalculateEllipses, GetGUIConfig, LoadCSVFile, CheckGoCSVStatus, OpenInGoCSV, LaunchGoCSV, DownloadGoCSV, SaveFile, SelectCSVFile } from '../wailsjs/go/main/App';
+import { RunPCA, LoadDatasetFile, GetVersion, GetGUIConfig, LoadCSVFile, CheckGoCSVStatus, OpenInGoCSV, LaunchGoCSV, DownloadGoCSV, SaveFile, SelectCSVFile } from '../wailsjs/go/main/App';
 import { Copy, Check } from 'lucide-react';
 import { EventsOn } from '../wailsjs/runtime/runtime';
 import { DataTable, SelectionTable, MatrixIllustration, HelpWrapper, DocumentationViewer, ModelOverview, AboutDialog } from './components';
@@ -23,10 +23,11 @@ const CircleOfCorrelations = lazy(() => import('./components/visualizations/Circ
 const DiagnosticScatterPlot = lazy(() => import('./components/visualizations/DiagnosticScatterPlot').then(m => ({ default: m.DiagnosticScatterPlot })));
 const EigencorrelationPlot = lazy(() => import('./components/visualizations/EigencorrelationPlot').then(m => ({ default: m.EigencorrelationPlot })));
 const TemporalLoadingsPlot = lazy(() => import('./components/visualizations/TemporalLoadingsPlot').then(m => ({ default: m.TemporalLoadingsPlot })));
+const TemporalVariableImportancePlot = lazy(() => import('./components/visualizations/TemporalVariableImportancePlot').then(m => ({ default: m.TemporalVariableImportancePlot })));
 const KernelMatrixHeatmap = lazy(() => import('./components/visualizations/KernelMatrixHeatmap').then(m => ({ default: m.KernelMatrixHeatmap })));
 const SampleContributionPlot = lazy(() => import('./components/visualizations/SampleContributionPlot').then(m => ({ default: m.SampleContributionPlot })));
 import { FileData, PCARequest, PCAResponse } from './types';
-import { ThemeProvider, ThemeToggle, ConfirmDialog, CustomSelect, SelectOption, ErrorBoundary, ErrorAlert, ErrorMessageTemplates } from '@gopca/ui-components';
+import { ThemeProvider, ThemeToggle, ConfirmDialog, CustomSelect, ErrorBoundary, ErrorAlert } from '@gopca/ui-components';
 import { HelpProvider, useHelp } from './contexts/HelpContext';
 import { PaletteProvider, usePalette } from './contexts/PaletteContext';
 import { HelpDisplay } from './components/HelpDisplay';
@@ -34,7 +35,6 @@ import { PaletteSelector } from './components/PaletteSelector';
 import { FontSizeControl } from './components/FontSizeControl';
 import { config } from '../wailsjs/go/models';
 import logo from './assets/images/GoPCA-logo-1024-transp.png';
-import { optimizeToRanges } from './utils/rangeOptimizer';
 import { generateCLICommand as generateCLICommandUtil } from './utils/cliCommandGenerator';
 
 function AppContent() {
@@ -52,7 +52,7 @@ function AppContent() {
     // Selection state
     const [excludedRows, setExcludedRows] = useState<number[]>([]);
     const [excludedColumns, setExcludedColumns] = useState<number[]>([]);
-    const [selectedPlot, setSelectedPlot] = useState<'scores' | 'scores3d' | 'scree' | 'loadings' | 'biplot' | 'biplot3d' | 'correlations' | 'diagnostics' | 'eigencorrelation' | 'temporal-loadings' | 'kernel-matrix' | 'sample-contributions'>('scores');
+    const [selectedPlot, setSelectedPlot] = useState<'scores' | 'scores3d' | 'scree' | 'loadings' | 'biplot' | 'biplot3d' | 'correlations' | 'diagnostics' | 'eigencorrelation' | 'temporal-loadings' | 'temporal-variable-importance' | 'kernel-matrix' | 'sample-contributions'>('scores');
     const [selectedXComponent, setSelectedXComponent] = useState(0);
     const [selectedYComponent, setSelectedYComponent] = useState(1);
     const [selectedZComponent, setSelectedZComponent] = useState(2);
@@ -120,7 +120,7 @@ function AppContent() {
         // Make SaveFile available globally for Plotly integration
         if (typeof SaveFile !== 'undefined') {
             (window as any).SaveFile = SaveFile;
-            console.info('SaveFile made available globally');
+            // SaveFile made available globally for Plotly integration
         }
 
         // Setup Plotly-Wails integration for export functionality
@@ -195,7 +195,7 @@ function AppContent() {
             // Generate 1-based row indices for the current data
             // Use the actual number of samples in the PCA result if available
             const numSamples = pcaResponse?.result?.scores?.length || fileData.data.length;
-            const indices = Array.from({length: numSamples}, (_, i) => i + 1);
+            const indices = Array.from({ length: numSamples }, (_, i) => i + 1);
             return { values: indices, type: 'continuous' };
         }
 
@@ -268,38 +268,6 @@ function AppContent() {
         }
     };
 
-    const handleFileUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
-        const file = event.target.files?.[0];
-        if (!file) {
-return;
-}
-
-        setLoading(true);
-        setFileError(null);
-        setPcaError(null); // Clear any previous PCA errors
-        setFileName(file.name); // Store the file name
-
-        try {
-            const content = await file.text();
-            const result = await ParseCSV(content);
-            setFileData(result);
-            setPcaResponse(null);
-            // Reset exclusions and selections when loading new data
-            setExcludedRows([]);
-            setExcludedColumns([]);
-            setSelectedGroupColumn(null);
-            setMode('none'); // Reset palette mode
-            setDatasetId(prev => prev + 1); // Force DataTable re-render
-
-            // Calculate and set default gamma for kernel PCA
-            updateGammaForData(result);
-        } catch (err) {
-            setFileError(`Failed to parse CSV: ${err}`);
-        } finally {
-            setLoading(false);
-        }
-    };
-
     const handleNativeFileSelect = async () => {
         setLoading(true);
         setFileError(null);
@@ -307,7 +275,7 @@ return;
 
         try {
             const parseResult = await SelectCSVFile();
-            
+
             // User cancelled
             if (!parseResult) {
                 setLoading(false);
@@ -378,7 +346,7 @@ return;
         if (loading || !fileData || indices.length === 0) {
             return;
         }
-        
+
         // Toggle selected indices in excluded rows
         setExcludedRows(prev => {
             const newExcluded = new Set(prev);
@@ -475,40 +443,40 @@ return;
                 setSelectedYComponent(1);
                 // Clear any previous errors
                 setPcaError(null);
-                
+
                 // If we had excluded rows, update fileData to reflect the filtered dataset
                 if (excludedRows.length > 0) {
                     setPcaHasExclusions(true);  // Mark that this PCA was run with exclusions
                     const includedIndices = fileData.data
                         .map((_, i) => i)
                         .filter(i => !excludedRows.includes(i));
-                    
+
                     const filteredData = includedIndices.map(i => fileData.data[i]);
                     const filteredRowNames = includedIndices.map(i => fileData.rowNames[i]);
-                    
+
                     // Update categorical and numeric columns if they exist
                     const filteredCategorical: Record<string, string[]> = {};
                     const filteredNumeric: Record<string, number[]> = {};
-                    
+
                     if (fileData.categoricalColumns) {
                         Object.keys(fileData.categoricalColumns).forEach(col => {
-                            filteredCategorical[col] = includedIndices.map(i => 
+                            filteredCategorical[col] = includedIndices.map(i =>
                                 fileData.categoricalColumns![col][i]
                             );
                         });
                     }
-                    
+
                     if (fileData.numericTargetColumns) {
                         Object.keys(fileData.numericTargetColumns).forEach(col => {
-                            filteredNumeric[col] = includedIndices.map(i => 
+                            filteredNumeric[col] = includedIndices.map(i =>
                                 fileData.numericTargetColumns![col][i]
                             );
                         });
                     }
-                    
+
                     // Clear excluded rows before updating fileData
                     setExcludedRows([]);
-                    
+
                     // Then update fileData with filtered dataset
                     setFileData({
                         ...fileData,
@@ -841,10 +809,9 @@ return;
                                                         newConfig.scaleOnly = false;
                                                     }
                                                     // scaleOnly is valid, so we keep it as-is
-                                                }
-                                                // When switching FROM kernel PCA to other methods, restore default preprocessing
-                                                // This prevents the bug where SVD runs on uncentered data after using kernel PCA
-                                                else if (oldMethod === 'kernel' && newMethod !== 'kernel') {
+                                                } else if (oldMethod === 'kernel' && newMethod !== 'kernel') {
+                                                    // When switching FROM kernel PCA to other methods, restore default preprocessing
+                                                    // This prevents the bug where SVD runs on uncentered data after using kernel PCA
                                                     // Restore default preprocessing for standard PCA methods
                                                     // Mean centering is the default and most important for SVD/NIPALS
                                                     newConfig.meanCenter = true;
@@ -919,12 +886,12 @@ return;
                                     {config.method === 'kernel' && (
                                         <div className="p-4 bg-gray-50 dark:bg-gray-700/50 rounded-lg space-y-4">
                                             <h4 className="font-medium text-sm">Kernel PCA Options</h4>
-                                            
+
                                             {/* Memory warning for large datasets */}
                                             {fileData && fileData.data && fileData.data.length > 5000 && (
                                                 <div className="p-3 bg-yellow-100 dark:bg-yellow-900/50 border border-yellow-300 dark:border-yellow-700 rounded-lg">
                                                     <p className="text-sm text-yellow-800 dark:text-yellow-200">
-                                                        <strong>⚠️ Warning:</strong> Kernel PCA with {fileData.data.length.toLocaleString()} samples 
+                                                        <strong>⚠️ Warning:</strong> Kernel PCA with {fileData.data.length.toLocaleString()} samples
                                                         may require significant memory (~{Math.round(fileData.data.length * fileData.data.length * 24 / 1024 / 1024 / 1024 * 10) / 10} GB).
                                                         {fileData.data.length > 10000 && (
                                                             <span className="block mt-1 font-semibold">
@@ -934,7 +901,7 @@ return;
                                                     </p>
                                                 </div>
                                             )}
-                                            
+
                                             <div className="space-y-4">
                                                 <HelpWrapper helpKey="kernel-type">
                                                     <label className="block text-sm font-medium mb-1">
@@ -1010,7 +977,7 @@ return;
                                     {config.method === 'temporal' && (
                                         <div className="p-4 bg-purple-50 dark:bg-purple-900/20 rounded-lg space-y-4">
                                             <h4 className="font-medium text-sm text-purple-900 dark:text-purple-100">Temporal PCA Options</h4>
-                                            
+
                                             <div className="space-y-2 text-sm text-purple-800 dark:text-purple-200">
                                                 <p className="flex items-start">
                                                     <span className="mr-2">•</span>
@@ -1025,7 +992,7 @@ return;
                                                     <span>Based on SSA (Singular Spectrum Analysis) methodology</span>
                                                 </p>
                                             </div>
-                                            
+
                                             <div className="space-y-4">
                                                 <HelpWrapper helpKey="temporal-lags">
                                                     <label className="block text-sm font-medium mb-1">
@@ -1060,13 +1027,13 @@ return;
                                                 {fileData && fileData.data && config.temporalLags >= fileData.data.length && (
                                                     <div className="p-3 bg-yellow-100 dark:bg-yellow-900/50 border border-yellow-300 dark:border-yellow-700 rounded-lg">
                                                         <p className="text-sm text-yellow-800 dark:text-yellow-200">
-                                                            <strong>⚠️ Warning:</strong> Number of lags ({config.temporalLags}) should be less than the number of samples ({fileData.data.length}). 
+                                                            <strong>⚠️ Warning:</strong> Number of lags ({config.temporalLags}) should be less than the number of samples ({fileData.data.length}).
                                                             Recommended: {Math.floor(fileData.data.length / 4)} lags or less.
                                                         </p>
                                                     </div>
                                                 )}
                                             </div>
-                                            
+
                                             <p className="text-xs text-gray-500 dark:text-gray-400 mt-2">
                                                 Creates a lag matrix where each row contains L consecutive observations, enabling capture of temporal patterns.
                                             </p>
@@ -1272,7 +1239,7 @@ return;
                                 </HelpWrapper>
 
                                 {/* Model Overview */}
-                                <ModelOverview 
+                                <ModelOverview
                                     pcaResult={pcaResponse.result}
                                     selectedPC={selectedXComponent}
                                     standardScale={config.standardScale}
@@ -1298,6 +1265,8 @@ return;
                                                     ...(pcaResponse.result.method !== 'kernel' && pcaResponse.result.method !== 'temporal' ? [{ value: 'loadings', label: 'Loadings Plot' }] : []),
                                                     // Temporal loadings pattern - only for temporal PCA
                                                     ...(pcaResponse.result.method === 'temporal' ? [{ value: 'temporal-loadings', label: 'Temporal Loadings' }] : []),
+                                                    // Variable importance plot - only for temporal PCA
+                                                    ...(pcaResponse.result.method === 'temporal' ? [{ value: 'temporal-variable-importance', label: 'Variable Importance' }] : []),
                                                     // Biplot - available for standard PCA with preprocessing (not for kernel PCA or temporal PCA)
                                                     ...(pcaResponse.result.preprocessing_applied && pcaResponse.result.method !== 'kernel' && pcaResponse.result.method !== 'temporal' ? [{ value: 'biplot', label: 'Biplot' }] : []),
                                                     // 3D Biplot and Circle of Correlations - not available for kernel PCA or temporal PCA
@@ -1365,7 +1334,7 @@ return;
                                                             // Row Index - always available as a continuous option
                                                             { value: 'Row Index', label: '📊 Row Index', group: 'Continuous' },
                                                             // Categorical columns
-                                                            ...(fileData.categoricalColumns && Object.keys(fileData.categoricalColumns).length > 0 
+                                                            ...(fileData.categoricalColumns && Object.keys(fileData.categoricalColumns).length > 0
                                                                 ? Object.keys(fileData.categoricalColumns).map((colName) => ({
                                                                     value: colName,
                                                                     label: `🏷️ ${colName}`,
@@ -1687,6 +1656,11 @@ return;
                                             />
                                         ) : selectedPlot === 'temporal-loadings' ? (
                                             <TemporalLoadingsPlot
+                                                pcaResult={pcaResponse.result}
+                                                fontScale={plotFontScale}
+                                            />
+                                        ) : selectedPlot === 'temporal-variable-importance' ? (
+                                            <TemporalVariableImportancePlot
                                                 pcaResult={pcaResponse.result}
                                                 fontScale={plotFontScale}
                                             />

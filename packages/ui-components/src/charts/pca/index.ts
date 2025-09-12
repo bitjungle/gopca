@@ -35,3 +35,6 @@ export type { Biplot3DData, Biplot3DConfig } from './Plotly3DBiplot';
 
 export { PlotlyTemporalLoadings, PCATemporalLoadingsPlot } from './PlotlyTemporalLoadings';
 export type { TemporalLoadingsPlotData, TemporalLoadingsPlotConfig } from './PlotlyTemporalLoadings';
+
+export { PlotlyTemporalVariableImportance, PCATemporalVariableImportancePlot } from './PlotlyTemporalVariableImportance';
+export type { TemporalVariableImportanceData, TemporalVariableImportancePlotConfig } from './PlotlyTemporalVariableImportance';

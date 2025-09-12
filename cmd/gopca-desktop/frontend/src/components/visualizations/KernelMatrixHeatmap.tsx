@@ -42,9 +42,9 @@ export const KernelMatrixHeatmap: React.FC<KernelMatrixHeatmapProps> = ({
   // Prepare data for Plotly heatmap
   const matrix = pcaResult.kernel_matrix;
   const n = matrix.length;
-  
+
   // Create sample labels
-  const sampleLabels = rowNames.length > 0 
+  const sampleLabels = rowNames.length > 0
     ? rowNames.slice(0, n)
     : Array.from({ length: n }, (_, i) => `Sample ${i + 1}`);
 
@@ -56,7 +56,7 @@ export const KernelMatrixHeatmap: React.FC<KernelMatrixHeatmapProps> = ({
     type: 'heatmap' as const,
     colorscale: colorScale,
     showscale: true,
-    hovertemplate: 
+    hovertemplate:
       '<b>Sample %{y}</b> ↔ <b>Sample %{x}</b><br>' +
       'Similarity: %{z:.4f}<br>' +
       '<extra></extra>',
@@ -135,8 +135,8 @@ export const KernelMatrixHeatmap: React.FC<KernelMatrixHeatmapProps> = ({
     width: undefined,
     height: undefined,
     autosize: true,
-    annotations: showValues && n <= 20 ? 
-      matrix.flatMap((row, i) => 
+    annotations: showValues && n <= 20 ?
+      matrix.flatMap((row, i) =>
         row.map((value, j) => ({
           x: sampleLabels[j],
           y: sampleLabels[i],
