@@ -107,23 +107,23 @@ func (fd *FileData) ToJSONSafe() *FileDataJSON {
 
 // PCAResultJSON is a JSON-safe version of types.PCAResult
 type PCAResultJSON struct {
-	Scores               [][]types.JSONFloat64       `json:"scores"`
-	Loadings             [][]types.JSONFloat64       `json:"loadings"`
-	ExplainedVar         []types.JSONFloat64         `json:"explained_variance"`
-	ExplainedVarRatio    []types.JSONFloat64         `json:"explained_variance_ratio"`
-	CumulativeVar        []types.JSONFloat64         `json:"cumulative_variance"`
-	ComponentLabels      []string                    `json:"component_labels"`
-	VariableLabels       []string                    `json:"variable_labels,omitempty"`
-	ComponentsComputed   int                         `json:"components_computed"`
-	Method               string                      `json:"method"`
-	PreprocessingApplied bool                        `json:"preprocessing_applied"`
-	Means                []types.JSONFloat64         `json:"means,omitempty"`
-	StdDevs              []types.JSONFloat64         `json:"stddevs,omitempty"`
-	Metrics              []SampleMetricsJSON         `json:"metrics,omitempty"`
-	T2Limit95            types.JSONFloat64           `json:"t2_limit_95,omitempty"`
-	T2Limit99            types.JSONFloat64           `json:"t2_limit_99,omitempty"`
-	QLimit95             types.JSONFloat64           `json:"q_limit_95,omitempty"`
-	QLimit99             types.JSONFloat64           `json:"q_limit_99,omitempty"`
+	Scores                     [][]types.JSONFloat64       `json:"scores"`
+	Loadings                   [][]types.JSONFloat64       `json:"loadings"`
+	ExplainedVar               []types.JSONFloat64         `json:"explained_variance"`
+	ExplainedVarRatio          []types.JSONFloat64         `json:"explained_variance_ratio"`
+	CumulativeVar              []types.JSONFloat64         `json:"cumulative_variance"`
+	ComponentLabels            []string                    `json:"component_labels"`
+	VariableLabels             []string                    `json:"variable_labels,omitempty"`
+	ComponentsComputed         int                         `json:"components_computed"`
+	Method                     string                      `json:"method"`
+	PreprocessingApplied       bool                        `json:"preprocessing_applied"`
+	Means                      []types.JSONFloat64         `json:"means,omitempty"`
+	StdDevs                    []types.JSONFloat64         `json:"stddevs,omitempty"`
+	Metrics                    []SampleMetricsJSON         `json:"metrics,omitempty"`
+	T2Limit95                  types.JSONFloat64           `json:"t2_limit_95,omitempty"`
+	T2Limit99                  types.JSONFloat64           `json:"t2_limit_99,omitempty"`
+	QLimit95                   types.JSONFloat64           `json:"q_limit_95,omitempty"`
+	QLimit99                   types.JSONFloat64           `json:"q_limit_99,omitempty"`
 	Eigencorrelations          *EigencorrelationResultJSON `json:"eigencorrelations,omitempty"`
 	AllEigenvalues             []types.JSONFloat64         `json:"all_eigenvalues,omitempty"`
 	TemporalEigenvectors       [][]types.JSONFloat64       `json:"temporal_eigenvectors,omitempty"`
@@ -293,7 +293,7 @@ func ConvertPCAResultToJSON(result *types.PCAResult) *PCAResultJSON {
 			}
 		}
 	}
-	
+
 	// Convert temporal variable importance if present (for temporal PCA)
 	if len(result.TemporalVariableImportance) > 0 {
 		jsonResult.TemporalVariableImportance = make([][]types.JSONFloat64, len(result.TemporalVariableImportance))
