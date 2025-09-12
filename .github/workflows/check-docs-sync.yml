@@ -4,7 +4,9 @@ on:
   pull_request:
     paths:
       - 'docs/intro_to_*.md'
+      - 'docs/images/intro_to_*.jpg'
       - 'cmd/*/frontend/public/docs/*.md'
+      - 'cmd/*/frontend/public/docs/images/*.png'
       - 'scripts/sync-docs.sh'
       - 'Makefile'
 
@@ -54,6 +56,21 @@ jobs:
           if [ ! -f "cmd/gocsv/frontend/public/docs/intro_to_data_prep.md" ]; then
             echo "❌ Missing: cmd/gocsv/frontend/public/docs/intro_to_data_prep.md"
             exit 1
+          fi
+          
+          # Check for GoPCA images
+          image_count=$(ls -1 cmd/gopca-desktop/frontend/public/docs/images/intro_to_pca_fig_*.jpg 2>/dev/null | wc -l)
+          if [ "$image_count" -eq 0 ]; then
+            echo "⚠️  Warning: No intro_to_pca images found in GoPCA Desktop public directory"
+            echo "   Expected location: cmd/gopca-desktop/frontend/public/docs/images/"
+          else
+            echo "✅ Found $image_count intro_to_pca image(s) in GoPCA Desktop"
+          fi
+          
+          # Check for GoCSV images (if any)
+          image_count=$(ls -1 cmd/gocsv/frontend/public/docs/images/intro_to_data_prep_fig_*.jpg 2>/dev/null | wc -l)
+          if [ "$image_count" -gt 0 ]; then
+            echo "✅ Found $image_count intro_to_data_prep image(s) in GoCSV Desktop"
           fi
           
           echo "✅ All documentation files are in their expected locations"
