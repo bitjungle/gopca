@@ -366,9 +366,13 @@ export const PCACircleOfCorrelations: React.FC<{
   config?: CircleOfCorrelationsConfig;
 }> = ({ data, config }) => {
   const plot = useMemo(() => new PlotlyCircleOfCorrelations(data, config), [data, config]);
+  
+  // Create a key based on the colorScheme to force re-render when palette changes
+  const colorSchemeKey = config?.colorScheme ? JSON.stringify(config.colorScheme) : 'default';
 
   return (
     <PlotlyWithFullscreen
+      key={`circle-correlations-${colorSchemeKey}`}
       data={plot.getTraces()}
       layout={plot.getEnhancedLayout()}
       config={plot.getConfig()}
