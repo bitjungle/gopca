@@ -1075,9 +1075,9 @@ Unlike standard PCA loadings that show which variables are important, these temp
 
 Remember, these patterns are the actual basis functions extracted from your data. When multiplied by their corresponding scores and summed, they reconstruct your original time series, but now you understand the fundamental temporal modes that comprise it.
 
-**Variable Importance in Temporal PCA (Coming Soon):**
+**Variable Importance in Temporal PCA:**
 
-> **📊 Upcoming Feature:** We're developing a **Variable Importance Plot** for Temporal PCA that will show how your original variables contribute to each temporal component, aggregated across all lags. This will bridge the gap between temporal patterns (U matrix) and variable contributions (V matrix), making it easier to identify which variables drive the discovered temporal patterns. This feature will provide familiar PCA-style interpretation while preserving the temporal richness of SSA. See [Issue #501](https://github.com/bitjungle/gopca/issues/501) for details.
+The **Variable Importance Plot** for Temporal PCA shows how your original variables contribute to each temporal component, aggregated across all lags. This bridges the gap between temporal patterns (U matrix) and variable contributions (V matrix), making it easier to identify which variables drive the discovered temporal patterns. This feature provides familiar PCA-style interpretation while preserving the temporal richness of SSA.
 
 **Reconstruction Error:**
 Unlike standard PCA, reconstruction error in Temporal PCA specifically indicates deviation from normal temporal patterns, making it powerful for anomaly detection and change point identification.
@@ -1476,6 +1476,8 @@ Welcome to the community of PCA practitioners. May your principal components be 
 ---
 
 ## 15. References and Further Reading
+
+![References and Further Reading](images/intro_to_pca_fig_015.jpg)
 
 ### Foundational Papers
 - **Pearson, K. (1901).** On lines and planes of closest fit to systems of points in space. _Philosophical Magazine_, 2(11), 559-572. [The original PCA paper]
