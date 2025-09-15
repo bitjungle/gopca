@@ -228,7 +228,7 @@ func outputJSONFormat(result *types.PCAResult, data *pkgcsv.Data, inputFile stri
 
 	// Create output directory if needed
 	if opts.OutputDir != "" {
-		if err := os.MkdirAll(opts.OutputDir, 0755); err != nil {
+		if err := os.MkdirAll(opts.OutputDir, 0750); err != nil {
 			return fmt.Errorf("failed to create output directory: %w", err)
 		}
 	}

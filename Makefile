@@ -630,7 +630,7 @@ fmt:
 lint:
 ifdef GOLINT
 	@echo "Running golangci-lint..."
-	golangci-lint run
+	golangci-lint run --timeout=5m
 else
 	@echo "golangci-lint not found. Install it with:"
 	@echo "  go install github.com/golangci/golangci-lint/cmd/golangci-lint@latest"
@@ -693,7 +693,16 @@ ci-lint:
 ifdef GOLINT
 	golangci-lint run --timeout=5m ./internal/... ./pkg/... ./cmd/gopca-cli/...
 else
-	@echo "golangci-lint not found, skipping..."
+	@echo "golangci-lint not found, using basic checks..."
+	@echo "Checking code formatting..."
+	@NEED_FORMAT=$$(gofmt -l internal pkg cmd/gopca-cli 2>/dev/null | grep -v vendor || true); \
+	if [ -n "$$NEED_FORMAT" ]; then \
+		echo "ERROR: The following files need formatting:"; \
+		echo "$$NEED_FORMAT"; \
+		exit 1; \
+	fi
+	@echo "Running go vet..."
+	go vet ./internal/... ./pkg/... ./cmd/gopca-cli/...
 endif
 
 ## ci-build-cli: Build CLI for all platforms in CI
