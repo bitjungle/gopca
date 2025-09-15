@@ -121,10 +121,7 @@ export const CSVGrid = forwardRef<any, CSVGridProps>(({
     onRowNameChange,
     onRefresh
 }, ref) => {
-    // Validate inputs
-    if (!data || !headers || data.length === 0 || headers.length === 0) {
-        return <div className="w-full h-full flex items-center justify-center text-gray-500">No data to display</div>;
-    }
+    // All hooks must be declared before any conditional returns
     const gridRef = useRef<AgGridReact>(null);
     const [gridApi, setGridApi] = useState<GridApi | null>(null);
     const [columnApi, setColumnApi] = useState<ColumnApi | null>(null);
@@ -152,6 +149,11 @@ export const CSVGrid = forwardRef<any, CSVGridProps>(({
         message: string;
         onConfirm: () => void;
     }>({ isOpen: false, title: '', message: '', onConfirm: () => {} });
+
+    // Validate inputs after hooks
+    if (!data || !headers || data.length === 0 || headers.length === 0) {
+        return <div className="w-full h-full flex items-center justify-center text-gray-500">No data to display</div>;
+    }
 
     // Detect column types
     const detectColumnType = useCallback((colIndex: number): 'numeric' | 'text' | 'mixed' => {
