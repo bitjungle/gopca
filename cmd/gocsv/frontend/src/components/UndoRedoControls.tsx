@@ -7,7 +7,7 @@
 import React, { useEffect, useState } from 'react';
 import { main } from '../../wailsjs/go/models';
 import { Undo, Redo, GetUndoRedoState } from '../../wailsjs/go/main/App';
-import { EventsOn, EventsOff } from '../../wailsjs/runtime/runtime';
+import { EventsOn } from '../../wailsjs/runtime/runtime';
 
 interface UndoRedoControlsProps {
     className?: string;

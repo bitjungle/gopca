@@ -6,11 +6,11 @@
 
 import React, { useCallback, useMemo, useRef, useState, useEffect, forwardRef, useImperativeHandle } from 'react';
 import { AgGridReact } from 'ag-grid-react';
-import { ColDef, GridReadyEvent, CellValueChangedEvent, GridApi, ColumnApi, CellClickedEvent, RowClickedEvent, ColumnResizedEvent } from 'ag-grid-community';
+import { ColDef, GridReadyEvent, CellValueChangedEvent, GridApi, ColumnApi, ColumnResizedEvent } from 'ag-grid-community';
 import 'ag-grid-community/styles/ag-grid.css';
 import 'ag-grid-community/styles/ag-theme-quartz.css';
 import { useTheme } from '@gopca/ui-components';
-import { ExecuteDeleteRows, ExecuteDeleteColumns, ExecuteInsertRow, ExecuteInsertColumn, ExecuteToggleTargetColumn, ExecuteHeaderEdit, ExecuteDuplicateRows } from '../../wailsjs/go/main/App';
+import { ExecuteDeleteRows, ExecuteDeleteColumns, ExecuteInsertRow, ExecuteInsertColumn, ExecuteToggleTargetColumn, ExecuteDuplicateRows } from '../../wailsjs/go/main/App';
 import { RenameDialog } from './RenameDialog';
 import { ConfirmDialog } from '@gopca/ui-components';
 import {

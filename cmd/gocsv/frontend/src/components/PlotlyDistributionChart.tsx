@@ -15,9 +15,9 @@ interface PlotlyDistributionChartProps {
 
 export const PlotlyDistributionChart: React.FC<PlotlyDistributionChartProps> = ({
     distribution,
-    columnName
+    columnName: _columnName
 }) => {
-    const { theme } = useTheme();
+    // const { theme } = useTheme(); // Removed: unused variable
 
     // Transform histogram data for PlotlyBarChart
     const chartData = useMemo(() => {
