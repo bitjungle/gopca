@@ -8,7 +8,7 @@ Consider these scenarios: You're a wine researcher with 178 Italian wines from t
 
 ![Wine and sensors](images/intro_to_pca_fig_01-01.jpg)
 
-This is where **Principal Component Analysis (PCA)** becomes invaluable. Think of PCA as a sophisticated lens that helps you see through the complexity to find the essential patterns in your data. Just as a photographer might use different lenses to capture the essence of a scene, PCA helps you capture the essence of your data by focusing on what matters most.
+This is where **Principal Component Analysis (PCA)** becomes invaluable. Think of PCA as a sophisticated lens that helps you see through the complexity to find the essential patterns in your data. Just as a photographer might use different lenses or angles to capture the essence of a scene, PCA helps you capture the essence of your data by focusing on what matters most.
 
 PCA has stood the test of time. **Developed over a century ago by Karl Pearson (1901) and later refined by Harold Hotelling (1933)**, PCA remains one of the most widely used techniques in modern data science. From a movie streaming service recommendation system to climate science, from quality control in manufacturing to discoveries in genomics, PCA is everywhere. It's mathematically elegant, computationally efficient, and remarkably effective at revealing hidden structure in complex data.
 
@@ -36,12 +36,11 @@ Principal Component Analysis is a **dimensionality reduction** technique that tr
 
 * **They're interpretable:** Each PC is a weighted combination of your original variables, revealing what aspects of your data each component represents.
 
-![Dimensionality reduction](images/intro_to_pca_fig_02-02.jpg)
-
 **The Mathematical Magic:**
 Without diving too deep into the mathematics (we'll explore that later for those interested), PCA essentially rotates your data's coordinate system to align with the directions of maximum variation. It's like turning a tilted oval until it lies flat along the x-axis: suddenly, the main pattern becomes crystal clear.
 
-**Why This Matters:**
+![Dimensionality reduction](images/intro_to_pca_fig_02-02.jpg)
+
 By reducing complexity while preserving information, PCA enables you to:
 - **Visualize high-dimensional data** in 2D or 3D plots that your brain can actually comprehend
 - **Identify hidden patterns** that would be invisible when looking at variables individually
@@ -51,6 +50,8 @@ By reducing complexity while preserving information, PCA enables you to:
 ---
 
 ## 3. Motivation and Intuition: Why Use PCA?
+
+Modern data challenges often involve datasets with dozens, hundreds, or even thousands of variables. This complexity creates both computational and interpretational challenges that PCA elegantly addresses. By transforming your data into a new coordinate system that highlights the most important patterns, PCA turns overwhelming complexity into manageable insight.
 
 ![The Curse of Dimensionality](images/intro_to_pca_fig_03-01.jpg)
 
@@ -69,7 +70,7 @@ PCA solves these challenges by:
 - **Allowing powerful visualization:** A plot of just the first two PCs may reveal groupings or trends that would be invisible in any individual variable.
 - **Facilitating downstream analysis:** Simplifying data before regression, classification, or clustering can lead to better, more interpretable models.
 
-**Example:** Consider our wine dataset with 178 Italian wines and 13 chemical properties. Instead of analyzing 13 separate variables (and all their inter-relationships), you may find that just the first 2 or 3 PCs explain 80-90% of the variation. This lets you visualize the main differences among wines and interpret which chemical properties drive those differences.
+**Example:** Consider our wine dataset with 178 Italian wines and 13 chemical properties. Instead of analyzing 13 separate variables (and all their inter-relationships), you may find that just the first 2 or 3 PCs explain most of the variation. This lets you visualize the main differences among wines and interpret which chemical properties drive those differences.
 
 ---
 
@@ -252,12 +253,9 @@ In our wine analysis:
 
 ### Step 6: Decide How Many Components to Keep
 
-Not all principal components are created equal. The **scree plot** helps you decide how many to retain.
-
-**Reading the Scree Plot:**
-The plot shows each PC's explained variance (eigenvalue) as bars or points:
-- PC1 typically explains the most (perhaps 30-40%)
-- PC2 explains less (perhaps 15-20%)
+Not all principal components are created equal. The **scree plot** helps you decide how many to retain. The plot shows each PC's explained variance (eigenvalue) as bars or points:
+- PC1 typically explains the most (perhaps 30-50%)
+- PC2 explains less (perhaps 10-30%)
 - Each subsequent PC explains progressively less
 - Eventually, PCs explain so little they're just capturing noise
 
@@ -274,9 +272,6 @@ The plot shows each PC's explained variance (eigenvalue) as bars or points:
 
 3. **Kaiser Criterion:** For standardized data, keep PCs with eigenvalues > 1 (explaining more variance than a single original variable).
 
-**Practical Advice:**
-For visualization, 2-3 components are ideal. For modeling, use cross-validation to find the optimal number. Remember: more components = more complexity, but also more noise.
-
 ---
 
 ## 6. The Geometry of PCA: Visualizing Data in Fewer Dimensions
@@ -285,17 +280,12 @@ While the mathematics of PCA involves matrices and eigenvalues, its true eleganc
 
 ![Geometry of PCA](images/intro_to_pca_fig_06-01.jpg)
 
-### The Power of Geometric Thinking
-
-One of PCA's most elegant aspects is its geometric interpretation. By understanding PCA geometrically, you gain intuitive insight into what the mathematics is actually doing to your data. This geometric view bridges the gap between abstract linear algebra and practical data analysis.
-
 ### Your Data as a Cloud of Points
 
 Imagine your dataset as a cloud of points floating in multidimensional space. With our wine dataset, each of the 178 wines becomes a single point whose position is determined by its 13 chemical measurements. This creates a "wine cloud" in 13-dimensional space. While we can't visualize 13 dimensions directly, the geometric principles remain the same whether we're working in 2D, 3D, or 13D.
 
 ### What PCA Does Geometrically
 
-**PCA as Rotation:**
 PCA essentially rotates your coordinate system to align with the natural "shape" of your data cloud. Think of it like this:
 
 1. **Finding the Main Axis:** PCA first finds the direction through your data cloud along which the points are most spread out. This becomes PC1.
@@ -304,34 +294,18 @@ PCA essentially rotates your coordinate system to align with the natural "shape"
 
 3. **Continuing the Process:** This continues for PC3, PC4, and so on, each perpendicular to all previous ones.
 
-**PCA as Projection:**
 Another way to think about PCA is as creating "shadows" of your high-dimensional data. Projecting onto PC1-PC2 is like shining a light through your data cloud and looking at its 2D shadow. But unlike random projections, this shadow is carefully chosen to preserve as much of the cloud's structure as possible. PCA finds the "best" angles that reveal the most information.
 
-### The Shape of Data: Ellipsoids and Variance
-
-**The Data Ellipsoid:**
-In their original space, most datasets form an ellipsoidal cloud rather than a perfect sphere. Think of different ellipsoid shapes:
-- **Cigar-shaped:** One dominant direction of variation (PC1 explains most variance)
-- **Pancake-shaped:** Two main directions of variation (PC1 and PC2 together explain most)
-- **Egg-shaped:** More balanced variation across dimensions (several PCs needed)
-
-PCA identifies these natural axes of the ellipsoid. The principal components are precisely the axes of this multidimensional ellipsoid, ordered from longest to shortest.
-
-**Variance as Distance:**
 Variance in each direction corresponds to how far the data points spread along that axis. High variance means points spread far apart, creating a long ellipsoid axis and an important PC. Conversely, low variance means points cluster tightly, resulting in a short ellipsoid axis and a less important PC.
 
 ### Understanding Projections and Reconstructions
 
-**The Projection Process:**
 When we project data onto the first few PCs, we're essentially:
 1. Taking each high-dimensional point
 2. Finding its coordinates along the new PC axes
 3. Keeping only the first few coordinates
 4. Ignoring the rest
 
-This is like describing a person's location using only "north-south" and "east-west" while ignoring "up-down" (altitude).
-
-**Information Loss and Reconstruction:**
 The beauty of PCA is that it minimizes information loss:
 - If you use all PCs, you can perfectly reconstruct the original data (minus centering/scaling)
 - With fewer PCs, you get an approximation
@@ -383,10 +357,8 @@ Unusual samples stand out geometrically:
 
 ### The Curse and Blessing of Dimensionality
 
-**Why Dimension Reduction Works:**
 Real-world high-dimensional data rarely fills all available dimensions. Data often lies on or near a lower-dimensional "manifold" because many variables are correlated, creating redundancy. While noise spreads thinly across many dimensions, signal concentrates in fewer dimensions. PCA exploits this structure by finding the lower-dimensional subspace where your data actually lives.
 
-**The Geometric Perspective on Noise:**
 Noise and signal have distinct geometric signatures. Noise typically spreads equally in all directions (spherical), contributing small amounts to many PCs and getting relegated to later, minor components. Signal, in contrast, has structure and direction, concentrating in early PCs and creating the elongated axes of the data ellipsoid. This separation is what makes PCA effective at denoising.
 
 ### Practical Geometric Insights
@@ -482,7 +454,6 @@ These projections \( t \) are the PC scores: the coordinates of each sample in t
 ### Singular Value Decomposition (SVD): The Modern Approach
 
 ![SVD](images/intro_to_pca_fig_07-02.jpg)
-
 
 **Why SVD?**
 While eigendecomposition is conceptually clear, in practice we use SVD: a more numerically stable and efficient approach that arrives at the same result.
