@@ -264,7 +264,7 @@ export class Plotly3DScoresPlot {
   getEnhancedLayout(): Partial<Layout> {
     const baseLayout = this.getLayout();
     const themeLayout = getPlotlyTheme(this.config.theme || 'light', this.config.fontScale).layout;
-    
+
     // Add watermark if enabled
     let watermarkImages: any[] = [];
     if (PLOT_CONFIG.watermark.enabled) {
@@ -284,13 +284,13 @@ export class Plotly3DScoresPlot {
         layer: 'above'
       }];
     }
-    
+
     return mergeLayouts(themeLayout, baseLayout, { images: watermarkImages });
   }
 
   getLayout(): Partial<Layout> {
     const { explainedVariance, pc1 = 0, pc2 = 1, pc3 = 2 } = this.data;
-    
+
     // Theme-aware colors for 3D scene
     const isDark = this.config.theme === 'dark';
     const sceneColors = {
@@ -371,28 +371,28 @@ export const PCA3DScoresPlot: React.FC<{
   const pc3 = data.pc3 ?? 2;
   const numComponents = data.scores[0]?.length || 0;
   const numExplainedVariance = data.explainedVariance?.length || 0;
-  
+
   // Validate that we have at least 3 components
   if (numComponents < 3 || pc3 >= numComponents || numExplainedVariance < 3 || pc3 >= numExplainedVariance) {
     const theme = config?.theme || 'light';
     return (
-      <div style={{ 
-        width: '100%', 
-        height: '100%', 
-        display: 'flex', 
-        alignItems: 'center', 
+      <div style={{
+        width: '100%',
+        height: '100%',
+        display: 'flex',
+        alignItems: 'center',
         justifyContent: 'center',
         flexDirection: 'column'
       }}>
-        <p style={{ 
-          color: theme === 'dark' ? '#9ca3af' : '#6b7280', 
+        <p style={{
+          color: theme === 'dark' ? '#9ca3af' : '#6b7280',
           textAlign: 'center',
           marginBottom: '10px'
         }}>
           3D Scores Plot requires at least 3 principal components.
         </p>
-        <p style={{ 
-          color: theme === 'dark' ? '#9ca3af' : '#6b7280', 
+        <p style={{
+          color: theme === 'dark' ? '#9ca3af' : '#6b7280',
           textAlign: 'center',
           fontSize: '14px'
         }}>
@@ -402,7 +402,7 @@ export const PCA3DScoresPlot: React.FC<{
       </div>
     );
   }
-  
+
   const plot = useMemo(() => new Plotly3DScoresPlot(data, config), [data, config]);
 
   return (

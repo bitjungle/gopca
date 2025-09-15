@@ -188,7 +188,7 @@ return trace;
   protected getEnhancedLayout(): Partial<Layout> {
     const baseLayout = this.getLayout();
     const themeLayout = getPlotlyTheme(this.theme, this.config.fontScale).layout;
-    
+
     // Add watermark if enabled
     let watermarkImages: any[] = [];
     if (PLOT_CONFIG.watermark.enabled) {

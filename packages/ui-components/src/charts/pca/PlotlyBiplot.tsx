@@ -153,7 +153,7 @@ export class PlotlyBiplot {
 
         // Use WebGL for better performance with large datasets
         const traceType = optimizeTraceType(scoresX, 100);
-        
+
         traces.push({
           type: traceType as any,
           mode: 'markers',
@@ -191,7 +191,7 @@ export class PlotlyBiplot {
 
           // Use WebGL for better performance with large datasets
           const groupTraceType = optimizeTraceType(groupX, 100);
-          
+
           traces.push({
             type: groupTraceType as any,
             mode: 'markers',
@@ -243,7 +243,7 @@ export class PlotlyBiplot {
         // Single group
         // Use WebGL for better performance with large datasets
         const singleGroupTraceType = optimizeTraceType(scoresX, 100);
-        
+
         traces.push({
           type: singleGroupTraceType as any,
           mode: 'markers',
@@ -401,7 +401,7 @@ return { x: 0, y: 0 };
   getEnhancedLayout(): Partial<Layout> {
     const baseLayout = this.getLayout();
     const themeLayout = getPlotlyTheme(this.config.theme || 'light', this.config.fontScale).layout;
-    
+
     // Add watermark if enabled
     let watermarkImages: any[] = [];
     if (PLOT_CONFIG.watermark.enabled) {
@@ -421,7 +421,7 @@ return { x: 0, y: 0 };
         layer: 'above'
       }];
     }
-    
+
     return mergeLayouts(themeLayout, baseLayout, { images: watermarkImages });
   }
 
@@ -507,7 +507,7 @@ export const PCABiplot: React.FC<{
   excludedRows?: number[];
 }> = ({ data, config, onSelection, excludedRows = [] }) => {
   const plot = useMemo(() => new PlotlyBiplot(data, config), [data, config]);
-  
+
   // Apply opacity to excluded rows
   const tracesWithOpacity = useMemo(() => {
     const traces = plot.getTraces();
@@ -539,7 +539,7 @@ export const PCABiplot: React.FC<{
         // Use customdata if available, otherwise use pointIndex
         return point.customdata?.[0] ?? point.pointIndex;
       }).filter((idx: number) => idx !== undefined && idx !== null);
-      
+
       if (indices.length > 0) {
         console.log('PCABiplot: Selection event', indices);
         onSelection(indices);

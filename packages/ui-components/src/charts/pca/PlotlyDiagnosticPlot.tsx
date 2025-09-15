@@ -135,9 +135,11 @@ export class PlotlyDiagnosticPlot {
         outlierCategories.forEach(cat => {
           // Filter indices that belong to this group and outlier category
           const filteredIndices = cat.indices.filter(i => groups[i] === group);
-          if (filteredIndices.length === 0) return;
+          if (filteredIndices.length === 0) {
+return;
+}
 
-          const categoryName = cat.type === 'regular' ? '' : 
+          const categoryName = cat.type === 'regular' ? '' :
                               cat.type === 'goodLeverage' ? ' (Good Leverage)' :
                               cat.type === 'orthogonal' ? ' (Orthogonal)' : ' (Bad Outlier)';
 
@@ -174,7 +176,9 @@ export class PlotlyDiagnosticPlot {
       ];
 
       outlierCategories.forEach(cat => {
-        if (cat.indices.length === 0) return;
+        if (cat.indices.length === 0) {
+return;
+}
 
         traces.push({
           type: 'scatter',
@@ -214,7 +218,9 @@ export class PlotlyDiagnosticPlot {
 
       // Add traces for each category
       categories.forEach(cat => {
-        if (cat.indices.length === 0) return;
+        if (cat.indices.length === 0) {
+return;
+}
 
         traces.push({
           type: 'scatter',
@@ -282,7 +288,7 @@ export class PlotlyDiagnosticPlot {
   getEnhancedLayout(): Partial<Layout> {
     const baseLayout = this.getLayout();
     const themeLayout = getPlotlyTheme(this.config.theme || 'light', this.config.fontScale).layout;
-    
+
     // Add watermark if enabled
     let watermarkImages: any[] = [];
     if (PLOT_CONFIG.watermark.enabled) {
@@ -302,7 +308,7 @@ export class PlotlyDiagnosticPlot {
         layer: 'above'
       }];
     }
-    
+
     return mergeLayouts(themeLayout, baseLayout, { images: watermarkImages });
   }
 
@@ -465,7 +471,7 @@ export const PCADiagnosticPlot: React.FC<{
   excludedRows?: number[];
 }> = ({ data, config, onSelection, excludedRows = [] }) => {
   const plot = useMemo(() => new PlotlyDiagnosticPlot(data, config), [data, config]);
-  
+
   // Apply opacity to excluded rows
   const tracesWithOpacity = useMemo(() => {
     const traces = plot.getTraces();
@@ -476,7 +482,7 @@ export const PCADiagnosticPlot: React.FC<{
           const updatedTrace: any = { ...trace };
           const numPoints = (traceAny.x as number[]).length;
           const opacity = new Array(numPoints).fill(1);
-          
+
           // Get the global indices from customdata
           const globalIndices = (traceAny.customdata as number[][]).map(cd => cd[0]);
           globalIndices.forEach((globalIdx, localIdx) => {
@@ -484,7 +490,7 @@ export const PCADiagnosticPlot: React.FC<{
               opacity[localIdx] = 0.2;
             }
           });
-          
+
           if (updatedTrace.marker) {
             updatedTrace.marker = {
               ...updatedTrace.marker,
@@ -506,7 +512,7 @@ export const PCADiagnosticPlot: React.FC<{
         // Use customdata if available, otherwise use pointIndex
         return point.customdata?.[0] ?? point.pointIndex;
       }).filter((idx: number) => idx !== undefined && idx !== null);
-      
+
       if (indices.length > 0) {
         console.log('PCADiagnosticPlot: Selection event', indices);
         onSelection(indices);

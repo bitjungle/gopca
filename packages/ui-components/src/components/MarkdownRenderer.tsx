@@ -23,9 +23,9 @@ export interface MarkdownRendererProps {
  * - Consistent styling across GoPCA and GoCSV applications
  * - Dark mode support
  */
-export const MarkdownRenderer: React.FC<MarkdownRendererProps> = ({ 
-  content, 
-  className = '' 
+export const MarkdownRenderer: React.FC<MarkdownRendererProps> = ({
+  content,
+  className = ''
 }) => {
   return (
     <div className={`prose prose-lg dark:prose-invert max-w-none text-left
@@ -120,8 +120,8 @@ export const MarkdownRenderer: React.FC<MarkdownRendererProps> = ({
             </tr>
           ),
           th: ({ node, children, ...props }) => (
-            <th 
-              className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider" 
+            <th
+              className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider"
               {...props}
             >
               {children}

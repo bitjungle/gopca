@@ -175,7 +175,7 @@ export class PlotlyLoadingsPlot {
   getEnhancedLayout(): Partial<Layout> {
     const baseLayout = this.getLayout();
     const themeLayout = getPlotlyTheme(this.config.theme || 'light', this.config.fontScale).layout;
-    
+
     // Add watermark if enabled
     let watermarkImages: any[] = [];
     if (PLOT_CONFIG.watermark.enabled) {
@@ -195,7 +195,7 @@ export class PlotlyLoadingsPlot {
         layer: 'above'
       }];
     }
-    
+
     return mergeLayouts(themeLayout, baseLayout, { images: watermarkImages });
   }
 

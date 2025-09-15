@@ -13,7 +13,7 @@ interface FontSizeControlProps {
 
 export const FontSizeControl: React.FC<FontSizeControlProps> = ({ value, onChange }) => {
   const percentage = Math.round(value * 100);
-  
+
   const handleSliderChange = (event: React.ChangeEvent<HTMLInputElement>) => {
     const newValue = parseFloat(event.target.value);
     onChange(newValue);

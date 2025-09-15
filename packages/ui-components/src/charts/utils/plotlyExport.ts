@@ -276,21 +276,21 @@ export function setupPlotlyWailsIntegration(): void {
   const originalAnchorClick = HTMLAnchorElement.prototype.click;
   HTMLAnchorElement.prototype.click = function() {
     const anchor = this;
-    
+
     // Check if this is a download link
     if (anchor.download && anchor.href) {
       const saveFileFunc = (window as any).go?.main?.App?.SaveFile;
-      
+
       if (saveFileFunc) {
         console.info('Intercepting anchor download click');
         console.info('Download attribute:', anchor.download);
         console.info('Href:', anchor.href.substring(0, 100) + '...');
-        
+
         // Handle the download through Wails
         (async () => {
           try {
             let dataUrl = anchor.href;
-            
+
             // If it's a blob URL, convert to data URL
             if (dataUrl.startsWith('blob:')) {
               const blob = blobUrlMap.get(dataUrl);
@@ -312,12 +312,12 @@ export function setupPlotlyWailsIntegration(): void {
                 }
               }
             }
-            
+
             // Use Wails SaveFile
             console.info('Calling Wails SaveFile with filename:', anchor.download);
             await saveFileFunc(anchor.download, dataUrl);
             console.info('File saved via Wails:', anchor.download);
-            
+
             // Clean up blob URL if needed
             if (anchor.href.startsWith('blob:')) {
               URL.revokeObjectURL(anchor.href);
@@ -328,12 +328,12 @@ export function setupPlotlyWailsIntegration(): void {
             originalAnchorClick.call(anchor);
           }
         })();
-        
+
         // Don't call the original click to prevent browser download
         return;
       }
     }
-    
+
     // For non-download clicks, use original behavior
     originalAnchorClick.call(anchor);
   };
@@ -404,7 +404,6 @@ export function setupPlotlyWailsIntegration(): void {
 
       // Replace downloadImage
       Plotly.downloadImage = handlePlotlyExport;
-
 
       console.info('Plotly-Wails integration setup complete');
     } else {

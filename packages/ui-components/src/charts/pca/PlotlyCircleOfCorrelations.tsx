@@ -225,7 +225,7 @@ export class PlotlyCircleOfCorrelations {
   getEnhancedLayout(): Partial<Layout> {
     const baseLayout = this.getLayout();
     const themeLayout = getPlotlyTheme(this.config.theme || 'light', this.config.fontScale).layout;
-    
+
     // Add watermark if enabled
     let watermarkImages: any[] = [];
     if (PLOT_CONFIG.watermark.enabled) {
@@ -245,7 +245,7 @@ export class PlotlyCircleOfCorrelations {
         layer: 'above'
       }];
     }
-    
+
     return mergeLayouts(themeLayout, baseLayout, { images: watermarkImages });
   }
 
@@ -366,7 +366,7 @@ export const PCACircleOfCorrelations: React.FC<{
   config?: CircleOfCorrelationsConfig;
 }> = ({ data, config }) => {
   const plot = useMemo(() => new PlotlyCircleOfCorrelations(data, config), [data, config]);
-  
+
   // Create a key based on the colorScheme to force re-render when palette changes
   const colorSchemeKey = config?.colorScheme ? JSON.stringify(config.colorScheme) : 'default';
 
