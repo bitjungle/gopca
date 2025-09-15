@@ -37,7 +37,7 @@ export const Scores3DPlot: React.FC<Scores3DPlotProps> = ({
   xComponent = 0,
   yComponent = 1,
   zComponent = 2,
-  groupColumn,
+  groupColumn: _groupColumn,
   groupLabels,
   groupValues,
   groupType = 'categorical',

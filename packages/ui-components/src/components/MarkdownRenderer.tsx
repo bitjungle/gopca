@@ -54,7 +54,7 @@ export const MarkdownRenderer: React.FC<MarkdownRendererProps> = ({
         ]}
         components={{
           // Custom link component to open external links in new tab
-          a: ({ node, children, href, ...props }) => (
+          a: ({ children, href, ...props }) => (
             <a
               href={href}
               target={href?.startsWith('http') ? '_blank' : undefined}
@@ -66,7 +66,7 @@ export const MarkdownRenderer: React.FC<MarkdownRendererProps> = ({
             </a>
           ),
           // Custom code block styling
-          code: ({ node, className, children, ...props }) => {
+          code: ({ className, children, ...props }) => {
             const match = /language-(\w+)/.exec(className || '');
             const isInline = !match && !className;
             return isInline ? (
@@ -88,7 +88,7 @@ export const MarkdownRenderer: React.FC<MarkdownRendererProps> = ({
             );
           },
           // Custom blockquote styling
-          blockquote: ({ node, children, ...props }) => (
+          blockquote: ({ children, ...props }) => (
             <blockquote
               className="border-l-4 border-blue-500 pl-4 my-4 italic text-gray-700 dark:text-gray-300"
               {...props}
@@ -97,29 +97,29 @@ export const MarkdownRenderer: React.FC<MarkdownRendererProps> = ({
             </blockquote>
           ),
           // Enhanced table styling for better readability
-          table: ({ node, children, ...props }) => (
+          table: ({ children, ...props }) => (
             <div className="overflow-x-auto my-6">
               <table className="min-w-full divide-y divide-gray-300 dark:divide-gray-600" {...props}>
                 {children}
               </table>
             </div>
           ),
-          thead: ({ node, children, ...props }) => (
+          thead: ({ children, ...props }) => (
             <thead className="bg-gray-50 dark:bg-gray-800" {...props}>
               {children}
             </thead>
           ),
-          tbody: ({ node, children, ...props }) => (
+          tbody: ({ children, ...props }) => (
             <tbody className="bg-white dark:bg-gray-900 divide-y divide-gray-200 dark:divide-gray-700" {...props}>
               {children}
             </tbody>
           ),
-          tr: ({ node, children, ...props }) => (
+          tr: ({ children, ...props }) => (
             <tr className="hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors" {...props}>
               {children}
             </tr>
           ),
-          th: ({ node, children, ...props }) => (
+          th: ({ children, ...props }) => (
             <th
               className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider"
               {...props}
@@ -127,7 +127,7 @@ export const MarkdownRenderer: React.FC<MarkdownRendererProps> = ({
               {children}
             </th>
           ),
-          td: ({ node, children, ...props }) => (
+          td: ({ children, ...props }) => (
             <td className="px-4 py-3 text-sm text-gray-900 dark:text-gray-100" {...props}>
               {children}
             </td>

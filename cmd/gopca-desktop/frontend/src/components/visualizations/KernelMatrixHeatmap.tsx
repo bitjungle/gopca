@@ -5,7 +5,6 @@ import React from 'react';
 import Plot from 'react-plotly.js';
 import { useTheme } from '@gopca/ui-components';
 import { PCAResult } from '../../types';
-import { usePalette } from '../../contexts/PaletteContext';
 
 interface KernelMatrixHeatmapProps {
   pcaResult: PCAResult;

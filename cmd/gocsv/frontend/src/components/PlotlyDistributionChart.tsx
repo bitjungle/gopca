@@ -5,7 +5,7 @@
 // military, warfare, or surveillance applications.
 
 import React, { useMemo } from 'react';
-import { PlotlyBarChart, useTheme } from '@gopca/ui-components';
+import { PlotlyBarChart } from '@gopca/ui-components';
 import { main } from '../../wailsjs/go/models';
 
 interface PlotlyDistributionChartProps {

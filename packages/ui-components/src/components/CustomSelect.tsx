@@ -359,7 +359,7 @@ return filteredOptions.length - 1;
         >
           {searchTerm && (
             <div className="px-3 py-1 text-xs text-gray-500 dark:text-gray-400 bg-gray-50 dark:bg-gray-800/50 border-b border-gray-200 dark:border-gray-600">
-              Searching: "{searchTerm}"
+              Searching: &quot;{searchTerm}&quot;
             </div>
           )}
           {renderOptions()}
