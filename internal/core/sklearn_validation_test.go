@@ -539,7 +539,7 @@ func TestMathematicalProperties(t *testing.T) {
 				// Use eigenvalues directly (already computed from singular values)
 				eigenvalue := result.ExplainedVar[j]
 				if eigenvalue > 1e-10 { // Avoid division by near-zero
-					mahalanobis += math.Pow(result.Scores[i][j], 2) / eigenvalue
+					mahalanobis += result.Scores[i][j] * result.Scores[i][j] / eigenvalue
 				}
 			}
 
