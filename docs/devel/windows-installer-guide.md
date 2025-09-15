@@ -244,7 +244,7 @@ You can test the Windows installer build without creating a release:
 1. **Via GitHub Actions UI** (workflow_dispatch):
    - Go to Actions → Release workflow
    - Click "Run workflow"
-   - Select branch and test version (e.g., v0.9.5-test)
+   - Select branch and test version (e.g., vX.X.X-test)
    - Download the installer artifact after completion
 
 2. **Locally** (requires NSIS):
@@ -259,8 +259,8 @@ The installer build is automatically tested in CI/CD when:
 - Using workflow_dispatch trigger (test builds)
 
 ### Version Handling
-- Production versions: `v0.9.5` → creates `GoPCA-Setup-v0.9.5.exe`
-- Test versions: `v0.9.5-test` → creates `GoPCA-Setup-v0.9.5-test.exe`
+- Production versions: `vX.X.X` → creates `GoPCA-Setup-vX.X.X.exe`
+- Test versions: `vX.X.X-test` → creates `GoPCA-Setup-vX.X.X-test.exe`
 - The 'v' prefix is stripped internally for NSIS processing
 
 ## Security Considerations
