@@ -42,12 +42,12 @@ export const DataTable: React.FC<DataTableProps> = ({
   onRowSelectionChange,
   onColumnSelectionChange,
   externalSelectedRows,
-  highlightExternalSelections
+  highlightExternalSelections: _highlightExternalSelections
 }) => {
   const hasRowNames = rowNames && rowNames.length > 0;
   const [rowSelection, setRowSelection] = React.useState<RowSelectionState>({});
   const [columnSelection, setColumnSelection] = React.useState<Record<string, boolean>>({});
-  const isFirstRender = React.useRef(true);
+  // Removed unused variable: const isFirstRender = React.useRef(true);
 
   // Initialize selection states when component mounts with data
   React.useEffect(() => {

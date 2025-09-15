@@ -91,7 +91,7 @@ export const ModelOverview: React.FC<ModelOverviewProps> = ({ pcaResult, selecte
     const kernelType = pcaResult.kernel_type || 'unknown';
     const kernelParams = pcaResult.kernel_params || {};
     const nComponents = pcaResult.components_computed;
-    const totalVariance = pcaResult.cumulative_variance?.[nComponents - 1] || 0;
+    // Removed unused: const totalVariance = pcaResult.cumulative_variance?.[nComponents - 1] || 0;
 
     // Get the first few eigenvalues for display
     const firstPC = pcaResult.explained_variance_ratio?.[0] || 0;
