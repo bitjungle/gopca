@@ -5,7 +5,7 @@
 // military, warfare, or surveillance applications.
 
 import React, { useMemo } from 'react';
-import { PlotlyBarChart, useTheme } from '@gopca/ui-components';
+import { PlotlyBarChart } from '@gopca/ui-components';
 import { main } from '../../wailsjs/go/models';
 
 interface PlotlyDistributionChartProps {
@@ -15,9 +15,9 @@ interface PlotlyDistributionChartProps {
 
 export const PlotlyDistributionChart: React.FC<PlotlyDistributionChartProps> = ({
     distribution,
-    columnName
+    columnName: _columnName
 }) => {
-    const { theme } = useTheme();
+    // const { theme } = useTheme(); // Removed: unused variable
 
     // Transform histogram data for PlotlyBarChart
     const chartData = useMemo(() => {

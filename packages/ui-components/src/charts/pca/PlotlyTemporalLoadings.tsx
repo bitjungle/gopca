@@ -86,7 +86,7 @@ export class PlotlyTemporalLoadings {
           color: colors[comp % colors.length],
           width: 2.5
         },
-        hovertemplate: 
+        hovertemplate:
           `<b>Component ${comp + 1}</b><br>` +
           'Lag: %{x}<br>' +
           'Loading: %{y:.4f}<br>' +
@@ -100,7 +100,7 @@ export class PlotlyTemporalLoadings {
   getEnhancedLayout(): Partial<Layout> {
     const baseLayout = this.getLayout();
     const themeLayout = getPlotlyTheme(this.config.theme || 'light', this.config.fontScale).layout;
-    
+
     // Add watermark if enabled
     let watermarkImages: any[] = [];
     if (PLOT_CONFIG.watermark.enabled) {
@@ -120,14 +120,14 @@ export class PlotlyTemporalLoadings {
         layer: 'above'
       }];
     }
-    
+
     return mergeLayouts(themeLayout, baseLayout, { images: watermarkImages });
   }
 
   getLayout(): Partial<Layout> {
     const layout: Partial<Layout> = {
       title: {
-        text: `Temporal Loadings Pattern`
+        text: 'Temporal Loadings Pattern'
       },
       xaxis: {
         title: {

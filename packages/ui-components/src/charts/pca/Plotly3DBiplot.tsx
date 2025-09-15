@@ -130,7 +130,7 @@ export class Plotly3DBiplot {
 
     // Store loading magnitudes and filtering info
     this.totalVariables = loadings[pc1].length;
-    
+
     // Filter to top N vectors by magnitude if needed
     const allVectors = this.data.variableNames.map((name, i) => {
       const magnitude = Math.sqrt(
@@ -140,7 +140,7 @@ export class Plotly3DBiplot {
     });
 
     this.needsFiltering = allVectors.length > (this.config.maxVariables || 50);
-    
+
     let validVectors = allVectors;
     if (this.needsFiltering) {
       validVectors = [...allVectors]
@@ -153,8 +153,8 @@ export class Plotly3DBiplot {
     validVectors = validVectors.filter(v => v.magnitude >= minMagnitude);
     this.displayedVariables = validVectors.length;
 
-    return { 
-      scoresX, scoresY, scoresZ, 
+    return {
+      scoresX, scoresY, scoresZ,
       loadingsX, loadingsY, loadingsZ,
       pc1, pc2, pc3,
       validVectors
@@ -163,8 +163,8 @@ export class Plotly3DBiplot {
 
   getTraces(): Data[] {
     const traces: Data[] = [];
-    const { 
-      scoresX, scoresY, scoresZ, 
+    const {
+      scoresX, scoresY, scoresZ,
       loadingsX, loadingsY, loadingsZ,
       pc1, pc2, pc3,
       validVectors
@@ -347,7 +347,7 @@ export class Plotly3DBiplot {
       // Add loading vectors as individual lines for better coloring
       validVectors.forEach(v => {
         const vectorColor = this.config.colorScheme![1] || '#ef4444';
-        
+
         traces.push({
           type: 'scatter3d',
           mode: 'lines',
@@ -373,7 +373,7 @@ export class Plotly3DBiplot {
         endpointX.push(loadingsX[v.i]);
         endpointY.push(loadingsY[v.i]);
         endpointZ.push(loadingsZ[v.i]);
-        
+
         hovertext.push(
           `<b>${v.name}</b><br>` +
           `PC${pc1 + 1}: ${loadingsX[v.i].toFixed(3)}<br>` +
@@ -438,7 +438,7 @@ export class Plotly3DBiplot {
 
     uniqueGroups.forEach((group, groupIndex) => {
       let groupX: number[], groupY: number[], groupZ: number[];
-      
+
       if (groups) {
         const indices = groups.map((g, idx) => g === group ? idx : -1).filter(idx => idx >= 0);
         groupX = indices.map(i => scoresX[i]);
@@ -510,7 +510,7 @@ export class Plotly3DBiplot {
   getEnhancedLayout(): Partial<Layout> {
     const baseLayout = this.getLayout();
     const themeLayout = getPlotlyTheme(this.config.theme || 'light', this.config.fontScale).layout;
-    
+
     // Add watermark if enabled
     let watermarkImages: any[] = [];
     if (PLOT_CONFIG.watermark.enabled) {
@@ -530,7 +530,7 @@ export class Plotly3DBiplot {
         layer: 'above'
       }];
     }
-    
+
     return mergeLayouts(themeLayout, baseLayout, { images: watermarkImages });
   }
 
@@ -539,7 +539,7 @@ export class Plotly3DBiplot {
     const pc1 = this.data.pc1 ?? 0;
     const pc2 = this.data.pc2 ?? 1;
     const pc3 = this.data.pc3 ?? 2;
-    
+
     // Theme-aware colors for 3D scene
     const isDark = this.config.theme === 'dark';
     const sceneColors = {
@@ -629,28 +629,28 @@ export const PCA3DBiplot: React.FC<{
   const pc3 = data.pc3 ?? 2;
   const numComponents = data.scores[0]?.length || 0;
   const numLoadingComponents = data.loadings?.length || 0;
-  
+
   // Validate that we have at least 3 components in both scores and loadings
   if (numComponents < 3 || pc3 >= numComponents || numLoadingComponents < 3 || pc3 >= numLoadingComponents) {
     const theme = config?.theme || 'light';
     return (
-      <div style={{ 
-        width: '100%', 
-        height: '100%', 
-        display: 'flex', 
-        alignItems: 'center', 
+      <div style={{
+        width: '100%',
+        height: '100%',
+        display: 'flex',
+        alignItems: 'center',
         justifyContent: 'center',
         flexDirection: 'column'
       }}>
-        <p style={{ 
-          color: theme === 'dark' ? '#9ca3af' : '#6b7280', 
+        <p style={{
+          color: theme === 'dark' ? '#9ca3af' : '#6b7280',
           textAlign: 'center',
           marginBottom: '10px'
         }}>
           3D Biplot requires at least 3 principal components.
         </p>
-        <p style={{ 
-          color: theme === 'dark' ? '#9ca3af' : '#6b7280', 
+        <p style={{
+          color: theme === 'dark' ? '#9ca3af' : '#6b7280',
           textAlign: 'center',
           fontSize: '14px'
         }}>
@@ -660,7 +660,7 @@ export const PCA3DBiplot: React.FC<{
       </div>
     );
   }
-  
+
   const plot = useMemo(() => new Plotly3DBiplot(data, config), [data, config]);
 
   return (

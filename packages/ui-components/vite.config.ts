@@ -26,7 +26,7 @@ export default defineConfig({
     },
     rollupOptions: {
       external: [
-        'react', 
+        'react',
         'react-dom',
         'react-plotly.js',
         'plotly.js-dist-min',
