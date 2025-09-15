@@ -150,12 +150,8 @@ export const CSVGrid = forwardRef<any, CSVGridProps>(({
         onConfirm: () => void;
     }>({ isOpen: false, title: '', message: '', onConfirm: () => {} });
 
-    // Validate inputs after hooks
-    if (!data || !headers || data.length === 0 || headers.length === 0) {
-        return <div className="w-full h-full flex items-center justify-center text-gray-500">No data to display</div>;
-    }
-
     // Detect column types
+    // Note: All hooks are declared before the validation check below to comply with React Hooks rules
     const detectColumnType = useCallback((colIndex: number): 'numeric' | 'text' | 'mixed' => {
         let hasNumeric = false;
         let hasText = false;
@@ -649,6 +645,11 @@ return;
             headerContainer.removeEventListener('contextmenu', handleHeaderRightClick);
         };
     }, [gridApi, columnApi, handleHeaderContextMenu]);
+
+    // Early return for invalid data (placed after all hooks to satisfy React rules)
+    if (!data || !headers || data.length === 0 || headers.length === 0) {
+        return <div className="w-full h-full flex items-center justify-center text-gray-500">No data to display</div>;
+    }
 
     return (
         <div className="w-full h-full">
