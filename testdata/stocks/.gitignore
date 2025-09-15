@@ -1,0 +1,8 @@
+# Generated enriched dataset files
+stocks_enriched_raw.csv
+stocks_enriched_for_pca.csv
+stocks_enriched_for_pca_standardized.csv
+
+# Test output files
+test_pca*.json
+test_pca*.csv

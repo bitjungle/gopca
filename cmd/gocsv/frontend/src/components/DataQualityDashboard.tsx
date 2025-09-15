@@ -7,7 +7,7 @@
 import React, { useState } from 'react';
 import { main } from '../../wailsjs/go/models';
 import { PlotlyDistributionChart } from './PlotlyDistributionChart';
-import { CorrelationMatrix } from './CorrelationMatrix';
+// import { CorrelationMatrix } from './CorrelationMatrix'; // Removed: unused import
 import { QualityScoreCard } from './QualityScoreCard';
 
 interface DataQualityDashboardProps {

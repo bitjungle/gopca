@@ -139,6 +139,14 @@ Perfect for organizations with strict data governance requirements, including:
 - Corporate policies restricting cloud services
 - Research requiring data isolation
 
+### Verify Our Privacy Claims
+Run our privacy verification scripts to confirm:
+```bash
+./scripts/verify-privacy.sh  # Audit dependencies and code
+./scripts/test-privacy.sh    # Test runtime network isolation
+```
+See [PRIVACY.md](PRIVACY.md) for detailed verification instructions.
+
 ## Getting Started
 
 ### GoPCA Desktop Application
@@ -246,6 +254,7 @@ Teach multivariate statistics with interactive visualizations, explore research 
 
 ## Documentation
 
+- [Privacy Policy & Verification](PRIVACY.md) - Our privacy commitment and how to verify it
 - [Introduction to PCA](docs/intro_to_pca.md) - Learn the fundamentals of Principal Component Analysis
 - [Data Preparation Guide](docs/intro_to_data_prep.md) - Best practices for preparing your data
 - [Data Format Specification](docs/data-format.md) - Detailed CSV format requirements

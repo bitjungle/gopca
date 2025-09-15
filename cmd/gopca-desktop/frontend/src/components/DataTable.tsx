@@ -19,6 +19,27 @@ interface TableRowData {
   [key: string]: string | number | undefined;
 }
 
+// Component for the select-all checkbox to avoid React Hooks in non-component functions
+const SelectAllCheckbox: React.FC<{ table: any }> = ({ table }) => {
+  const checkboxRef = React.useRef<HTMLInputElement>(null);
+  
+  React.useEffect(() => {
+    if (checkboxRef.current) {
+      checkboxRef.current.indeterminate = table.getIsSomeRowsSelected();
+    }
+  });
+
+  return (
+    <input
+      ref={checkboxRef}
+      type="checkbox"
+      checked={table.getIsAllRowsSelected()}
+      onChange={table.getToggleAllRowsSelectedHandler()}
+      className="w-4 h-4 text-blue-600 bg-white dark:bg-gray-700 border-gray-300 dark:border-gray-600 rounded focus:ring-blue-500"
+    />
+  );
+};
+
 interface DataTableProps {
   headers: string[];
   rowNames: string[];
@@ -42,12 +63,12 @@ export const DataTable: React.FC<DataTableProps> = ({
   onRowSelectionChange,
   onColumnSelectionChange,
   externalSelectedRows,
-  highlightExternalSelections
+  highlightExternalSelections: _highlightExternalSelections
 }) => {
   const hasRowNames = rowNames && rowNames.length > 0;
   const [rowSelection, setRowSelection] = React.useState<RowSelectionState>({});
   const [columnSelection, setColumnSelection] = React.useState<Record<string, boolean>>({});
-  const isFirstRender = React.useRef(true);
+  // Removed unused variable: const isFirstRender = React.useRef(true);
 
   // Initialize selection states when component mounts with data
   React.useEffect(() => {
@@ -116,24 +137,7 @@ return;
     if (enableRowSelection) {
       cols.push({
         id: 'select',
-        header: ({ table }) => {
-          const checkboxRef = React.useRef<HTMLInputElement>(null);
-          React.useEffect(() => {
-            if (checkboxRef.current) {
-              checkboxRef.current.indeterminate = table.getIsSomeRowsSelected();
-            }
-          });
-
-          return (
-            <input
-              ref={checkboxRef}
-              type="checkbox"
-              checked={table.getIsAllRowsSelected()}
-              onChange={table.getToggleAllRowsSelectedHandler()}
-              className="w-4 h-4 text-blue-600 bg-white dark:bg-gray-700 border-gray-300 dark:border-gray-600 rounded focus:ring-blue-500"
-            />
-          );
-        },
+        header: ({ table }) => <SelectAllCheckbox table={table} />,
         cell: ({ row }) => (
           <input
             type="checkbox"

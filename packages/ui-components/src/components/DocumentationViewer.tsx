@@ -19,11 +19,11 @@ export interface DocumentationViewerProps {
  * Handles loading, escape key, scroll prevention, and consistent styling.
  * Used by both GoPCA Desktop and GoCSV Desktop applications.
  */
-export const DocumentationViewer: React.FC<DocumentationViewerProps> = ({ 
-  isOpen, 
-  onClose, 
-  title, 
-  markdownPath 
+export const DocumentationViewer: React.FC<DocumentationViewerProps> = ({
+  isOpen,
+  onClose,
+  title,
+  markdownPath
 }) => {
   const [markdownContent, setMarkdownContent] = useState<string>('');
   const [isLoading, setIsLoading] = useState(true);

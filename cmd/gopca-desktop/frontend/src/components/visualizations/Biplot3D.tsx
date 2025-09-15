@@ -41,7 +41,7 @@ export const Biplot3D: React.FC<Biplot3DProps> = ({
   xComponent = 0,
   yComponent = 1,
   zComponent = 2,
-  groupColumn,
+  groupColumn: _groupColumn,
   groupLabels,
   groupValues,
   groupType,

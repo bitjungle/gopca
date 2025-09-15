@@ -68,8 +68,10 @@ export const CustomSelect: React.FC<CustomSelectProps> = ({
 
   // Filter options based on search term
   const filteredOptions = React.useMemo(() => {
-    if (!searchTerm) return options;
-    
+    if (!searchTerm) {
+return options;
+}
+
     return options.filter(option =>
       option.label.toLowerCase().includes(searchTerm.toLowerCase())
     );
@@ -96,7 +98,9 @@ export const CustomSelect: React.FC<CustomSelectProps> = ({
 
   // Handle keyboard navigation
   const handleKeyDown = useCallback((e: React.KeyboardEvent) => {
-    if (disabled) return;
+    if (disabled) {
+return;
+}
 
     switch (e.key) {
       case 'Enter':
@@ -130,7 +134,9 @@ export const CustomSelect: React.FC<CustomSelectProps> = ({
         } else {
           setHighlightedIndex(prev => {
             const next = prev + 1;
-            if (next >= filteredOptions.length) return 0;
+            if (next >= filteredOptions.length) {
+return 0;
+}
             // Skip disabled options
             if (filteredOptions[next]?.disabled) {
               let nextValid = next + 1;
@@ -151,7 +157,9 @@ export const CustomSelect: React.FC<CustomSelectProps> = ({
         } else {
           setHighlightedIndex(prev => {
             const next = prev - 1;
-            if (next < 0) return filteredOptions.length - 1;
+            if (next < 0) {
+return filteredOptions.length - 1;
+}
             // Skip disabled options
             if (filteredOptions[next]?.disabled) {
               let nextValid = next - 1;
@@ -171,7 +179,7 @@ export const CustomSelect: React.FC<CustomSelectProps> = ({
           e.preventDefault();
           const newSearchTerm = searchTerm + e.key;
           setSearchTerm(newSearchTerm);
-          
+
           // Clear search after 1.5 seconds of inactivity
           if (searchTimeoutRef.current) {
             clearTimeout(searchTimeoutRef.current);
@@ -216,8 +224,8 @@ export const CustomSelect: React.FC<CustomSelectProps> = ({
         onMouseEnter={() => !option.disabled && setHighlightedIndex(index)}
         className={`
           relative flex items-center px-3 py-2 cursor-pointer select-none text-left
-          ${option.disabled 
-            ? 'opacity-50 cursor-not-allowed bg-gray-50 dark:bg-gray-800 text-gray-400 dark:text-gray-500' 
+          ${option.disabled
+            ? 'opacity-50 cursor-not-allowed bg-gray-50 dark:bg-gray-800 text-gray-400 dark:text-gray-500'
             : isHighlighted
               ? 'bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400'
               : isSelected
@@ -252,7 +260,7 @@ export const CustomSelect: React.FC<CustomSelectProps> = ({
     if (Object.keys(groupedOptions.groups).length > 0) {
       return (
         <>
-          {groupedOptions.ungrouped.map((option) => 
+          {groupedOptions.ungrouped.map((option) =>
             renderOption(option, options.indexOf(option))
           )}
           {Object.entries(groupedOptions.groups).map(([groupName, groupOptions]) => (
@@ -260,7 +268,7 @@ export const CustomSelect: React.FC<CustomSelectProps> = ({
               <div className="px-3 py-1 text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider bg-gray-50 dark:bg-gray-800/50">
                 {groupName}
               </div>
-              {groupOptions.map(option => 
+              {groupOptions.map(option =>
                 renderOption(option, options.indexOf(option))
               )}
             </div>
@@ -270,7 +278,7 @@ export const CustomSelect: React.FC<CustomSelectProps> = ({
     }
 
     // Otherwise render flat list
-    return filteredOptions.map((option) => 
+    return filteredOptions.map((option) =>
       renderOption(option, options.indexOf(option))
     );
   };
@@ -278,14 +286,14 @@ export const CustomSelect: React.FC<CustomSelectProps> = ({
   return (
     <div className={`relative ${className}`} ref={dropdownRef}>
       {label && (
-        <label 
+        <label
           htmlFor={id}
           className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1"
         >
           {label}
         </label>
       )}
-      
+
       <button
         ref={buttonRef}
         id={id}
@@ -314,11 +322,11 @@ export const CustomSelect: React.FC<CustomSelectProps> = ({
           {selectedOption ? selectedOption.label : placeholder}
         </span>
         <span className="absolute inset-y-0 right-0 flex items-center pr-2 pointer-events-none">
-          <svg 
-            className={`w-5 h-5 text-gray-400 transition-transform duration-200 ${isOpen ? 'rotate-180' : ''}`} 
-            fill="none" 
-            strokeWidth="2" 
-            stroke="currentColor" 
+          <svg
+            className={`w-5 h-5 text-gray-400 transition-transform duration-200 ${isOpen ? 'rotate-180' : ''}`}
+            fill="none"
+            strokeWidth="2"
+            stroke="currentColor"
             viewBox="0 0 24 24"
           >
             <path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" />
@@ -351,7 +359,7 @@ export const CustomSelect: React.FC<CustomSelectProps> = ({
         >
           {searchTerm && (
             <div className="px-3 py-1 text-xs text-gray-500 dark:text-gray-400 bg-gray-50 dark:bg-gray-800/50 border-b border-gray-200 dark:border-gray-600">
-              Searching: "{searchTerm}"
+              Searching: &quot;{searchTerm}&quot;
             </div>
           )}
           {renderOptions()}

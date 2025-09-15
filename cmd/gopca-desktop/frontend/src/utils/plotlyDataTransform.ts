@@ -353,7 +353,7 @@ export function createCircleOfCorrelationsConfig(
     showGrid: true,
     showLabels: true,
     minVectorLength: 0.1,
-    colorByMagnitude: true,
+    colorByMagnitude: false,  // Use palette colors for each variable
     ...createBaseVisualizationConfig(theme, colorScheme, fontScale)
   };
 }
@@ -453,9 +453,19 @@ export function createEigencorrelationPlotConfig(
   colorScheme?: string[],
   fontScale?: number
 ): EigencorrelationPlotConfig {
+  // Convert color array to Plotly colorscale format
+  let colorScale: any = 'Reds'; // Default fallback
+  if (colorScheme && colorScheme.length > 0) {
+    // Create a Plotly colorscale from the palette colors
+    colorScale = colorScheme.map((color, index) => [
+      index / (colorScheme.length - 1),
+      color
+    ]);
+  }
+
   return {
     maxComponents,
-    colorScale: 'Reds',
+    colorScale,
     showValues: true,
     valueFormat: '.2f',
     clusterVariables: false,

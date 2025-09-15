@@ -19,9 +19,9 @@ interface AboutDialogProps {
     onLicenseClick: (e: React.MouseEvent) => void;
 }
 
-export const AboutDialog: React.FC<AboutDialogProps> = ({ 
-    isOpen, 
-    onClose, 
+export const AboutDialog: React.FC<AboutDialogProps> = ({
+    isOpen,
+    onClose,
     version,
     appName,
     tagline,
@@ -45,7 +45,7 @@ export const AboutDialog: React.FC<AboutDialogProps> = ({
                         alt={logoAlt}
                         className="h-24 w-auto"
                     />
-                    
+
                     <div className="space-y-2">
                         <h2 className="text-2xl font-bold text-gray-900 dark:text-gray-100">
                             {appName}
@@ -95,7 +95,7 @@ export const AboutDialog: React.FC<AboutDialogProps> = ({
                     </div>
                 </div>
             </DialogBody>
-            
+
             <DialogFooter>
                 <button
                     onClick={onClose}
