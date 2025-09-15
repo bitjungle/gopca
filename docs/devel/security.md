@@ -58,7 +58,7 @@ GoPCA Suite guarantees **zero telemetry or data collection**:
 - No auto-update mechanisms
 - Complete offline operation
 
-### Framework Privacy Verification (January 2025)
+### Framework Privacy Verification (September 2025)
 
 All frameworks and dependencies have been audited for telemetry:
 
