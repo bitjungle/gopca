@@ -1,6 +1,6 @@
 # GoPCA Suite - The Definitive Principal Component Analysis Toolset
 
-Professional-grade PCA analysis made simple. A comprehensive suite of tools including a powerful command-line interface and intuitive desktop applications.
+Professional-grade PCA analysis made simple. A comprehensive suite of tools for linear, non-linear, and temporal data analysis through powerful command-line and intuitive desktop applications.
 
 ## What is GoPCA Suite?
 
@@ -55,7 +55,7 @@ Clean and prepare your data with an intuitive spreadsheet-like interface.
 ![GoCSV Overview](docs/images/GoCSV_overview.png)
 
 **GoCSV Desktop Features:**
-- Edit cells directly like in Excel
+- Edit cells directly in spreadsheet interface
 - Add, remove, or reorder columns
 - Multi-step undo/redo functionality
 - Column type detection (numeric, categorical, target)
@@ -70,6 +70,7 @@ Clean and prepare your data with an intuitive spreadsheet-like interface.
   - SVD (default) - Fast and accurate for complete data
   - NIPALS - Handles missing data gracefully
   - Kernel PCA - For non-linear relationships
+  - SSA - For time series and temporal pattern analysis
 - **Flexible preprocessing**: 
   - Mean centering and scaling
   - Robust scaling for outlier resistance
@@ -81,21 +82,15 @@ Clean and prepare your data with an intuitive spreadsheet-like interface.
 
 ![GoPCA plot types](docs/images/GoPCA-plots.jpg)
 
-**Available Visualizations:**
-- **Scores plots** - View samples in PC space with group coloring and confidence ellipses
-- **Loadings plots** - Understand variable contributions to each component
-- **Scree plots** - Determine optimal number of components
-- **Biplots** - See samples and variables together with confidence ellipses
-- **Circle of Correlations** - Visualize variable relationships on unit circle
+**Interactive Visualizations:**
+- **Scores & Loadings plots** - Explore samples and variable contributions
+- **Biplots** - Combined view with confidence ellipses
+- **Scree plots** - Determine optimal components
+- **Circle of Correlations** - Variable relationships on unit circle
 - **Diagnostic plots** - Detect outliers with T² vs Q residuals
-- **Eigencorrelation plots** - Explore correlations between PCs and original variables
+- **Eigencorrelation plots** - PC-variable correlations
 
-**All visualizations feature:**
-- **Export to PNG** for publications
-- **Interactive tooltips** with detailed information
-- **High quality color palettes** (qualitative and sequential)
-- **Full-screen mode** for presentations
-- **Optional row labels** for identifying specific data points
+All plots support PNG export, interactive tooltips, full-screen mode, and optional labels.
 
 ![GoPCA Scoreplot Example](docs/images/GoPCA_scoreplot_example.png)
 
@@ -109,43 +104,21 @@ Clean and prepare your data with an intuitive spreadsheet-like interface.
 
 ## Privacy & Security
 
-GoPCA Suite is designed with privacy and security as fundamental principles:
+GoPCA Suite prioritizes your data privacy:
 
-### 100% Local Processing
-All computations happen exclusively on your machine. There are no cloud services, external servers, or remote processing involved. Your data is processed where it lives - on your computer.
+- **100% Local Processing** - All computations happen on your machine only
+- **Zero Telemetry** - No analytics, tracking, or data collection
+- **No Network Dependencies** - Works completely offline
+- **Open Source** - Entire codebase auditable on GitHub
+- **Compliance Ready** - Perfect for GDPR, HIPAA, and strict corporate policies
 
-### Complete Data Sovereignty
-Your data **never** leaves your computer. We don't upload, transmit, or share any of your data, results, or usage patterns. What you analyze stays with you.
+Your data **never** leaves your computer. No cloud services, no external servers, no hidden connections.
 
-### Zero Telemetry
-- No usage analytics or metrics collection
-- No crash reporting to external services
-- No feature tracking or user behavior monitoring
-- No automatic updates that phone home
-
-### No External Dependencies
-- Works completely offline - no internet connection required
-- No API calls to external services
-- No third-party analytics or tracking libraries
-- No hidden connections or background communications
-
-### Open Source Transparency
-The entire codebase is open source and publicly auditable on GitHub. You can review every line of code to verify our privacy commitments. We believe transparency builds trust.
-
-### Compliance Ready
-Perfect for organizations with strict data governance requirements, including:
-- GDPR compliance (data remains under your control)
-- HIPAA environments (no data transmission risks)
-- Corporate policies restricting cloud services
-- Research requiring data isolation
-
-### Verify Our Privacy Claims
-Run our privacy verification scripts to confirm:
+Verify our privacy claims:
 ```bash
-./scripts/verify-privacy.sh  # Audit dependencies and code
-./scripts/test-privacy.sh    # Test runtime network isolation
+./scripts/verify-privacy.sh  # Audit code and dependencies
 ```
-See [PRIVACY.md](PRIVACY.md) for detailed verification instructions.
+See [PRIVACY.md](PRIVACY.md) for detailed privacy documentation and verification.
 
 ## Getting Started
 
@@ -158,8 +131,6 @@ See [PRIVACY.md](PRIVACY.md) for detailed verification instructions.
 5. **Configure preprocessing** - Choose centering, scaling, and other options
 6. **Click "Go PCA!"** - Explore results interactively
 
-<!-- ![GoPCA Workflow](docs/images/workflow.png) -->
-*[Screenshot placeholder: Step-by-step workflow visualization]*
 
 ### Data Preparation with GoCSV Desktop
 
@@ -174,33 +145,15 @@ See [PRIVACY.md](PRIVACY.md) for detailed verification instructions.
 4. **Save** the cleaned file
 5. **Open in GoPCA Desktop** with one click
 
-### macOS Security Note
+### Platform Security Notes
 
-When downloading GoPCA Desktop and GoCSV Desktop from GitHub releases, macOS may apply security measures that prevent the apps from detecting each other. This happens because macOS runs downloaded apps from a temporary, randomized location (App Translocation) for security.
+**macOS**: Downloaded apps may be blocked by Gatekeeper. Solution: Move both GoPCA.app and GoCSV.app to Applications folder before launching, or right-click and choose "Open".
 
-**Solutions:**
-1. **Move both apps to Applications**: Drag both GoPCA.app and GoCSV.app to your Applications folder before launching
-2. **Keep apps together**: Always keep both apps in the same folder (Applications, Downloads, or Desktop)
-3. **Alternative launch method**: Right-click the app and choose "Open" instead of double-clicking
+**Windows**: SmartScreen may flag the installer as uncommon. Solution: Click "More info" then "Run anyway", or check "Unblock" in file Properties.
 
-### Windows Security Note
-
-When downloading the GoPCA installer from GitHub releases, Windows may show a security warning stating the file "isn't commonly downloaded" or may be blocked by Windows SmartScreen. This is a standard Windows security feature that flags newer or less frequently downloaded files.
-
-**How to proceed safely:**
-1. **From the download warning**: Click the three dots (...) menu and select "Keep" 
-2. **If Windows Defender blocks it**: Click "More info" then "Run anyway"
-3. **Alternative**: You can also right-click the downloaded file, go to Properties, and check "Unblock" if present
-
-**Why this happens:**
-- Windows SmartScreen uses download frequency as one safety metric
-- As an open-source project, our installers have fewer downloads than commercial software
-- The warning will decrease as more users download each release
-
-**Verify authenticity:**
-- Check that you're downloading from our official GitHub releases page
-- Each release includes SHA-256 checksums for verification
-- The entire source code is available for review on GitHub
+Both warnings are standard OS security features for new software. Verify authenticity by:
+- Downloading only from our official [GitHub Releases](https://github.com/bitjungle/gopca/releases)
+- Checking SHA-256 checksums provided with each release
 
 ### Command-Line Interface
 
