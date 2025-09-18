@@ -10,7 +10,7 @@ import React, { useMemo } from 'react';
 import { Data, Layout, Config } from 'plotly.js';
 import { getPlotlyTheme, mergeLayouts, ThemeMode } from '../utils/plotlyTheme';
 import { getExportMenuItems } from '../utils/plotlyExport';
-import { PLOT_CONFIG, getScaledMarkerSize } from '../config/plotConfig';
+import { PLOT_CONFIG, getScaledMarkerSize, getScaledFontSizes } from '../config/plotConfig';
 import { PlotlyWithFullscreen } from '../utils/plotlyFullscreen';
 import { getWatermarkDataUrlSync } from '../assets/watermark';
 
@@ -205,13 +205,13 @@ export class Plotly3DBiplot {
 
         traces.push({
           type: 'scatter3d',
-          mode: (showText ? 'markers+text' : 'markers') as any,
+          mode: showText ? 'markers+text' as any : 'markers',
           x: scoresX,
           y: scoresY,
           z: scoresZ,
           name: 'Scores',
           text: textLabels,
-          textposition: 'top center' as any,
+          textposition: 'top center',
           textfont: showText ? {
             size: Math.round(10 * (this.config.fontScale || 1.0)),
             color: 'currentColor'
@@ -228,7 +228,7 @@ export class Plotly3DBiplot {
             colorbar: {
               title: {
                 text: 'Value'
-              } as any,
+              },
               thickness: 15,
               len: 0.9
             },
@@ -261,13 +261,13 @@ export class Plotly3DBiplot {
 
           traces.push({
             type: 'scatter3d',
-            mode: (showText ? 'markers+text' : 'markers') as any,
+            mode: showText ? 'markers+text' as any : 'markers',
             name: group,
             x: groupX,
             y: groupY,
             z: groupZ,
             text: textLabels,
-            textposition: 'top center' as any,
+            textposition: 'top center',
             textfont: showText ? {
               size: Math.round(10 * (this.config.fontScale || 1.0)),
               color: 'currentColor'
@@ -297,13 +297,13 @@ export class Plotly3DBiplot {
 
         traces.push({
           type: 'scatter3d',
-          mode: (showText ? 'markers+text' : 'markers') as any,
+          mode: showText ? 'markers+text' as any : 'markers',
           x: scoresX,
           y: scoresY,
           z: scoresZ,
           name: 'Scores',
           text: textLabels,
-          textposition: 'top center' as any,
+          textposition: 'top center',
           textfont: showText ? {
             size: Math.round(10 * (this.config.fontScale || 1.0)),
             color: 'currentColor'
@@ -540,6 +540,9 @@ export class Plotly3DBiplot {
     const pc2 = this.data.pc2 ?? 1;
     const pc3 = this.data.pc3 ?? 2;
 
+    // Get scaled font sizes based on fontScale
+    const scaledFonts = getScaledFontSizes(this.config.fontScale || 1.0);
+
     // Theme-aware colors for 3D scene
     const isDark = this.config.theme === 'dark';
     const sceneColors = {
@@ -561,8 +564,10 @@ export class Plotly3DBiplot {
       scene: {
         xaxis: {
           title: {
-            text: `PC${pc1 + 1} (${explainedVariance[pc1].toFixed(1)}%)`
+            text: `PC${pc1 + 1} (${explainedVariance[pc1].toFixed(1)}%)`,
+            font: { size: scaledFonts.axis }
           },
+          tickfont: { size: scaledFonts.label },
           backgroundcolor: sceneColors.backgroundcolor,
           gridcolor: sceneColors.gridcolor,
           showbackground: true,
@@ -571,8 +576,10 @@ export class Plotly3DBiplot {
         },
         yaxis: {
           title: {
-            text: `PC${pc2 + 1} (${explainedVariance[pc2].toFixed(1)}%)`
+            text: `PC${pc2 + 1} (${explainedVariance[pc2].toFixed(1)}%)`,
+            font: { size: scaledFonts.axis }
           },
+          tickfont: { size: scaledFonts.label },
           backgroundcolor: sceneColors.backgroundcolor,
           gridcolor: sceneColors.gridcolor,
           showbackground: true,
@@ -581,8 +588,10 @@ export class Plotly3DBiplot {
         },
         zaxis: {
           title: {
-            text: `PC${pc3 + 1} (${explainedVariance[pc3].toFixed(1)}%)`
+            text: `PC${pc3 + 1} (${explainedVariance[pc3].toFixed(1)}%)`,
+            font: { size: scaledFonts.axis }
           },
+          tickfont: { size: scaledFonts.label },
           backgroundcolor: sceneColors.backgroundcolor,
           gridcolor: sceneColors.gridcolor,
           showbackground: true,
@@ -609,7 +618,7 @@ export class Plotly3DBiplot {
     return {
       responsive: true,
       displaylogo: false,
-      modeBarButtonsToAdd: getExportMenuItems() as any,
+      modeBarButtonsToAdd: getExportMenuItems(),
       toImageButtonOptions: {
         ...PLOT_CONFIG.export.presentation,
         filename: 'pca-3d-biplot'
@@ -625,6 +634,9 @@ export const PCA3DBiplot: React.FC<{
   data: Biplot3DData;
   config?: Biplot3DConfig;
 }> = ({ data, config }) => {
+  // Always call hooks first, before any conditional returns
+  const plot = useMemo(() => new Plotly3DBiplot(data, config), [data, config]);
+
   // Check if we have enough components for 3D visualization
   const pc3 = data.pc3 ?? 2;
   const numComponents = data.scores[0]?.length || 0;
@@ -660,8 +672,6 @@ export const PCA3DBiplot: React.FC<{
       </div>
     );
   }
-
-  const plot = useMemo(() => new Plotly3DBiplot(data, config), [data, config]);
 
   return (
     <PlotlyWithFullscreen
