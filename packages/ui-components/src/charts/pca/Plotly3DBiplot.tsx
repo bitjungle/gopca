@@ -10,7 +10,7 @@ import React, { useMemo } from 'react';
 import { Data, Layout, Config } from 'plotly.js';
 import { getPlotlyTheme, mergeLayouts, ThemeMode } from '../utils/plotlyTheme';
 import { getExportMenuItems } from '../utils/plotlyExport';
-import { PLOT_CONFIG, getScaledMarkerSize } from '../config/plotConfig';
+import { PLOT_CONFIG, getScaledMarkerSize, getScaledFontSizes } from '../config/plotConfig';
 import { PlotlyWithFullscreen } from '../utils/plotlyFullscreen';
 import { getWatermarkDataUrlSync } from '../assets/watermark';
 
@@ -540,6 +540,9 @@ export class Plotly3DBiplot {
     const pc2 = this.data.pc2 ?? 1;
     const pc3 = this.data.pc3 ?? 2;
 
+    // Get scaled font sizes based on fontScale
+    const scaledFonts = getScaledFontSizes(this.config.fontScale || 1.0);
+
     // Theme-aware colors for 3D scene
     const isDark = this.config.theme === 'dark';
     const sceneColors = {
@@ -561,8 +564,10 @@ export class Plotly3DBiplot {
       scene: {
         xaxis: {
           title: {
-            text: `PC${pc1 + 1} (${explainedVariance[pc1].toFixed(1)}%)`
+            text: `PC${pc1 + 1} (${explainedVariance[pc1].toFixed(1)}%)`,
+            font: { size: scaledFonts.axis }
           },
+          tickfont: { size: scaledFonts.label },
           backgroundcolor: sceneColors.backgroundcolor,
           gridcolor: sceneColors.gridcolor,
           showbackground: true,
@@ -571,8 +576,10 @@ export class Plotly3DBiplot {
         },
         yaxis: {
           title: {
-            text: `PC${pc2 + 1} (${explainedVariance[pc2].toFixed(1)}%)`
+            text: `PC${pc2 + 1} (${explainedVariance[pc2].toFixed(1)}%)`,
+            font: { size: scaledFonts.axis }
           },
+          tickfont: { size: scaledFonts.label },
           backgroundcolor: sceneColors.backgroundcolor,
           gridcolor: sceneColors.gridcolor,
           showbackground: true,
@@ -581,8 +588,10 @@ export class Plotly3DBiplot {
         },
         zaxis: {
           title: {
-            text: `PC${pc3 + 1} (${explainedVariance[pc3].toFixed(1)}%)`
+            text: `PC${pc3 + 1} (${explainedVariance[pc3].toFixed(1)}%)`,
+            font: { size: scaledFonts.axis }
           },
+          tickfont: { size: scaledFonts.label },
           backgroundcolor: sceneColors.backgroundcolor,
           gridcolor: sceneColors.gridcolor,
           showbackground: true,
