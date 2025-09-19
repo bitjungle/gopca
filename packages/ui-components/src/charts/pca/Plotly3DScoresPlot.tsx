@@ -10,7 +10,7 @@ import React, { useMemo } from 'react';
 import { Data, Layout, Config } from 'plotly.js';
 import { getPlotlyTheme, mergeLayouts, ThemeMode } from '../utils/plotlyTheme';
 import { getExportMenuItems } from '../utils/plotlyExport';
-import { PLOT_CONFIG, getScaledMarkerSize } from '../config/plotConfig';
+import { PLOT_CONFIG, getScaledMarkerSize, getScaledFontSizes } from '../config/plotConfig';
 import { PlotlyWithFullscreen } from '../utils/plotlyFullscreen';
 import { getWatermarkDataUrlSync } from '../assets/watermark';
 
@@ -109,13 +109,13 @@ export class Plotly3DScoresPlot {
 
       traces.push({
         type: 'scatter3d',
-        mode: (showText ? 'markers+text' : 'markers') as any,
+        mode: showText ? 'markers+text' as any : 'markers',
         name: 'Scores',
         x: scoresX,
         y: scoresY,
         z: scoresZ,
         text: textLabels,
-        textposition: 'top center' as any,
+        textposition: 'top center',
         textfont: showText ? {
           size: Math.round(10 * (this.config.fontScale || 1.0)),
           color: 'currentColor'
@@ -132,7 +132,7 @@ export class Plotly3DScoresPlot {
           colorbar: {
             title: {
               text: 'Value'
-            } as any,
+            },
             thickness: 15,
             len: 0.9
           },
@@ -165,13 +165,13 @@ export class Plotly3DScoresPlot {
 
         traces.push({
           type: 'scatter3d',
-          mode: (showText ? 'markers+text' : 'markers') as any,
+          mode: showText ? 'markers+text' as any : 'markers',
           name: group,
           x: groupScores.map(s => s[pc1]),
           y: groupScores.map(s => s[pc2]),
           z: groupScores.map(s => s[pc3]),
           text: textLabels,
-          textposition: 'top center' as any,
+          textposition: 'top center',
           textfont: showText ? {
             size: Math.round(10 * (this.config.fontScale || 1.0)),
             color: 'currentColor'
@@ -291,6 +291,9 @@ export class Plotly3DScoresPlot {
   getLayout(): Partial<Layout> {
     const { explainedVariance, pc1 = 0, pc2 = 1, pc3 = 2 } = this.data;
 
+    // Get scaled font sizes based on fontScale
+    const scaledFonts = getScaledFontSizes(this.config.fontScale || 1.0);
+
     // Theme-aware colors for 3D scene
     const isDark = this.config.theme === 'dark';
     const sceneColors = {
@@ -306,8 +309,10 @@ export class Plotly3DScoresPlot {
       scene: {
         xaxis: {
           title: {
-            text: `PC${pc1 + 1} (${explainedVariance[pc1].toFixed(1)}%)`
+            text: `PC${pc1 + 1} (${explainedVariance[pc1].toFixed(1)}%)`,
+            font: { size: scaledFonts.axis }
           },
+          tickfont: { size: scaledFonts.label },
           backgroundcolor: sceneColors.backgroundcolor,
           gridcolor: sceneColors.gridcolor,
           showbackground: true,
@@ -315,8 +320,10 @@ export class Plotly3DScoresPlot {
         },
         yaxis: {
           title: {
-            text: `PC${pc2 + 1} (${explainedVariance[pc2].toFixed(1)}%)`
+            text: `PC${pc2 + 1} (${explainedVariance[pc2].toFixed(1)}%)`,
+            font: { size: scaledFonts.axis }
           },
+          tickfont: { size: scaledFonts.label },
           backgroundcolor: sceneColors.backgroundcolor,
           gridcolor: sceneColors.gridcolor,
           showbackground: true,
@@ -324,8 +331,10 @@ export class Plotly3DScoresPlot {
         },
         zaxis: {
           title: {
-            text: `PC${pc3 + 1} (${explainedVariance[pc3].toFixed(1)}%)`
+            text: `PC${pc3 + 1} (${explainedVariance[pc3].toFixed(1)}%)`,
+            font: { size: scaledFonts.axis }
           },
+          tickfont: { size: scaledFonts.label },
           backgroundcolor: sceneColors.backgroundcolor,
           gridcolor: sceneColors.gridcolor,
           showbackground: true,
@@ -351,7 +360,7 @@ export class Plotly3DScoresPlot {
     return {
       responsive: true,
       displaylogo: false,
-      modeBarButtonsToAdd: getExportMenuItems() as any,
+      modeBarButtonsToAdd: getExportMenuItems(),
       toImageButtonOptions: {
         ...PLOT_CONFIG.export.presentation,
         filename: 'pca-3d-scores'
@@ -367,6 +376,9 @@ export const PCA3DScoresPlot: React.FC<{
   data: Scores3DPlotData;
   config?: Scores3DPlotConfig;
 }> = ({ data, config }) => {
+  // Always call hooks first, before any conditional returns
+  const plot = useMemo(() => new Plotly3DScoresPlot(data, config), [data, config]);
+
   // Check if we have enough components for 3D visualization
   const pc3 = data.pc3 ?? 2;
   const numComponents = data.scores[0]?.length || 0;
@@ -402,8 +414,6 @@ export const PCA3DScoresPlot: React.FC<{
       </div>
     );
   }
-
-  const plot = useMemo(() => new Plotly3DScoresPlot(data, config), [data, config]);
 
   return (
     <PlotlyWithFullscreen
