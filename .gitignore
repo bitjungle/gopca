@@ -33,6 +33,7 @@ go.work.sum
 .claude/
 CLAUDE.md
 CLAUDE.md.bak
+docs/CLAUDE.md
 .mcp.json
 
 # Local documentation
