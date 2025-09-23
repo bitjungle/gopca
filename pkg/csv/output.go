@@ -120,7 +120,7 @@ func ConvertToPCAOutputDataWithMetadata(result *types.PCAResult, data *Data, inc
 	// Use VariableLabels from result if available (e.g., for temporal PCA lag labels)
 	// Otherwise fall back to original data headers
 	featureLabels := data.Headers
-	if result.VariableLabels != nil && len(result.VariableLabels) > 0 {
+	if len(result.VariableLabels) > 0 {
 		featureLabels = result.VariableLabels
 	}
 
