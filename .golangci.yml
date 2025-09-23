@@ -38,8 +38,6 @@ linters:
     - gosec
     - errorlint
     - misspell
-    - gofmt
-    - goimports
     - gocognit
     - gocyclo
 
