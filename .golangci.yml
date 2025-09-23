@@ -2,9 +2,9 @@ version: "2"
 
 run:
   timeout: 5m
-  exclude-dirs:
-    - cmd/gopca-desktop/frontend
-    - cmd/gocsv/frontend
+  skip-files:
+    - cmd/gopca-desktop/main.go
+    - cmd/gocsv/main.go
 
 linters:
   enable:
@@ -13,10 +13,3 @@ linters:
     - ineffassign
     - staticcheck
     - unused
-
-issues:
-  exclude-patterns:
-    - path: cmd/gopca-desktop/main.go
-      text: "pattern all:frontend/dist"
-    - path: cmd/gocsv/main.go
-      text: "pattern all:frontend/dist"
