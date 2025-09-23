@@ -14,20 +14,20 @@ import (
 
 // FileDataJSON is a JSON-safe version of FileData
 type FileDataJSON struct {
-	Headers              []string                     `json:"headers"`
-	RowNames             []string                     `json:"rowNames"`
-	Data                 [][]types.JSONFloat64        `json:"data"`
-	MissingMask          [][]bool                     `json:"missingMask,omitempty"`
-	CategoricalColumns   map[string][]string          `json:"categoricalColumns,omitempty"`
+	Headers              []string                       `json:"headers"`
+	RowNames             []string                       `json:"rowNames"`
+	Data                 [][]types.JSONFloat64          `json:"data"`
+	MissingMask          [][]bool                       `json:"missingMask,omitempty"`
+	CategoricalColumns   map[string][]string            `json:"categoricalColumns,omitempty"`
 	NumericTargetColumns map[string][]types.JSONFloat64 `json:"numericTargetColumns,omitempty"`
 }
 
 // ToJSONSafe converts FileData to a JSON-safe version with optimized performance.
-// 
+//
 // Performance optimization: This method uses a two-pass approach to avoid unnecessary
 // memory allocations for the missing value mask. For large datasets without missing
 // values (like MET with ~100,000 data points), this avoids allocating ~100,000 booleans.
-// 
+//
 // Pass 1: Quick scan to detect if any NaN values exist (can exit early on first NaN)
 // Pass 2: Convert data and only build missing mask if needed
 //
@@ -56,7 +56,7 @@ func (fd *FileData) ToJSONSafe() *FileDataJSON {
 	// Second pass: convert float64 data to types.JSONFloat64
 	jsonData := make([][]types.JSONFloat64, len(fd.Data))
 	var missingMask [][]bool
-	
+
 	// Only allocate missing mask if we actually have missing values
 	// This is the key optimization for large datasets without missing values
 	if hasMissing {
@@ -68,7 +68,7 @@ func (fd *FileData) ToJSONSafe() *FileDataJSON {
 		if hasMissing {
 			missingMask[i] = make([]bool, len(row))
 		}
-		
+
 		// Convert row data
 		for j, val := range row {
 			jsonData[i][j] = types.JSONFloat64(val)
@@ -107,34 +107,41 @@ func (fd *FileData) ToJSONSafe() *FileDataJSON {
 
 // PCAResultJSON is a JSON-safe version of types.PCAResult
 type PCAResultJSON struct {
-	Scores               [][]types.JSONFloat64       `json:"scores"`
-	Loadings             [][]types.JSONFloat64       `json:"loadings"`
-	ExplainedVar         []types.JSONFloat64         `json:"explained_variance"`
-	ExplainedVarRatio    []types.JSONFloat64         `json:"explained_variance_ratio"`
-	CumulativeVar        []types.JSONFloat64         `json:"cumulative_variance"`
-	ComponentLabels      []string                    `json:"component_labels"`
-	VariableLabels       []string                    `json:"variable_labels,omitempty"`
-	ComponentsComputed   int                         `json:"components_computed"`
-	Method               string                      `json:"method"`
-	PreprocessingApplied bool                        `json:"preprocessing_applied"`
-	Means                []types.JSONFloat64         `json:"means,omitempty"`
-	StdDevs              []types.JSONFloat64         `json:"stddevs,omitempty"`
-	Metrics              []SampleMetricsJSON         `json:"metrics,omitempty"`
-	T2Limit95            types.JSONFloat64           `json:"t2_limit_95,omitempty"`
-	T2Limit99            types.JSONFloat64           `json:"t2_limit_99,omitempty"`
-	QLimit95             types.JSONFloat64           `json:"q_limit_95,omitempty"`
-	QLimit99             types.JSONFloat64           `json:"q_limit_99,omitempty"`
-	Eigencorrelations    *EigencorrelationResultJSON `json:"eigencorrelations,omitempty"`
-	AllEigenvalues       []types.JSONFloat64         `json:"all_eigenvalues,omitempty"`
+	Scores                     [][]types.JSONFloat64       `json:"scores"`
+	Loadings                   [][]types.JSONFloat64       `json:"loadings"`
+	ExplainedVar               []types.JSONFloat64         `json:"explained_variance"`
+	ExplainedVarRatio          []types.JSONFloat64         `json:"explained_variance_ratio"`
+	CumulativeVar              []types.JSONFloat64         `json:"cumulative_variance"`
+	ComponentLabels            []string                    `json:"component_labels"`
+	VariableLabels             []string                    `json:"variable_labels,omitempty"`
+	ComponentsComputed         int                         `json:"components_computed"`
+	Method                     string                      `json:"method"`
+	PreprocessingApplied       bool                        `json:"preprocessing_applied"`
+	Means                      []types.JSONFloat64         `json:"means,omitempty"`
+	StdDevs                    []types.JSONFloat64         `json:"stddevs,omitempty"`
+	Metrics                    []SampleMetricsJSON         `json:"metrics,omitempty"`
+	T2Limit95                  types.JSONFloat64           `json:"t2_limit_95,omitempty"`
+	T2Limit99                  types.JSONFloat64           `json:"t2_limit_99,omitempty"`
+	QLimit95                   types.JSONFloat64           `json:"q_limit_95,omitempty"`
+	QLimit99                   types.JSONFloat64           `json:"q_limit_99,omitempty"`
+	Eigencorrelations          *EigencorrelationResultJSON `json:"eigencorrelations,omitempty"`
+	AllEigenvalues             []types.JSONFloat64         `json:"all_eigenvalues,omitempty"`
+	TemporalEigenvectors       [][]types.JSONFloat64       `json:"temporal_eigenvectors,omitempty"`
+	TemporalVariableImportance [][]types.JSONFloat64       `json:"temporal_variable_importance,omitempty"`
+	// Kernel PCA specific fields
+	KernelType         string                       `json:"kernel_type,omitempty"`
+	KernelParams       map[string]types.JSONFloat64 `json:"kernel_params,omitempty"`
+	KernelMatrix       [][]types.JSONFloat64        `json:"kernel_matrix,omitempty"`
+	KernelEigenvectors [][]types.JSONFloat64        `json:"kernel_eigenvectors,omitempty"`
 }
 
 // EigencorrelationResultJSON is a JSON-safe version of types.EigencorrelationResult
 type EigencorrelationResultJSON struct {
 	Correlations map[string][]types.JSONFloat64 `json:"correlations"`
 	PValues      map[string][]types.JSONFloat64 `json:"pValues"`
-	Variables    []string                        `json:"variables"`
-	Components   []string                        `json:"components"`
-	Method       string                          `json:"method"`
+	Variables    []string                       `json:"variables"`
+	Components   []string                       `json:"components"`
+	Method       string                         `json:"method"`
 }
 
 // SampleMetricsJSON is a JSON-safe version of types.SampleMetrics
@@ -273,6 +280,61 @@ func ConvertPCAResultToJSON(result *types.PCAResult) *PCAResultJSON {
 		jsonResult.AllEigenvalues = make([]types.JSONFloat64, len(result.AllEigenvalues))
 		for i, val := range result.AllEigenvalues {
 			jsonResult.AllEigenvalues[i] = types.JSONFloat64(val)
+		}
+	}
+
+	// Convert temporal eigenvectors if present (for temporal PCA)
+	if len(result.TemporalEigenvectors) > 0 {
+		jsonResult.TemporalEigenvectors = make([][]types.JSONFloat64, len(result.TemporalEigenvectors))
+		for i, row := range result.TemporalEigenvectors {
+			jsonResult.TemporalEigenvectors[i] = make([]types.JSONFloat64, len(row))
+			for j, val := range row {
+				jsonResult.TemporalEigenvectors[i][j] = types.JSONFloat64(val)
+			}
+		}
+	}
+
+	// Convert temporal variable importance if present (for temporal PCA)
+	if len(result.TemporalVariableImportance) > 0 {
+		jsonResult.TemporalVariableImportance = make([][]types.JSONFloat64, len(result.TemporalVariableImportance))
+		for i, row := range result.TemporalVariableImportance {
+			jsonResult.TemporalVariableImportance[i] = make([]types.JSONFloat64, len(row))
+			for j, val := range row {
+				jsonResult.TemporalVariableImportance[i][j] = types.JSONFloat64(val)
+			}
+		}
+	}
+
+	// Convert kernel PCA specific fields
+	jsonResult.KernelType = result.KernelType
+
+	// Convert kernel parameters if present
+	if len(result.KernelParams) > 0 {
+		jsonResult.KernelParams = make(map[string]types.JSONFloat64)
+		for key, val := range result.KernelParams {
+			jsonResult.KernelParams[key] = types.JSONFloat64(val)
+		}
+	}
+
+	// Convert kernel matrix if present
+	if len(result.KernelMatrix) > 0 {
+		jsonResult.KernelMatrix = make([][]types.JSONFloat64, len(result.KernelMatrix))
+		for i, row := range result.KernelMatrix {
+			jsonResult.KernelMatrix[i] = make([]types.JSONFloat64, len(row))
+			for j, val := range row {
+				jsonResult.KernelMatrix[i][j] = types.JSONFloat64(val)
+			}
+		}
+	}
+
+	// Convert kernel eigenvectors if present
+	if len(result.KernelEigenvectors) > 0 {
+		jsonResult.KernelEigenvectors = make([][]types.JSONFloat64, len(result.KernelEigenvectors))
+		for i, row := range result.KernelEigenvectors {
+			jsonResult.KernelEigenvectors[i] = make([]types.JSONFloat64, len(row))
+			for j, val := range row {
+				jsonResult.KernelEigenvectors[i][j] = types.JSONFloat64(val)
+			}
 		}
 	}
 

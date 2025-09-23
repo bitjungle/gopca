@@ -5,7 +5,69 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [1.0.1] - 2025-01-31
+## [1.1.0] - 2025-09-23
+
+### Added
+- **Temporal PCA (SSA/Time-Delay PCA)**: Complete implementation for time series analysis (#424)
+  - Variable Importance Plot for temporal analysis (#502)
+  - Biplot support for temporal PCA (#442)
+  - SSA documentation and examples (#525, #527)
+- **Kernel PCA enhancements**: Additional visualizations and model summary (#483)
+- **Validation framework**: sklearn validation tests for mathematical correctness (#460)
+- **Shared UI components package**: Modular architecture for frontend components (#453)
+- **Stock market datasets**: US technology stocks and enriched market factor data (#514, #475)
+- **Privacy audit system**: Comprehensive privacy verification framework (#518)
+- **Code quality tools**: golangci-lint integration for Go code analysis (#523)
+- **Cross-method validation**: Comprehensive validation between PCA methods (#482)
+- **Numerical stability tests**: Tests for algorithm robustness (#463)
+- **Error boundaries**: Standardized error handling in frontend (#454)
+- **Group coloring in diagnostic plots** (#447)
+- **Range syntax for exclusions**: Support for ranges in --exclude-rows/columns (#417)
+- **Row index coloring option** for sample visualization (#429)
+- **Automatic documentation sync** between main docs and desktop app (#434)
+
+### Fixed
+- Font scaling in 3D plot axis labels (#526)
+- Color palette control visibility issues (#512)
+- Watermark missing in Temporal Variable Importance plot (#510)
+- TypeScript/React linting errors (#520)
+- 3D plot label display feature (#498)
+- File loading in GoPCA Desktop (#494)
+- Preprocessing settings when switching from Kernel PCA (#488)
+- CLI feedback for variance explained criterion (#478)
+- Temporal PCA explained variance display (#476)
+- Biplot crash with Kernel PCA (#469)
+- Error dialog alignment and overflow (#466)
+- sklearn validation test handling (#474)
+- CSV loading performance for large datasets (#427)
+- Table selection state reset after filtering (#420)
+
+### Changed
+- Standardized file dialogs and button naming across apps (#492)
+- Removed MET dataset from embedded resources (#490)
+- Improved developer documentation structure (#524)
+- Enhanced Plotly selection tools in BiPlot and DiagnosticPlot (#445)
+
+### Documentation
+- Improved temporal PCA documentation with figures (#527)
+- Added SSA/temporal analysis info to README (#525)
+- Added PCA literature summaries for reference (#444)
+- Fixed markdown table rendering issues (#439)
+- Comprehensive frontend code audit and roadmap (#452)
+
+## [1.0.2] - 2025-09-02
+
+### Fixed
+- Fixed critical bug where row and column exclusions were not being applied before PCA analysis (#419)
+  - Exclusions are now correctly applied to the data matrix before any PCA computations
+  - This ensures accurate results when users exclude specific rows or columns from analysis
+
+### Documentation
+- Added comprehensive Git workflow documentation (#414)
+  - Created detailed guides for the project's Git workflow
+  - Helps contributors understand branch strategies and contribution process
+
+## [1.0.1] - 2025-08-31
 
 ### Fixed
 - Fixed 3D Scores Plot to properly color samples when using target columns (continuous data) (#410)
@@ -29,7 +91,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Git Aliases
   - MCP Tool Best Practices
 
-## [1.0.0] - 2025-01-31
+## [1.0.0] - 2025-08-31
 
 ### Added
 - Initial public release of GoPCA Suite
@@ -44,5 +106,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - JSON model export/import capability
 - Extensive documentation and help system
 
+[1.0.2]: https://github.com/bitjungle/gopca/releases/tag/v1.0.2
 [1.0.1]: https://github.com/bitjungle/gopca/releases/tag/v1.0.1
 [1.0.0]: https://github.com/bitjungle/gopca/releases/tag/v1.0.0

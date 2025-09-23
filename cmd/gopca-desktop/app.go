@@ -613,7 +613,8 @@ func (a *App) RunPCA(request PCARequest) (response PCAResponse) {
 	result.VariableLabels = filteredHeaders
 
 	// Calculate diagnostic metrics (not applicable for Kernel PCA or Temporal PCA)
-	// Temporal PCA has different dimensions (n-lags+1) so metrics calculation would fail
+	// Kernel PCA works in a different feature space, so RSS calculation is not directly applicable
+	// Temporal PCA has different dimensions (n-lags+1 samples) that don't match original data (n samples)
 	if strings.ToLower(request.Method) != "kernel" && strings.ToLower(request.Method) != "temporal" {
 		// For RSS calculation, we need to use data preprocessed exactly as it was for PCA fitting
 		// This ensures the data and reconstruction are in the same space
@@ -1053,6 +1054,42 @@ func (a *App) LoadIrisDataset() (*FileDataJSON, error) {
 	modifiedContent := strings.Join(newLines, "\n")
 
 	return a.ParseCSV(modifiedContent)
+}
+
+// SelectCSVFile opens a native file dialog for selecting CSV files and returns parsed data
+func (a *App) SelectCSVFile() (*FileDataJSON, error) {
+	dialogOptions := runtime.OpenDialogOptions{
+		Title: "Select CSV File",
+		Filters: []runtime.FileFilter{
+			{
+				DisplayName: "CSV Files",
+				Pattern:     "*.csv",
+			},
+			{
+				DisplayName: "All Files",
+				Pattern:     "*.*",
+			},
+		},
+	}
+
+	filePath, err := runtime.OpenFileDialog(a.ctx, dialogOptions)
+	if err != nil {
+		return nil, fmt.Errorf("failed to open file dialog: %w", err)
+	}
+
+	// User cancelled
+	if filePath == "" {
+		return nil, nil
+	}
+
+	// Read the file content
+	content, err := os.ReadFile(filePath)
+	if err != nil {
+		return nil, fmt.Errorf("failed to read file: %w", err)
+	}
+
+	// Parse the CSV content and return the result
+	return a.ParseCSV(string(content))
 }
 
 // LoadDatasetFile loads a CSV file from the embedded data

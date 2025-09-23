@@ -41,7 +41,7 @@ export const Biplot3D: React.FC<Biplot3DProps> = ({
   xComponent = 0,
   yComponent = 1,
   zComponent = 2,
-  groupColumn,
+  groupColumn: _groupColumn,
   groupLabels,
   groupValues,
   groupType,
@@ -49,7 +49,8 @@ export const Biplot3D: React.FC<Biplot3DProps> = ({
   maxLabelsToShow = 10,
   showLoadings = true,
   vectorScale = 1.0,
-  maxVariables = 50
+  maxVariables = 50,
+  fontScale = 1.0
 }) => {
   const theme = useTheme();
   const { qualitativePalette, sequentialPalette } = usePalette();
@@ -78,8 +79,10 @@ export const Biplot3D: React.FC<Biplot3DProps> = ({
     showScores: true,
     showLoadings,
     showLabels: showRowLabels,
+    maxLabels: maxLabelsToShow,
     vectorScale,
-    maxVariables
+    maxVariables,
+    fontScale
   });
 
   return (

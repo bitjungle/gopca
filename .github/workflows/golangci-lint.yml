@@ -1,0 +1,67 @@
+name: golangci-lint
+
+on:
+  push:
+    branches: [ main, develop ]
+    paths:
+      - '**.go'
+      - 'go.mod'
+      - 'go.sum'
+      - '.golangci.yml'
+      - '.github/workflows/golangci-lint.yml'
+  pull_request:
+    branches: [ main, develop ]
+    paths:
+      - '**.go'
+      - 'go.mod'
+      - 'go.sum'
+      - '.golangci.yml'
+      - '.github/workflows/golangci-lint.yml'
+
+permissions:
+  contents: read
+  # Optional: allow read access to pull request. Use with `only-new-issues` option.
+  pull-requests: read
+
+jobs:
+  golangci:
+    name: lint
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v5
+      
+      - name: Set up Go
+        uses: actions/setup-go@v6
+        with:
+          go-version: '1.24'
+          cache: true
+
+      - name: Create frontend dist directories for Wails apps
+        run: |
+          mkdir -p cmd/gopca-desktop/frontend/dist
+          mkdir -p cmd/gocsv/frontend/dist
+          echo '<!DOCTYPE html><html><body>Placeholder</body></html>' > cmd/gopca-desktop/frontend/dist/index.html
+          echo '<!DOCTYPE html><html><body>Placeholder</body></html>' > cmd/gocsv/frontend/dist/index.html
+
+      - name: golangci-lint
+        uses: golangci/golangci-lint-action@v8
+        with:
+          # Required: the version of golangci-lint to use.
+          # Note: v2.4.0 is compatible with our configuration
+          version: v2.4
+          
+          # Optional: working directory, useful for monorepos
+          # working-directory: .
+          
+          # Optional: show only new issues if it's a pull request
+          only-new-issues: true
+          
+          # Optional: golangci-lint command line arguments
+          args: --timeout=5m
+          
+          # Optional: if set to true, then all caching functionality will be completely disabled
+          skip-cache: false
+          
+          # Optional: if set to true, then the action will not annotate code with findings
+          # annotations: false

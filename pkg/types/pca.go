@@ -84,6 +84,14 @@ type PCAResult struct {
 	Scale              []float64 `json:"scale,omitempty"`                      // Feature scales (for transform)
 	Components         int       `json:"components,omitempty"`                 // Number of components retained
 	Config             PCAConfig `json:"config,omitempty"`                     // Configuration used for fitting
+	// Temporal PCA specific fields
+	TemporalEigenvectors       Matrix `json:"temporal_eigenvectors,omitempty"`        // U matrix from SVD (lags × components) for temporal PCA
+	TemporalVariableImportance Matrix `json:"temporal_variable_importance,omitempty"` // Aggregated variable importance (components × variables)
+	// Kernel PCA specific fields
+	KernelType         string             `json:"kernel_type,omitempty"`         // Type of kernel used (rbf, linear, poly)
+	KernelParams       map[string]float64 `json:"kernel_params,omitempty"`       // Kernel parameters (gamma, degree, coef0)
+	KernelMatrix       Matrix             `json:"kernel_matrix,omitempty"`       // Kernel matrix (optional, for visualization)
+	KernelEigenvectors Matrix             `json:"kernel_eigenvectors,omitempty"` // Eigenvectors for contribution analysis
 }
 
 // EigencorrelationResult contains correlations between PC scores and metadata variables

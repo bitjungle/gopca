@@ -15,6 +15,18 @@ export { InputDialog } from './components/InputDialog';
 export { SkipLinks } from './components/SkipLinks';
 export { KeyboardHelp } from './components/KeyboardHelp';
 export { CustomSelect } from './components/CustomSelect';
+export { DocumentationViewer } from './components/DocumentationViewer';
+export { MarkdownRenderer } from './components/MarkdownRenderer';
+export { FontSizeControl } from './components/FontSizeControl';
+export { LoadingSpinner } from './components/LoadingSpinner';
+export { ErrorBoundary } from './components/ErrorBoundary';
+export { ErrorAlert } from './components/ErrorAlert';
+export { ErrorPage } from './components/ErrorPage';
+export { ErrorToast } from './components/ErrorToast';
+export { ValidationError } from './components/ValidationError';
+
+// Dialogs
+export { AboutDialog } from './dialogs/AboutDialog';
 
 // Component Types
 export type { ExportButtonProps, ExportConfig, ExportFormat } from './components/ExportButton';
@@ -26,6 +38,8 @@ export type { InputDialogProps } from './components/InputDialog';
 export type { SkipLinksProps, SkipLink } from './components/SkipLinks';
 export type { KeyboardHelpProps } from './components/KeyboardHelp';
 export type { SelectOption } from './components/CustomSelect';
+export type { DocumentationViewerProps } from './components/DocumentationViewer';
+export type { MarkdownRendererProps } from './components/MarkdownRenderer';
 
 // Contexts
 export { ThemeProvider, useTheme } from './contexts/ThemeContext';
@@ -71,6 +85,12 @@ export {
   type FormattedError,
   type ErrorSeverity
 } from './utils/errorMessages';
+export {
+  ErrorTemplates as ErrorMessageTemplates,
+  getErrorTemplate,
+  formatErrorMessage as formatError,
+  type ErrorTemplate
+} from './utils/errorTemplates';
 
 // Charts - Removed as part of Plotly migration
 // Chart components have been replaced with Plotly visualizations below
@@ -95,6 +115,8 @@ export {
   PCACircleOfCorrelations,
   PCADiagnosticPlot,
   PCAEigencorrelationPlot,
+  PCATemporalLoadingsPlot,
+  PCATemporalVariableImportancePlot,
   // Classes for advanced usage
   PlotlyScoresPlot,
   Plotly3DScoresPlot,
@@ -105,6 +127,8 @@ export {
   PlotlyCircleOfCorrelations,
   PlotlyDiagnosticPlot,
   PlotlyEigencorrelationPlot,
+  PlotlyTemporalLoadings,
+  PlotlyTemporalVariableImportance,
   // Types
   type ScoresPlotData,
   type ScoresPlotConfig,
@@ -123,7 +147,11 @@ export {
   type DiagnosticPlotData,
   type DiagnosticPlotConfig,
   type EigencorrelationPlotData,
-  type EigencorrelationPlotConfig
+  type EigencorrelationPlotConfig,
+  type TemporalLoadingsPlotData,
+  type TemporalLoadingsPlotConfig,
+  type TemporalVariableImportanceData,
+  type TemporalVariableImportancePlotConfig
 } from './charts/pca';
 
 // Plotly Export Utils

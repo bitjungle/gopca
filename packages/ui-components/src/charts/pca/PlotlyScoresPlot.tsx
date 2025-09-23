@@ -443,12 +443,12 @@ return;
       ...baseConfig,
       modeBarButtonsToAdd: getExportMenuItems() as any
     };
-    
+
     console.log('PlotlyScoresPlot Config:', {
       modeBarButtons: config.modeBarButtonsToRemove,
       enableLasso: this.config.enableLasso
     });
-    
+
     return config;
   }
 }
@@ -468,7 +468,7 @@ export const PCAScoresPlot: React.FC<{
   const handleSelected = (event: any) => {
     if (onSelection && event?.points && event.points.length > 0) {
       // Extract global indices from customdata
-      const indices = event.points.map((p: any) => 
+      const indices = event.points.map((p: any) =>
         p.customdata !== undefined ? p.customdata : p.pointNumber
       );
       onSelection(indices);
@@ -486,21 +486,21 @@ export const PCAScoresPlot: React.FC<{
   // Modify traces to show excluded points with reduced opacity
   const modifiedTraces = useMemo(() => {
     const traces = plot.getOptimizedTraces();
-    
+
     if (!excludedRows || excludedRows.length === 0) {
       return traces;
     }
-    
+
     const excludedSet = new Set(excludedRows);
-    
+
     return traces.map((trace: any) => {
       // Only modify traces with customdata (scatter/scattergl point traces)
       if (trace.customdata && trace.marker) {
         // Create per-point opacity array based on customdata indices
-        const opacities = trace.customdata.map((globalIndex: number) => 
+        const opacities = trace.customdata.map((globalIndex: number) =>
           excludedSet.has(globalIndex) ? 0.2 : 0.8
         );
-        
+
         return {
           ...trace,
           marker: {

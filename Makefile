@@ -123,8 +123,12 @@ build-all-parallel:
 	@$(MAKE) -j5 build-darwin-amd64 build-darwin-arm64 build-linux-amd64 build-linux-arm64 build-windows-amd64
 	@echo "All parallel pca CLI builds complete!"
 
+## sync-docs: Synchronize documentation files to frontend directories
+sync-docs:
+	@bash scripts/sync-docs.sh
+
 ## pca-dev: Run GoPCA Desktop in development mode with hot reload
-pca-dev:
+pca-dev: sync-docs
 	@if [ -x "$(WAILS)" ]; then \
 		echo "Starting GoPCA Desktop in development mode..."; \
 		cd $(DESKTOP_PATH) && $(WAILS) dev; \
@@ -135,7 +139,7 @@ pca-dev:
 	fi
 
 ## pca-build: Build GoPCA Desktop for production
-pca-build:
+pca-build: sync-docs
 	@if [ -x "$(WAILS)" ]; then \
 		echo "Building GoPCA Desktop..."; \
 		cd $(DESKTOP_PATH) && $(WAILS) build $(DESKTOP_LDFLAGS); \
@@ -166,7 +170,7 @@ pca-deps:
 	@echo "GoPCA Desktop dependencies installed"
 
 ## csv-dev: Run GoCSV Desktop in development mode with hot reload
-csv-dev:
+csv-dev: sync-docs
 	@if [ -x "$(WAILS)" ]; then \
 		echo "Starting CSV editor in development mode..."; \
 		cd $(CSV_PATH) && $(WAILS) dev; \
@@ -177,7 +181,7 @@ csv-dev:
 	fi
 
 ## csv-build: Build GoCSV Desktop for production
-csv-build:
+csv-build: sync-docs
 	@if [ -x "$(WAILS)" ]; then \
 		echo "Building CSV editor application..."; \
 		cd $(CSV_PATH) && $(WAILS) build $(DESKTOP_LDFLAGS); \
@@ -601,6 +605,21 @@ test-regression:
 	@echo "Running regression tests..."
 	$(GOTEST) -v -run TestRegression ./internal/integration/...
 
+## generate-sklearn-reference: Generate sklearn reference data for validation tests
+generate-sklearn-reference:
+	@echo "Generating sklearn reference data..."
+	@if [ ! -d "testdata/.venv" ]; then \
+		echo "Python virtual environment not found at testdata/.venv"; \
+		echo "Please create it with:"; \
+		echo "  cd testdata && python3 -m venv .venv && source .venv/bin/activate && pip install numpy pandas scikit-learn"; \
+		exit 1; \
+	fi
+	@cd testdata && \
+		. .venv/bin/activate && \
+		cd validation && \
+		python generate_reference_pca.py && \
+		echo "Sklearn reference data generated successfully in testdata/validation/reference_results/"
+
 ## fmt: Format all Go code
 fmt:
 	@echo "Formatting Go code..."
@@ -611,7 +630,7 @@ fmt:
 lint:
 ifdef GOLINT
 	@echo "Running golangci-lint..."
-	golangci-lint run
+	golangci-lint run --timeout=5m
 else
 	@echo "golangci-lint not found. Install it with:"
 	@echo "  go install github.com/golangci/golangci-lint/cmd/golangci-lint@latest"
@@ -674,7 +693,16 @@ ci-lint:
 ifdef GOLINT
 	golangci-lint run --timeout=5m ./internal/... ./pkg/... ./cmd/gopca-cli/...
 else
-	@echo "golangci-lint not found, skipping..."
+	@echo "golangci-lint not found, using basic checks..."
+	@echo "Checking code formatting..."
+	@NEED_FORMAT=$$(gofmt -l internal pkg cmd/gopca-cli 2>/dev/null | grep -v vendor || true); \
+	if [ -n "$$NEED_FORMAT" ]; then \
+		echo "ERROR: The following files need formatting:"; \
+		echo "$$NEED_FORMAT"; \
+		exit 1; \
+	fi
+	@echo "Running go vet..."
+	go vet ./internal/... ./pkg/... ./cmd/gopca-cli/...
 endif
 
 ## ci-build-cli: Build CLI for all platforms in CI
@@ -715,7 +743,7 @@ csv-build-all:
 	fi
 
 ## build-everything: Build all applications for all platforms
-build-everything: build-all pca-build-all csv-build-all
+build-everything: sync-docs build-all pca-build-all csv-build-all
 	@echo "All applications built for all platforms!"
 
 ## ci-build-desktop: Build GoPCA app in CI

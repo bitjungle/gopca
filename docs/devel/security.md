@@ -10,8 +10,8 @@ Security updates are provided for the following versions:
 
 | Version | Supported          |
 | ------- | ------------------ |
-| 0.9.x   | :white_check_mark: |
-| < 0.9.0 | :x:                |
+| 1.x.x   | :white_check_mark: |
+| < 1.0.0 | :x:                |
 
 ## Security Features
 
@@ -47,6 +47,45 @@ Security updates are provided for the following versions:
 - Kernel gamma: 1e-6 to 1e6
 - Maximum memory usage: 2GB per operation
 - Maximum iterations: 10,000
+
+## Privacy & Telemetry
+
+### Zero Telemetry Guarantee
+GoPCA Suite guarantees **zero telemetry or data collection**:
+- No usage statistics or metrics collection
+- No error reporting or crash data
+- No external network connections
+- No auto-update mechanisms
+- Complete offline operation
+
+### Framework Privacy Verification (September 2025)
+
+All frameworks and dependencies have been audited for telemetry:
+
+| Framework | Version | Telemetry Status | Notes |
+|-----------|---------|------------------|-------|
+| **Wails** | v2.10.2 | ✅ None | No telemetry mechanisms found |
+| **Vite** | v7.1.2 | ✅ None | No built-in telemetry |
+| **React** | v18.2.0 | ✅ None | Library has no telemetry |
+| **Plotly.js** | v2.35.3 | ✅ Offline | Operates offline by default |
+| **Gonum** | v0.16.0 | ✅ None | No telemetry found |
+| **Go** | v1.24+ | ✅ Opt-in | Telemetry OFF by default, not in binaries |
+
+### Privacy Verification
+
+Users can verify privacy claims:
+```bash
+# Run privacy audit
+./scripts/verify-privacy.sh
+
+# Test runtime privacy
+./scripts/test-privacy.sh
+
+# Monitor network (no connections expected)
+lsof -i -P | grep -i gopca
+```
+
+See [PRIVACY.md](/PRIVACY.md) for complete privacy documentation and verification methods.
 
 ## Security Best Practices
 
@@ -193,6 +232,7 @@ GoPCA aims to follow:
 
 | Version | Date | Changes |
 |---------|------|---------|
+| 1.1 | 2025-01-12 | Added privacy & telemetry section, updated version support |
 | 1.0 | 2025-08-15 | Initial security policy |
 
 ---

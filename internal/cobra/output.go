@@ -20,7 +20,7 @@ import (
 
 // outputTableFormat outputs PCA results in table format
 func outputTableFormat(result *types.PCAResult, data *pkgcsv.Data,
-	outputScores, outputLoadings, outputVariance, includeMetrics bool) error {
+	outputScores, outputLoadings, outputVariance, includeMetrics bool, varianceExplained float64) error {
 
 	// Calculate metrics if requested (skip for kernel PCA as it doesn't have loadings)
 	var metrics []types.SampleMetrics
@@ -116,9 +116,9 @@ func outputTableFormat(result *types.PCAResult, data *pkgcsv.Data,
 		}
 	}
 
-	// Output loadings table (skip for kernel PCA which doesn't have loadings)
+	// Output loadings table (skip for kernel PCA and temporal PCA which have different loading structures)
 	if outputLoadings {
-		if result.Method != "kernel" {
+		if result.Method != "kernel" && result.Method != "temporal" {
 			fmt.Println("\nPCA Loadings:")
 			fmt.Println("──────────────────────────────────────────────────────────────")
 
@@ -162,8 +162,10 @@ func outputTableFormat(result *types.PCAResult, data *pkgcsv.Data,
 			if nFeatures > 25 {
 				fmt.Printf("\nShowing first 20 and last 5 of %d features\n", nFeatures)
 			}
-		} else {
+		} else if result.Method == "kernel" {
 			fmt.Println("\nNote: Loadings are not available for Kernel PCA")
+		} else if result.Method == "temporal" {
+			fmt.Println("\nNote: Temporal PCA loadings have a different structure (components × lagged features)")
 		}
 	}
 
@@ -179,6 +181,14 @@ func outputTableFormat(result *types.PCAResult, data *pkgcsv.Data,
 				result.ComponentLabels[i],
 				result.ExplainedVarRatio[i],
 				result.CumulativeVar[i])
+		}
+
+		// Add feedback when variance explained criterion was used
+		if varianceExplained > 0 {
+			fmt.Printf("\n✓ Selected %d components to achieve %.1f%% cumulative variance (target: %.1f%%)\n",
+				len(result.ComponentLabels),
+				result.CumulativeVar[len(result.ComponentLabels)-1],
+				varianceExplained*100)
 		}
 	}
 
@@ -218,7 +228,7 @@ func outputJSONFormat(result *types.PCAResult, data *pkgcsv.Data, inputFile stri
 
 	// Create output directory if needed
 	if opts.OutputDir != "" {
-		if err := os.MkdirAll(opts.OutputDir, 0755); err != nil {
+		if err := os.MkdirAll(opts.OutputDir, 0750); err != nil {
 			return fmt.Errorf("failed to create output directory: %w", err)
 		}
 	}

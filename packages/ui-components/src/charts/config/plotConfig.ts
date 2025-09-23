@@ -32,7 +32,7 @@ export const PLOT_CONFIG = {
       scale: 1
     }
   },
-  
+
   // Color palettes
   colors: {
     // Primary colors (Tailwind palette)
@@ -41,10 +41,10 @@ export const PLOT_CONFIG = {
     success: '#10b981',   // Green-500
     warning: '#f59e0b',   // Amber-500
     info: '#8b5cf6',      // Purple-500
-    
+
     // Default categorical palette for multi-group visualizations
     categorical: ['#3b82f6', '#ef4444', '#10b981', '#f59e0b', '#8b5cf6'],
-    
+
     // Diagnostic plot specific colors
     diagnostic: {
       normal: '#10b981',      // Green for normal points
@@ -53,7 +53,7 @@ export const PLOT_CONFIG = {
       badLeverage: '#ef4444', // Red for bad leverage
       unknown: '#8b5cf6'      // Purple for unknown
     },
-    
+
     // Grid and axis colors for light/dark themes
     grid: {
       light: 'rgba(128, 128, 128, 0.2)',
@@ -64,7 +64,7 @@ export const PLOT_CONFIG = {
       dark: 'rgba(200, 200, 200, 0.3)'
     }
   },
-  
+
   // Visual properties
   visual: {
     markerSize: 10,
@@ -86,7 +86,7 @@ export const PLOT_CONFIG = {
       dashArray: '5,5'
     }
   },
-  
+
   // Performance thresholds
   performance: {
     webglThreshold: 1000,      // Switch to WebGL above this point count
@@ -94,7 +94,7 @@ export const PLOT_CONFIG = {
     densityThreshold: 100000,   // Use density plots above this count
     labelThreshold: 100         // Maximum labels to show by default
   },
-  
+
   // Watermark configuration
   watermark: {
     enabled: true,              // Enable watermark on all plots

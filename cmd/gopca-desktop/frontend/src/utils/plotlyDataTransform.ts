@@ -25,7 +25,11 @@ import type {
   DiagnosticPlotData,
   DiagnosticPlotConfig,
   EigencorrelationPlotData,
-  EigencorrelationPlotConfig
+  EigencorrelationPlotConfig,
+  TemporalLoadingsPlotData,
+  TemporalLoadingsPlotConfig,
+  TemporalVariableImportanceData,
+  TemporalVariableImportancePlotConfig
 } from '@gopca/ui-components';
 
 /**
@@ -128,10 +132,10 @@ export function transformToScores3DPlotData(
   zComponent: number = 2
 ): Scores3DPlotData {
   // Ensure we always have groups - if none provided, create a single default group
-  const groups = groupLabels && groupLabels.length > 0 
-    ? groupLabels 
+  const groups = groupLabels && groupLabels.length > 0
+    ? groupLabels
     : Array(pcaResult.scores.length).fill('All samples');
-    
+
   return {
     scores: pcaResult.scores,
     sampleNames: rowNames,
@@ -152,17 +156,21 @@ export function createScores3DPlotConfig(
   _xComponent: number = 0,
   _yComponent: number = 1,
   _zComponent: number = 2,
-  _showRowLabels?: boolean,
-  _maxLabelsToShow?: number,
+  showRowLabels?: boolean,
+  maxLabelsToShow?: number,
   theme?: 'light' | 'dark',
-  colorScheme?: string[]
+  colorScheme?: string[],
+  fontScale?: number
 ): Scores3DPlotConfig {
   return {
     colorScheme,
     markerSize: 5,
     opacity: 0.8,
     showProjections: false,
-    theme
+    theme,
+    showLabels: showRowLabels || false,
+    maxLabels: maxLabelsToShow || 10,
+    fontScale
   };
 }
 
@@ -257,6 +265,11 @@ export function transformToBiplotData(
   groupValues?: number[],
   groupType?: 'categorical' | 'continuous'
 ): BiplotData {
+  // Check if loadings exist (e.g., not available for Kernel PCA)
+  if (!pcaResult.loadings || pcaResult.loadings.length === 0) {
+    throw new Error('Biplot visualization requires loadings data, which is not available for this PCA method.');
+  }
+
   // Backend stores loadings as [variables][components], but frontend expects [components][variables]
   const transposedLoadings = transposeMatrix(pcaResult.loadings);
 
@@ -307,6 +320,11 @@ export function createBiplotConfig(
 export function transformToCircleOfCorrelationsData(
   pcaResult: PCAResult
 ): CircleOfCorrelationsData {
+  // Check if loadings exist (e.g., not available for Kernel PCA)
+  if (!pcaResult.loadings || pcaResult.loadings.length === 0) {
+    throw new Error('Circle of Correlations visualization requires loadings data, which is not available for this PCA method.');
+  }
+
   // Backend stores loadings as [variables][components], but frontend expects [components][variables]
   const transposedLoadings = transposeMatrix(pcaResult.loadings);
 
@@ -335,7 +353,7 @@ export function createCircleOfCorrelationsConfig(
     showGrid: true,
     showLabels: true,
     minVectorLength: 0.1,
-    colorByMagnitude: true,
+    colorByMagnitude: false,  // Use palette colors for each variable
     ...createBaseVisualizationConfig(theme, colorScheme, fontScale)
   };
 }
@@ -346,7 +364,9 @@ export function createCircleOfCorrelationsConfig(
 export function transformToDiagnosticPlotData(
   pcaResult: PCAResult,
   rowNames: string[],
-  groupLabels?: string[]
+  groupLabels?: string[],
+  groupValues?: number[],
+  groupType?: 'categorical' | 'continuous'
 ): DiagnosticPlotData {
   // Extract Mahalanobis distances and RSS from metrics if available
   const metrics = pcaResult.metrics || [];
@@ -355,7 +375,9 @@ export function transformToDiagnosticPlotData(
     mahalanobisDistances: metrics.map(m => m.mahalanobis || 0),
     residualSumOfSquares: metrics.map(m => m.rss || 0),
     sampleNames: rowNames,
-    groups: groupLabels
+    groups: groupLabels,
+    groupValues,
+    groupType
   };
 }
 
@@ -431,9 +453,19 @@ export function createEigencorrelationPlotConfig(
   colorScheme?: string[],
   fontScale?: number
 ): EigencorrelationPlotConfig {
+  // Convert color array to Plotly colorscale format
+  let colorScale: any = 'Reds'; // Default fallback
+  if (colorScheme && colorScheme.length > 0) {
+    // Create a Plotly colorscale from the palette colors
+    colorScale = colorScheme.map((color, index) => [
+      index / (colorScheme.length - 1),
+      color
+    ]);
+  }
+
   return {
     maxComponents,
-    colorScale: 'Reds',
+    colorScale,
     showValues: true,
     valueFormat: '.2f',
     clusterVariables: false,
@@ -455,6 +487,11 @@ export function transformToBiplot3DData(
   pc2?: number,
   pc3?: number
 ): Biplot3DData {
+  // Check if loadings exist (e.g., not available for Kernel PCA)
+  if (!pcaResult.loadings || pcaResult.loadings.length === 0) {
+    throw new Error('3D Biplot visualization requires loadings data, which is not available for this PCA method.');
+  }
+
   // Backend stores loadings as [variables][components], but frontend expects [components][variables]
   const transposedLoadings = transposeMatrix(pcaResult.loadings);
 
@@ -483,8 +520,10 @@ export function createBiplot3DConfig(options: {
   showScores?: boolean;
   showLoadings?: boolean;
   showLabels?: boolean;
+  maxLabels?: number;
   vectorScale?: number;
   maxVariables?: number;
+  fontScale?: number;
 }): Biplot3DConfig {
   const {
     theme,
@@ -492,14 +531,18 @@ export function createBiplot3DConfig(options: {
     showScores = true,
     showLoadings = true,
     showLabels = false,
+    maxLabels = 10,
     vectorScale = 1.0,
-    maxVariables = 50
+    maxVariables = 50,
+    fontScale
   } = options;
 
   return {
     scalingType: 'correlation',
     showScores,
     showLoadings,
+    showLabels,
+    maxLabels,
     maxVariables,
     vectorScale,
     colorScheme,
@@ -512,6 +555,93 @@ export function createBiplot3DConfig(options: {
       eye: { x: 1.5, y: 1.5, z: 1.5 },
       center: { x: 0, y: 0, z: 0 }
     },
-    theme
+    theme,
+    fontScale
+  };
+}
+
+/**
+ * Transform temporal eigenvectors (U matrix) to TemporalLoadingsPlot data format
+ */
+export function transformToTemporalLoadingsPlotData(
+  pcaResult: PCAResult
+): TemporalLoadingsPlotData | null {
+  if (!pcaResult.temporal_eigenvectors || pcaResult.temporal_eigenvectors.length === 0) {
+    return null;
+  }
+
+  return {
+    temporalEigenvectors: pcaResult.temporal_eigenvectors,
+    explainedVariance: pcaResult.explained_variance_ratio
+  };
+}
+
+/**
+ * Create configuration for Temporal Loadings plot
+ */
+export function createTemporalLoadingsPlotConfig(
+  maxComponents: number = 5,
+  theme?: 'light' | 'dark',
+  colorScheme?: string[],
+  fontScale?: number
+): TemporalLoadingsPlotConfig {
+  return {
+    maxComponents,
+    theme,
+    colorScheme,
+    fontScale
+  };
+}
+
+/**
+ * Transform temporal variable importance data to plot format
+ */
+export function transformToTemporalVariableImportancePlotData(
+  pcaResult: PCAResult
+): TemporalVariableImportanceData | null {
+  if (!pcaResult.temporal_variable_importance || pcaResult.temporal_variable_importance.length === 0) {
+    return null;
+  }
+
+  // Get variable names or generate default ones
+  const variableNames = pcaResult.variable_labels ||
+    Array.from({ length: pcaResult.temporal_variable_importance[0].length }, (_, i) => `Var${i + 1}`);
+
+  return {
+    importance: pcaResult.temporal_variable_importance,
+    variableNames,
+    explainedVariance: pcaResult.explained_variance_ratio
+  };
+}
+
+/**
+ * Create configuration for Temporal Variable Importance plot
+ */
+export function createTemporalVariableImportancePlotConfig(
+  maxComponents: number = 10,
+  theme?: 'light' | 'dark',
+  colorScheme?: string[],
+  fontScale?: number
+): TemporalVariableImportancePlotConfig {
+  // Convert color array to Plotly colorscale format
+  let colorScale: any = 'Blues'; // Default fallback
+  if (colorScheme && colorScheme.length > 0) {
+    // Create a Plotly colorscale from the palette colors
+    colorScale = colorScheme.map((color, index) => [
+      index / (colorScheme.length - 1),
+      color
+    ]);
+  }
+
+  return {
+    maxComponents,
+    theme,
+    colorScheme,
+    fontScale,
+    showValues: true,
+    valueFormat: '.3f',
+    annotationThreshold: 0.01,
+    colorScale,
+    showWatermark: true  // Enable watermark for consistency with other plots
   };
 }

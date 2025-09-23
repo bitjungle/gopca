@@ -20,6 +20,8 @@ export interface DiagnosticPlotData {
   residualSumOfSquares: number[];
   sampleNames?: string[];
   groups?: string[];
+  groupValues?: number[];
+  groupType?: 'categorical' | 'continuous';
 }
 
 export interface DiagnosticPlotConfig extends PlotlyVisualizationConfig {
@@ -78,28 +80,34 @@ export class PlotlyDiagnosticPlot {
     const orthogonal: number[] = [];
     const regular: number[] = [];
 
-    mahalanobisDistances.forEach((md, i) => {
-      const rss = residualSumOfSquares[i];
-      const isMahalanobisOutlier = md > this.config.mahalanobisThreshold!;
-      const isRSSOutlier = rss > this.config.rssThreshold!;
+    // Only classify if thresholds are available
+    if (this.config.showThresholds && this.config.mahalanobisThreshold && this.config.rssThreshold) {
+      mahalanobisDistances.forEach((md, i) => {
+        const rss = residualSumOfSquares[i];
+        const isMahalanobisOutlier = md > this.config.mahalanobisThreshold!;
+        const isRSSOutlier = rss > this.config.rssThreshold!;
 
-      if (isMahalanobisOutlier && isRSSOutlier) {
-        outliers.push(i);
-      } else if (isMahalanobisOutlier && !isRSSOutlier) {
-        goodLeverage.push(i);
-      } else if (!isMahalanobisOutlier && isRSSOutlier) {
-        orthogonal.push(i);
-      } else {
-        regular.push(i);
-      }
-    });
+        if (isMahalanobisOutlier && isRSSOutlier) {
+          outliers.push(i);
+        } else if (isMahalanobisOutlier && !isRSSOutlier) {
+          goodLeverage.push(i);
+        } else if (!isMahalanobisOutlier && isRSSOutlier) {
+          orthogonal.push(i);
+        } else {
+          regular.push(i);
+        }
+      });
+    } else {
+      // If no thresholds, all points are regular
+      mahalanobisDistances.forEach((_, i) => regular.push(i));
+    }
 
     return { outliers, goodLeverage, orthogonal, regular };
   }
 
   getTraces(): Data[] {
     const traces: Data[] = [];
-    const { mahalanobisDistances, residualSumOfSquares, sampleNames } = this.data;
+    const { mahalanobisDistances, residualSumOfSquares, sampleNames, groups, groupValues, groupType } = this.data;
     const { outliers, goodLeverage, orthogonal, regular } = this.identifyOutliers();
 
     // Use colorScheme from config, fallback to defaults if not provided
@@ -108,38 +116,132 @@ export class PlotlyDiagnosticPlot {
       '#ec4899', '#14b8a6', '#f97316', '#6366f1', '#84cc16'
     ];
 
-    // Define point categories and their properties
-    const categories = [
-      { name: 'Regular', indices: regular, color: colors[0] || '#10b981', symbol: 'circle' },
-      { name: 'Good Leverage', indices: goodLeverage, color: colors[1] || '#3b82f6', symbol: 'square' },
-      { name: 'Orthogonal Outliers', indices: orthogonal, color: colors[2] || '#f59e0b', symbol: 'diamond' },
-      { name: 'Bad Outliers', indices: outliers, color: colors[3] || '#ef4444', symbol: 'x' }
-    ];
+    // Determine if we have groups to color by
+    const hasGroups = groups && groups.length > 0;
+    const isContinuous = groupType === 'continuous' && groupValues;
 
-    // Add traces for each category
-    categories.forEach(cat => {
-      if (cat.indices.length === 0) {
+    if (hasGroups && !isContinuous) {
+      // Categorical grouping with shapes for outlier categories
+      const uniqueGroups = Array.from(new Set(groups));
+      const outlierCategories = [
+        { type: 'regular', indices: regular, symbol: 'circle' },
+        { type: 'goodLeverage', indices: goodLeverage, symbol: 'square' },
+        { type: 'orthogonal', indices: orthogonal, symbol: 'diamond' },
+        { type: 'outliers', indices: outliers, symbol: 'x' }
+      ];
+
+      // Create traces for each group and outlier category combination
+      uniqueGroups.forEach((group, groupIdx) => {
+        outlierCategories.forEach(cat => {
+          // Filter indices that belong to this group and outlier category
+          const filteredIndices = cat.indices.filter(i => groups[i] === group);
+          if (filteredIndices.length === 0) {
 return;
 }
 
-      traces.push({
-        type: 'scatter',
-        mode: 'markers',
-        x: cat.indices.map(i => mahalanobisDistances[i]),
-        y: cat.indices.map(i => residualSumOfSquares[i]),
-        name: cat.name,
-        marker: {
-          color: cat.color,
-          size: getScaledMarkerSize(this.config.pointSize || 8, this.config.fontScale || 1.0),
-          symbol: cat.symbol,
-          opacity: 0.7
-        },
-        text: sampleNames ? cat.indices.map(i => sampleNames[i]) : undefined,
-        hovertemplate: '<b>%{text}</b><br>' +
-                      'Mahalanobis: %{x:.2f}<br>' +
-                      'RSS: %{y:.2f}<extra></extra>'
+          const categoryName = cat.type === 'regular' ? '' :
+                              cat.type === 'goodLeverage' ? ' (Good Leverage)' :
+                              cat.type === 'orthogonal' ? ' (Orthogonal)' : ' (Bad Outlier)';
+
+          traces.push({
+            type: 'scatter',
+            mode: 'markers',
+            x: filteredIndices.map(i => mahalanobisDistances[i]),
+            y: filteredIndices.map(i => residualSumOfSquares[i]),
+            name: group + categoryName,
+            customdata: filteredIndices.map(i => [i]),
+            marker: {
+              color: colors[groupIdx % colors.length],
+              size: getScaledMarkerSize(this.config.pointSize || 8, this.config.fontScale || 1.0),
+              symbol: cat.symbol,
+              opacity: 0.7
+            },
+            text: sampleNames ? filteredIndices.map(i => sampleNames[i]) : undefined,
+            hovertemplate: '<b>%{text}</b><br>' +
+                          'Group: ' + group + '<br>' +
+                          'Mahalanobis: %{x:.2f}<br>' +
+                          'RSS: %{y:.2f}<extra></extra>',
+            legendgroup: group,
+            showlegend: cat.type === 'regular' // Only show legend for regular points
+          });
+        });
       });
-    });
+    } else if (isContinuous) {
+      // Continuous coloring with shapes for outlier categories
+      const outlierCategories = [
+        { type: 'regular', indices: regular, symbol: 'circle', name: 'Regular' },
+        { type: 'goodLeverage', indices: goodLeverage, symbol: 'square', name: 'Good Leverage' },
+        { type: 'orthogonal', indices: orthogonal, symbol: 'diamond', name: 'Orthogonal Outliers' },
+        { type: 'outliers', indices: outliers, symbol: 'x', name: 'Bad Outliers' }
+      ];
+
+      outlierCategories.forEach(cat => {
+        if (cat.indices.length === 0) {
+return;
+}
+
+        traces.push({
+          type: 'scatter',
+          mode: 'markers',
+          x: cat.indices.map(i => mahalanobisDistances[i]),
+          y: cat.indices.map(i => residualSumOfSquares[i]),
+          name: cat.name,
+          customdata: cat.indices.map(i => [i]),
+          marker: {
+            color: cat.indices.map(i => groupValues![i]),
+            size: getScaledMarkerSize(this.config.pointSize || 8, this.config.fontScale || 1.0),
+            symbol: cat.symbol,
+            opacity: 0.7,
+            colorscale: 'Viridis',
+            showscale: cat.type === 'regular', // Only show colorbar for regular points
+            colorbar: cat.type === 'regular' ? {
+              title: { text: groups?.[0] || 'Value' },
+              thickness: 15,
+              len: 0.7
+            } : undefined
+          },
+          text: sampleNames ? cat.indices.map(i => sampleNames[i]) : undefined,
+          hovertemplate: '<b>%{text}</b><br>' +
+                        'Value: %{marker.color:.2f}<br>' +
+                        'Mahalanobis: %{x:.2f}<br>' +
+                        'RSS: %{y:.2f}<extra></extra>'
+        });
+      });
+    } else {
+      // No grouping - use shapes only for outlier categories
+      const categories = [
+        { name: 'Regular', indices: regular, color: colors[0] || '#10b981', symbol: 'circle' },
+        { name: 'Good Leverage', indices: goodLeverage, color: colors[1] || '#3b82f6', symbol: 'square' },
+        { name: 'Orthogonal Outliers', indices: orthogonal, color: colors[2] || '#f59e0b', symbol: 'diamond' },
+        { name: 'Bad Outliers', indices: outliers, color: colors[3] || '#ef4444', symbol: 'x' }
+      ];
+
+      // Add traces for each category
+      categories.forEach(cat => {
+        if (cat.indices.length === 0) {
+return;
+}
+
+        traces.push({
+          type: 'scatter',
+          mode: 'markers',
+          x: cat.indices.map(i => mahalanobisDistances[i]),
+          y: cat.indices.map(i => residualSumOfSquares[i]),
+          name: cat.name,
+          customdata: cat.indices.map(i => [i]), // Add global indices for selection
+          marker: {
+            color: cat.color,
+            size: getScaledMarkerSize(this.config.pointSize || 8, this.config.fontScale || 1.0),
+            symbol: cat.symbol,
+            opacity: 0.7
+          },
+          text: sampleNames ? cat.indices.map(i => sampleNames[i]) : undefined,
+          hovertemplate: '<b>%{text}</b><br>' +
+                        'Mahalanobis: %{x:.2f}<br>' +
+                        'RSS: %{y:.2f}<extra></extra>'
+        });
+      });
+    }
 
     // Add labels for samples
     if (this.config.showLabels && sampleNames) {
@@ -186,7 +288,7 @@ return;
   getEnhancedLayout(): Partial<Layout> {
     const baseLayout = this.getLayout();
     const themeLayout = getPlotlyTheme(this.config.theme || 'light', this.config.fontScale).layout;
-    
+
     // Add watermark if enabled
     let watermarkImages: any[] = [];
     if (PLOT_CONFIG.watermark.enabled) {
@@ -206,7 +308,7 @@ return;
         layer: 'above'
       }];
     }
-    
+
     return mergeLayouts(themeLayout, baseLayout, { images: watermarkImages });
   }
 
@@ -365,15 +467,76 @@ return;
 export const PCADiagnosticPlot: React.FC<{
   data: DiagnosticPlotData;
   config?: DiagnosticPlotConfig;
-}> = ({ data, config }) => {
+  onSelection?: (indices: number[]) => void;
+  excludedRows?: number[];
+}> = ({ data, config, onSelection, excludedRows = [] }) => {
   const plot = useMemo(() => new PlotlyDiagnosticPlot(data, config), [data, config]);
+
+  // Apply opacity to excluded rows
+  const tracesWithOpacity = useMemo(() => {
+    const traces = plot.getTraces();
+    if (excludedRows.length > 0) {
+      return traces.map(trace => {
+        const traceAny = trace as any;
+        if (traceAny.customdata) {
+          const updatedTrace: any = { ...trace };
+          const numPoints = (traceAny.x as number[]).length;
+          const opacity = new Array(numPoints).fill(1);
+
+          // Get the global indices from customdata
+          const globalIndices = (traceAny.customdata as number[][]).map(cd => cd[0]);
+          globalIndices.forEach((globalIdx, localIdx) => {
+            if (excludedRows.includes(globalIdx)) {
+              opacity[localIdx] = 0.2;
+            }
+          });
+
+          if (updatedTrace.marker) {
+            updatedTrace.marker = {
+              ...updatedTrace.marker,
+              opacity
+            };
+          }
+          return updatedTrace;
+        }
+        return trace;
+      });
+    }
+    return traces;
+  }, [plot, excludedRows]);
+
+  // Handle selection events
+  const handlePlotlyEvent = React.useCallback((event: any) => {
+    if (event?.points && onSelection) {
+      const indices = event.points.map((point: any) => {
+        // Use customdata if available, otherwise use pointIndex
+        return point.customdata?.[0] ?? point.pointIndex;
+      }).filter((idx: number) => idx !== undefined && idx !== null);
+
+      if (indices.length > 0) {
+        console.log('PCADiagnosticPlot: Selection event', indices);
+        onSelection(indices);
+      }
+    }
+  }, [onSelection]);
+
+  // Get layout with lasso selection enabled
+  const layoutWithSelection = useMemo(() => {
+    const baseLayout = plot.getEnhancedLayout();
+    return {
+      ...baseLayout,
+      dragmode: 'lasso' as const,
+      selectdirection: 'diagonal' as const
+    };
+  }, [plot]);
 
   return (
     <PlotlyWithFullscreen
-      data={plot.getTraces()}
-      layout={plot.getEnhancedLayout()}
+      data={tracesWithOpacity}
+      layout={layoutWithSelection}
       config={plot.getConfig()}
       style={{ width: '100%', height: '100%' }}
+      onSelected={handlePlotlyEvent}
     />
   );
 };

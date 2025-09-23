@@ -144,9 +144,9 @@ func TestTemporalPCAFit(t *testing.T) {
 	// First component should explain most variance for trend data
 	assert.Greater(t, result.ExplainedVar[0], 0.7)
 
-	// Cumulative variance should be increasing
+	// Cumulative variance should be increasing (now in percentage scale 0-100)
 	assert.Less(t, result.CumulativeVar[0], result.CumulativeVar[1])
-	assert.LessOrEqual(t, result.CumulativeVar[1], 1.0)
+	assert.LessOrEqual(t, result.CumulativeVar[1], 100.0)
 }
 
 // TestTemporalPCAVarianceExplained tests the variance explained criterion
@@ -726,6 +726,121 @@ func TestTemporalPCAEdgeCases(t *testing.T) {
 		// Cumulative variance should be monotonically increasing
 		for i := 1; i < len(result.CumulativeVar); i++ {
 			assert.GreaterOrEqual(t, result.CumulativeVar[i], result.CumulativeVar[i-1])
+		}
+	})
+}
+
+// TestTemporalPCAVariableImportance tests the variable importance computation
+func TestTemporalPCAVariableImportance(t *testing.T) {
+	t.Run("basic variable importance calculation", func(t *testing.T) {
+		// Create test data with 3 variables, 10 samples
+		data := types.Matrix{
+			{1.0, 2.0, 3.0},
+			{2.0, 3.0, 4.0},
+			{3.0, 4.0, 5.0},
+			{4.0, 5.0, 6.0},
+			{5.0, 6.0, 7.0},
+			{6.0, 7.0, 8.0},
+			{7.0, 8.0, 9.0},
+			{8.0, 9.0, 10.0},
+			{9.0, 10.0, 11.0},
+			{10.0, 11.0, 12.0},
+		}
+
+		engine := NewTemporalPCAEngine()
+		config := types.PCAConfig{
+			Components:   2,
+			MeanCenter:   true,
+			TemporalLags: 3,
+		}
+
+		result, err := engine.Fit(data, config)
+		require.NoError(t, err)
+		require.NotNil(t, result)
+
+		// Check that variable importance was computed
+		assert.NotNil(t, result.TemporalVariableImportance)
+
+		// Check dimensions: should be [components × variables]
+		assert.Len(t, result.TemporalVariableImportance, 2) // 2 components
+		if len(result.TemporalVariableImportance) > 0 {
+			assert.Len(t, result.TemporalVariableImportance[0], 3) // 3 variables
+		}
+
+		// Check that values are non-negative (RMS should always be positive)
+		for comp := 0; comp < len(result.TemporalVariableImportance); comp++ {
+			for var_ := 0; var_ < len(result.TemporalVariableImportance[comp]); var_++ {
+				assert.GreaterOrEqual(t, result.TemporalVariableImportance[comp][var_], 0.0,
+					"Variable importance should be non-negative")
+			}
+		}
+	})
+
+	t.Run("variable importance with known loadings", func(t *testing.T) {
+		// Create a temporal PCA engine and manually set loadings for testing
+		engine := &TemporalPCAImpl{
+			nComponents: 1,
+			origVars:    2,
+			numLags:     2,
+			fitted:      true,
+		}
+
+		// Create known loadings: [1 × 4] matrix (1 component, 2 vars × 2 lags)
+		// Loadings: [var0_lag0=0.5, var1_lag0=0.3, var0_lag1=0.4, var1_lag1=0.6]
+		engine.loadings = mat.NewDense(1, 4, []float64{0.5, 0.3, 0.4, 0.6})
+
+		importance, err := engine.ComputeVariableImportance()
+		require.NoError(t, err)
+		assert.NotNil(t, importance)
+
+		// Check dimensions
+		assert.Len(t, importance, 1)    // 1 component
+		assert.Len(t, importance[0], 2) // 2 variables
+
+		// Calculate expected RMS values
+		// Var0: sqrt((0.5^2 + 0.4^2) / 2) = sqrt((0.25 + 0.16) / 2) = sqrt(0.205) ≈ 0.4528
+		// Var1: sqrt((0.3^2 + 0.6^2) / 2) = sqrt((0.09 + 0.36) / 2) = sqrt(0.225) ≈ 0.4743
+		expectedVar0 := math.Sqrt((0.5*0.5 + 0.4*0.4) / 2.0)
+		expectedVar1 := math.Sqrt((0.3*0.3 + 0.6*0.6) / 2.0)
+
+		assert.InDelta(t, expectedVar0, importance[0][0], 1e-10,
+			"Variable 0 importance should match expected RMS")
+		assert.InDelta(t, expectedVar1, importance[0][1], 1e-10,
+			"Variable 1 importance should match expected RMS")
+	})
+
+	t.Run("variable importance ordering", func(t *testing.T) {
+		// Create data where first variable has stronger pattern
+		data := types.Matrix{
+			{10.0, 1.0, 0.1},
+			{20.0, 2.0, 0.2},
+			{30.0, 3.0, 0.3},
+			{40.0, 4.0, 0.4},
+			{50.0, 5.0, 0.5},
+			{60.0, 6.0, 0.6},
+			{70.0, 7.0, 0.7},
+			{80.0, 8.0, 0.8},
+		}
+
+		engine := NewTemporalPCAEngine()
+		config := types.PCAConfig{
+			Components:   1,
+			MeanCenter:   true,
+			TemporalLags: 2,
+		}
+
+		result, err := engine.Fit(data, config)
+		require.NoError(t, err)
+		require.NotNil(t, result.TemporalVariableImportance)
+
+		// First variable should have highest importance due to larger magnitude
+		if len(result.TemporalVariableImportance) > 0 && len(result.TemporalVariableImportance[0]) >= 3 {
+			assert.Greater(t, result.TemporalVariableImportance[0][0],
+				result.TemporalVariableImportance[0][1],
+				"First variable should have higher importance than second")
+			assert.Greater(t, result.TemporalVariableImportance[0][1],
+				result.TemporalVariableImportance[0][2],
+				"Second variable should have higher importance than third")
 		}
 	})
 }

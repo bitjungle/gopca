@@ -125,11 +125,21 @@ export class PlotlyCircleOfCorrelations {
       });
     }
 
-    // Add correlation vectors - use same color as Biplot (colorScheme[1])
+    // Add correlation vectors - assign each variable a color from the palette
     filteredNames.forEach((name, i) => {
-      const color = this.config.colorByMagnitude
-        ? `hsl(${240 - magnitudes[i] * 240}, 70%, 50%)`  // Blue to red gradient
-        : (this.config.colorScheme?.[1] || '#ef4444');  // Use index 1 like Biplot
+      let color: string;
+      if (this.config.colorScheme && this.config.colorScheme.length > 0) {
+        // Assign each variable its own color from the palette
+        // Use modulo to cycle through palette if more variables than colors
+        const paletteIndex = i % this.config.colorScheme.length;
+        color = this.config.colorScheme[paletteIndex];
+      } else if (this.config.colorByMagnitude) {
+        // Fallback to HSL gradient based on magnitude if no palette
+        color = `hsl(${240 - magnitudes[i] * 240}, 70%, 50%)`;  // Blue to red gradient
+      } else {
+        // Default fallback color
+        color = '#ef4444';
+      }
 
       // Vector line
       traces.push({
@@ -139,7 +149,7 @@ export class PlotlyCircleOfCorrelations {
         y: [0, correlationsY[i]],
         line: {
           color: color,
-          width: this.config.arrowWidth
+          width: this.config.arrowWidth || 2
         },
         showlegend: false,
         hovertemplate: `<b>${name}</b><br>` +
@@ -215,7 +225,7 @@ export class PlotlyCircleOfCorrelations {
   getEnhancedLayout(): Partial<Layout> {
     const baseLayout = this.getLayout();
     const themeLayout = getPlotlyTheme(this.config.theme || 'light', this.config.fontScale).layout;
-    
+
     // Add watermark if enabled
     let watermarkImages: any[] = [];
     if (PLOT_CONFIG.watermark.enabled) {
@@ -235,7 +245,7 @@ export class PlotlyCircleOfCorrelations {
         layer: 'above'
       }];
     }
-    
+
     return mergeLayouts(themeLayout, baseLayout, { images: watermarkImages });
   }
 
@@ -357,8 +367,12 @@ export const PCACircleOfCorrelations: React.FC<{
 }> = ({ data, config }) => {
   const plot = useMemo(() => new PlotlyCircleOfCorrelations(data, config), [data, config]);
 
+  // Create a key based on the colorScheme to force re-render when palette changes
+  const colorSchemeKey = config?.colorScheme ? JSON.stringify(config.colorScheme) : 'default';
+
   return (
     <PlotlyWithFullscreen
+      key={`circle-correlations-${colorSchemeKey}`}
       data={plot.getTraces()}
       layout={plot.getEnhancedLayout()}
       config={plot.getConfig()}

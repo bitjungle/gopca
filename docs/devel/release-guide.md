@@ -14,10 +14,32 @@ The release process is fully automated via GitHub Actions. Once you push a versi
 
 - Push access to the repository
 - GitHub CLI (`gh`) installed and authenticated
-- Be on the `main` branch with all changes synced
+- Be on the `main` branch with all changes synced (or `develop` for major releases)
 - All tests passing
+- CI/CD passing on the source branch
+- Version numbers consistent across all files
+- No linter configuration issues
 
 ## Release Process
+
+### Special Case: Releasing from develop Branch
+
+For major releases with many features accumulated in develop:
+
+1. **Merge develop → main first**
+   ```bash
+   # Create PR from develop to main
+   gh pr create --base main --head develop --title "Release vX.X.X"
+   ```
+
+2. **Handle merge conflicts**
+   - If main has commits not in develop, conflicts may arise
+   - Generally prefer develop's version for feature releases
+   - Document any commits from main that might need cherry-picking later
+
+3. **Continue with normal release process after merge**
+
+## Standard Release Process
 
 ### Automated Execution (AI Assistant/Claude Code)
 
@@ -40,14 +62,14 @@ When using Claude Code or another AI assistant to create a release, the assistan
 **AI Assistant Instructions:**
 ```bash
 # The AI will execute these automatically:
-./scripts/prepare-release.sh v0.9.1
-git push -u origin release-v0.9.1
-gh pr create --title "Release v0.9.1" --body "Preparing release v0.9.1"
+./scripts/prepare-release.sh vX.X.X
+git push -u origin release-vX.X.X
+gh pr create --title "Release vX.X.X" --body "Preparing release vX.X.X"
 
 # AI will monitor CI and notify when ready to merge
 # After you merge, AI continues automatically:
 git checkout main && git pull origin main
-./scripts/release.sh v0.9.1
+./scripts/release.sh vX.X.X
 gh run watch  # AI monitors until complete
 ```
 
@@ -57,33 +79,52 @@ If executing manually, follow these steps:
 
 ### Step 1: Prepare the Release
 
+**First, update CHANGELOG.md:**
+```bash
+# List all commits since last release
+git log --oneline origin/main..HEAD
+
+# Edit CHANGELOG.md with:
+# - Version and date header
+# - Organized sections: Added, Fixed, Changed, Documentation
+# - PR numbers for each change
+```
+
 Run the release preparation script with your desired version:
 
 ```bash
-./scripts/prepare-release.sh v0.9.1
+./scripts/prepare-release.sh vX.X.X
 ```
 
-**Version format:** `vMAJOR.MINOR.PATCH` (e.g., v0.9.0, v1.0.0, v2.1.3)
+**Version format:** `vMAJOR.MINOR.PATCH` (e.g., v1.0.0, v1.1.0, v2.0.0)
 
 This script will:
 - Verify you're on main with no uncommitted changes
 - Run all tests and linters
-- Create a release branch (e.g., `release-v0.9.1`)
+- Create a release branch (e.g., `release-vX.X.X`)
 - Update version in both `cmd/gopca-desktop/wails.json` and `cmd/gocsv/wails.json`
 - Commit the version changes
+
+**Note:** The version in `internal/version/version.go` is set via build flags, not manually
 
 ### Step 2: Create and Merge Pull Request
 
 Push the release branch:
 ```bash
-git push -u origin release-v0.9.1
+git push -u origin release-vX.X.X
 ```
 
-Create the PR:
+Create the PR (or update existing one):
 ```bash
+# Create new PR
 gh pr create \
-  --title "Release v0.9.1" \
-  --body "Preparing release v0.9.1"
+  --title "Release vX.X.X" \
+  --body "Preparing release vX.X.X"
+
+# Or update existing PR
+gh pr edit <PR-NUMBER> \
+  --title "Release vX.X.X: Brief description" \
+  --body "Updated release notes..."
 ```
 
 Then:
@@ -101,7 +142,7 @@ git checkout main
 git pull origin main
 
 # Create and push the release tag
-./scripts/release.sh v0.9.1
+./scripts/release.sh vX.X.X
 ```
 
 This script will:
@@ -140,7 +181,7 @@ The workflow will:
 
 Once complete, verify at:
 ```bash
-open https://github.com/bitjungle/gopca/releases/tag/v0.9.1
+open https://github.com/bitjungle/gopca/releases/tag/vX.X.X
 ```
 
 Check that:
@@ -208,7 +249,7 @@ You can test the release workflow without creating actual releases using the wor
 3. Click "Run workflow" button
 4. Configure the test run:
    - **Branch**: Select branch to test from (e.g., main or feature branch)
-   - **Test version**: Use default `v0.9.5-test` or enter custom version
+   - **Test version**: Use default `vX.X.X-test` or enter custom version
 5. Click the green "Run workflow" button
 
 ### What Happens in Test Mode
@@ -351,6 +392,31 @@ For comprehensive Git workflow documentation, see [git-workflow.md](git-workflow
 
 ## Troubleshooting
 
+### Linter Configuration Errors
+
+If golangci-lint fails in CI:
+
+1. **Configuration format issues**
+   - Verify `.golangci.yml` has `version: "2"` for golangci-lint v2
+   - Use minimal configuration if compatibility issues persist
+   - Check that frontend/dist directories are created (automatic in CI)
+
+2. **Wails embed errors**
+   ```yaml
+   # .github/workflows/golangci-lint.yml should include:
+   - name: Create frontend dist directories for Wails apps
+     run: |
+       mkdir -p cmd/gopca-desktop/frontend/dist
+       mkdir -p cmd/gocsv/frontend/dist
+       echo '<!DOCTYPE html><html><body>Placeholder</body></html>' > cmd/gopca-desktop/frontend/dist/index.html
+       echo '<!DOCTYPE html><html><body>Placeholder</body></html>' > cmd/gocsv/frontend/dist/index.html
+   ```
+
+3. **Minimal working config for v2**
+   ```yaml
+   version: "2"
+   ```
+
 ### Release Workflow Fails
 
 If the workflow fails:
@@ -358,11 +424,11 @@ If the workflow fails:
 2. Fix the issue in a new PR
 3. After merging, delete the failed release and tag:
    ```bash
-   gh release delete v0.9.1 --yes
-   git push origin :refs/tags/v0.9.1
-   git tag -d v0.9.1
+   gh release delete vX.X.X --yes
+   git push origin :refs/tags/vX.X.X
+   git tag -d vX.X.X
    ```
-4. Start over with `./scripts/release.sh v0.9.1`
+4. Start over with `./scripts/release.sh vX.X.X`
 
 ### Version Mismatch
 
@@ -375,15 +441,15 @@ If release.sh reports version mismatch:
 
 If tag exists locally but not remotely:
 ```bash
-git tag -d v0.9.1
-./scripts/release.sh v0.9.1
+git tag -d vX.X.X
+./scripts/release.sh vX.X.X
 ```
 
 If tag exists remotely (be careful!):
 ```bash
-git push origin :refs/tags/v0.9.1
-git tag -d v0.9.1
-./scripts/release.sh v0.9.1
+git push origin :refs/tags/vX.X.X
+git tag -d vX.X.X
+./scripts/release.sh vX.X.X
 ```
 
 ### Self-Hosted Runner Issues
@@ -455,19 +521,19 @@ If we upgrade to a paid SignPath plan, we can re-enable the automated signing in
 
 Check the version using:
 ```bash
-pca --version  # Shows version number only (e.g., "0.9.0")
+pca --version  # Shows version number only (e.g., "1.0.2")
 pca version    # Shows detailed version information
 ```
 
 Example output:
 ```
 $ pca version
-GoPCA 0.9.0 (abc123) built on 2025-01-01T00:00:00Z with go1.24.5 for darwin/arm64
+GoPCA 1.0.2 (abc123) built on 2025-01-01T00:00:00Z with go1.24.5 for darwin/arm64
 ```
 
 ### Desktop Applications
 
-- **GoPCA Desktop**: Version displayed next to the logo in the application header (e.g., "v0.9.0")
+- **GoPCA Desktop**: Version displayed next to the logo in the application header (e.g., "v1.0.2")
 - **GoCSV**: Version displayed in the application header
 
 ## Best Practices

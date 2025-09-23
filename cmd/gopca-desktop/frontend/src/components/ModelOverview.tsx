@@ -33,7 +33,18 @@ export const ModelOverview: React.FC<ModelOverviewProps> = ({ pcaResult, selecte
 
   useEffect(() => {
     const fetchMetrics = async () => {
-      if (!pcaResult || !pcaResult.loadings || pcaResult.method === 'kernel') {
+      if (!pcaResult) {
+        setLoading(false);
+        return;
+      }
+
+      // Skip backend call for Kernel PCA - we'll handle it client-side
+      if (pcaResult.method === 'kernel') {
+        setLoading(false);
+        return;
+      }
+
+      if (!pcaResult.loadings) {
         setLoading(false);
         return;
       }
@@ -75,9 +86,118 @@ export const ModelOverview: React.FC<ModelOverviewProps> = ({ pcaResult, selecte
     fetchMetrics();
   }, [pcaResult, selectedPC, standardScale, originalData]);
 
-  // Don't render for Kernel PCA as it doesn't have loadings
+  // Render special Kernel PCA overview
   if (pcaResult?.method === 'kernel') {
-    return null;
+    const kernelType = pcaResult.kernel_type || 'unknown';
+    const kernelParams = pcaResult.kernel_params || {};
+    const nComponents = pcaResult.components_computed;
+    // Removed unused: const totalVariance = pcaResult.cumulative_variance?.[nComponents - 1] || 0;
+
+    // Get the first few eigenvalues for display
+    const firstPC = pcaResult.explained_variance_ratio?.[0] || 0;
+    const secondPC = pcaResult.explained_variance_ratio?.[1] || 0;
+    const thirdPC = pcaResult.explained_variance_ratio?.[2] || 0;
+
+    // Format kernel parameters for display
+    const formatKernelParams = () => {
+      switch (kernelType) {
+        case 'rbf':
+          return `γ = ${kernelParams.gamma?.toFixed(4) || 'auto'}`;
+        case 'polynomial':
+          return `degree = ${kernelParams.degree || 3}, γ = ${kernelParams.gamma?.toFixed(4) || 'auto'}`;
+        case 'sigmoid':
+          return `γ = ${kernelParams.gamma?.toFixed(4) || 'auto'}, c₀ = ${kernelParams.coef0 || 0}`;
+        case 'linear':
+          return 'no parameters';
+        default:
+          return '';
+      }
+    };
+
+    // Get kernel description
+    const getKernelDescription = () => {
+      switch (kernelType) {
+        case 'rbf':
+          return 'Radial Basis Function';
+        case 'polynomial':
+          return 'Polynomial';
+        case 'sigmoid':
+          return 'Sigmoid';
+        case 'linear':
+          return 'Linear';
+        default:
+          return 'Unknown';
+      }
+    };
+
+    return (
+      <HelpWrapper helpKey="model-overview">
+        <div className="bg-gray-100 dark:bg-gray-700 rounded-lg p-4 h-full flex flex-col">
+          <div className="mb-2">
+            <h3 className="text-lg font-semibold">Model Overview</h3>
+          </div>
+          <div className="space-y-2 flex-grow">
+            <HelpWrapper helpKey="kernel-type">
+              <div className="flex justify-between items-start">
+                <span>Kernel:</span>
+                <div className="text-right">
+                  <span className="font-medium">
+                    {getKernelDescription()}
+                  </span>
+                  <div className="text-xs text-gray-500 dark:text-gray-400">
+                    {formatKernelParams()}
+                  </div>
+                </div>
+              </div>
+            </HelpWrapper>
+
+            <HelpWrapper helpKey="kernel-components">
+              <div className="flex justify-between items-start">
+                <span>Components:</span>
+                <div className="text-right">
+                  <span className="font-medium">
+                    {nComponents} computed
+                  </span>
+                  <div className="text-xs text-gray-500 dark:text-gray-400">
+                    PC1: {firstPC.toFixed(1)}% variance
+                  </div>
+                </div>
+              </div>
+            </HelpWrapper>
+
+            <HelpWrapper helpKey="kernel-variance">
+              <div className="flex justify-between items-start">
+                <span>Top 3 PCs:</span>
+                <div className="text-right">
+                  <span className="font-medium">
+                    {(firstPC + secondPC + thirdPC).toFixed(1)}%
+                  </span>
+                  <div className="text-xs text-gray-500 dark:text-gray-400">
+                    cumulative variance
+                  </div>
+                </div>
+              </div>
+            </HelpWrapper>
+
+            {pcaResult.kernel_matrix && (
+              <HelpWrapper helpKey="kernel-matrix-size">
+                <div className="flex justify-between items-start">
+                  <span>Kernel matrix:</span>
+                  <div className="text-right">
+                    <span className="font-medium">
+                      {pcaResult.kernel_matrix.length} × {pcaResult.kernel_matrix.length}
+                    </span>
+                    <div className="text-xs text-gray-500 dark:text-gray-400">
+                      similarity matrix
+                    </div>
+                  </div>
+                </div>
+              </HelpWrapper>
+            )}
+          </div>
+        </div>
+      </HelpWrapper>
+    );
   }
 
   if (loading) {
@@ -106,17 +226,19 @@ export const ModelOverview: React.FC<ModelOverviewProps> = ({ pcaResult, selecte
 
   // Format the recommendation subtitle
   const getRecommendationSubtitle = () => {
-    if (!metrics) return '';
-    
+    if (!metrics) {
+return '';
+}
+
     const varianceText = `${metrics.varianceCaptured.toFixed(1)}% variance`;
-    
+
     // If standardized and Kaiser is available and matches, show it
     if (standardScale && metrics.kaiserComponents > 0 && metrics.kaiserComponents === metrics.recommendedComponents) {
       return `${varianceText} (Kaiser agrees)`;
     } else if (standardScale && metrics.kaiserComponents > 0) {
       return `${varianceText} (Kaiser: ${metrics.kaiserComponents})`;
     }
-    
+
     return varianceText;
   };
 
@@ -140,7 +262,7 @@ export const ModelOverview: React.FC<ModelOverviewProps> = ({ pcaResult, selecte
               </div>
             </div>
           </HelpWrapper>
-          
+
           <HelpWrapper helpKey="recommended-components">
             <div className="flex justify-between items-start">
               <span>

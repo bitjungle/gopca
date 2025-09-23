@@ -10,7 +10,7 @@ import React, { useMemo } from 'react';
 import { Data, Layout, Config } from 'plotly.js';
 import { getPlotlyTheme, mergeLayouts, ThemeMode } from '../utils/plotlyTheme';
 import { getExportMenuItems } from '../utils/plotlyExport';
-import { PLOT_CONFIG, getScaledMarkerSize } from '../config/plotConfig';
+import { PLOT_CONFIG, getScaledMarkerSize, getScaledFontSizes } from '../config/plotConfig';
 import { PlotlyWithFullscreen } from '../utils/plotlyFullscreen';
 import { getWatermarkDataUrlSync } from '../assets/watermark';
 
@@ -32,6 +32,8 @@ export interface Biplot3DConfig {
   scalingType?: 'correlation' | 'symmetric' | 'pca';
   showScores?: boolean;
   showLoadings?: boolean;
+  showLabels?: boolean;  // Whether to show sample labels
+  maxLabels?: number;     // Maximum number of labels to display
   maxVariables?: number;  // Maximum number of loading vectors to display
   vectorScale?: number;  // Manual scaling adjustment
   colorScheme?: string[];
@@ -128,7 +130,7 @@ export class Plotly3DBiplot {
 
     // Store loading magnitudes and filtering info
     this.totalVariables = loadings[pc1].length;
-    
+
     // Filter to top N vectors by magnitude if needed
     const allVectors = this.data.variableNames.map((name, i) => {
       const magnitude = Math.sqrt(
@@ -138,7 +140,7 @@ export class Plotly3DBiplot {
     });
 
     this.needsFiltering = allVectors.length > (this.config.maxVariables || 50);
-    
+
     let validVectors = allVectors;
     if (this.needsFiltering) {
       validVectors = [...allVectors]
@@ -151,8 +153,8 @@ export class Plotly3DBiplot {
     validVectors = validVectors.filter(v => v.magnitude >= minMagnitude);
     this.displayedVariables = validVectors.length;
 
-    return { 
-      scoresX, scoresY, scoresZ, 
+    return {
+      scoresX, scoresY, scoresZ,
       loadingsX, loadingsY, loadingsZ,
       pc1, pc2, pc3,
       validVectors
@@ -161,8 +163,8 @@ export class Plotly3DBiplot {
 
   getTraces(): Data[] {
     const traces: Data[] = [];
-    const { 
-      scoresX, scoresY, scoresZ, 
+    const {
+      scoresX, scoresY, scoresZ,
       loadingsX, loadingsY, loadingsZ,
       pc1, pc2, pc3,
       validVectors
@@ -194,13 +196,26 @@ export class Plotly3DBiplot {
           return `<b>${label}</b><br>Value: ${valueStr}<br>PC${pc1 + 1}: ${x.toFixed(2)}<br>PC${pc2 + 1}: ${scoresY[i].toFixed(2)}<br>PC${pc3 + 1}: ${scoresZ[i].toFixed(2)}`;
         });
 
+        // Prepare text labels if enabled (limit to maxLabels)
+        const maxLabels = this.config.maxLabels || 10;
+        const textLabels = this.config.showLabels && sampleNames && scoresX.length > 0
+          ? scoresX.map((_, i) => i < maxLabels ? (sampleNames[i] || '') : '')
+          : undefined;
+        const showText = !!textLabels;
+
         traces.push({
           type: 'scatter3d',
-          mode: 'markers',
+          mode: showText ? 'markers+text' as any : 'markers',
           x: scoresX,
           y: scoresY,
           z: scoresZ,
           name: 'Scores',
+          text: textLabels,
+          textposition: 'top center',
+          textfont: showText ? {
+            size: Math.round(10 * (this.config.fontScale || 1.0)),
+            color: 'currentColor'
+          } : undefined,
           hovertext: hovertext,
           hovertemplate: '%{hovertext}<extra></extra>',
           marker: {
@@ -213,7 +228,7 @@ export class Plotly3DBiplot {
             colorbar: {
               title: {
                 text: 'Value'
-              } as any,
+              },
               thickness: 15,
               len: 0.9
             },
@@ -236,13 +251,27 @@ export class Plotly3DBiplot {
             return `<b>${label}</b><br>Group: ${group}<br>PC${pc1 + 1}: ${scoresX[i].toFixed(2)}<br>PC${pc2 + 1}: ${scoresY[i].toFixed(2)}<br>PC${pc3 + 1}: ${scoresZ[i].toFixed(2)}`;
           });
 
+          // Prepare text labels if enabled (limit per group)
+          const maxLabelsPerGroup = Math.ceil((this.config.maxLabels || 10) / uniqueGroups.length);
+          const groupSampleNames = indices.map(i => sampleNames?.[i] || `Sample ${i}`);
+          const textLabels = this.config.showLabels && sampleNames && groupSampleNames.length > 0
+            ? groupSampleNames.map((name, idx) => idx < maxLabelsPerGroup ? name : '')
+            : undefined;
+          const showText = !!textLabels;
+
           traces.push({
             type: 'scatter3d',
-            mode: 'markers',
+            mode: showText ? 'markers+text' as any : 'markers',
             name: group,
             x: groupX,
             y: groupY,
             z: groupZ,
+            text: textLabels,
+            textposition: 'top center',
+            textfont: showText ? {
+              size: Math.round(10 * (this.config.fontScale || 1.0)),
+              color: 'currentColor'
+            } : undefined,
             hovertext: hovertext,
             hovertemplate: '%{hovertext}<extra></extra>',
             marker: {
@@ -259,13 +288,26 @@ export class Plotly3DBiplot {
           return `<b>${label}</b><br>PC${pc1 + 1}: ${x.toFixed(2)}<br>PC${pc2 + 1}: ${scoresY[i].toFixed(2)}<br>PC${pc3 + 1}: ${scoresZ[i].toFixed(2)}`;
         });
 
+        // Prepare text labels if enabled (limit to maxLabels)
+        const maxLabels = this.config.maxLabels || 10;
+        const textLabels = this.config.showLabels && sampleNames && scoresX.length > 0
+          ? scoresX.map((_, i) => i < maxLabels ? (sampleNames[i] || '') : '')
+          : undefined;
+        const showText = !!textLabels;
+
         traces.push({
           type: 'scatter3d',
-          mode: 'markers',
+          mode: showText ? 'markers+text' as any : 'markers',
           x: scoresX,
           y: scoresY,
           z: scoresZ,
           name: 'Scores',
+          text: textLabels,
+          textposition: 'top center',
+          textfont: showText ? {
+            size: Math.round(10 * (this.config.fontScale || 1.0)),
+            color: 'currentColor'
+          } : undefined,
           hovertext: hovertext,
           hovertemplate: '%{hovertext}<extra></extra>',
           marker: {
@@ -305,7 +347,7 @@ export class Plotly3DBiplot {
       // Add loading vectors as individual lines for better coloring
       validVectors.forEach(v => {
         const vectorColor = this.config.colorScheme![1] || '#ef4444';
-        
+
         traces.push({
           type: 'scatter3d',
           mode: 'lines',
@@ -331,7 +373,7 @@ export class Plotly3DBiplot {
         endpointX.push(loadingsX[v.i]);
         endpointY.push(loadingsY[v.i]);
         endpointZ.push(loadingsZ[v.i]);
-        
+
         hovertext.push(
           `<b>${v.name}</b><br>` +
           `PC${pc1 + 1}: ${loadingsX[v.i].toFixed(3)}<br>` +
@@ -396,7 +438,7 @@ export class Plotly3DBiplot {
 
     uniqueGroups.forEach((group, groupIndex) => {
       let groupX: number[], groupY: number[], groupZ: number[];
-      
+
       if (groups) {
         const indices = groups.map((g, idx) => g === group ? idx : -1).filter(idx => idx >= 0);
         groupX = indices.map(i => scoresX[i]);
@@ -468,7 +510,7 @@ export class Plotly3DBiplot {
   getEnhancedLayout(): Partial<Layout> {
     const baseLayout = this.getLayout();
     const themeLayout = getPlotlyTheme(this.config.theme || 'light', this.config.fontScale).layout;
-    
+
     // Add watermark if enabled
     let watermarkImages: any[] = [];
     if (PLOT_CONFIG.watermark.enabled) {
@@ -488,7 +530,7 @@ export class Plotly3DBiplot {
         layer: 'above'
       }];
     }
-    
+
     return mergeLayouts(themeLayout, baseLayout, { images: watermarkImages });
   }
 
@@ -497,7 +539,10 @@ export class Plotly3DBiplot {
     const pc1 = this.data.pc1 ?? 0;
     const pc2 = this.data.pc2 ?? 1;
     const pc3 = this.data.pc3 ?? 2;
-    
+
+    // Get scaled font sizes based on fontScale
+    const scaledFonts = getScaledFontSizes(this.config.fontScale || 1.0);
+
     // Theme-aware colors for 3D scene
     const isDark = this.config.theme === 'dark';
     const sceneColors = {
@@ -519,8 +564,10 @@ export class Plotly3DBiplot {
       scene: {
         xaxis: {
           title: {
-            text: `PC${pc1 + 1} (${explainedVariance[pc1].toFixed(1)}%)`
+            text: `PC${pc1 + 1} (${explainedVariance[pc1].toFixed(1)}%)`,
+            font: { size: scaledFonts.axis }
           },
+          tickfont: { size: scaledFonts.label },
           backgroundcolor: sceneColors.backgroundcolor,
           gridcolor: sceneColors.gridcolor,
           showbackground: true,
@@ -529,8 +576,10 @@ export class Plotly3DBiplot {
         },
         yaxis: {
           title: {
-            text: `PC${pc2 + 1} (${explainedVariance[pc2].toFixed(1)}%)`
+            text: `PC${pc2 + 1} (${explainedVariance[pc2].toFixed(1)}%)`,
+            font: { size: scaledFonts.axis }
           },
+          tickfont: { size: scaledFonts.label },
           backgroundcolor: sceneColors.backgroundcolor,
           gridcolor: sceneColors.gridcolor,
           showbackground: true,
@@ -539,8 +588,10 @@ export class Plotly3DBiplot {
         },
         zaxis: {
           title: {
-            text: `PC${pc3 + 1} (${explainedVariance[pc3].toFixed(1)}%)`
+            text: `PC${pc3 + 1} (${explainedVariance[pc3].toFixed(1)}%)`,
+            font: { size: scaledFonts.axis }
           },
+          tickfont: { size: scaledFonts.label },
           backgroundcolor: sceneColors.backgroundcolor,
           gridcolor: sceneColors.gridcolor,
           showbackground: true,
@@ -567,7 +618,7 @@ export class Plotly3DBiplot {
     return {
       responsive: true,
       displaylogo: false,
-      modeBarButtonsToAdd: getExportMenuItems() as any,
+      modeBarButtonsToAdd: getExportMenuItems(),
       toImageButtonOptions: {
         ...PLOT_CONFIG.export.presentation,
         filename: 'pca-3d-biplot'
@@ -583,32 +634,35 @@ export const PCA3DBiplot: React.FC<{
   data: Biplot3DData;
   config?: Biplot3DConfig;
 }> = ({ data, config }) => {
+  // Always call hooks first, before any conditional returns
+  const plot = useMemo(() => new Plotly3DBiplot(data, config), [data, config]);
+
   // Check if we have enough components for 3D visualization
   const pc3 = data.pc3 ?? 2;
   const numComponents = data.scores[0]?.length || 0;
   const numLoadingComponents = data.loadings?.length || 0;
-  
+
   // Validate that we have at least 3 components in both scores and loadings
   if (numComponents < 3 || pc3 >= numComponents || numLoadingComponents < 3 || pc3 >= numLoadingComponents) {
     const theme = config?.theme || 'light';
     return (
-      <div style={{ 
-        width: '100%', 
-        height: '100%', 
-        display: 'flex', 
-        alignItems: 'center', 
+      <div style={{
+        width: '100%',
+        height: '100%',
+        display: 'flex',
+        alignItems: 'center',
         justifyContent: 'center',
         flexDirection: 'column'
       }}>
-        <p style={{ 
-          color: theme === 'dark' ? '#9ca3af' : '#6b7280', 
+        <p style={{
+          color: theme === 'dark' ? '#9ca3af' : '#6b7280',
           textAlign: 'center',
           marginBottom: '10px'
         }}>
           3D Biplot requires at least 3 principal components.
         </p>
-        <p style={{ 
-          color: theme === 'dark' ? '#9ca3af' : '#6b7280', 
+        <p style={{
+          color: theme === 'dark' ? '#9ca3af' : '#6b7280',
           textAlign: 'center',
           fontSize: '14px'
         }}>
@@ -618,8 +672,6 @@ export const PCA3DBiplot: React.FC<{
       </div>
     );
   }
-  
-  const plot = useMemo(() => new Plotly3DBiplot(data, config), [data, config]);
 
   return (
     <PlotlyWithFullscreen

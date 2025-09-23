@@ -10,7 +10,7 @@ import React, { useMemo } from 'react';
 import { Data, Layout, Config } from 'plotly.js';
 import { getPlotlyTheme, mergeLayouts, ThemeMode } from '../utils/plotlyTheme';
 import { getExportMenuItems } from '../utils/plotlyExport';
-import { PLOT_CONFIG, getScaledMarkerSize } from '../config/plotConfig';
+import { PLOT_CONFIG, getScaledMarkerSize, getScaledFontSizes } from '../config/plotConfig';
 import { PlotlyWithFullscreen } from '../utils/plotlyFullscreen';
 import { getWatermarkDataUrlSync } from '../assets/watermark';
 
@@ -31,6 +31,8 @@ export interface Scores3DPlotConfig {
   markerSize?: number;
   opacity?: number;
   showProjections?: boolean;
+  showLabels?: boolean;  // Whether to show sample labels
+  maxLabels?: number;     // Maximum number of labels to display
   cameraPosition?: {
     eye: { x: number; y: number; z: number };
     center?: { x: number; y: number; z: number };
@@ -98,13 +100,26 @@ export class Plotly3DScoresPlot {
         return `<b>${label}</b><br>Value: ${valueStr}<br>PC${pc1 + 1}: ${x.toFixed(2)}<br>PC${pc2 + 1}: ${scoresY[i].toFixed(2)}<br>PC${pc3 + 1}: ${scoresZ[i].toFixed(2)}`;
       });
 
+      // Prepare text labels if enabled (limit to maxLabels)
+      const maxLabels = this.config.maxLabels || 10;
+      const textLabels = this.config.showLabels && sampleNames && scoresX.length > 0
+        ? scoresX.map((_, i) => i < maxLabels ? (sampleNames[i] || '') : '')
+        : undefined;
+      const showText = !!textLabels;
+
       traces.push({
         type: 'scatter3d',
-        mode: 'markers',
+        mode: showText ? 'markers+text' as any : 'markers',
         name: 'Scores',
         x: scoresX,
         y: scoresY,
         z: scoresZ,
+        text: textLabels,
+        textposition: 'top center',
+        textfont: showText ? {
+          size: Math.round(10 * (this.config.fontScale || 1.0)),
+          color: 'currentColor'
+        } : undefined,
         hovertext: hovertext,
         hovertemplate: '%{hovertext}<extra></extra>',
         marker: {
@@ -117,7 +132,7 @@ export class Plotly3DScoresPlot {
           colorbar: {
             title: {
               text: 'Value'
-            } as any,
+            },
             thickness: 15,
             len: 0.9
           },
@@ -140,13 +155,27 @@ export class Plotly3DScoresPlot {
           return `<b>${label}</b><br>Group: ${group}<br>PC${pc1 + 1}: ${scores[i][pc1].toFixed(2)}<br>PC${pc2 + 1}: ${scores[i][pc2].toFixed(2)}<br>PC${pc3 + 1}: ${scores[i][pc3].toFixed(2)}`;
         });
 
+        // Prepare text labels if enabled (limit per group)
+        const maxLabelsPerGroup = Math.ceil((this.config.maxLabels || 10) / uniqueGroups.length);
+        const groupSampleNames = groupIndices.map(i => sampleNames?.[i] || `Sample ${i}`);
+        const textLabels = this.config.showLabels && sampleNames && groupSampleNames.length > 0
+          ? groupSampleNames.map((name, idx) => idx < maxLabelsPerGroup ? name : '')
+          : undefined;
+        const showText = !!textLabels;
+
         traces.push({
           type: 'scatter3d',
-          mode: 'markers',
+          mode: showText ? 'markers+text' as any : 'markers',
           name: group,
           x: groupScores.map(s => s[pc1]),
           y: groupScores.map(s => s[pc2]),
           z: groupScores.map(s => s[pc3]),
+          text: textLabels,
+          textposition: 'top center',
+          textfont: showText ? {
+            size: Math.round(10 * (this.config.fontScale || 1.0)),
+            color: 'currentColor'
+          } : undefined,
           hovertext: hovertext,
           hovertemplate: '%{hovertext}<extra></extra>',
           marker: {
@@ -235,7 +264,7 @@ export class Plotly3DScoresPlot {
   getEnhancedLayout(): Partial<Layout> {
     const baseLayout = this.getLayout();
     const themeLayout = getPlotlyTheme(this.config.theme || 'light', this.config.fontScale).layout;
-    
+
     // Add watermark if enabled
     let watermarkImages: any[] = [];
     if (PLOT_CONFIG.watermark.enabled) {
@@ -255,13 +284,16 @@ export class Plotly3DScoresPlot {
         layer: 'above'
       }];
     }
-    
+
     return mergeLayouts(themeLayout, baseLayout, { images: watermarkImages });
   }
 
   getLayout(): Partial<Layout> {
     const { explainedVariance, pc1 = 0, pc2 = 1, pc3 = 2 } = this.data;
-    
+
+    // Get scaled font sizes based on fontScale
+    const scaledFonts = getScaledFontSizes(this.config.fontScale || 1.0);
+
     // Theme-aware colors for 3D scene
     const isDark = this.config.theme === 'dark';
     const sceneColors = {
@@ -277,8 +309,10 @@ export class Plotly3DScoresPlot {
       scene: {
         xaxis: {
           title: {
-            text: `PC${pc1 + 1} (${explainedVariance[pc1].toFixed(1)}%)`
+            text: `PC${pc1 + 1} (${explainedVariance[pc1].toFixed(1)}%)`,
+            font: { size: scaledFonts.axis }
           },
+          tickfont: { size: scaledFonts.label },
           backgroundcolor: sceneColors.backgroundcolor,
           gridcolor: sceneColors.gridcolor,
           showbackground: true,
@@ -286,8 +320,10 @@ export class Plotly3DScoresPlot {
         },
         yaxis: {
           title: {
-            text: `PC${pc2 + 1} (${explainedVariance[pc2].toFixed(1)}%)`
+            text: `PC${pc2 + 1} (${explainedVariance[pc2].toFixed(1)}%)`,
+            font: { size: scaledFonts.axis }
           },
+          tickfont: { size: scaledFonts.label },
           backgroundcolor: sceneColors.backgroundcolor,
           gridcolor: sceneColors.gridcolor,
           showbackground: true,
@@ -295,8 +331,10 @@ export class Plotly3DScoresPlot {
         },
         zaxis: {
           title: {
-            text: `PC${pc3 + 1} (${explainedVariance[pc3].toFixed(1)}%)`
+            text: `PC${pc3 + 1} (${explainedVariance[pc3].toFixed(1)}%)`,
+            font: { size: scaledFonts.axis }
           },
+          tickfont: { size: scaledFonts.label },
           backgroundcolor: sceneColors.backgroundcolor,
           gridcolor: sceneColors.gridcolor,
           showbackground: true,
@@ -322,7 +360,7 @@ export class Plotly3DScoresPlot {
     return {
       responsive: true,
       displaylogo: false,
-      modeBarButtonsToAdd: getExportMenuItems() as any,
+      modeBarButtonsToAdd: getExportMenuItems(),
       toImageButtonOptions: {
         ...PLOT_CONFIG.export.presentation,
         filename: 'pca-3d-scores'
@@ -338,32 +376,35 @@ export const PCA3DScoresPlot: React.FC<{
   data: Scores3DPlotData;
   config?: Scores3DPlotConfig;
 }> = ({ data, config }) => {
+  // Always call hooks first, before any conditional returns
+  const plot = useMemo(() => new Plotly3DScoresPlot(data, config), [data, config]);
+
   // Check if we have enough components for 3D visualization
   const pc3 = data.pc3 ?? 2;
   const numComponents = data.scores[0]?.length || 0;
   const numExplainedVariance = data.explainedVariance?.length || 0;
-  
+
   // Validate that we have at least 3 components
   if (numComponents < 3 || pc3 >= numComponents || numExplainedVariance < 3 || pc3 >= numExplainedVariance) {
     const theme = config?.theme || 'light';
     return (
-      <div style={{ 
-        width: '100%', 
-        height: '100%', 
-        display: 'flex', 
-        alignItems: 'center', 
+      <div style={{
+        width: '100%',
+        height: '100%',
+        display: 'flex',
+        alignItems: 'center',
         justifyContent: 'center',
         flexDirection: 'column'
       }}>
-        <p style={{ 
-          color: theme === 'dark' ? '#9ca3af' : '#6b7280', 
+        <p style={{
+          color: theme === 'dark' ? '#9ca3af' : '#6b7280',
           textAlign: 'center',
           marginBottom: '10px'
         }}>
           3D Scores Plot requires at least 3 principal components.
         </p>
-        <p style={{ 
-          color: theme === 'dark' ? '#9ca3af' : '#6b7280', 
+        <p style={{
+          color: theme === 'dark' ? '#9ca3af' : '#6b7280',
           textAlign: 'center',
           fontSize: '14px'
         }}>
@@ -373,8 +414,6 @@ export const PCA3DScoresPlot: React.FC<{
       </div>
     );
   }
-  
-  const plot = useMemo(() => new Plotly3DScoresPlot(data, config), [data, config]);
 
   return (
     <PlotlyWithFullscreen

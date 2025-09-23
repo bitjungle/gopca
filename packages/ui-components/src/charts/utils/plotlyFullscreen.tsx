@@ -51,7 +51,9 @@ export const PlotlyFullscreenModal: React.FC<{
     }
   }, [isOpen]);
 
-  if (!isOpen) return null;
+  if (!isOpen) {
+return null;
+}
 
   // Enhanced config with exit fullscreen button
   // Ensure modebar is visible and add the fullscreen toggle button
@@ -75,7 +77,7 @@ export const PlotlyFullscreenModal: React.FC<{
           data={plotData}
           layout={{
             ...plotLayout,
-            autosize: true,
+            autosize: true
           }}
           config={enhancedConfig}
           style={{ width: '100%', height: 'calc(100% - 3rem)' }}

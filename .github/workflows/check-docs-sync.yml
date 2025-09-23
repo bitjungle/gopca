@@ -1,0 +1,76 @@
+name: Check Documentation Sync
+
+on:
+  pull_request:
+    paths:
+      - 'docs/intro_to_*.md'
+      - 'docs/images/intro_to_*.jpg'
+      - 'cmd/*/frontend/public/docs/*.md'
+      - 'cmd/*/frontend/public/docs/images/*.png'
+      - 'scripts/sync-docs.sh'
+      - 'Makefile'
+
+jobs:
+  check-sync:
+    name: Verify documentation synchronization
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      
+      - name: Check documentation synchronization
+        run: |
+          echo "Checking documentation file synchronization..."
+          
+          # Run the sync script
+          bash scripts/sync-docs.sh
+          
+          # Check if any files were changed
+          if ! git diff --exit-code; then
+            echo "❌ Documentation files are out of sync!"
+            echo ""
+            echo "The following files need to be updated:"
+            git diff --name-only
+            echo ""
+            echo "Please run 'make sync-docs' locally and commit the changes."
+            exit 1
+          fi
+          
+          echo "✅ Documentation files are properly synchronized"
+      
+      - name: Verify documentation accessibility
+        run: |
+          # Verify that the documentation files exist where expected
+          echo "Verifying documentation file locations..."
+          
+          # Check GoPCA documentation
+          if [ ! -f "cmd/gopca-desktop/frontend/public/docs/intro_to_pca.md" ]; then
+            echo "❌ Missing: cmd/gopca-desktop/frontend/public/docs/intro_to_pca.md"
+            exit 1
+          fi
+          
+          # Check GoCSV documentation
+          if [ ! -f "cmd/gocsv/frontend/public/docs/intro_to_data_prep.md" ]; then
+            echo "❌ Missing: cmd/gocsv/frontend/public/docs/intro_to_data_prep.md"
+            exit 1
+          fi
+          
+          # Check for GoPCA images
+          image_count=$(ls -1 cmd/gopca-desktop/frontend/public/docs/images/intro_to_pca_fig_*.jpg 2>/dev/null | wc -l)
+          if [ "$image_count" -eq 0 ]; then
+            echo "⚠️  Warning: No intro_to_pca images found in GoPCA Desktop public directory"
+            echo "   Expected location: cmd/gopca-desktop/frontend/public/docs/images/"
+          else
+            echo "✅ Found $image_count intro_to_pca image(s) in GoPCA Desktop"
+          fi
+          
+          # Check for GoCSV images (if any)
+          image_count=$(ls -1 cmd/gocsv/frontend/public/docs/images/intro_to_data_prep_fig_*.jpg 2>/dev/null | wc -l)
+          if [ "$image_count" -gt 0 ]; then
+            echo "✅ Found $image_count intro_to_data_prep image(s) in GoCSV Desktop"
+          fi
+          
+          echo "✅ All documentation files are in their expected locations"

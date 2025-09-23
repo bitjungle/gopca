@@ -6,11 +6,11 @@
 
 import React, { useCallback, useMemo, useRef, useState, useEffect, forwardRef, useImperativeHandle } from 'react';
 import { AgGridReact } from 'ag-grid-react';
-import { ColDef, GridReadyEvent, CellValueChangedEvent, GridApi, ColumnApi, CellClickedEvent, RowClickedEvent, ColumnResizedEvent } from 'ag-grid-community';
+import { ColDef, GridReadyEvent, CellValueChangedEvent, GridApi, ColumnApi, ColumnResizedEvent } from 'ag-grid-community';
 import 'ag-grid-community/styles/ag-grid.css';
 import 'ag-grid-community/styles/ag-theme-quartz.css';
 import { useTheme } from '@gopca/ui-components';
-import { ExecuteDeleteRows, ExecuteDeleteColumns, ExecuteInsertRow, ExecuteInsertColumn, ExecuteToggleTargetColumn, ExecuteHeaderEdit, ExecuteDuplicateRows } from '../../wailsjs/go/main/App';
+import { ExecuteDeleteRows, ExecuteDeleteColumns, ExecuteInsertRow, ExecuteInsertColumn, ExecuteToggleTargetColumn, ExecuteDuplicateRows } from '../../wailsjs/go/main/App';
 import { RenameDialog } from './RenameDialog';
 import { ConfirmDialog } from '@gopca/ui-components';
 import {
@@ -121,10 +121,7 @@ export const CSVGrid = forwardRef<any, CSVGridProps>(({
     onRowNameChange,
     onRefresh
 }, ref) => {
-    // Validate inputs
-    if (!data || !headers || data.length === 0 || headers.length === 0) {
-        return <div className="w-full h-full flex items-center justify-center text-gray-500">No data to display</div>;
-    }
+    // All hooks must be declared before any conditional returns
     const gridRef = useRef<AgGridReact>(null);
     const [gridApi, setGridApi] = useState<GridApi | null>(null);
     const [columnApi, setColumnApi] = useState<ColumnApi | null>(null);
@@ -154,6 +151,7 @@ export const CSVGrid = forwardRef<any, CSVGridProps>(({
     }>({ isOpen: false, title: '', message: '', onConfirm: () => {} });
 
     // Detect column types
+    // Note: All hooks are declared before the validation check below to comply with React Hooks rules
     const detectColumnType = useCallback((colIndex: number): 'numeric' | 'text' | 'mixed' => {
         let hasNumeric = false;
         let hasText = false;
@@ -647,6 +645,11 @@ return;
             headerContainer.removeEventListener('contextmenu', handleHeaderRightClick);
         };
     }, [gridApi, columnApi, handleHeaderContextMenu]);
+
+    // Early return for invalid data (placed after all hooks to satisfy React rules)
+    if (!data || !headers || data.length === 0 || headers.length === 0) {
+        return <div className="w-full h-full flex items-center justify-center text-gray-500">No data to display</div>;
+    }
 
     return (
         <div className="w-full h-full">

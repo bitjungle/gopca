@@ -43,7 +43,17 @@ Validates that existing functionality remains intact:
 - Numerical stability
 - Performance baselines
 
-### 4. Platform-Specific Tests
+### 4. Numerical Stability Tests (Phase 2)
+Located in `internal/core/stability_test.go`, `edgecase_test.go`, `performance_test.go`
+
+Comprehensive testing of numerical robustness:
+- **Ill-conditioned matrices**: Condition numbers from 10² to 10¹⁰
+- **Edge cases**: Empty data, single dimensions, zero variance
+- **Extreme values**: Near machine epsilon and overflow
+- **Performance benchmarks**: Memory and time complexity validation
+- **Method consistency**: SVD vs NIPALS comparison
+
+### 5. Platform-Specific Tests
 Script: `scripts/ci/test-platforms.sh`
 
 Tests platform-specific behaviors:
@@ -52,6 +62,26 @@ Tests platform-specific behaviors:
 - Security features (Windows reserved names, macOS quarantine)
 - Build artifacts validation
 - GUI application structure
+
+### 5. Sklearn Validation Tests
+Located in `internal/core/sklearn_validation_test.go`
+
+Validates mathematical correctness against scikit-learn reference implementation:
+- **Datasets**: Uses real data (iris, wine, corn) from `testdata/`
+- **Methods**: Validates SVD and NIPALS algorithms
+- **Properties**: Tests orthogonality, eigenvalue ordering, variance preservation
+- **Preprocessing**: Validates mean-centering and standardization
+- **Sign Ambiguity**: Handles eigenvector sign indeterminacy
+
+Reference generation:
+```bash
+cd testdata
+source .venv/bin/activate
+cd validation
+python generate_reference_pca.py
+```
+
+See [validation-methodology.md](validation-methodology.md) for complete details.
 
 ## Running Tests
 
@@ -69,6 +99,9 @@ go test -cover ./internal/integration/...
 
 # Run platform-specific tests
 ./scripts/ci/test-platforms.sh
+
+# Run sklearn validation tests
+go test -v -run TestSklearn ./internal/core/...
 ```
 
 ### Test Scripts

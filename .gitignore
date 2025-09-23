@@ -33,10 +33,14 @@ go.work.sum
 .claude/
 CLAUDE.md
 CLAUDE.md.bak
+docs/CLAUDE.md
 .mcp.json
 
 # Local documentation
 docs_tmp/
+# Keep reference summaries but ignore PDFs
+docs/references/*.pdf
+!docs/references/_summaries.txt
 
 # Build artifacts
 results/
@@ -68,3 +72,4 @@ Screenshot*.png
 # Misc. temp files
 _tmp/
 testdata/wine/plotly/
+testdata/validation/reference_results

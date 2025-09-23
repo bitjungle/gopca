@@ -35,11 +35,11 @@ export const ScoresPlot: React.FC<ScoresPlotProps> = ({
   rowNames,
   xComponent = 0,
   yComponent = 1,
-  groupColumn,
+  groupColumn: _groupColumn,
   groupLabels,
   groupValues,
   groupType = 'categorical',
-  groupEllipses,
+  groupEllipses: _groupEllipses,
   showEllipses = false,
   confidenceLevel = 0.95,
   showRowLabels = false,
@@ -80,9 +80,8 @@ export const ScoresPlot: React.FC<ScoresPlotProps> = ({
     fontScale
   );
 
-  // Debug logging
+  // Handle selection callback
   const handleSelection = React.useCallback((indices: number[]) => {
-    console.log('ScoresPlot wrapper: Selection received', indices);
     if (onSelectionChange) {
       onSelectionChange(indices);
     }

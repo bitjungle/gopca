@@ -1,7 +1,7 @@
 // Copyright 2025 bitjungle - Rune Mathisen. All rights reserved.
 // Plotly-based PCA Loadings Plot
 
-import React, { useMemo, useState } from 'react';
+import React, { useMemo } from 'react';
 import { PCALoadingsPlot, useTheme } from '@gopca/ui-components';
 import { PCAResult } from '../../types';
 import {

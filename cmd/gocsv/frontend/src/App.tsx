@@ -7,10 +7,10 @@
 import React, { useState, useRef, useEffect } from 'react';
 import './App.css';
 import { CSVGrid, ValidationResults, MissingValueSummary, MissingValueDialog, DataQualityDashboard, UndoRedoControls, ImportWizard, DataTransformDialog, DocumentationViewer, AboutDialog } from './components';
-import { ConfirmDialog } from '@gopca/ui-components';
+import { ConfirmDialog, ErrorBoundary } from '@gopca/ui-components';
 import { ThemeProvider, ThemeToggle } from '@gopca/ui-components';
 import logo from './assets/images/GoCSV-logo-1024-transp.png';
-import { LoadCSV, SaveCSV, SaveExcel, ValidateForGoPCA, AnalyzeMissingValues, FillMissingValues, AnalyzeDataQuality, CheckGoPCAStatus, OpenInGoPCA, DownloadGoPCA, ExecuteCellEdit, ExecuteHeaderEdit, ExecuteFillMissingValues, ClearHistory, GetVersion } from '../wailsjs/go/main/App';
+import { LoadCSV, SaveCSV, SaveExcel, ValidateForGoPCA, AnalyzeMissingValues, FillMissingValues, AnalyzeDataQuality, CheckGoPCAStatus, OpenInGoPCA, DownloadGoPCA, ExecuteCellEdit, ExecuteHeaderEdit, ClearHistory, GetVersion } from '../wailsjs/go/main/App';
 import { EventsOn, OnFileDrop, OnFileDropOff } from '../wailsjs/runtime/runtime';
 import { main } from '../wailsjs/go/models';
 
@@ -135,7 +135,6 @@ function AppContent() {
             }
         } catch (error) {
             console.error('Error loading dropped file:', error);
-            alert(`Error loading file: ${error}`);
         } finally {
             setIsLoading(false);
         }
@@ -146,14 +145,7 @@ function AppContent() {
         setIsLoading(true);
         try {
             const result = await LoadCSV('');
-            console.log('Loaded file data:', result);
             if (result && result.data && result.data.length > 0) {
-                console.log('Setting file data:', {
-                    headers: result.headers?.length,
-                    rows: result.rows,
-                    columns: result.columns,
-                    dataLength: result.data?.length
-                });
                 setFileData(result);
                 setFileLoaded(true);
                 // Filename will be set by the event from backend
@@ -367,7 +359,7 @@ return;
                                         disabled={isLoading}
                                         className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
                                     >
-                                        {isLoading ? 'Loading...' : 'Browse for File'}
+                                        {isLoading ? 'Loading...' : 'Choose File'}
                                     </button>
                                     <button
                                         onClick={() => setShowImportWizard(true)}
@@ -378,7 +370,7 @@ return;
                                     </button>
                                 </div>
                                 <div className="text-xs text-gray-500 dark:text-gray-400 space-y-1">
-                                    <p><span className="font-medium">Browse for File:</span> Quick file picker for standard CSV/TSV files with automatic format detection</p>
+                                    <p><span className="font-medium">Choose File:</span> Quick file picker for standard CSV/TSV files with automatic format detection</p>
                                     <p><span className="font-medium">Import with Wizard:</span> Advanced options for Excel sheets, custom delimiters, header rows, and column selection</p>
                                 </div>
                             </div>
@@ -492,15 +484,20 @@ return;
                             </div>
 
                             <div className="h-[600px] w-full">
-                                <CSVGrid
-                                    ref={gridRef}
-                                    data={fileData.data}
-                                    headers={fileData.headers}
-                                    rowNames={fileData.rowNames}
-                                    fileData={fileData}
-                                    onDataChange={handleDataChange}
-                                    onHeaderChange={handleHeaderChange}
-                                    onRowNameChange={(rowIndex, newRowName) => {
+                                <ErrorBoundary
+                                    onError={(error, errorInfo) => {
+                                        console.error('CSVGrid Error:', error, errorInfo);
+                                    }}
+                                >
+                                    <CSVGrid
+                                        ref={gridRef}
+                                        data={fileData.data}
+                                        headers={fileData.headers}
+                                        rowNames={fileData.rowNames}
+                                        fileData={fileData}
+                                        onDataChange={handleDataChange}
+                                        onHeaderChange={handleHeaderChange}
+                                        onRowNameChange={(rowIndex, newRowName) => {
                                         if (fileData && fileData.rowNames) {
                                             const newRowNames = [...fileData.rowNames];
                                             newRowNames[rowIndex] = newRowName;
@@ -523,7 +520,8 @@ return;
                                             setValidationResult(null);
                                         }
                                     }}
-                                />
+                                    />
+                                </ErrorBoundary>
                             </div>
                         </div>
                     )}
@@ -700,7 +698,13 @@ return;
 function App() {
     return (
         <ThemeProvider>
-            <AppContent />
+            <ErrorBoundary
+                onError={(error, errorInfo) => {
+                    console.error('App Error Boundary:', error, errorInfo);
+                }}
+            >
+                <AppContent />
+            </ErrorBoundary>
         </ThemeProvider>
     );
 }

@@ -35,8 +35,6 @@ type TemporalPCAImpl struct {
 	// Temporal-specific parameters
 	numLags      int       // Number of time lags (L)
 	origVars     int       // Original number of variables (p)
-	laggedMeans  []float64 // Mean of each lagged feature for centering
-	laggedScales []float64 // Scale of each lagged feature for standardization
 	singularVals []float64 // Singular values from SVD
 	explainedVar []float64 // Explained variance ratio for each component
 
@@ -234,8 +232,35 @@ func (t *TemporalPCAImpl) Fit(data types.Matrix, config types.PCAConfig) (*types
 		return nil, fmt.Errorf("insufficient samples (%d) for %d lags", rows, t.numLags)
 	}
 
-	// Build lag matrix
-	lagMatrix, err := t.buildLagMatrix(dataMatrix)
+	// IMPORTANT: For proper SSA/temporal PCA, preprocess the ORIGINAL series
+	// before building the lag matrix, not after
+	preprocessedOriginal := dataMatrix
+	if config.MeanCenter || config.StandardScale || config.RobustScale || config.ScaleOnly {
+		// Apply preprocessing to the original series
+		t.preprocessor = NewPreprocessorWithScaleOnly(
+			config.MeanCenter,
+			config.StandardScale,
+			config.RobustScale,
+			config.ScaleOnly,
+			false, // SNV
+			false, // VectorNorm
+		)
+
+		origData := utils.MatrixToSlice(dataMatrix)
+		if err := t.preprocessor.Fit(types.Matrix(origData)); err != nil {
+			return nil, fmt.Errorf("preprocessing fit failed: %w", err)
+		}
+
+		preprocessedData, err := t.preprocessor.Transform(types.Matrix(origData))
+		if err != nil {
+			return nil, fmt.Errorf("preprocessing transform failed: %w", err)
+		}
+
+		preprocessedOriginal = utils.SliceToMatrix([][]float64(preprocessedData))
+	}
+
+	// Build lag matrix from PREPROCESSED data
+	lagMatrix, err := t.buildLagMatrix(preprocessedOriginal)
 	if err != nil {
 		return nil, fmt.Errorf("failed to build lag matrix: %w", err)
 	}
@@ -254,7 +279,7 @@ func (t *TemporalPCAImpl) Fit(data types.Matrix, config types.PCAConfig) (*types
 		}
 	}
 
-	// Create preprocessing config from PCAConfig
+	// Store preprocessing config for later use
 	t.preprocessingConfig = types.PreprocessingConfig{
 		Method:        types.PreprocessingTypeMeanCenter,
 		MeanCenter:    config.MeanCenter,
@@ -265,34 +290,13 @@ func (t *TemporalPCAImpl) Fit(data types.Matrix, config types.PCAConfig) (*types
 		VectorNorm:    config.VectorNorm,
 	}
 
-	// Apply preprocessing to lag matrix
-	t.preprocessor = NewPreprocessorWithScaleOnly(
-		config.MeanCenter,
-		config.StandardScale,
-		config.RobustScale,
-		config.ScaleOnly,
-		config.SNV,
-		config.VectorNorm,
-	)
+	// IMPORTANT: For proper SSA/temporal PCA, we do NOT apply column-wise preprocessing
+	// to the lag matrix. The preprocessing was already applied to the original series
+	// before building the lag matrix. This preserves the temporal structure.
+	preprocessedData := lagMatrix
 
-	// Convert lag matrix to Matrix type for preprocessing
-	lagData := utils.MatrixToSlice(lagMatrix)
-	err = t.preprocessor.Fit(types.Matrix(lagData))
-	if err != nil {
-		return nil, fmt.Errorf("preprocessing fit failed: %w", err)
-	}
-
-	preprocessedMatrix, err := t.preprocessor.Transform(types.Matrix(lagData))
-	if err != nil {
-		return nil, fmt.Errorf("preprocessing transform failed: %w", err)
-	}
-
-	// Convert back to Dense matrix
-	preprocessedData := utils.SliceToMatrix([][]float64(preprocessedMatrix))
-
-	// Store means and scales for later use
-	t.laggedMeans = t.preprocessor.GetMeans()
-	t.laggedScales = t.preprocessor.GetStdDevs()
+	// Note: We don't need laggedMeans and laggedScales for the lag matrix anymore
+	// since we're not preprocessing it. The preprocessor is stored for the original series.
 
 	// Handle edge case for single effective sample
 	if effectiveRows == 1 {
@@ -324,18 +328,43 @@ func (t *TemporalPCAImpl) Fit(data types.Matrix, config types.PCAConfig) (*types
 
 		t.fitted = true
 
+		// For single sample, create a trivial temporal eigenvector
+		temporalEigenvectors := mat.NewDense(t.numLags, 1, nil)
+		for i := 0; i < t.numLags; i++ {
+			temporalEigenvectors.Set(i, 0, 1.0/math.Sqrt(float64(t.numLags))) // Normalized vector
+		}
+
+		// Generate component labels for single component
+		componentLabels := []string{"PC1"}
+
+		// For single sample, compute trivial variable importance
+		variableImportance := make([][]float64, 1)
+		variableImportance[0] = make([]float64, t.origVars)
+		for var_ := 0; var_ < t.origVars; var_++ {
+			sumSquared := 0.0
+			for lag := 0; lag < t.numLags; lag++ {
+				loading, _ := t.GetLoadingForLag(var_, lag, 0)
+				sumSquared += loading * loading
+			}
+			variableImportance[0][var_] = math.Sqrt(sumSquared / float64(t.numLags))
+		}
+
 		return &types.PCAResult{
-			Scores:             utils.MatrixToSlice(scores),
-			Loadings:           utils.MatrixToSlice(t.loadings),
-			ExplainedVar:       t.explainedVar,
-			ExplainedVarRatio:  []float64{100.0}, // Single component explains 100%
-			CumulativeVar:      []float64{1.0},
-			SingularValues:     t.singularVals,
-			Method:             "temporal",
-			Means:              t.laggedMeans,
-			StdDevs:            t.laggedScales,
-			ComponentsComputed: 1,
-			Config:             config,
+			Scores:                     utils.MatrixToSlice(scores),
+			Loadings:                   utils.MatrixToSlice(t.loadings),
+			ExplainedVar:               t.explainedVar,
+			ExplainedVarRatio:          []float64{100.0}, // Single component explains 100%
+			CumulativeVar:              []float64{100.0}, // Cumulative should also be 100%
+			ComponentLabels:            componentLabels,
+			SingularValues:             t.singularVals,
+			Method:                     "temporal",
+			Means:                      nil, // Not applicable for temporal PCA with SSA approach
+			StdDevs:                    nil, // Not applicable for temporal PCA with SSA approach
+			ComponentsComputed:         1,
+			Config:                     config,
+			PreprocessingApplied:       config.MeanCenter || config.StandardScale || config.RobustScale || config.ScaleOnly,
+			TemporalEigenvectors:       utils.MatrixToSlice(temporalEigenvectors), // Add trivial U matrix for single sample case
+			TemporalVariableImportance: types.Matrix(variableImportance),          // Add variable importance for single sample case
 		}, nil
 	}
 
@@ -422,45 +451,55 @@ func (t *TemporalPCAImpl) Fit(data types.Matrix, config types.PCAConfig) (*types
 		explainedVarRatio[i] = t.explainedVar[i] * 100.0 // Convert to percentage
 	}
 
-	// Calculate cumulative variance
+	// Calculate cumulative variance (as cumulative sum of percentages)
 	cumulativeVar := make([]float64, t.nComponents)
 	cumSum := 0.0
 	for i := 0; i < t.nComponents; i++ {
-		cumSum += t.explainedVar[i]
+		cumSum += explainedVarRatio[i]
 		cumulativeVar[i] = cumSum
 	}
 
-	// Generate variable labels for lags
-	variableLabels := make([]string, t.origVars*t.numLags)
-	for lag := 0; lag < t.numLags; lag++ {
-		for v := 0; v < t.origVars; v++ {
-			idx := lag*t.origVars + v
-			if t.origVars == 1 {
-				// For univariate series, use simple lag labels
-				variableLabels[idx] = fmt.Sprintf("Lag %d", lag)
-			} else {
-				// For multivariate series, include variable index
-				variableLabels[idx] = fmt.Sprintf("Var%d_Lag%d", v+1, lag)
-			}
+	// Extract U matrix (temporal eigenvectors) for the retained components
+	// U matrix has shape [effectiveRows × t.nComponents] where effectiveRows = numLags
+	temporalEigenvectors := mat.NewDense(t.numLags, t.nComponents, nil)
+	for i := 0; i < t.numLags && i < effectiveRows; i++ {
+		for j := 0; j < t.nComponents; j++ {
+			temporalEigenvectors.Set(i, j, u.At(i, j))
 		}
+	}
+
+	// Generate component labels
+	componentLabels := make([]string, t.nComponents)
+	for i := 0; i < t.nComponents; i++ {
+		componentLabels[i] = fmt.Sprintf("PC%d", i+1)
+	}
+
+	// Compute variable importance (aggregated loadings across lags)
+	variableImportance, err := t.ComputeVariableImportance()
+	if err != nil {
+		// Log but don't fail - variable importance is optional
+		fmt.Printf("Warning: failed to compute variable importance: %v\n", err)
+		variableImportance = nil
 	}
 
 	// Prepare result
 	result := &types.PCAResult{
-		Scores:               utils.MatrixToSlice(scores),
-		Loadings:             utils.MatrixToSlice(t.loadings),
-		ExplainedVar:         t.explainedVar[:t.nComponents],
-		ExplainedVarRatio:    explainedVarRatio,
-		CumulativeVar:        cumulativeVar,
-		SingularValues:       t.singularVals,
-		Means:                t.laggedMeans,
-		StdDevs:              t.laggedScales,
-		Method:               "temporal",
-		ComponentsComputed:   t.nComponents,
-		Config:               config,
-		VariableLabels:       variableLabels,
-		PreprocessingApplied: true,           // Temporal PCA always preprocesses the lag matrix
-		AllEigenvalues:       allEigenvalues, // Store all eigenvalues for diagnostic purposes
+		Scores:                     utils.MatrixToSlice(scores),
+		Loadings:                   utils.MatrixToSlice(t.loadings),
+		ExplainedVar:               t.explainedVar[:t.nComponents],
+		ExplainedVarRatio:          explainedVarRatio,
+		CumulativeVar:              cumulativeVar,
+		ComponentLabels:            componentLabels,
+		SingularValues:             t.singularVals,
+		Means:                      nil, // Not applicable for temporal PCA with SSA approach
+		StdDevs:                    nil, // Not applicable for temporal PCA with SSA approach
+		Method:                     "temporal",
+		ComponentsComputed:         t.nComponents,
+		Config:                     config,
+		AllEigenvalues:             allEigenvalues, // Store all eigenvalues for diagnostic purposes
+		PreprocessingApplied:       config.MeanCenter || config.StandardScale || config.RobustScale || config.ScaleOnly,
+		TemporalEigenvectors:       utils.MatrixToSlice(temporalEigenvectors), // Add U matrix for temporal loadings visualization
+		TemporalVariableImportance: types.Matrix(variableImportance),          // Add variable importance for temporal PCA
 	}
 
 	return result, nil
@@ -493,21 +532,25 @@ func (t *TemporalPCAImpl) Transform(data types.Matrix) (types.Matrix, error) {
 		return nil, fmt.Errorf("insufficient samples (%d) for %d lags", rows, t.numLags)
 	}
 
-	// Build lag matrix for new data
-	lagMatrix, err := t.buildLagMatrix(dataMatrix)
+	// Apply same preprocessing to original series as during training
+	preprocessedOriginal := dataMatrix
+	if t.preprocessor != nil {
+		origData := utils.MatrixToSlice(dataMatrix)
+		preprocessedData, err := t.preprocessor.Transform(types.Matrix(origData))
+		if err != nil {
+			return nil, fmt.Errorf("preprocessing failed: %w", err)
+		}
+		preprocessedOriginal = utils.SliceToMatrix([][]float64(preprocessedData))
+	}
+
+	// Build lag matrix from preprocessed data
+	lagMatrix, err := t.buildLagMatrix(preprocessedOriginal)
 	if err != nil {
 		return nil, fmt.Errorf("failed to build lag matrix: %w", err)
 	}
 
-	// Apply same preprocessing as during training
-	lagData := utils.MatrixToSlice(lagMatrix)
-	preprocessedMatrix, err := t.preprocessor.Transform(types.Matrix(lagData))
-	if err != nil {
-		return nil, fmt.Errorf("preprocessing failed: %w", err)
-	}
-
-	// Convert back to Dense matrix
-	preprocessedData := utils.SliceToMatrix([][]float64(preprocessedMatrix))
+	// Use lag matrix directly (no further preprocessing)
+	preprocessedData := lagMatrix
 
 	// Project onto principal components
 	// scores = preprocessedData * loadings^T
@@ -542,21 +585,25 @@ func (t *TemporalPCAImpl) ReconstructionError(data types.Matrix) ([]float64, err
 	scoresMatrix := utils.SliceToMatrix([][]float64(scores))
 	dataMatrix := utils.SliceToMatrix([][]float64(data))
 
-	// Build lag matrix
-	lagMatrix, err := t.buildLagMatrix(dataMatrix)
+	// Apply same preprocessing to original series as during training
+	preprocessedOriginal := dataMatrix
+	if t.preprocessor != nil {
+		origData := utils.MatrixToSlice(dataMatrix)
+		preprocessedDataSlice, err := t.preprocessor.Transform(types.Matrix(origData))
+		if err != nil {
+			return nil, fmt.Errorf("preprocessing failed: %w", err)
+		}
+		preprocessedOriginal = utils.SliceToMatrix([][]float64(preprocessedDataSlice))
+	}
+
+	// Build lag matrix from preprocessed data
+	lagMatrix, err := t.buildLagMatrix(preprocessedOriginal)
 	if err != nil {
 		return nil, fmt.Errorf("failed to build lag matrix: %w", err)
 	}
 
-	// Preprocess lag matrix
-	lagData := utils.MatrixToSlice(lagMatrix)
-	preprocessedMatrix, err := t.preprocessor.Transform(types.Matrix(lagData))
-	if err != nil {
-		return nil, fmt.Errorf("preprocessing failed: %w", err)
-	}
-
-	// Convert back to Dense matrix
-	preprocessedData := utils.SliceToMatrix([][]float64(preprocessedMatrix))
+	// Use lag matrix directly (no further preprocessing)
+	preprocessedData := lagMatrix
 
 	// Reconstruct: scores * loadings
 	reconstructed := mat.NewDense(scoresMatrix.RawMatrix().Rows, t.loadings.RawMatrix().Cols, nil)
@@ -612,6 +659,34 @@ func (t *TemporalPCAImpl) GetLagContributions() ([][]float64, error) {
 	}
 
 	return contributions, nil
+}
+
+// ComputeVariableImportance aggregates loadings across lags to show variable importance
+// Returns a matrix where rows are components and columns are original variables
+// Uses RMS (Root Mean Square) aggregation to capture overall contribution strength
+func (t *TemporalPCAImpl) ComputeVariableImportance() ([][]float64, error) {
+	if !t.fitted {
+		return nil, fmt.Errorf("model not fitted")
+	}
+
+	// Create importance matrix [components × variables]
+	importance := make([][]float64, t.nComponents)
+	for comp := 0; comp < t.nComponents; comp++ {
+		importance[comp] = make([]float64, t.origVars)
+
+		for var_ := 0; var_ < t.origVars; var_++ {
+			// Aggregate loadings across all lags using RMS
+			sumSquared := 0.0
+			for lag := 0; lag < t.numLags; lag++ {
+				loading, _ := t.GetLoadingForLag(var_, lag, comp)
+				sumSquared += loading * loading
+			}
+			// RMS aggregation
+			importance[comp][var_] = math.Sqrt(sumSquared / float64(t.numLags))
+		}
+	}
+
+	return importance, nil
 }
 
 // ComputeAutoCorrelation computes the autocorrelation function for lag selection guidance
