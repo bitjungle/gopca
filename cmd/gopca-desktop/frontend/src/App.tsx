@@ -1517,7 +1517,7 @@ return;
                                                         className="min-w-[150px]"
                                                     />
                                                 </div>
-                                                {selectedPlot === 'scores3d' && pcaResponse.result.scores[0]?.length > 2 && (
+                                                {(selectedPlot === 'scores3d' || selectedPlot === 'biplot3d') && pcaResponse.result.scores[0]?.length > 2 && (
                                                     <div className="flex items-center gap-2">
                                                         <label className="text-sm text-gray-600 dark:text-gray-400">Z:</label>
                                                         <CustomSelect
