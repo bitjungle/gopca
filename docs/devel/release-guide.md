@@ -14,10 +14,32 @@ The release process is fully automated via GitHub Actions. Once you push a versi
 
 - Push access to the repository
 - GitHub CLI (`gh`) installed and authenticated
-- Be on the `main` branch with all changes synced
+- Be on the `main` branch with all changes synced (or `develop` for major releases)
 - All tests passing
+- CI/CD passing on the source branch
+- Version numbers consistent across all files
+- No linter configuration issues
 
 ## Release Process
+
+### Special Case: Releasing from develop Branch
+
+For major releases with many features accumulated in develop:
+
+1. **Merge develop → main first**
+   ```bash
+   # Create PR from develop to main
+   gh pr create --base main --head develop --title "Release vX.X.X"
+   ```
+
+2. **Handle merge conflicts**
+   - If main has commits not in develop, conflicts may arise
+   - Generally prefer develop's version for feature releases
+   - Document any commits from main that might need cherry-picking later
+
+3. **Continue with normal release process after merge**
+
+## Standard Release Process
 
 ### Automated Execution (AI Assistant/Claude Code)
 
@@ -57,6 +79,17 @@ If executing manually, follow these steps:
 
 ### Step 1: Prepare the Release
 
+**First, update CHANGELOG.md:**
+```bash
+# List all commits since last release
+git log --oneline origin/main..HEAD
+
+# Edit CHANGELOG.md with:
+# - Version and date header
+# - Organized sections: Added, Fixed, Changed, Documentation
+# - PR numbers for each change
+```
+
 Run the release preparation script with your desired version:
 
 ```bash
@@ -72,6 +105,8 @@ This script will:
 - Update version in both `cmd/gopca-desktop/wails.json` and `cmd/gocsv/wails.json`
 - Commit the version changes
 
+**Note:** The version in `internal/version/version.go` is set via build flags, not manually
+
 ### Step 2: Create and Merge Pull Request
 
 Push the release branch:
@@ -79,11 +114,17 @@ Push the release branch:
 git push -u origin release-vX.X.X
 ```
 
-Create the PR:
+Create the PR (or update existing one):
 ```bash
+# Create new PR
 gh pr create \
   --title "Release vX.X.X" \
   --body "Preparing release vX.X.X"
+
+# Or update existing PR
+gh pr edit <PR-NUMBER> \
+  --title "Release vX.X.X: Brief description" \
+  --body "Updated release notes..."
 ```
 
 Then:
@@ -350,6 +391,31 @@ When supporting multiple versions simultaneously (e.g., v1.0.x and v1.1.x):
 For comprehensive Git workflow documentation, see [git-workflow.md](git-workflow.md).
 
 ## Troubleshooting
+
+### Linter Configuration Errors
+
+If golangci-lint fails in CI:
+
+1. **Configuration format issues**
+   - Verify `.golangci.yml` has `version: "2"` for golangci-lint v2
+   - Use minimal configuration if compatibility issues persist
+   - Check that frontend/dist directories are created (automatic in CI)
+
+2. **Wails embed errors**
+   ```yaml
+   # .github/workflows/golangci-lint.yml should include:
+   - name: Create frontend dist directories for Wails apps
+     run: |
+       mkdir -p cmd/gopca-desktop/frontend/dist
+       mkdir -p cmd/gocsv/frontend/dist
+       echo '<!DOCTYPE html><html><body>Placeholder</body></html>' > cmd/gopca-desktop/frontend/dist/index.html
+       echo '<!DOCTYPE html><html><body>Placeholder</body></html>' > cmd/gocsv/frontend/dist/index.html
+   ```
+
+3. **Minimal working config for v2**
+   ```yaml
+   version: "2"
+   ```
 
 ### Release Workflow Fails
 
