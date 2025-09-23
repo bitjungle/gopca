@@ -117,13 +117,20 @@ func ConvertToPCAOutputDataWithMetadata(result *types.PCAResult, data *Data, inc
 	}
 
 	// Create model components
+	// Use VariableLabels from result if available (e.g., for temporal PCA lag labels)
+	// Otherwise fall back to original data headers
+	featureLabels := data.Headers
+	if result.VariableLabels != nil && len(result.VariableLabels) > 0 {
+		featureLabels = result.VariableLabels
+	}
+
 	modelComponents := types.ModelComponents{
 		Loadings:               result.Loadings,
 		ExplainedVariance:      result.ExplainedVar,
 		ExplainedVarianceRatio: result.ExplainedVarRatio,
 		CumulativeVariance:     result.CumulativeVar,
 		ComponentLabels:        result.ComponentLabels,
-		FeatureLabels:          data.Headers,
+		FeatureLabels:          featureLabels,
 	}
 
 	// Create results data
