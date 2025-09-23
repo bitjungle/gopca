@@ -27,6 +27,21 @@ export const MarkdownRenderer: React.FC<MarkdownRendererProps> = ({
   content,
   className = ''
 }) => {
+  // Preprocess markdown to fix display math blocks with $$ on separate lines
+  // This converts multiline display math blocks into single-line format to prevent duplication
+  const preprocessedContent = React.useMemo(() => {
+    // Pattern: $$ on its own line, followed by content, followed by $$ on its own line
+    // Replace with: $$content$$ on a single line
+    return content.replace(
+      /^\$\$\s*\n([\s\S]*?)\n\$\$\s*$/gm,
+      (_match, formula) => {
+        // Trim the formula and put it on a single line with $$
+        const trimmedFormula = formula.trim();
+        return `$$${trimmedFormula}$$`;
+      }
+    );
+  }, [content]);
+
   return (
     <div className={`prose prose-lg dark:prose-invert max-w-none text-left
       prose-headings:text-gray-900 dark:prose-headings:text-gray-100 prose-headings:text-left
@@ -133,7 +148,7 @@ export const MarkdownRenderer: React.FC<MarkdownRendererProps> = ({
             </td>
           ),
           // Custom image component to handle relative paths
-          img: ({ node, src, alt, ...props }) => {
+          img: ({ src, alt, ...props }) => {
             // If the src is a relative path starting with 'images/', prepend the docs path
             const imageSrc = src?.startsWith('images/') ? `/docs/${src}` : src;
             return (
@@ -148,7 +163,7 @@ export const MarkdownRenderer: React.FC<MarkdownRendererProps> = ({
           }
         }}
       >
-        {content}
+        {preprocessedContent}
       </ReactMarkdown>
     </div>
   );
