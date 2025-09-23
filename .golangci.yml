@@ -1,15 +1,1 @@
 version: "2"
-
-run:
-  timeout: 5m
-  skip-files:
-    - cmd/gopca-desktop/main.go
-    - cmd/gocsv/main.go
-
-linters:
-  enable:
-    - errcheck
-    - govet
-    - ineffassign
-    - staticcheck
-    - unused
