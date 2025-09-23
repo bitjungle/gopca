@@ -1,0 +1,134 @@
+// Copyright 2025 bitjungle - Rune Mathisen. All rights reserved.
+// Use of this source code is governed by the MIT license
+// that can be found in the LICENSE file.
+
+import { parseError } from '../errorMessages';
+
+describe('parseError', () => {
+  describe('ENOENT error parsing', () => {
+    it('should extract filename from standard ENOENT error message', () => {
+      const error = new Error("ENOENT: no such file or directory, open '/path/to/file.txt'");
+      const result = parseError(error);
+
+      expect(result.title).toBe('File Not Found');
+      expect(result.message).toContain('/path/to/file.txt');
+    });
+
+    it('should extract filename from ENOENT scandir message', () => {
+      const error = new Error("ENOENT: no such file or directory, scandir '/Users/test/data'");
+      const result = parseError(error);
+
+      expect(result.title).toBe('File Not Found');
+      expect(result.message).toContain('/Users/test/data');
+    });
+
+    it('should handle ENOENT message with multiple quoted paths', () => {
+      const error = new Error("ENOENT: tried '/first/path.txt' and '/second/path.txt'");
+      const result = parseError(error);
+
+      expect(result.title).toBe('File Not Found');
+      expect(result.message).toContain('/first/path.txt');
+    });
+
+    it('should handle ENOENT message without quotes', () => {
+      const error = new Error("ENOENT: no such file or directory");
+      const result = parseError(error);
+
+      expect(result.title).toBe('File Not Found');
+      expect(result.message).toContain('unknown');
+    });
+
+    it('should handle empty filename in quotes', () => {
+      const error = new Error("ENOENT: no such file or directory, open ''");
+      const result = parseError(error);
+
+      expect(result.title).toBe('File Not Found');
+      expect(result.message).toContain('unknown');
+    });
+
+    it('should handle ENOENT with special characters in path', () => {
+      const error = new Error("ENOENT: no such file or directory, open '/path/with spaces/file[1].txt'");
+      const result = parseError(error);
+
+      expect(result.title).toBe('File Not Found');
+      expect(result.message).toContain('/path/with spaces/file[1].txt');
+    });
+
+    describe('ReDoS vulnerability prevention', () => {
+      it('should handle long strings without performance degradation', () => {
+        // Create a malicious input that would cause ReDoS with the old regex
+        const longString = 'A'.repeat(10000);
+        const error = new Error(`ENOENT${longString}'test.txt'`);
+
+        const startTime = performance.now();
+        const result = parseError(error);
+        const endTime = performance.now();
+
+        // Should complete in less than 100ms even with 10000 characters
+        expect(endTime - startTime).toBeLessThan(100);
+        expect(result.title).toBe('File Not Found');
+        expect(result.message).toContain('test.txt');
+      });
+
+      it('should handle extremely long strings without quotes efficiently', () => {
+        // This would cause catastrophic backtracking with the vulnerable regex
+        const longString = 'A'.repeat(50000);
+        const error = new Error(`ENOENT${longString}`);
+
+        const startTime = performance.now();
+        const result = parseError(error);
+        const endTime = performance.now();
+
+        // Should complete almost instantly
+        expect(endTime - startTime).toBeLessThan(100);
+        expect(result.title).toBe('File Not Found');
+        expect(result.message).toContain('unknown');
+      });
+
+      it('should handle repeated ENOENT patterns efficiently', () => {
+        const repeatedPattern = 'ENOENT'.repeat(1000);
+        const error = new Error(`${repeatedPattern}'file.txt'`);
+
+        const startTime = performance.now();
+        const result = parseError(error);
+        const endTime = performance.now();
+
+        expect(endTime - startTime).toBeLessThan(100);
+        expect(result.title).toBe('File Not Found');
+        expect(result.message).toContain('file.txt');
+      });
+    });
+  });
+
+  describe('Other error types', () => {
+    it('should handle CSV parse errors', () => {
+      const error = new Error('CSV parsing failed: Invalid format');
+      const result = parseError(error);
+
+      expect(result.title).toBe('CSV Parsing Error');
+      expect(result.message).toContain('Invalid format');
+    });
+
+    it('should handle network errors', () => {
+      const error = new Error('Network request failed');
+      const result = parseError(error);
+
+      expect(result.title).toBe('Network Error');
+    });
+
+    it('should handle generic errors', () => {
+      const error = new Error('Something went wrong');
+      const result = parseError(error);
+
+      expect(result.title).toBe('Error');
+      expect(result.message).toBe('Something went wrong');
+    });
+
+    it('should handle non-Error objects', () => {
+      const result = parseError('Just a string');
+
+      expect(result.title).toBe('Unknown Error');
+      expect(result.message).toBe('An unexpected error occurred');
+    });
+  });
+});
