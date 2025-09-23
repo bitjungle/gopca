@@ -27,7 +27,6 @@ Let's start with an analogy that makes PCA intuitive. Imagine you're a photograp
 
 PCA does something remarkably similar with your data. When you have many variables describing your samples, PCA finds the "best vantage points" called **principal components (PCs)** that capture the most important patterns in your data. Just as those key photos summarize the city square, principal components summarize your complex dataset.
 
-**The Technical Definition:**
 Principal Component Analysis is a **dimensionality reduction** technique that transforms your original variables into a new set of uncorrelated variables called principal components. These components are special because:
 
 * **They're ordered by importance:** The first principal component (PC1) captures the most variation in your data, PC2 captures the second-most (while being completely independent of PC1), and so on.
@@ -36,7 +35,6 @@ Principal Component Analysis is a **dimensionality reduction** technique that tr
 
 * **They're interpretable:** Each PC is a weighted combination of your original variables, revealing what aspects of your data each component represents.
 
-**The Mathematical Magic:**
 Without diving too deep into the mathematics (we'll explore that later for those interested), PCA essentially rotates your data's coordinate system to align with the directions of maximum variation. It's like turning a tilted oval until it lies flat along the x-axis: suddenly, the main pattern becomes crystal clear.
 
 ![Dimensionality reduction](images/intro_to_pca_fig_02-02.jpg)
@@ -51,26 +49,19 @@ By reducing complexity while preserving information, PCA enables you to:
 
 ## 3. Motivation and Intuition: Why Use PCA?
 
-Modern data challenges often involve datasets with dozens, hundreds, or even thousands of variables. This complexity creates both computational and interpretational challenges that PCA elegantly addresses. By transforming your data into a new coordinate system that highlights the most important patterns, PCA turns overwhelming complexity into manageable insight.
+Modern data challenges often involve datasets with dozens, hundreds, or even thousands of variables. This complexity creates both computational and interpretational hurdles that PCA elegantly addresses. By transforming your data into a new coordinate system that highlights the most important patterns, PCA turns overwhelming complexity into manageable insight.
 
 ![The Curse of Dimensionality](images/intro_to_pca_fig_03-01.jpg)
 
-### The Curse of Dimensionality
+As the number of variables grows, data analysis quickly becomes unwieldy. With just 10 variables, there are already 45 possible pairwise scatterplots; with 100 variables, that number explodes to 4950. Interpreting all of these possible relationships is simply impossible. And beyond visualization, high-dimensional data suffers from what’s known as the curse of dimensionality: distances and densities become less meaningful, making statistical modeling and machine learning less reliable.
 
-As the number of variables grows, data analysis becomes more difficult. For example, with 10 variables, there are already 45 possible pairwise scatterplots; with 100 variables, there are 4950. Interpreting all possible relationships is impossible.
+Compounding the problem, many real-world variables are correlated. In wine chemistry, for instance, high ethanol often goes hand-in-hand with high glycerol. In genomics, groups of genes are co-regulated. This redundancy inflates the apparent complexity of the data without adding new information.
 
-Further, many real-world variables are **correlated**. In wine chemistry, high ethanol might often go hand-in-hand with high glycerol. In genomics, many genes are co-regulated. Such redundancy inflates the complexity of the data.
+PCA addresses these challenges head-on. It finds new variables—principal components—that capture the directions of greatest variation in the data. These components combine correlated variables into single, more informative dimensions, stripping away redundancy and focusing attention on what really matters. Often just a handful of components explain most of the variation across dozens or even hundreds of variables.
 
-### Dimensionality Reduction
+The benefits are immediate and tangible. A simple plot of the first two principal components can reveal clusters, trends, or groupings that would be invisible in the raw variables. In our wine dataset, PCA turns 13 overlapping chemical measurements into a clear picture that separates grape cultivars by their distinct chemical fingerprints.
 
-PCA solves these challenges by:
-
-- **Finding new variables (PCs) that best explain the variation in the data.**
-- **Reducing redundancy** by combining correlated variables.
-- **Allowing powerful visualization:** A plot of just the first two PCs may reveal groupings or trends that would be invisible in any individual variable.
-- **Facilitating downstream analysis:** Simplifying data before regression, classification, or clustering can lead to better, more interpretable models.
-
-**Example:** Consider our wine dataset with 178 Italian wines and 13 chemical properties. Instead of analyzing 13 separate variables (and all their inter-relationships), you may find that just the first 2 or 3 PCs explain most of the variation. This lets you visualize the main differences among wines and interpret which chemical properties drive those differences.
+PCA also prepares your data for downstream tasks. Whether you’re running regressions, building classification models, or clustering samples, working in a reduced set of principal components often leads to models that are faster, less noisy, and more interpretable. Rather than drowning in complexity, PCA helps you focus on the essential structure of your data—making discovery possible where raw variables only create confusion.
 
 ---
 
@@ -85,10 +76,8 @@ Let's make PCA tangible with a real example you can follow along with in GoPCA D
 - 3 grape cultivars: Barolo (59 samples), Grignolino (71 samples), and Barbera (48 samples)
 - 13 chemical measurements per wine: alcohol, malic acid, ash, alkalinity of ash, magnesium, total phenols, flavanoids, nonflavanoid phenols, proanthocyanins, color intensity, hue, OD280/OD315 of diluted wines, and proline
 
-**The Challenge:**
 With 13 dimensions, you can't visualize your data directly. You could make 78 different scatter plots (every pair of variables), but you'd likely miss the big picture. Plus, many of these chemical properties are correlated; for instance, total phenols and flavanoids show strong positive correlation.
 
-**Enter PCA:**
 Using GoPCA Desktop with the included wine dataset, here's what happens when you apply PCA:
 
 1. **Load and Preprocess:**
@@ -316,8 +305,7 @@ For example, if PC1-3 explain 66% of variance in wine data, using only these thr
 
 ### Geometric Interpretation of Key Concepts
 
-**Loadings as Direction Cosines:**
-Loadings tell you how the new axes (PCs) relate to the old axes (original variables):
+**Loadings** tell you how the new axes (PCs) relate to the old axes (original variables):
 - A loading of +0.71 means the PC points 45° toward that variable's positive direction (cos(45°) ≈ 0.71)
 - A loading of -0.71 means it points 135° from that variable
 - A loading near 0 means the PC is nearly perpendicular to that variable
@@ -325,32 +313,25 @@ Loadings tell you how the new axes (PCs) relate to the old axes (original variab
 
 This is why variables with similar loadings on a PC are correlated: they point in similar directions in space.
 
-**Scores as New Coordinates:**
-Scores are simply the coordinates of each sample in the rotated coordinate system. A sample's score on PC1 tells you how far along the first principal axis it lies. Positive scores place it on one side of the center, negative on the other, while large absolute scores indicate the sample is far from the center along that axis.
+**Scores** are simply the coordinates of each sample in the rotated coordinate system. A sample's score on PC1 tells you how far along the first principal axis it lies. Positive scores place it on one side of the center, negative on the other, while large absolute scores indicate the sample is far from the center along that axis.
 
-**The Biplot: Combining Both Views:**
-A biplot overlays the sample positions (scores) with variable directions (loadings), creating a unified geometric view. Samples appear as points while variables appear as vectors from the origin. When samples lie in the direction of a variable vector, they tend to have high values for that variable.
+**The biplot** overlays the sample positions (scores) with variable directions (loadings), creating a unified geometric view. Samples appear as points while variables appear as vectors from the origin. When samples lie in the direction of a variable vector, they tend to have high values for that variable.
 
 ![The Biplot](images/intro_to_pca_fig_05-07.jpg)
 
 ### Distance and Similarity in PC Space
 
-**Euclidean Distance After PCA:**
-In PC space, Euclidean distance has special meaning. The distance between samples reflects their overall dissimilarity, but now corrected for correlations between variables. Two wines close in PC space are chemically similar overall, taking into account all the relationships between their chemical properties.
+In PC space, **Euclidean distance** has special meaning. The distance between samples reflects their overall dissimilarity, but now corrected for correlations between variables. Two wines close in PC space are chemically similar overall, taking into account all the relationships between their chemical properties.
 
-**Mahalanobis Distance Connection:**
-There's a beautiful relationship between PCA and the Mahalanobis distance. While Mahalanobis distance measures how far a point is from the center, accounting for correlations, in PC space with standardized axes it becomes simple Euclidean distance. This transformation is why outlier detection works so well in PC space.
+There's a beautiful relationship between PCA and the **Mahalanobis distance**. While Mahalanobis distance measures how far a point is from the center, accounting for correlations, in PC space with standardized axes it becomes simple Euclidean distance. This transformation is why outlier detection works so well in PC space.
 
 ### Visualizing Different Data Structures
 
-**Clustered Data:**
 When data contains distinct groups, they appear as separate point clouds in PC space. The first PCs often capture between-group differences while later PCs might capture within-group variation. In our wine example, the three cultivars form distinct clusters in PC1-PC2 space, clearly separated by their chemical profiles.
 
-**Continuous Gradients:**
 When data varies continuously, points form elongated clouds or gradients rather than distinct clusters. Colors or trajectories reveal the underlying pattern. For instance, temperature readings over a day might show a smooth arc through PC space as conditions gradually change.
 
-**Outliers and Anomalies:**
-Unusual samples stand out geometrically:
+Outliers and anomalies are unusual samples that stand out geometrically. They can be categorized as:
 - **Leverage points:** Far from center along major PCs (high Hotelling's T²)
 - **Orthogonal outliers:** Far from the PC subspace (high Q residuals)
 - **Mixed outliers:** Both far along PCs and poorly reconstructed
@@ -374,7 +355,6 @@ Noise and signal have distinct geometric signatures. Noise typically spreads equ
 - **Vector direction:** Which PC(s) the variable influences
 - **Angles between vectors:** Variable correlations (0° = perfect positive, 180° = perfect negative, 90° = uncorrelated)
 
-**The 95% Confidence Ellipse:**
 In 2D score plots, the 95% confidence ellipse shows where most "normal" samples should fall:
 - Based on the chi-square distribution with 2 degrees of freedom
 - Points outside are potential outliers
@@ -410,58 +390,53 @@ Now that you've seen PCA in action and understood its geometry, let's explore th
 
 ### Covariance: The Heart of PCA
 
-**Starting with Variance:**
-Before we tackle covariance, let's recall variance: how spread out a single variable's values are. If wine alcohol content ranges from 11% to 15%, it has higher variance than pH ranging from 3.1 to 3.4.
+Before we tackle covariance, let's recall **variance**: how spread out a single variable's values are. If wine alcohol content ranges from 11% to 15%, it has higher variance than pH ranging from 3.1 to 3.4.
 
-**Covariance: How Variables Dance Together:**
-Covariance measures whether two variables tend to vary together. Positive covariance means when one goes up, the other tends to go up (like height and weight in people). Negative covariance means when one goes up, the other tends to go down (like altitude and temperature).
+**Covariance** measures whether two variables tend to vary together. Positive covariance means when one goes up, the other tends to go up (like height and weight in people). Negative covariance means when one goes up, the other tends to go down (like altitude and temperature).
 
-**The Covariance Matrix: The Complete Picture:**
-For our wine dataset with 13 variables, we can compute covariances between every pair. That's 78 unique covariances plus 13 variances on the diagonal, forming a 13×13 symmetric matrix. This **covariance matrix** \( S \) captures all the linear relationships in your data:
+For our wine dataset with 13 variables, we can compute covariances between every pair. That's 78 unique covariances plus 13 variances on the diagonal, forming a 13×13 symmetric matrix. This **covariance matrix** $ S $ captures all the linear relationships in your data:
 
-\( S = \frac{1}{n-1} X^T X \)
+$$ 
+S = \frac{1}{n-1} X^T X 
+$$
 
-where \( X \) is your mean-centered data matrix (n samples × p variables).
+where $ X $ is your mean-centered data matrix (n samples × p variables).
 
-**Why This Matters:**
 The covariance matrix is like a complete map of how your variables relate to each other. PCA's job is to find the best way to navigate this map: the directions that capture the most variation.
 
 ### Eigendecomposition: Finding the Principal Directions
 
-**The Eigenvalue Equation:**
-The mathematical magic happens when we solve:
+The mathematical magic happens when we solve
 
-\( S a = \lambda a \)
+$$ 
+S a = \lambda a 
+$$
 
-**What This Really Means:**
-This equation asks: "Which direction \( a \) (eigenvector), when we project our covariance structure onto it, simply scales by some amount \( \lambda \) (eigenvalue) without changing direction?"
+This equation asks: *Which direction $ a $ (eigenvector), when we project our covariance structure onto it, simply scales by some amount $ \lambda $ (eigenvalue) without changing direction?* Think of it like finding the natural “grain” of wood: directions along which the structure naturally aligns.
 
-Think of it like finding the natural "grain" of wood: directions along which the structure naturally aligns.
+The eigenvectors are the principal directions in the original variable space. Each one tells us how to combine the original variables to create a principal component, and they are always perpendicular (orthogonal) to each other, ensuring no redundancy.
 
-**Eigenvectors = Loading Vectors:**
-These are the principal directions in your original variable space. Each eigenvector tells you how to combine original variables to create a principal component, and they're always perpendicular (orthogonal) to each other, ensuring no redundancy.
+The eigenvalues tell us how much variance is captured along each corresponding eigenvector. Larger eigenvalues indicate more important directions, and the ratio of each eigenvalue to the sum of all eigenvalues gives the percentage of variance explained by that component.
 
-**Eigenvalues = Variance Explained:**
-Each eigenvalue tells you how much variance is captured along its corresponding eigenvector. Larger eigenvalues indicate more important directions. The ratio of each eigenvalue to the sum of all eigenvalues gives the percentage of variance explained by that component.
-
-**Principal Component Scores:**
 Once we have the eigenvectors, we project our data onto them:
 
-\( t = X a \)
+$$ 
+t = X a 
+$$
 
-These projections \( t \) are the PC scores: the coordinates of each sample in the new principal component space.
+These projections $ t $ are the principal component scores, the coordinates of each sample in the new principal component space.
 
 ### Singular Value Decomposition (SVD): The Modern Approach
 
 ![SVD](images/intro_to_pca_fig_07-02.jpg)
 
-**Why SVD?**
-While eigendecomposition is conceptually clear, in practice we use SVD: a more numerically stable and efficient approach that arrives at the same result.
+While eigendecomposition is conceptually clear, in practice we use **SVD**: a more numerically stable and efficient approach that arrives at the same result.
 
-**The SVD Decomposition:**
 SVD decomposes your centered data matrix directly:
 
-\( X = U \Sigma V^T \)
+$$ 
+X = U \Sigma V^T 
+$$
 
 **What Each Part Represents:**
 - **U**: The "sample patterns" matrix showing how samples relate to the principal components
@@ -473,25 +448,20 @@ SVD decomposes your centered data matrix directly:
 - **Scores**: U × Σ gives you the PC scores for each sample
 - **Variance**: The squared singular values (σ²) divided by (n-1) equal the eigenvalues
 
-**A Practical Analogy:**
-Imagine decomposing a complex sound wave into pure tones. SVD similarly decomposes your data into fundamental patterns, with the singular values telling you the "volume" (importance) of each pattern.
-
 ### How Many Components Can We Extract?
 
-**The Mathematical Limit:**
 The maximum number of meaningful principal components is the smaller of:
-- \( n-1 \) (number of samples minus one), or
-- \( p \) (number of variables)
+- $ n-1 $ (number of samples minus one), or
+- $ p $ (number of variables)
 
-**Why These Limits?**
-- With n samples, you can only define n-1 independent directions (like how 3 points define a plane)
-- With p variables, you can't have more than p orthogonal directions in p-dimensional space
+Why These Limits?
+- With $ n $ samples, you can only define $ n-1 $ independent directions (like how 3 points define a plane)
+- With $ p $ variables, you can't have more than $ p $ orthogonal directions in $ p $-dimensional space
 
-**The Practical Reality:**
 Thankfully, you rarely need all possible components! Real-world data has **intrinsic dimensionality** where the true complexity is much lower than the number of variables. Beyond a certain point, you hit the **noise floor** and are just capturing measurement noise. Additionally, more than 3-5 components become hard to interpret meaningfully.
 
-**Example:**
-In our wine dataset with 178 samples and 13 variables, we could extract at most min(177, 13) = 13 components. But in practice, 2-3 components capture 55-66% of the variation, which is sufficient to clearly separate the three grape cultivars; the rest captures finer chemical variations and noise.
+> **Example:**.  
+> In our wine dataset with 178 samples and 13 variables, we could extract at most min(177, 13) = 13 components. But in practice, 2-3 components capture 55-66% of the variation, which is sufficient to clearly separate the three grape cultivars; the rest captures finer chemical variations and noise.
 
 ### The Optimization at the Heart of PCA
 
@@ -501,12 +471,14 @@ PCA solves a beautiful optimization problem: "Find the direction that captures t
 **For the First Principal Component:**
 Mathematically, we're solving:
 
-\( \text{maximize } \text{Var}(Xa) \text{ subject to } ||a||=1 \)
+$$ 
+( \text{maximize } \text{Var}(Xa) \text{ subject to } ||a||=1 ) 
+$$
 
-In plain English: "Find the unit vector \( a \) such that when we project our data \( X \) onto it, the projected values have maximum spread (variance)."
+In plain English: "Find the unit vector $ a $ such that when we project our data $ X $ onto it, the projected values have maximum spread (variance)."
 
 **The Constraint Matters:**
-The constraint \( ||a||=1 \) (unit length) is crucial. Without it, we could make the variance arbitrarily large by simply scaling up \( a \). It's like asking "What's the best direction?" rather than "What's the best direction times infinity?"
+The constraint $ ||a||=1 $ (unit length) is crucial. Without it, we could make the variance arbitrarily large by simply scaling up $ a $. It's like asking "What's the best direction?" rather than "What's the best direction times infinity?"
 
 **For Subsequent Components:**
 Each additional PC solves the same problem with an added constraint:
@@ -527,48 +499,55 @@ Requiring components to be perpendicular ensures no redundancy between component
 
 ---
 
-## 8. What Does PCA Do? Strengths and Limitations
+## 8. What Does PCA Do? Assumptions,Strengths and Limitations
 
-Like any analytical tool, PCA excels in certain situations and struggles in others. Understanding both its powers and limitations helps you apply it wisely and know when to reach for alternatives. Let's explore what PCA does brilliantly, where it falls short, and how to recognize which situation you're facing.
+Like any analytical tool, Linear PCA (SVD and NIPALS) excels in certain situations and struggles in others. Understanding both its powers and limitations helps you apply it wisely and know when to reach for alternatives. Let's explore what PCA does brilliantly, where it falls short, and how to recognize which situation you're facing.
+
+### Assumptions: The Ground Rules of PCA
+
+Like any tool, PCA works best under certain conditions. These assumptions are not absolute laws, but they shape when PCA is appropriate and when another method might serve you better.
+
+First, PCA assumes that relationships between variables are linear. This works well in cases like height versus weight, where the general trend is straight-line. But it fails for curved patterns, such as enzyme activity versus pH, where the relationship is bell-shaped.
+
+Second, PCA assumes that variance equals importance—that the directions with the most spread contain the most meaningful signal. This is often true in measurement data, where genuine structure dominates noise. But it can fail in situations where subtle, low-variance signals matter more than broad fluctuations. In those cases, PCA might filter out what you care about most.
+
+Third, PCA enforces orthogonality, meaning each principal component must be perpendicular to the others. This works well if the true underlying factors are independent. But if those factors are correlated, PCA may split them awkwardly across components.
+
+Finally, PCA assumes continuous, quantitative data. It handles measurements, concentrations, and intensities beautifully, but struggles with categorical, binary, or purely count-based variables. While you can sometimes shoehorn such data into PCA through encoding, the results can be misleading.
+
+Understanding these ground rules helps you recognize when PCA is the right tool—and when it’s time to reach for alternatives like kernel methods, ICA, or techniques designed for categorical data.
 
 ![PCA Strengths](images/intro_to_pca_fig_08-01.jpg)
 
 ### Strengths: Where PCA Shines
 
-**Uncovers Hidden Structure**
-PCA reveals patterns and relationships invisible when examining variables individually. In our wine dataset, no single chemical measurement cleanly separates the three cultivars. But PCA combines all 13 measurements to reveal clear clustering, showing that the cultivars have distinct chemical fingerprints. This pattern emerges because PCA considers all variables simultaneously, finding the combinations that best reveal the underlying structure.
+PCA excels at uncovering hidden structure in data. It reveals patterns and relationships invisible when examining variables individually. In the wine dataset, for instance, no single chemical measurement cleanly separates the three cultivars. But when PCA combines all 13 measurements, clear clustering emerges, showing that the cultivars have distinct chemical fingerprints. This works because PCA considers all variables simultaneously, finding the combinations that best reveal the underlying structure.
 
-**Reduces Dimensionality Without Losing the Essence**
-A handful of principal components often capture most of the meaningful variation in dozens or hundreds of variables. This isn't just data compression; it's intelligent summarization. When you reduce 13 wine measurements to 2-3 principal components and still maintain cultivar separation, you've identified the essential chemical differences while discarding minor variations. This makes subsequent analyses faster and often more robust.
+Another strength is its ability to reduce dimensionality without losing the essence of the data. A handful of principal components often capture most of the meaningful variation in dozens or even hundreds of variables. This isn’t just data compression—it’s intelligent summarization. Reducing 13 wine measurements to two or three principal components still preserves the cultivar separation, highlighting the essential chemical differences while discarding minor variations. The result is not only faster analysis but also more robust conclusions.
 
-**Natural Noise Filtering**
-PCA effectively separates signal from noise because systematic patterns concentrate in early components while random noise spreads across all components. By keeping only the major components, you automatically filter out much of the measurement noise and experimental variation. This denoising happens without any explicit noise model or threshold setting; it emerges naturally from the variance-maximization principle.
+PCA also acts as a natural noise filter. Systematic patterns concentrate in early components, while random noise spreads across all components. By keeping only the major components, much of the measurement noise and experimental variation is automatically filtered out. This denoising requires no explicit noise model or thresholds; it simply emerges from the variance-maximization principle at the heart of PCA.
 
-**Creates Powerful New Features**
-Principal components serve as engineered features that often work better than original variables in downstream analyses. These PC scores capture the coordinated variation patterns in your data. For machine learning applications, using PC scores as inputs often improves model performance by removing multicollinearity and reducing overfitting. In our wine example, using PC1 and PC2 as features for classification would likely outperform using any pair of original chemical measurements.
+Another major benefit is that PCA creates powerful new features. Principal components are engineered variables that often work better than the original ones in downstream analyses. These PC scores capture coordinated patterns of variation across the dataset. In machine learning, using PC scores as inputs often improves performance by reducing multicollinearity and overfitting. In the wine example, classification models built on PC1 and PC2 would likely outperform models built on any single pair of original chemical measurements.
 
-**Enables Visualization of the Impossible**
-Perhaps PCA's most appreciated strength is making high-dimensional data visible. You cannot directly visualize 13-dimensional wine chemistry, but you can easily plot PC1 vs PC2. These visualizations aren't arbitrary projections; they're the optimal 2D view that preserves the most variation. This allows human pattern recognition to work on data that would otherwise be incomprehensible.
+Finally, PCA enables visualization of the impossible. We cannot directly picture 13-dimensional wine chemistry, but we can easily plot PC1 against PC2. These aren’t arbitrary projections—they’re the optimal two-dimensional view that preserves as much variation as possible. This makes otherwise incomprehensible datasets accessible to human pattern recognition, turning abstract numbers into clear, interpretable pictures.
+
+![The Ferris Wheel Problem](images/intro_to_pca_fig_08-02.jpg)
 
 ### Limitations: Where PCA Struggles
 
-**The Linearity Constraint**
-PCA only captures linear relationships between variables. If your data contains important nonlinear patterns (like polynomial relationships, interactions, or curved manifolds), standard PCA will miss them. Imagine data points arranged in a spiral: PCA would try to fit straight lines through a fundamentally curved structure. This is why GoPCA Suite includes Kernel PCA for nonlinear patterns, though interpreting kernel components is more challenging than standard PCs.
+Linear PCA (SVD and NIPALS) only captures linear relationships between variables. If your data contains important nonlinear patterns (like polynomial relationships, interactions, or curved manifolds), linear PCA will miss them. Imagine data points arranged in a spiral: linear PCA would try to fit straight lines through a fundamentally curved structure. This is why GoPCA Suite includes Kernel PCA for nonlinear patterns, though interpreting kernel components is often more challenging than "standard" PCs.
 
-**Interpretability Challenges**
-While principal components are mathematically optimal, they can be difficult to interpret. Each PC is a weighted combination of all original variables, sometimes mixing conceptually different measurements. In wine analysis, PC1 might combine alcohol, phenols, and color intensity in ways that don't correspond to any single chemical process. This contrasts with techniques like factor analysis, which explicitly seeks interpretable factors, though at the cost of PCA's optimality properties.
+While principal components are mathematically optimal, they can be difficult to interpret. Each PC is a weighted combination of all original variables, sometimes mixing conceptually different measurements. In wine analysis, for example, PC1 might combine alcohol, phenols, and color intensity in ways that don’t correspond to any single chemical process. This contrasts with techniques like factor analysis, which explicitly seeks interpretable factors—though at the cost of losing some of PCA’s optimality properties.
 
-**Scale Sensitivity**
-PCA results depend critically on variable scaling. Without standardization, variables with larger numerical ranges dominate the analysis. Proline (ranging 278-1680) would overwhelm pH (ranging 2.74-4.01) in unscaled PCA, not because proline is more important, but simply because its numbers are bigger. This isn't a bug but a feature: sometimes you want variables with more variation to have more influence. The key is making a conscious choice about scaling based on your analytical goals.
+PCA results depend critically on variable scaling. Without standardization, variables with larger numerical ranges dominate the analysis. In the wine dataset, Proline (ranging 278–1680) would overwhelm pH (ranging 2.74–4.01) in unscaled PCA, not because Proline is inherently more important, but simply because its numbers are bigger. This isn’t a bug but a feature: sometimes you want variables with more variation to have more influence. The key is making a conscious choice about scaling based on your analytical goals.
 
-**Outlier Vulnerability**
-Because PCA seeks directions of maximum variance, outliers can dramatically influence results. A single contaminated wine sample far from others might pull the first principal component toward itself, distorting the entire analysis. While GoPCA Suite offers robust scaling options that reduce outlier influence, severe outliers should be investigated and potentially removed before analysis. This sensitivity also means PCA can be an effective outlier detection tool.
+Because PCA seeks directions of maximum variance, outliers can dramatically influence results. A single contaminated wine sample far from others might pull the first principal component toward itself, distorting the entire analysis. While GoPCA Suite offers robust scaling options that reduce outlier influence, severe outliers should be investigated and potentially removed before analysis. This sensitivity also means PCA can be a useful outlier detection tool.
 
-**Continuous Variable Assumption**
-PCA works best with continuous, quantitative measurements. Categorical variables (like wine region or production method) don't fit naturally into the PCA framework, which assumes meaningful numerical distances between values. While you can encode categories numerically, this introduces arbitrary choices that affect results. For mixed continuous and categorical data, consider techniques like Multiple Factor Analysis (MFA) or simply use categories for coloring plots rather than including them in the analysis.
+PCA works best with continuous, quantitative measurements. Categorical variables (like wine region or production method) don’t fit naturally into the PCA framework, which assumes meaningful numerical distances between values. While you can encode categories numerically, this introduces arbitrary choices that affect results. For mixed continuous and categorical data, consider techniques like Multiple Factor Analysis (MFA), or simply use categories for coloring plots rather than including them in the analysis.
 
-**Limited to Second-Order Statistics**
-PCA only considers means and covariances (second-order statistics), potentially missing higher-order patterns. It decorrelates variables but cannot capture more complex dependencies. For instance, if two variables are independent but become dependent when a third variable is considered (conditional dependence), PCA won't detect this relationship. Independent Component Analysis (ICA) addresses some of these limitations but lacks PCA's geometric interpretability.
+Linear PCA also struggles with time series data. Traditional PCA treats observations as independent samples, ignoring temporal structure such as trends, seasonality, or lagged dependencies. As a result, it may miss the dynamics that drive variation over time. Temporal approaches such as Singular Spectrum Analysis (SSA), implemented as Temporal PCA in GoPCA Suite, explicitly account for time ordering by embedding lagged versions of the data. This allows PCA-like decomposition of temporal patterns, making it well-suited for analyzing signals, sensor data, or other sequential processes.
+
+Finally, PCA only considers means and covariances (second-order statistics), potentially missing higher-order patterns. It decorrelates variables but cannot capture more complex dependencies. For instance, if two variables are independent but become dependent when a third variable is considered (conditional dependence), PCA won’t detect this relationship. Independent Component Analysis (ICA) addresses some of these limitations but lacks PCA’s geometric interpretability.
 
 ---
 
@@ -946,123 +925,9 @@ The method is closely related to Singular Spectrum Analysis (SSA) and provides a
 
 ---
 
-## 12. Assumptions, Limitations, and When PCA Can Fail
+## 12. PCA in Practice: Tips for Effective Use
 
-![The Ferris Wheel Problem](images/intro_to_pca_fig_12-01.jpg)
-
-### Understanding PCA's Assumptions
-
-Like any tool, PCA works best under certain conditions. Understanding these helps you know when to use it and when to reach for alternatives.
-
-**Core Assumptions:**
-
-1. **Linearity Assumption:**
-   - PCA assumes relationships between variables are linear
-   - Works well: Height vs weight (generally linear)
-   - Fails: Enzyme activity vs pH (bell-shaped curve)
-
-2. **Variance Equals Importance:**
-   - PCA assumes high-variance directions contain the signal
-   - Works well: Most measurement data where signal > noise
-   - Fails: Cases where important but subtle signals have low variance
-
-3. **Orthogonality of Components:**
-   - PCA forces components to be perpendicular
-   - Works well: When true factors are independent
-   - May struggle: When underlying factors are correlated (try Independent Component Analysis)
-
-4. **Continuous Variables:**
-   - PCA is designed for continuous numerical data
-   - Works well: Measurements, concentrations, intensities
-   - Struggles with: Categorical data, binary variables, count data
-
-### When PCA Can Fail (Real Examples)
-
-**Example 1: The Ferris Wheel Problem**
-
-Imagine tracking a point on a rotating Ferris wheel:
-- **True structure:** Circular motion (best described by radius and angle)
-- **What PCA sees:** Oscillations along x and y axes
-- **The problem:** PCA creates two components for what's really one degree of freedom (rotation)
-- **Solution:** Use Kernel PCA with RBF kernel to "unwrap" the circle
-
-**Example 2: The Cocktail Party Problem**
-
-Multiple people talking simultaneously, recorded by multiple microphones:
-- **True structure:** Independent source signals mixed together
-- **What PCA finds:** Directions of maximum variance (loudest overall combinations)
-- **The problem:** PCA can't separate the independent sources
-- **Solution:** Independent Component Analysis (ICA) designed for source separation
-
-**Example 3: Gene Expression with Batch Effects**
-
-RNA sequencing data from multiple laboratories:
-- **True structure:** Biological differences between samples
-- **What PCA finds:** Batch effects (which lab processed each sample) dominate PC1
-- **The problem:** Technical variation overwhelms biological signal
-- **Solution:** Batch correction before PCA, or methods like ComBat or limma
-
-**Example 4: Outlier Domination**
-
-Quality control data with equipment malfunction:
-- **True structure:** Normal process variation
-- **What PCA finds:** PC1 points directly at the outlier
-- **The problem:** One bad day ruins the entire analysis
-- **Solution:** Robust PCA methods or careful outlier removal
-
-### The Small-Sample Challenge
-
-**The Curse of Dimensionality:**
-When you have more variables than samples (p > n):
-- Each sample can be perfectly separated (overfitting)
-- Components may capture noise rather than signal
-- Results may not generalize to new data
-
-**Real Example:** 
-Analyzing 20,000 genes from 50 patients:
-- Mathematically, you can only extract 49 meaningful components
-- Many components will just fit noise
-- Solution: Feature selection, regularized PCA, or partial least squares
-
-### Diagnostic Signs That PCA Might Not Be Working
-
-1. **No Clear Elbow in Scree Plot:**
-   - All components explain similar variance
-   - Suggests no dominant patterns (just noise) or wrong method
-
-2. **Horseshoe or Arch Effects:**
-   - PC2 is a quadratic function of PC1
-   - Indicates strong nonlinear gradient
-   - Consider Kernel PCA or correspondence analysis
-
-3. **Interpretability Issues:**
-   - Components make no scientific sense
-   - All variables contribute equally to all components
-   - May indicate wrong preprocessing or method
-
-4. **Poor Reconstruction:**
-   - Can't reconstruct original data well even with many components
-   - Suggests nonlinear relationships or non-Gaussian distributions
-
-### When to Use Alternatives
-
-| Situation | Alternative Method | Why |
-|-----------|-------------------|-----|
-| Nonlinear patterns | Kernel PCA, t-SNE, UMAP | Handle nonlinear relationships |
-| Categorical data | Multiple Correspondence Analysis | Designed for categories |
-| Source separation | Independent Component Analysis | Finds independent, not uncorrelated |
-| Supervised analysis | PLS, LDA | Uses label information |
-| Sparse patterns | Sparse PCA | Enforces zero loadings |
-| Robust to outliers | Robust PCA, PCA-RANSAC | Down-weights outliers |
-| Time series | Temporal PCA/SSA, Dynamic PCA | Captures temporal structure |
-
-> **Remember:** PCA is a powerful first step in data analysis. Even when it's not the final solution, it often reveals whether you need more sophisticated methods and which direction to explore.
-
----
-
-## 13. PCA in Practice: Tips for Effective Use
-
-![A Practical Checklist](images/intro_to_pca_fig_13-01.jpg)
+![A Practical Checklist](images/intro_to_pca_fig_12-01.jpg)
 
 ### The PCA Workflow (A Practical Checklist)
 
@@ -1200,9 +1065,9 @@ PCA Analysis Record:
 
 ---
 
-## 14. Conclusion: Your Path Forward with PCA
+## 13. Conclusion: Your Path Forward with PCA
 
-![Your Path Forward with PCA](images/intro_to_pca_fig_14-01.jpg)
+![Your Path Forward with PCA](images/intro_to_pca_fig_13-01.jpg)
 
 ### What You've Learned
 
@@ -1269,9 +1134,9 @@ Welcome to the community of PCA practitioners. May your principal components be 
 
 ---
 
-## 15. References and Further Reading
+## 14. References and Further Reading
 
-![References and Further Reading](images/intro_to_pca_fig_15-01.jpg)
+![References and Further Reading](images/intro_to_pca_fig_14-01.jpg)
 
 ### Foundational Papers
 - **Pearson, K. (1901).** On lines and planes of closest fit to systems of points in space. _Philosophical Magazine_, 2(11), 559-572. The original formulation of what would become PCA.
