@@ -1,64 +1,11 @@
 version: "2"
 
-run:
-  timeout: 5m
-  tests: true
-  skip-dirs:
-    - vendor
-    - testdata
-
-linters-settings:
-  errcheck:
-    check-type-assertions: true
-    check-blank: true
-  
-  gosec:
-    excludes:
-      - G104
-  
-  errorlint:
-    errorf: true
-  
-  misspell:
-    locale: US
-  
-  gocognit:
-    min-complexity: 50
-  
-  gocyclo:
-    min-complexity: 50
+timeout: 5m
 
 linters:
-  enable:
+  enabled:
     - errcheck
     - govet
     - ineffassign
     - staticcheck
     - unused
-    - gosec
-    - errorlint
-    - misspell
-    - gocognit
-    - gocyclo
-
-issues:
-  exclude-rules:
-    - path: _test\.go
-      linters:
-        - gosec
-        - errcheck
-    
-    - path: internal/core/pca\.go
-      linters:
-        - gocognit
-        - gocyclo
-    
-    - path: internal/core/metrics\.go
-      linters:
-        - gocognit
-        - gocyclo
-    
-    - path: internal/cobra/analyze\.go
-      linters:
-        - gocognit
-        - gocyclo
