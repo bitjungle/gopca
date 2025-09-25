@@ -96,7 +96,7 @@ pca analyze [OPTIONS] <input.csv>
 - `--kernel-type <type>` - Kernel type: `rbf`, `linear`, or `poly`
 - `--kernel-gamma <value>` - Gamma parameter for RBF and polynomial kernels (default: 0.01)
 - `--kernel-degree <n>` - Degree for polynomial kernel (default: 3)
-- `--kernel-coef0 <value>` - Coef0 for polynomial kernel (default: 0)
+- `--kernel-coef0 <value>` - Coef0 for polynomial kernel (default: 1)
 
 ##### Data Format Options
 - `--no-headers` - First row contains data, not column names

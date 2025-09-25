@@ -111,7 +111,7 @@ function AppContent() {
         kernelType: 'rbf',
         kernelGamma: 1.0,
         kernelDegree: 3,
-        kernelCoef0: 0.0,
+        kernelCoef0: 1.0,
         // Temporal PCA parameters
         temporalLags: 10,
         varianceExplained: 0.0
@@ -1012,7 +1012,7 @@ return;
                                                                 step="0.1"
                                                                 onChange={(e) => {
                                                                     const value = parseFloat(e.target.value);
-                                                                    setConfig({ ...config, kernelCoef0: isNaN(value) ? 0.0 : value });
+                                                                    setConfig({ ...config, kernelCoef0: isNaN(value) ? 1.0 : value });
                                                                 }}
                                                                 className="w-full px-3 py-2 bg-gray-100 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg text-gray-900 dark:text-white"
                                                             />
