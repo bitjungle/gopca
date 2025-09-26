@@ -72,7 +72,7 @@
     },
     "kernel-coef0": {
       "title": "Polynomial Coefficient",
-      "text": "Independent term in polynomial kernel. Usually 0 or 1.",
+      "text": "Independent term in polynomial kernel. Default is 1 for numerical stability. Set to 0 for traditional polynomial kernel.",
       "category": "configuration"
     },
     "temporal-lags": {
