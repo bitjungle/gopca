@@ -497,52 +497,9 @@ return;
                 // Clear any previous errors
                 setPcaError(null);
 
-                // If we had excluded rows, update fileData to reflect the filtered dataset
-                if (excludedRows.length > 0) {
-                    setPcaHasExclusions(true);  // Mark that this PCA was run with exclusions
-                    const includedIndices = fileData.data
-                        .map((_, i) => i)
-                        .filter(i => !excludedRows.includes(i));
-
-                    const filteredData = includedIndices.map(i => fileData.data[i]);
-                    const filteredRowNames = includedIndices.map(i => fileData.rowNames[i]);
-
-                    // Update categorical and numeric columns if they exist
-                    const filteredCategorical: Record<string, string[]> = {};
-                    const filteredNumeric: Record<string, number[]> = {};
-
-                    if (fileData.categoricalColumns) {
-                        Object.keys(fileData.categoricalColumns).forEach(col => {
-                            filteredCategorical[col] = includedIndices.map(i =>
-                                fileData.categoricalColumns![col][i]
-                            );
-                        });
-                    }
-
-                    if (fileData.numericTargetColumns) {
-                        Object.keys(fileData.numericTargetColumns).forEach(col => {
-                            filteredNumeric[col] = includedIndices.map(i =>
-                                fileData.numericTargetColumns![col][i]
-                            );
-                        });
-                    }
-
-                    // Clear excluded rows before updating fileData
-                    setExcludedRows([]);
-
-                    // Then update fileData with filtered dataset
-                    setFileData({
-                        ...fileData,
-                        data: filteredData,
-                        rowNames: filteredRowNames,
-                        categoricalColumns: Object.keys(filteredCategorical).length > 0 ? filteredCategorical : undefined,
-                        numericTargetColumns: Object.keys(filteredNumeric).length > 0 ? filteredNumeric : undefined
-                    });
-                    // Force table components to reset their selection state for the new dataset
-                    setDatasetId(prev => prev + 1);
-                } else {
-                    setPcaHasExclusions(false);  // No exclusions in this PCA
-                }
+                // Track whether this PCA was run with exclusions (for UI feedback)
+                // Note: We keep the original fileData intact - the backend handles exclusions
+                setPcaHasExclusions(excludedRows.length > 0);
 
                 // Check if Kernel PCA is selected with unsupported visualization
                 if (config.method === 'kernel' &&
