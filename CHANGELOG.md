@@ -5,6 +5,27 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.1.2] - 2025-01-28
+
+### Added
+- Comprehensive test coverage improvements (#553)
+  - pkg/csv: 26% → 73.8% coverage with validation and writer tests
+  - pkg/security: 50.6% → 85.8% coverage with command, path, and input validation tests
+  - pkg/integration: 34.1% → 46.6% coverage with event bus tests
+- CSV format tooltip to data table in Step 1 (#547)
+
+### Fixed
+- Preserve unselected rows in table after plot selection (#544)
+- ReDoS vulnerability in error parsing (#537)
+- Z-axis component selector for 3D Biplot visualization (#535)
+- LaTeX math duplication by importing ui-components CSS (#534)
+- Linter errors in path security tests and output.go
+
+### Changed
+- Default coef0 value for polynomial kernel from 0 to 1 (#542)
+- Simplified embedded stock dataset for non-traders (#539)
+- Removed redundant CSV format text in Step 1 (#548)
+
 ## [1.1.0] - 2025-09-23
 
 ### Added
