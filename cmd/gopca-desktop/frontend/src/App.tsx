@@ -634,9 +634,6 @@ return;
                                         {loading ? 'Loading...' : 'Choose File'}
                                     </button>
                                 </HelpWrapper>
-                                <p className="mt-2 text-xs text-gray-500 dark:text-gray-400">
-                                    Accepts CSV files with headers
-                                </p>
 
                                 {/* GoCSV Integration Button */}
                                 <div className="mt-4">
