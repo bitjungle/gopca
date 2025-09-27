@@ -47,7 +47,7 @@
     },
     "data-table-format": {
       "title": "CSV Data Format",
-      "text": "CSV format: first row = variable names, first column = sample names. All data must be numeric except row/column labels. Missing values allowed.",
+      "text": "First row = variable names. First column = sample names. Missing values allowed.",
       "category": "data-input"
     },
     "num-components": {
