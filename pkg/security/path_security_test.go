@@ -152,8 +152,8 @@ func TestSecureTempFile_Created(t *testing.T) {
 		t.Fatalf("SecureTempFile() error = %v", err)
 	}
 	defer func() {
-		file.Close()
-		os.Remove(file.Name())
+		_ = file.Close()
+		_ = os.Remove(file.Name())
 	}()
 
 	if file.Name() == "" {
