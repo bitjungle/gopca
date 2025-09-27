@@ -59,13 +59,6 @@ export const MatrixIllustration: React.FC = () => {
         <path d="M 195 170 L 195 180 L 190 175 M 195 180 L 200 175" stroke="#3b82f6" strokeWidth="2" fill="none" className="dark:stroke-blue-400"/>
         <text x="195" y="195" textAnchor="middle" className="text-xs fill-blue-600 dark:fill-blue-400 font-medium">Columns</text>
       </svg>
-
-      <div className="mt-4 text-center">
-        <p className="text-sm text-gray-600 dark:text-gray-400">
-          CSV format: first row contains variable names,<br/>
-          first column contains sample names
-        </p>
-      </div>
     </div>
   );
 };
