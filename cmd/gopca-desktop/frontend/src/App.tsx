@@ -659,7 +659,9 @@ return;
 
                             {/* Column 2: Matrix Illustration */}
                             <div className="flex items-center justify-center border-0 md:border-x lg:border-x border-gray-200 dark:border-gray-700 px-4 py-6 md:py-0">
-                                <MatrixIllustration />
+                                <HelpWrapper helpKey="data-table-format">
+                                    <MatrixIllustration />
+                                </HelpWrapper>
                             </div>
 
                             {/* Column 3: Sample Datasets */}
@@ -751,19 +753,21 @@ return;
                                         console.error('DataTable Error:', error, errorInfo);
                                     }}
                                 >
-                                    <DataTable
-                                        key={`dataset-${datasetId}`}
-                                        headers={fileData.headers}
-                                        rowNames={fileData.rowNames}
-                                        data={fileData.data}
-                                        title="Input Data"
-                                    enableRowSelection={true}
-                                    enableColumnSelection={true}
-                                    onRowSelectionChange={handleRowSelectionChange}
-                                    onColumnSelectionChange={handleColumnSelectionChange}
-                                    externalSelectedRows={fileData.data.map((_, i) => i).filter(i => !excludedRows.includes(i))}
-                                    highlightExternalSelections={true}
-                                />
+                                    <HelpWrapper helpKey="data-table-format">
+                                        <DataTable
+                                            key={`dataset-${datasetId}`}
+                                            headers={fileData.headers}
+                                            rowNames={fileData.rowNames}
+                                            data={fileData.data}
+                                            title="Input Data"
+                                        enableRowSelection={true}
+                                        enableColumnSelection={true}
+                                        onRowSelectionChange={handleRowSelectionChange}
+                                        onColumnSelectionChange={handleColumnSelectionChange}
+                                        externalSelectedRows={fileData.data.map((_, i) => i).filter(i => !excludedRows.includes(i))}
+                                        highlightExternalSelections={true}
+                                    />
+                                    </HelpWrapper>
                                 </ErrorBoundary>
                             )}
                         </div>

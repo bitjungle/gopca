@@ -45,6 +45,11 @@
       "text": "GoCSV is a companion app for data preparation. Click to install GoCSV if not available, and open your data file in GoCSV for editing and cleaning.",
       "category": "data-input"
     },
+    "data-table-format": {
+      "title": "CSV Data Format",
+      "text": "First row = variable names. First column = sample names. Missing values allowed.",
+      "category": "data-input"
+    },
     "num-components": {
       "title": "Number of Components",
       "text": "Principal components to extract. Default: 2. Max meaningful: min(n-1, p). Use 2-3 for visualization, more for full variance.",
@@ -429,10 +434,5 @@
       "name": "Analysis",
       "description": "Advanced interpretation"
     }
-  },
-  "metadata": {
-    "version": "1.0.0",
-    "lastUpdated": "2025-01-25",
-    "application": "GoPCA Desktop"
   }
 }
