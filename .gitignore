@@ -1,4 +1,5 @@
 .DS_Store
+.gitconfig
 
 # Binaries for programs and plugins
 *.exe
@@ -35,6 +36,7 @@ CLAUDE.md
 CLAUDE.md.bak
 docs/CLAUDE.md
 .mcp.json
+.serena
 
 # Local documentation
 docs_tmp/

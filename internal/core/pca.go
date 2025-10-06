@@ -267,25 +267,8 @@ func (p *PCAImpl) nipalsAlgorithm(X *mat.Dense, nComponents int) (*mat.Dense, *m
 	const maxIter = 1000
 
 	for k := 0; k < nComponents; k++ {
-		// Initialize score vector t with column having maximum variance
-		t := mat.NewVecDense(n, nil)
-		maxVar := 0.0
-		maxVarCol := 0
-
-		// Find column with maximum variance
-		for j := 0; j < m; j++ {
-			col := mat.Col(nil, j, Xwork)
-			var sum, sumSq float64
-			for _, v := range col {
-				sum += v
-				sumSq += v * v
-			}
-			variance := sumSq/float64(n) - (sum/float64(n))*(sum/float64(n))
-			if variance > maxVar {
-				maxVar = variance
-				maxVarCol = j
-			}
-		}
+		// Find column with maximum variance for initialization
+		maxVarCol, maxVar := findMaxVarianceColumn(Xwork)
 
 		// Check if remaining variance is too small
 		if maxVar < tolerance {
@@ -296,11 +279,8 @@ func (p *PCAImpl) nipalsAlgorithm(X *mat.Dense, nComponents int) (*mat.Dense, *m
 			break
 		}
 
-		// Initialize t with the column having maximum variance
-		col := mat.Col(nil, maxVarCol, Xwork)
-		for i := 0; i < n; i++ {
-			t.SetVec(i, col[i])
-		}
+		// Initialize score vector with column having maximum variance
+		t := initializeScoreVector(Xwork, maxVarCol, n)
 
 		// Power iteration
 		converged := false
@@ -312,31 +292,21 @@ func (p *PCAImpl) nipalsAlgorithm(X *mat.Dense, nComponents int) (*mat.Dense, *m
 			tOld = mat.NewVecDense(n, nil)
 			tOld.CopyVec(t)
 
-			// p = X^T * t / (t^T * t)
-			p = mat.NewVecDense(m, nil)
-			p.MulVec(Xwork.T(), t)
-			tNorm := mat.Dot(t, t)
-			if tNorm < tolerance {
-				return nil, nil, nil, fmt.Errorf("score vector has zero variance at component %d", k+1)
+			// Compute loading vector p = X^T * t / (t^T * t), normalized
+			var err error
+			p, err = computeLoadingVector(Xwork, t, tolerance)
+			if err != nil {
+				return nil, nil, nil, fmt.Errorf("component %d: %w", k+1, err)
 			}
-			p.ScaleVec(1.0/tNorm, p)
 
-			// Normalize p
-			pNorm := math.Sqrt(mat.Dot(p, p))
-			if pNorm < tolerance {
-				return nil, nil, nil, fmt.Errorf("loading vector has zero variance at component %d", k+1)
+			// Update score vector t = X * p / (p^T * p)
+			t, err = updateScoreVector(Xwork, p, tolerance)
+			if err != nil {
+				return nil, nil, nil, fmt.Errorf("component %d: %w", k+1, err)
 			}
-			p.ScaleVec(1.0/pNorm, p)
-
-			// t = X * p / (p^T * p)
-			t.MulVec(Xwork, p)
-			pNormSq := mat.Dot(p, p)
-			t.ScaleVec(1.0/pNormSq, t)
 
 			// Check convergence
-			diff := mat.NewVecDense(n, nil)
-			diff.SubVec(t, tOld)
-			if mat.Norm(diff, 2) < tolerance {
+			if checkConvergence(t, tOld, tolerance) {
 				converged = true
 				break
 			}
@@ -347,14 +317,8 @@ func (p *PCAImpl) nipalsAlgorithm(X *mat.Dense, nComponents int) (*mat.Dense, *m
 		}
 
 		// Store component
-		tData := make([]float64, n)
-		pData := make([]float64, m)
-		for i := 0; i < n; i++ {
-			tData[i] = t.AtVec(i)
-		}
-		for i := 0; i < m; i++ {
-			pData[i] = p.AtVec(i)
-		}
+		tData := extractVectorData(t)
+		pData := extractVectorData(p)
 		T.SetCol(k, tData)
 		P.SetCol(k, pData)
 
@@ -363,11 +327,7 @@ func (p *PCAImpl) nipalsAlgorithm(X *mat.Dense, nComponents int) (*mat.Dense, *m
 		// allowing subsequent components to capture remaining variance.
 		// Mathematical explanation: We're projecting X onto the space orthogonal to
 		// the current principal component, ensuring orthogonality between components.
-		tMat := mat.NewDense(n, 1, tData) // Score vector as column matrix (n×1)
-		pMat := mat.NewDense(1, m, pData) // Loading vector as row matrix (1×m)
-		deflation := mat.NewDense(n, m, nil)
-		deflation.Mul(tMat, pMat)   // Outer product: t * p^T gives rank-1 approximation
-		Xwork.Sub(Xwork, deflation) // Remove this component's contribution
+		deflateMatrix(Xwork, t, p)
 	}
 
 	// Calculate eigenvalues from scores for retained components
@@ -429,33 +389,10 @@ func (p *PCAImpl) nipalsAlgorithmWithMissing(X *mat.Dense, nComponents int) (*ma
 	// Working copy of X for deflation
 	Xwork := CreateWorkingCopy(X)
 
-	// Calculate column means using only non-missing values if mean centering is requested
-	columnMeans := make([]float64, m)
+	// Calculate column means and center data (only for non-missing values)
 	if p.config.MeanCenter {
-		for j := 0; j < m; j++ {
-			sum := 0.0
-			count := 0
-			for i := 0; i < n; i++ {
-				val := Xwork.At(i, j)
-				if !math.IsNaN(val) {
-					sum += val
-					count++
-				}
-			}
-			if count > 0 {
-				columnMeans[j] = sum / float64(count)
-			}
-		}
-
-		// Center the data by subtracting column means from non-missing values
-		for i := 0; i < n; i++ {
-			for j := 0; j < m; j++ {
-				val := Xwork.At(i, j)
-				if !math.IsNaN(val) {
-					Xwork.Set(i, j, val-columnMeans[j])
-				}
-			}
-		}
+		columnMeans := computeColumnMeansWithMissing(Xwork)
+		centerMatrixWithMissing(Xwork, columnMeans)
 	}
 
 	// Tolerance for convergence
@@ -463,32 +400,8 @@ func (p *PCAImpl) nipalsAlgorithmWithMissing(X *mat.Dense, nComponents int) (*ma
 	const maxIter = 1000
 
 	for k := 0; k < nComponents; k++ {
-		// Initialize score vector t with column having maximum non-missing variance
-		t := mat.NewVecDense(n, nil)
-		maxVar := 0.0
-		maxVarCol := 0
-
 		// Find column with maximum variance (considering only non-missing values)
-		for j := 0; j < m; j++ {
-			var sum, sumSq float64
-			count := 0
-			for i := 0; i < n; i++ {
-				v := Xwork.At(i, j)
-				if !math.IsNaN(v) {
-					sum += v
-					sumSq += v * v
-					count++
-				}
-			}
-			if count > 0 {
-				mean := sum / float64(count)
-				variance := sumSq/float64(count) - mean*mean
-				if variance > maxVar {
-					maxVar = variance
-					maxVarCol = j
-				}
-			}
-		}
+		maxVarCol, maxVar := findMaxVarianceColumnWithMissing(Xwork)
 
 		// Check if remaining variance is too small
 		if maxVar < tolerance {
@@ -498,29 +411,9 @@ func (p *PCAImpl) nipalsAlgorithmWithMissing(X *mat.Dense, nComponents int) (*ma
 			break
 		}
 
-		// Initialize t with the column having maximum variance (only non-missing values)
-		for i := 0; i < n; i++ {
-			v := Xwork.At(i, maxVarCol)
-			if !math.IsNaN(v) {
-				t.SetVec(i, v)
-			} else {
-				// Initialize missing positions with column mean
-				var colSum float64
-				colCount := 0
-				for ii := 0; ii < n; ii++ {
-					vv := Xwork.At(ii, maxVarCol)
-					if !math.IsNaN(vv) {
-						colSum += vv
-						colCount++
-					}
-				}
-				if colCount > 0 {
-					t.SetVec(i, colSum/float64(colCount))
-				} else {
-					t.SetVec(i, 0)
-				}
-			}
-		}
+		// Initialize score vector with column having maximum variance
+		// Missing values are replaced with column mean
+		t := initializeScoreVectorWithMissing(Xwork, maxVarCol, n)
 
 		// Power iteration with missing value handling
 		converged := false
@@ -532,68 +425,18 @@ func (p *PCAImpl) nipalsAlgorithmWithMissing(X *mat.Dense, nComponents int) (*ma
 			tOld = mat.NewVecDense(n, nil)
 			tOld.CopyVec(t)
 
-			// p = X^T * t / (t^T * t), handling missing values
-			p = mat.NewVecDense(m, nil)
-			for j := 0; j < m; j++ {
-				numerator := 0.0
-				denominator := 0.0
-				count := 0
-				for i := 0; i < n; i++ {
-					xVal := Xwork.At(i, j)
-					tVal := t.AtVec(i)
-					if !math.IsNaN(xVal) && !math.IsNaN(tVal) {
-						numerator += xVal * tVal
-						denominator += tVal * tVal
-						count++
-					}
-				}
-				if count > 0 && denominator > tolerance {
-					p.SetVec(j, numerator/denominator)
-				} else {
-					p.SetVec(j, 0)
-				}
+			// Compute loading vector p = X^T * t / (t^T * t), handling missing values
+			var err error
+			p, err = computeLoadingVectorWithMissing(Xwork, t, tolerance)
+			if err != nil {
+				return nil, nil, nil, fmt.Errorf("component %d: %w", k+1, err)
 			}
 
-			// Normalize p
-			pNorm := 0.0
-			for j := 0; j < m; j++ {
-				pVal := p.AtVec(j)
-				if !math.IsNaN(pVal) {
-					pNorm += pVal * pVal
-				}
-			}
-			pNorm = math.Sqrt(pNorm)
-			if pNorm < tolerance {
-				return nil, nil, nil, fmt.Errorf("loading vector has zero variance at component %d", k+1)
-			}
-			p.ScaleVec(1.0/pNorm, p)
-
-			// t = X * p / (p^T * p), handling missing values
-			for i := 0; i < n; i++ {
-				numerator := 0.0
-				denominator := 0.0
-				count := 0
-				for j := 0; j < m; j++ {
-					xVal := Xwork.At(i, j)
-					pVal := p.AtVec(j)
-					if !math.IsNaN(xVal) && !math.IsNaN(pVal) {
-						numerator += xVal * pVal
-						denominator += pVal * pVal
-						count++
-					}
-				}
-				if count > 0 && denominator > tolerance {
-					t.SetVec(i, numerator/denominator)
-				} else {
-					// If no valid data for this sample, keep previous value
-					t.SetVec(i, tOld.AtVec(i))
-				}
-			}
+			// Update score vector t = X * p / (p^T * p), handling missing values
+			t = updateScoreVectorWithMissing(Xwork, p, tOld, tolerance)
 
 			// Check convergence
-			diff := mat.NewVecDense(n, nil)
-			diff.SubVec(t, tOld)
-			if mat.Norm(diff, 2) < tolerance {
+			if checkConvergence(t, tOld, tolerance) {
 				converged = true
 				break
 			}
@@ -604,25 +447,13 @@ func (p *PCAImpl) nipalsAlgorithmWithMissing(X *mat.Dense, nComponents int) (*ma
 		}
 
 		// Store component
-		tData := make([]float64, n)
-		pData := make([]float64, m)
-		for i := 0; i < n; i++ {
-			tData[i] = t.AtVec(i)
-		}
-		for i := 0; i < m; i++ {
-			pData[i] = p.AtVec(i)
-		}
+		tData := extractVectorData(t)
+		pData := extractVectorData(p)
 		T.SetCol(k, tData)
 		P.SetCol(k, pData)
 
 		// Deflate X: X = X - t * p^T, only for non-missing values
-		for i := 0; i < n; i++ {
-			for j := 0; j < m; j++ {
-				if !math.IsNaN(Xwork.At(i, j)) {
-					Xwork.Set(i, j, Xwork.At(i, j)-tData[i]*pData[j])
-				}
-			}
-		}
+		deflateMatrixWithMissing(Xwork, tData, pData)
 	}
 
 	// Calculate eigenvalues from scores for retained components

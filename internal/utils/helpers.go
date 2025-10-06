@@ -5,21 +5,12 @@
 package utils
 
 import (
-	"github.com/bitjungle/gopca/pkg/types"
 	"gonum.org/v1/gonum/mat"
 )
 
 // MinInt returns the minimum of two integers
 func MinInt(a, b int) int {
 	if a < b {
-		return a
-	}
-	return b
-}
-
-// MaxInt returns the maximum of two integers
-func MaxInt(a, b int) int {
-	if a > b {
 		return a
 	}
 	return b
@@ -52,10 +43,4 @@ func MatrixToSlice(m *mat.Dense) [][]float64 {
 		}
 	}
 	return result
-}
-
-// GetDataFromMatrix extracts data from a Matrix
-func GetDataFromMatrix(m types.Matrix) [][]float64 {
-	// types.Matrix is a type alias for [][]float64
-	return [][]float64(m)
 }
