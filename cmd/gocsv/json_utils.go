@@ -24,18 +24,7 @@ type FileData struct {
 }
 
 // ConvertFloat64MapToJSON converts a map of float64 slices to JSONFloat64 slices
+// This is now a wrapper around the shared function in pkg/types
 func ConvertFloat64MapToJSON(data map[string][]float64) map[string][]types.JSONFloat64 {
-	if data == nil {
-		return nil
-	}
-
-	result := make(map[string][]types.JSONFloat64, len(data))
-	for key, values := range data {
-		jsonValues := make([]types.JSONFloat64, len(values))
-		for i, v := range values {
-			jsonValues[i] = types.JSONFloat64(v)
-		}
-		result[key] = jsonValues
-	}
-	return result
+	return types.ConvertFloat64MapToJSON(data)
 }

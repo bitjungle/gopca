@@ -5,6 +5,19 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.1.3] - 2025-01-10
+
+### Changed
+- **Code Quality Improvements**: Significant refactoring to improve maintainability (#557)
+  - Consolidated JSON conversion helpers to eliminate ~150 lines of duplication across apps
+  - Extracted NIPALS algorithm helpers into reusable functions (72% and 54% complexity reduction)
+  - Improved testability with comprehensive unit tests for helper functions
+  - All changes maintain mathematical correctness and performance
+  - Better adherence to DRY and KISS principles from development guidelines
+
+### Documentation
+- Optimized intro_to_pca.md illustration images for faster loading (#556)
+
 ## [1.1.2] - 2025-01-28
 
 ### Added
@@ -25,6 +38,24 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Default coef0 value for polynomial kernel from 0 to 1 (#542)
 - Simplified embedded stock dataset for non-traders (#539)
 - Removed redundant CSV format text in Step 1 (#548)
+
+## [1.1.1] - 2025-09-25
+
+### Fixed
+- Fixed Z-axis component selector missing in 3D Biplot visualization (#535)
+- Fixed LaTeX math duplication in UI components by importing CSS correctly (#534)
+- Resolved ReDoS vulnerability in ENOENT error parsing (#537)
+- Fixed multiple CI/CD configuration issues with golangci-lint v2
+- Fixed Wails embed pattern exclusions in linter checks
+
+### Changed
+- Simplified embedded stock dataset for better accessibility to non-traders (#539)
+
+### Added
+- Experimental non-linear datasets for testing kernel PCA methods
+
+### Documentation
+- Updated release guide with lessons learned from v1.1.0 release
 
 ## [1.1.0] - 2025-09-23
 
@@ -127,6 +158,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - JSON model export/import capability
 - Extensive documentation and help system
 
+[1.1.1]: https://github.com/bitjungle/gopca/releases/tag/v1.1.1
+[1.1.0]: https://github.com/bitjungle/gopca/releases/tag/v1.1.0
 [1.0.2]: https://github.com/bitjungle/gopca/releases/tag/v1.0.2
 [1.0.1]: https://github.com/bitjungle/gopca/releases/tag/v1.0.1
 [1.0.0]: https://github.com/bitjungle/gopca/releases/tag/v1.0.0

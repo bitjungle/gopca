@@ -158,69 +158,19 @@ func ConvertPCAResultToJSON(result *types.PCAResult) *PCAResultJSON {
 		return nil
 	}
 
-	// Convert scores
-	scores := make([][]types.JSONFloat64, len(result.Scores))
-	for i, row := range result.Scores {
-		scores[i] = make([]types.JSONFloat64, len(row))
-		for j, val := range row {
-			scores[i][j] = types.JSONFloat64(val)
-		}
-	}
-
-	// Convert loadings
-	loadings := make([][]types.JSONFloat64, len(result.Loadings))
-	for i, row := range result.Loadings {
-		loadings[i] = make([]types.JSONFloat64, len(row))
-		for j, val := range row {
-			loadings[i][j] = types.JSONFloat64(val)
-		}
-	}
-
-	// Convert explained variance
-	explainedVar := make([]types.JSONFloat64, len(result.ExplainedVar))
-	for i, val := range result.ExplainedVar {
-		explainedVar[i] = types.JSONFloat64(val)
-	}
-
-	// Convert explained variance ratio
-	explainedVarRatio := make([]types.JSONFloat64, len(result.ExplainedVarRatio))
-	for i, val := range result.ExplainedVarRatio {
-		explainedVarRatio[i] = types.JSONFloat64(val)
-	}
-
-	// Convert cumulative variance
-	cumulativeVar := make([]types.JSONFloat64, len(result.CumulativeVar))
-	for i, val := range result.CumulativeVar {
-		cumulativeVar[i] = types.JSONFloat64(val)
-	}
-
 	jsonResult := &PCAResultJSON{
-		Scores:               scores,
-		Loadings:             loadings,
-		ExplainedVar:         explainedVar,
-		ExplainedVarRatio:    explainedVarRatio,
-		CumulativeVar:        cumulativeVar,
+		Scores:               types.ConvertFloat64MatrixToJSON(result.Scores),
+		Loadings:             types.ConvertFloat64MatrixToJSON(result.Loadings),
+		ExplainedVar:         types.ConvertFloat64SliceToJSON(result.ExplainedVar),
+		ExplainedVarRatio:    types.ConvertFloat64SliceToJSON(result.ExplainedVarRatio),
+		CumulativeVar:        types.ConvertFloat64SliceToJSON(result.CumulativeVar),
 		ComponentLabels:      result.ComponentLabels,
 		VariableLabels:       result.VariableLabels,
 		ComponentsComputed:   result.ComponentsComputed,
 		Method:               result.Method,
 		PreprocessingApplied: result.PreprocessingApplied,
-	}
-
-	// Convert means if present
-	if len(result.Means) > 0 {
-		jsonResult.Means = make([]types.JSONFloat64, len(result.Means))
-		for i, val := range result.Means {
-			jsonResult.Means[i] = types.JSONFloat64(val)
-		}
-	}
-
-	// Convert stddevs if present
-	if len(result.StdDevs) > 0 {
-		jsonResult.StdDevs = make([]types.JSONFloat64, len(result.StdDevs))
-		for i, val := range result.StdDevs {
-			jsonResult.StdDevs[i] = types.JSONFloat64(val)
-		}
+		Means:                types.ConvertFloat64SliceToJSON(result.Means),
+		StdDevs:              types.ConvertFloat64SliceToJSON(result.StdDevs),
 	}
 
 	// Convert metrics if present
@@ -245,43 +195,26 @@ func ConvertPCAResultToJSON(result *types.PCAResult) *PCAResultJSON {
 	// Convert eigencorrelations if present
 	if result.Eigencorrelations != nil {
 		jsonResult.Eigencorrelations = &EigencorrelationResultJSON{
-			Variables:  result.Eigencorrelations.Variables,
-			Components: result.Eigencorrelations.Components,
-			Method:     result.Eigencorrelations.Method,
-		}
-
-		// Convert correlations
-		if len(result.Eigencorrelations.Correlations) > 0 {
-			jsonResult.Eigencorrelations.Correlations = make(map[string][]types.JSONFloat64)
-			for key, values := range result.Eigencorrelations.Correlations {
-				jsonValues := make([]types.JSONFloat64, len(values))
-				for i, val := range values {
-					jsonValues[i] = types.JSONFloat64(val)
-				}
-				jsonResult.Eigencorrelations.Correlations[key] = jsonValues
-			}
-		}
-
-		// Convert p-values
-		if len(result.Eigencorrelations.PValues) > 0 {
-			jsonResult.Eigencorrelations.PValues = make(map[string][]types.JSONFloat64)
-			for key, values := range result.Eigencorrelations.PValues {
-				jsonValues := make([]types.JSONFloat64, len(values))
-				for i, val := range values {
-					jsonValues[i] = types.JSONFloat64(val)
-				}
-				jsonResult.Eigencorrelations.PValues[key] = jsonValues
-			}
+			Variables:    result.Eigencorrelations.Variables,
+			Components:   result.Eigencorrelations.Components,
+			Method:       result.Eigencorrelations.Method,
+			Correlations: types.ConvertFloat64MapToJSON(result.Eigencorrelations.Correlations),
+			PValues:      types.ConvertFloat64MapToJSON(result.Eigencorrelations.PValues),
 		}
 	}
 
 	// Convert all eigenvalues if present
-	if len(result.AllEigenvalues) > 0 {
-		jsonResult.AllEigenvalues = make([]types.JSONFloat64, len(result.AllEigenvalues))
-		for i, val := range result.AllEigenvalues {
-			jsonResult.AllEigenvalues[i] = types.JSONFloat64(val)
-		}
-	}
+	jsonResult.AllEigenvalues = types.ConvertFloat64SliceToJSON(result.AllEigenvalues)
+
+	// Convert temporal fields (for temporal PCA)
+	jsonResult.TemporalEigenvectors = types.ConvertFloat64MatrixToJSON(result.TemporalEigenvectors)
+	jsonResult.TemporalVariableImportance = types.ConvertFloat64MatrixToJSON(result.TemporalVariableImportance)
+
+	// Convert kernel PCA specific fields
+	jsonResult.KernelType = result.KernelType
+	jsonResult.KernelParams = types.ConvertFloat64ParamsMapToJSON(result.KernelParams)
+	jsonResult.KernelMatrix = types.ConvertFloat64MatrixToJSON(result.KernelMatrix)
+	jsonResult.KernelEigenvectors = types.ConvertFloat64MatrixToJSON(result.KernelEigenvectors)
 
 	// Convert temporal eigenvectors if present (for temporal PCA)
 	if len(result.TemporalEigenvectors) > 0 {

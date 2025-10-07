@@ -111,7 +111,7 @@ function AppContent() {
         kernelType: 'rbf',
         kernelGamma: 1.0,
         kernelDegree: 3,
-        kernelCoef0: 0.0,
+        kernelCoef0: 1.0,
         // Temporal PCA parameters
         temporalLags: 10,
         varianceExplained: 0.0
@@ -497,52 +497,9 @@ return;
                 // Clear any previous errors
                 setPcaError(null);
 
-                // If we had excluded rows, update fileData to reflect the filtered dataset
-                if (excludedRows.length > 0) {
-                    setPcaHasExclusions(true);  // Mark that this PCA was run with exclusions
-                    const includedIndices = fileData.data
-                        .map((_, i) => i)
-                        .filter(i => !excludedRows.includes(i));
-
-                    const filteredData = includedIndices.map(i => fileData.data[i]);
-                    const filteredRowNames = includedIndices.map(i => fileData.rowNames[i]);
-
-                    // Update categorical and numeric columns if they exist
-                    const filteredCategorical: Record<string, string[]> = {};
-                    const filteredNumeric: Record<string, number[]> = {};
-
-                    if (fileData.categoricalColumns) {
-                        Object.keys(fileData.categoricalColumns).forEach(col => {
-                            filteredCategorical[col] = includedIndices.map(i =>
-                                fileData.categoricalColumns![col][i]
-                            );
-                        });
-                    }
-
-                    if (fileData.numericTargetColumns) {
-                        Object.keys(fileData.numericTargetColumns).forEach(col => {
-                            filteredNumeric[col] = includedIndices.map(i =>
-                                fileData.numericTargetColumns![col][i]
-                            );
-                        });
-                    }
-
-                    // Clear excluded rows before updating fileData
-                    setExcludedRows([]);
-
-                    // Then update fileData with filtered dataset
-                    setFileData({
-                        ...fileData,
-                        data: filteredData,
-                        rowNames: filteredRowNames,
-                        categoricalColumns: Object.keys(filteredCategorical).length > 0 ? filteredCategorical : undefined,
-                        numericTargetColumns: Object.keys(filteredNumeric).length > 0 ? filteredNumeric : undefined
-                    });
-                    // Force table components to reset their selection state for the new dataset
-                    setDatasetId(prev => prev + 1);
-                } else {
-                    setPcaHasExclusions(false);  // No exclusions in this PCA
-                }
+                // Track whether this PCA was run with exclusions (for UI feedback)
+                // Note: We keep the original fileData intact - the backend handles exclusions
+                setPcaHasExclusions(excludedRows.length > 0);
 
                 // Check if Kernel PCA is selected with unsupported visualization
                 if (config.method === 'kernel' &&
@@ -677,9 +634,6 @@ return;
                                         {loading ? 'Loading...' : 'Choose File'}
                                     </button>
                                 </HelpWrapper>
-                                <p className="mt-2 text-xs text-gray-500 dark:text-gray-400">
-                                    Accepts CSV files with headers
-                                </p>
 
                                 {/* GoCSV Integration Button */}
                                 <div className="mt-4">
@@ -702,7 +656,9 @@ return;
 
                             {/* Column 2: Matrix Illustration */}
                             <div className="flex items-center justify-center border-0 md:border-x lg:border-x border-gray-200 dark:border-gray-700 px-4 py-6 md:py-0">
-                                <MatrixIllustration />
+                                <HelpWrapper helpKey="data-table-format">
+                                    <MatrixIllustration />
+                                </HelpWrapper>
                             </div>
 
                             {/* Column 3: Sample Datasets */}
@@ -794,19 +750,21 @@ return;
                                         console.error('DataTable Error:', error, errorInfo);
                                     }}
                                 >
-                                    <DataTable
-                                        key={`dataset-${datasetId}`}
-                                        headers={fileData.headers}
-                                        rowNames={fileData.rowNames}
-                                        data={fileData.data}
-                                        title="Input Data"
-                                    enableRowSelection={true}
-                                    enableColumnSelection={true}
-                                    onRowSelectionChange={handleRowSelectionChange}
-                                    onColumnSelectionChange={handleColumnSelectionChange}
-                                    externalSelectedRows={fileData.data.map((_, i) => i).filter(i => !excludedRows.includes(i))}
-                                    highlightExternalSelections={true}
-                                />
+                                    <HelpWrapper helpKey="data-table-format">
+                                        <DataTable
+                                            key={`dataset-${datasetId}`}
+                                            headers={fileData.headers}
+                                            rowNames={fileData.rowNames}
+                                            data={fileData.data}
+                                            title="Input Data"
+                                        enableRowSelection={true}
+                                        enableColumnSelection={true}
+                                        onRowSelectionChange={handleRowSelectionChange}
+                                        onColumnSelectionChange={handleColumnSelectionChange}
+                                        externalSelectedRows={fileData.data.map((_, i) => i).filter(i => !excludedRows.includes(i))}
+                                        highlightExternalSelections={true}
+                                    />
+                                    </HelpWrapper>
                                 </ErrorBoundary>
                             )}
                         </div>
@@ -1012,7 +970,7 @@ return;
                                                                 step="0.1"
                                                                 onChange={(e) => {
                                                                     const value = parseFloat(e.target.value);
-                                                                    setConfig({ ...config, kernelCoef0: isNaN(value) ? 0.0 : value });
+                                                                    setConfig({ ...config, kernelCoef0: isNaN(value) ? 1.0 : value });
                                                                 }}
                                                                 className="w-full px-3 py-2 bg-gray-100 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg text-gray-900 dark:text-white"
                                                             />
@@ -1517,7 +1475,7 @@ return;
                                                         className="min-w-[150px]"
                                                     />
                                                 </div>
-                                                {selectedPlot === 'scores3d' && pcaResponse.result.scores[0]?.length > 2 && (
+                                                {(selectedPlot === 'scores3d' || selectedPlot === 'biplot3d') && pcaResponse.result.scores[0]?.length > 2 && (
                                                     <div className="flex items-center gap-2">
                                                         <label className="text-sm text-gray-600 dark:text-gray-400">Z:</label>
                                                         <CustomSelect

@@ -45,6 +45,11 @@
       "text": "GoCSV is a companion app for data preparation. Click to install GoCSV if not available, and open your data file in GoCSV for editing and cleaning.",
       "category": "data-input"
     },
+    "data-table-format": {
+      "title": "CSV Data Format",
+      "text": "First row = variable names. First column = sample names. Missing values allowed.",
+      "category": "data-input"
+    },
     "num-components": {
       "title": "Number of Components",
       "text": "Principal components to extract. Default: 2. Max meaningful: min(n-1, p). Use 2-3 for visualization, more for full variance.",
@@ -72,7 +77,7 @@
     },
     "kernel-coef0": {
       "title": "Polynomial Coefficient",
-      "text": "Independent term in polynomial kernel. Usually 0 or 1.",
+      "text": "Independent term in polynomial kernel. Default is 1 for numerical stability. Set to 0 for traditional polynomial kernel.",
       "category": "configuration"
     },
     "temporal-lags": {
@@ -429,10 +434,5 @@
       "name": "Analysis",
       "description": "Advanced interpretation"
     }
-  },
-  "metadata": {
-    "version": "1.0.0",
-    "lastUpdated": "2025-01-25",
-    "application": "GoPCA Desktop"
   }
 }

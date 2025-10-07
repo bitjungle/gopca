@@ -984,6 +984,79 @@ jobs:
         echo "To create an actual release, push a version tag (e.g., v0.9.5)"
         echo "=========================================="
     
+    - name: Generate release body with changelog
+      if: github.event_name == 'push' && contains(github.ref, 'refs/tags/')
+      id: release_body
+      run: |
+        # Extract the changelog content for this version
+        VERSION="${GITHUB_REF#refs/tags/}"
+        echo "Extracting changelog for version: $VERSION"
+
+        # Use the extraction script
+        CHANGELOG_CONTENT=$(./scripts/extract-changelog.sh "$VERSION")
+
+        # If no changelog content found, use a default message
+        if [ -z "$CHANGELOG_CONTENT" ]; then
+          CHANGELOG_CONTENT="See CHANGELOG.md for details about this release."
+        fi
+
+        # Create the release body with changelog and download instructions
+        cat > release_body.md << EOF
+        ## What's Changed in ${VERSION}
+
+        ${CHANGELOG_CONTENT}
+
+        ---
+
+        ## Downloads
+
+        Download the complete bundle for your platform. Each bundle contains:
+        - **PCA CLI**: Command-line tool for scripting and automation
+        - **GoPCA Desktop**: GUI application for interactive PCA analysis
+        - **GoCSV**: Data preparation and CSV editing tool
+
+        ### Platform Bundles
+
+        | Platform | Download | Contents |
+        |----------|----------|----------|
+        | **macOS** | [\`gopca-macos-universal.zip\`](../../releases/download/${VERSION}/gopca-macos-universal.zip) | • \`pca-intel\` and \`pca-arm64\` CLI tools<br>• \`GoPCA.app\` (signed & notarized)<br>• \`GoCSV.app\` (signed & notarized) |
+        | **Windows** | [\`gopca-windows-x64.zip\`](../../releases/download/${VERSION}/gopca-windows-x64.zip) | • \`pca.exe\` CLI tool${{ steps.check_signed.outputs.windows_signed == 'signed' && ' (digitally signed)' || '' }}<br>• \`GoPCA.exe\`${{ steps.check_signed.outputs.windows_signed == 'signed' && ' (digitally signed)' || '' }}<br>• \`GoCSV.exe\`${{ steps.check_signed.outputs.windows_signed == 'signed' && ' (digitally signed)' || '' }} |
+        | **Linux** | [\`gopca-linux-x64.tar.gz\`](../../releases/download/${VERSION}/gopca-linux-x64.tar.gz) | • \`pca-x64\` and \`pca-arm64\` CLI tools<br>• \`GoPCA\` app<br>• \`GoCSV\` editor |
+
+        ### Linux AppImages (Recommended for Linux desktop users)
+
+        AppImages are portable, single-file applications that work on all Linux distributions. They include proper icon support and require no installation.
+
+        | Application | Download | Description |
+        |------------|----------|-------------|
+        | **GoPCA Desktop** | [\`GoPCA-x86_64.AppImage\`](../../releases/download/${VERSION}/GoPCA-x86_64.AppImage) | PCA analysis GUI with full icon support<br>• Download and make executable: \`chmod +x\`<br>• Double-click to run |
+        | **GoCSV Editor** | [\`GoCSV-x86_64.AppImage\`](../../releases/download/${VERSION}/GoCSV-x86_64.AppImage) | CSV data preparation tool with full icon support<br>• Download and make executable: \`chmod +x\`<br>• Double-click to run |
+
+        ### Windows Installer (Recommended for Windows users)
+
+        | Installer | Download | Description |
+        |-----------|----------|-------------|
+        | **Windows Setup** | [\`GoPCA-Setup-${VERSION}.exe\`](../../releases/download/${VERSION}/GoPCA-Setup-${VERSION}.exe) | Complete installer with all GoPCA components${{ steps.check_signed.outputs.windows_signed == 'signed' && ' (digitally signed)' || '' }}<br>• Automated installation to Program Files<br>• Start Menu shortcuts<br>• Optional PATH configuration for CLI<br>• Uninstaller included |
+
+        ### Installation
+
+        1. Download the bundle for your platform
+        2. Extract the archive to your preferred location
+        3. Add the directory to your PATH for CLI access (optional)
+
+        ### Verification
+
+        SHA-256 checksums: [\`checksums.txt\`](../../releases/download/${VERSION}/checksums.txt)
+
+        ${{ steps.check_signed.outputs.windows_signed == 'signed' && '✅ **Windows binaries are digitally signed** - No security warnings on Windows 10/11' || '⚠️ **Windows binaries are not digitally signed** - You may see security warnings when running' }}
+
+        ---
+
+        **Full Changelog**: https://github.com/bitjungle/gopca/blob/${VERSION}/CHANGELOG.md
+        EOF
+
+        echo "✓ Release body generated with changelog"
+
     - name: Create Release
       if: github.event_name == 'push' && contains(github.ref, 'refs/tags/')
       uses: softprops/action-gh-release@v2
@@ -995,49 +1068,6 @@ jobs:
           artifacts/*.AppImage
           artifacts/GoPCA-Setup-*.exe
           artifacts/checksums.txt
-        generate_release_notes: true
+        generate_release_notes: false
         fail_on_unmatched_files: false
-        body: |
-          ## Downloads
-          
-          Download the complete bundle for your platform. Each bundle contains:
-          - **PCA CLI**: Command-line tool for scripting and automation
-          - **GoPCA Desktop**: GUI application for interactive PCA analysis
-          - **GoCSV**: Data preparation and CSV editing tool
-          
-          ### Platform Bundles
-          
-          | Platform | Download | Contents |
-          |----------|----------|----------|
-          | **macOS** | [`gopca-macos-universal.zip`](../../releases/download/${{ github.ref_name }}/gopca-macos-universal.zip) | • `pca-intel` and `pca-arm64` CLI tools<br>• `GoPCA.app` (signed & notarized)<br>• `GoCSV.app` (signed & notarized) |
-          | **Windows** | [`gopca-windows-x64.zip`](../../releases/download/${{ github.ref_name }}/gopca-windows-x64.zip) | • `pca.exe` CLI tool${{ steps.check_signed.outputs.windows_signed == 'signed' && ' (digitally signed)' || '' }}<br>• `GoPCA.exe`${{ steps.check_signed.outputs.windows_signed == 'signed' && ' (digitally signed)' || '' }}<br>• `GoCSV.exe`${{ steps.check_signed.outputs.windows_signed == 'signed' && ' (digitally signed)' || '' }} |
-          | **Linux** | [`gopca-linux-x64.tar.gz`](../../releases/download/${{ github.ref_name }}/gopca-linux-x64.tar.gz) | • `pca-x64` and `pca-arm64` CLI tools<br>• `GoPCA` app<br>• `GoCSV` editor |
-          
-          ### Linux AppImages (Recommended for Linux desktop users)
-          
-          AppImages are portable, single-file applications that work on all Linux distributions. They include proper icon support and require no installation.
-          
-          | Application | Download | Description |
-          |------------|----------|-------------|
-          | **GoPCA Desktop** | [`GoPCA-x86_64.AppImage`](../../releases/download/${{ github.ref_name }}/GoPCA-x86_64.AppImage) | PCA analysis GUI with full icon support<br>• Download and make executable: `chmod +x`<br>• Double-click to run |
-          | **GoCSV Editor** | [`GoCSV-x86_64.AppImage`](../../releases/download/${{ github.ref_name }}/GoCSV-x86_64.AppImage) | CSV data preparation tool with full icon support<br>• Download and make executable: `chmod +x`<br>• Double-click to run |
-          
-          ### Windows Installer (Recommended for Windows users)
-          
-          | Installer | Download | Description |
-          |-----------|----------|-------------|
-          | **Windows Setup** | [`GoPCA-Setup-${{ github.ref_name }}.exe`](../../releases/download/${{ github.ref_name }}/GoPCA-Setup-${{ github.ref_name }}.exe) | Complete installer with all GoPCA components${{ steps.check_signed.outputs.windows_signed == 'signed' && ' (digitally signed)' || '' }}<br>• Automated installation to Program Files<br>• Start Menu shortcuts<br>• Optional PATH configuration for CLI<br>• Uninstaller included |
-          
-          ### Installation
-          
-          1. Download the bundle for your platform
-          2. Extract the archive to your preferred location
-          3. Add the directory to your PATH for CLI access (optional)
-          
-          ### Verification
-          
-          SHA-256 checksums: [`checksums.txt`](../../releases/download/${{ github.ref_name }}/checksums.txt)
-          
-          ${{ steps.check_signed.outputs.windows_signed == 'signed' && '✅ **Windows binaries are digitally signed** - No security warnings on Windows 10/11' || '⚠️ **Windows binaries are not digitally signed** - You may see security warnings when running' }}
-          
-          ---
+        body_path: release_body.md

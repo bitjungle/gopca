@@ -133,7 +133,7 @@ export const MarkdownRenderer: React.FC<MarkdownRendererProps> = ({
             </td>
           ),
           // Custom image component to handle relative paths
-          img: ({ node, src, alt, ...props }) => {
+          img: ({ src, alt, ...props }) => {
             // If the src is a relative path starting with 'images/', prepend the docs path
             const imageSrc = src?.startsWith('images/') ? `/docs/${src}` : src;
             return (

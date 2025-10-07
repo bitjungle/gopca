@@ -125,7 +125,7 @@ EXAMPLES:
 		"Gamma parameter for RBF/poly kernels")
 	cmd.Flags().IntVar(&opts.KernelDegree, "kernel-degree", 3,
 		"Degree for polynomial kernel")
-	cmd.Flags().Float64Var(&opts.KernelCoef0, "kernel-coef0", 0.0,
+	cmd.Flags().Float64Var(&opts.KernelCoef0, "kernel-coef0", 1.0,
 		"Coef0 for polynomial kernel")
 
 	// Temporal PCA parameters

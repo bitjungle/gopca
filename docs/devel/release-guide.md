@@ -8,7 +8,7 @@ The release process is fully automated via GitHub Actions. Once you push a versi
 1. Builds all binaries for all platforms
 2. Signs and notarizes macOS applications
 3. Creates the GitHub release with all artifacts attached
-4. Generates release notes automatically
+4. Generates release notes from CHANGELOG.md (includes all changes between releases)
 
 ## Prerequisites
 
@@ -81,13 +81,18 @@ If executing manually, follow these steps:
 
 **First, update CHANGELOG.md:**
 ```bash
-# List all commits since last release
-git log --oneline origin/main..HEAD
+# List all PRs merged to develop since last release
+gh pr list --state merged --base develop --limit 30 \
+  --json number,title,mergedAt --jq '.[] | "\(.number): \(.title)"'
 
 # Edit CHANGELOG.md with:
 # - Version and date header
 # - Organized sections: Added, Fixed, Changed, Documentation
 # - PR numbers for each change
+
+# IMPORTANT: The release workflow will automatically extract the changelog
+# section for your version and include it in the GitHub release notes.
+# This ensures all changes are visible, not just the release PR.
 ```
 
 Run the release preparation script with your desired version:
@@ -191,6 +196,19 @@ Check that:
 - [ ] Checksums file is present
 - [ ] Linux AppImages are included for both GoPCA and GoCSV
 - [ ] macOS apps run without Gatekeeper warnings
+
+## Release Notes Generation
+
+The release workflow automatically generates comprehensive release notes by:
+
+1. **Extracting from CHANGELOG.md**: The `scripts/extract-changelog.sh` script extracts the changelog section for the specific version
+2. **Including all changes**: Shows all features, fixes, and improvements for this version (not just the release PR)
+3. **Formatted presentation**: The GitHub release displays:
+   - Changelog content at the top
+   - Download instructions and tables below
+   - Links to full CHANGELOG.md for reference
+
+This ensures users see all changes between releases, regardless of which branch (develop/main) the work was merged to.
 
 ## Artifacts Produced
 

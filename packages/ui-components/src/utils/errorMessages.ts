@@ -236,7 +236,7 @@ export function parseError(error: unknown): FormattedError {
   if (error instanceof Error) {
     // Check for specific error types
     if (error.message.includes('ENOENT')) {
-      const match = error.message.match(/ENOENT.*'(.+)'/);
+      const match = error.message.match(/ENOENT[^']*'([^']+)'/);
       const filename = match ? match[1] : 'unknown';
       return ErrorTemplates.FILE_NOT_FOUND(filename);
     }
