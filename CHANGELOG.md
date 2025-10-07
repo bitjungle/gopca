@@ -5,6 +5,40 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.1.3] - 2025-01-10
+
+### Changed
+- **Code Quality Improvements**: Significant refactoring to improve maintainability (#557)
+  - Consolidated JSON conversion helpers to eliminate ~150 lines of duplication across apps
+  - Extracted NIPALS algorithm helpers into reusable functions (72% and 54% complexity reduction)
+  - Improved testability with comprehensive unit tests for helper functions
+  - All changes maintain mathematical correctness and performance
+  - Better adherence to DRY and KISS principles from development guidelines
+
+### Documentation
+- Optimized intro_to_pca.md illustration images for faster loading (#556)
+
+## [1.1.2] - 2025-01-28
+
+### Added
+- Comprehensive test coverage improvements (#553)
+  - pkg/csv: 26% → 73.8% coverage with validation and writer tests
+  - pkg/security: 50.6% → 85.8% coverage with command, path, and input validation tests
+  - pkg/integration: 34.1% → 46.6% coverage with event bus tests
+- CSV format tooltip to data table in Step 1 (#547)
+
+### Fixed
+- Preserve unselected rows in table after plot selection (#544)
+- ReDoS vulnerability in error parsing (#537)
+- Z-axis component selector for 3D Biplot visualization (#535)
+- LaTeX math duplication by importing ui-components CSS (#534)
+- Linter errors in path security tests and output.go
+
+### Changed
+- Default coef0 value for polynomial kernel from 0 to 1 (#542)
+- Simplified embedded stock dataset for non-traders (#539)
+- Removed redundant CSV format text in Step 1 (#548)
+
 ## [1.1.1] - 2025-09-25
 
 ### Fixed
