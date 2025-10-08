@@ -149,11 +149,15 @@ See [PRIVACY.md](PRIVACY.md) for detailed privacy documentation and verification
 
 **macOS**: Downloaded apps may be blocked by Gatekeeper. Solution: Move both GoPCA.app and GoCSV.app to Applications folder before launching, or right-click and choose "Open".
 
-**Windows**: SmartScreen may flag the installer as uncommon. Solution: Click "More info" then "Run anyway", or check "Unblock" in file Properties.
+**Windows**: Multiple installation options available:
+- **Microsoft Store** (Coming Soon - Recommended): Zero security warnings, automatic updates. [Learn more](docs/windows-installation.md)
+- **Windows Installer**: Download from [Releases](https://github.com/bitjungle/gopca/releases). If SmartScreen appears, click "More info" then "Run anyway".
+- **Portable ZIP**: Extract and run without installation. See [Windows Installation Guide](docs/windows-installation.md)
 
-Both warnings are standard OS security features for new software. Verify authenticity by:
+Both macOS and Windows warnings are standard OS security features for new software. Verify authenticity by:
 - Downloading only from our official [GitHub Releases](https://github.com/bitjungle/gopca/releases)
 - Checking SHA-256 checksums provided with each release
+- See platform-specific guides: [macOS](docs/macos-installation.md) | [Windows](docs/windows-installation.md) | [Linux](docs/linux-installation.md)
 
 ### Command-Line Interface
 

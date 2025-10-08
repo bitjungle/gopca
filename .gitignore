@@ -71,6 +71,11 @@ Screenshot*.png
 *.p12
 *.pfx
 
+# MSIX packaging artifacts
+cmd/gopca-desktop/AppxManifest.xml
+*.msix
+*.appx
+
 # Misc. temp files
 _tmp/
 testdata/wine/plotly/
