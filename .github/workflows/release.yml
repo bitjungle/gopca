@@ -597,6 +597,197 @@ jobs:
         path: signing-status.txt
         retention-days: 1
 
+  build-msix:
+    name: Build MSIX Package
+    runs-on: windows-latest
+    needs: [build-desktop, sign-windows-binaries]
+    if: always() && !cancelled()
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Get version from tag or input
+      id: get_version
+      shell: bash
+      run: |
+        if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+          VERSION="${{ github.event.inputs.test_version }}"
+          echo "Using test version: $VERSION"
+        else
+          VERSION="${GITHUB_REF#refs/tags/}"
+          echo "Using tag version: $VERSION"
+        fi
+        # Strip 'v' prefix for MSIX version
+        VERSION_NO_V="${VERSION#v}"
+        echo "version=$VERSION" >> $GITHUB_OUTPUT
+        echo "version_no_v=$VERSION_NO_V" >> $GITHUB_OUTPUT
+
+    - name: Check signing status
+      id: check_signed
+      shell: bash
+      run: |
+        echo "Checking for signed Windows binaries..."
+        echo "use_signed=false" >> $GITHUB_OUTPUT
+
+    - name: Download signing status
+      uses: actions/download-artifact@v4
+      with:
+        name: signing-status
+        path: .
+      continue-on-error: true
+
+    - name: Update signing status
+      id: update_signed
+      shell: bash
+      run: |
+        SIGNED="false"
+        if [ -f "signing-status.txt" ]; then
+          STATUS=$(cat signing-status.txt)
+          if [ "$STATUS" = "signed" ]; then
+            SIGNED="true"
+            echo "✓ Using signed GoPCA.exe"
+          else
+            echo "⚠️ Using unsigned GoPCA.exe"
+          fi
+        else
+          echo "⚠️ No signing status found, using unsigned binaries"
+        fi
+        echo "use_signed=${SIGNED}" >> $GITHUB_OUTPUT
+
+    - name: Download Windows GoPCA artifact
+      uses: actions/download-artifact@v4
+      with:
+        name: gopca-desktop-windows-latest
+        path: windows-desktop
+
+    - name: Download signed Windows artifacts
+      if: steps.update_signed.outputs.use_signed == 'true'
+      uses: actions/download-artifact@v4
+      with:
+        name: windows-signed
+        path: windows-signed
+      continue-on-error: true
+
+    - name: Prepare GoPCA.exe for MSIX
+      shell: bash
+      run: |
+        mkdir -p msix-build
+
+        # Use signed binary if available, otherwise unsigned
+        if [ "${{ steps.update_signed.outputs.use_signed }}" = "true" ] && [ -f "windows-signed/GoPCA.exe" ]; then
+          echo "Using signed GoPCA.exe"
+          cp windows-signed/GoPCA.exe msix-build/GoPCA.exe
+        elif [ -f "windows-desktop/GoPCA.exe" ]; then
+          echo "Using unsigned GoPCA.exe"
+          cp windows-desktop/GoPCA.exe msix-build/GoPCA.exe
+        elif [ -f "windows-desktop/GoPCA-amd64.exe" ]; then
+          echo "Using unsigned GoPCA-amd64.exe (cross-compiled)"
+          cp windows-desktop/GoPCA-amd64.exe msix-build/GoPCA.exe
+        else
+          echo "ERROR: No GoPCA.exe found!"
+          ls -la windows-desktop/
+          exit 1
+        fi
+
+    - name: Generate AppxManifest.xml
+      shell: bash
+      run: |
+        # Construct publisher string (add CN= prefix)
+        PUBLISHER="CN=${{ secrets.MS_WINDOWS_PUBLISHER_ID }}"
+
+        # Convert version to MSIX format (X.X.X.0)
+        VERSION_NO_V="${{ steps.get_version.outputs.version_no_v }}"
+        MSIX_VERSION="${VERSION_NO_V}.0"
+
+        echo "Generating AppxManifest.xml"
+        echo "  Version: $MSIX_VERSION"
+        echo "  Publisher: $PUBLISHER"
+
+        # Create package structure
+        mkdir -p msix-build/package/Assets
+
+        # Copy Assets
+        cp cmd/gopca-desktop/Assets/*.png msix-build/package/Assets/
+
+        # Copy GoPCA.exe
+        cp msix-build/GoPCA.exe msix-build/package/
+
+        # Generate manifest from template
+        sed -e "s|{{VERSION}}|${MSIX_VERSION}|g" \
+            -e "s|{{PUBLISHER}}|${PUBLISHER}|g" \
+            cmd/gopca-desktop/AppxManifest.template.xml > msix-build/package/AppxManifest.xml
+
+        # Verify substitutions
+        echo "Verifying manifest..."
+        if ! grep -q "$MSIX_VERSION" msix-build/package/AppxManifest.xml; then
+          echo "ERROR: Version not substituted correctly"
+          exit 1
+        fi
+
+        if ! grep -q "$PUBLISHER" msix-build/package/AppxManifest.xml; then
+          echo "ERROR: Publisher not substituted correctly"
+          exit 1
+        fi
+
+        echo "✓ Manifest generated successfully"
+        echo "Package contents:"
+        ls -la msix-build/package/
+        ls -la msix-build/package/Assets/
+
+    - name: Build MSIX package
+      shell: cmd
+      run: |
+        set VERSION_NO_V=${{ steps.get_version.outputs.version_no_v }}
+        set MSIX_VERSION=%VERSION_NO_V%.0
+
+        echo Building MSIX package for version %MSIX_VERSION%
+
+        "C:\Program Files (x86)\Windows Kits\10\bin\10.0.22621.0\x64\MakeAppx.exe" pack /v /h SHA256 /d msix-build\package /p msix-build\GoPCA_%MSIX_VERSION%_x64.msix
+
+        if errorlevel 1 (
+          echo ERROR: MakeAppx.exe failed
+          exit /b 1
+        )
+
+        echo MSIX package created successfully
+        dir msix-build\*.msix
+
+    - name: Sign MSIX package
+      shell: cmd
+      run: |
+        set VERSION_NO_V=${{ steps.get_version.outputs.version_no_v }}
+        set MSIX_VERSION=%VERSION_NO_V%.0
+        set MSIX_FILE=msix-build\GoPCA_%MSIX_VERSION%_x64.msix
+
+        echo Creating self-signed certificate for MSIX (Store will re-sign)
+
+        REM Create test certificate for MSIX packaging
+        powershell -Command "& { $cert = New-SelfSignedCertificate -Type Custom -Subject 'CN=${{ secrets.MS_WINDOWS_PUBLISHER_ID }}' -KeyUsage DigitalSignature -FriendlyName 'GoPCA MSIX Test' -CertStoreLocation 'Cert:\CurrentUser\My' -TextExtension @('2.5.29.37={text}1.3.6.1.5.5.7.3.3', '2.5.29.19={text}'); Export-PfxCertificate -Cert $cert -FilePath msix-cert.pfx -Password (ConvertTo-SecureString -String 'test' -Force -AsPlainText) }"
+
+        echo Signing MSIX package with test certificate
+        "C:\Program Files (x86)\Windows Kits\10\bin\10.0.22621.0\x64\SignTool.exe" sign /fd SHA256 /a /f msix-cert.pfx /p test "%MSIX_FILE%"
+
+        if errorlevel 1 (
+          echo WARNING: SignTool failed, MSIX may be unsigned
+          echo This is OK - Microsoft Store will re-sign the package
+        ) else (
+          echo MSIX package signed successfully with test certificate
+        )
+
+        echo Verifying MSIX signature
+        "C:\Program Files (x86)\Windows Kits\10\bin\10.0.22621.0\x64\SignTool.exe" verify /pa "%MSIX_FILE%"
+
+        REM Clean up certificate
+        del msix-cert.pfx
+
+    - name: Upload MSIX artifact
+      uses: actions/upload-artifact@v4
+      with:
+        name: msix-package
+        path: msix-build/GoPCA_*.msix
+        retention-days: 1
+
   build-windows-installer:
     name: Build Windows Installer
     runs-on: self-hosted
@@ -756,7 +947,7 @@ jobs:
   create-release:
     name: Create Release with Artifacts
     runs-on: ubuntu-latest
-    needs: [build-cli-binaries, build-desktop, build-gocsv, build-appimages, sign-windows-binaries, build-windows-installer]
+    needs: [build-cli-binaries, build-desktop, build-gocsv, build-appimages, sign-windows-binaries, build-windows-installer, build-msix]
     if: always() && !cancelled()
     
     steps:
@@ -933,23 +1124,36 @@ jobs:
         if [ "${INSTALLER_AVAILABLE}" = "true" ]; then
           mv windows-installer/GoPCA-Setup-*.exe .
         fi
-        
+
+        # Copy MSIX package if available
+        if [ -d "msix-package" ] && ls msix-package/*.msix 1> /dev/null 2>&1; then
+          echo "✓ MSIX package found"
+          cp msix-package/*.msix .
+          echo "MSIX package copied:"
+          ls -lh *.msix
+        else
+          echo "⚠️ No MSIX package found (build may have failed)"
+        fi
+
         # Clean up temporary directories
         rm -rf macos windows linux
-        rm -rf pca-* gopca-desktop-* gocsv-* windows-signed signing-status unsigned-* windows-installer
-        
-        # Generate checksums for all artifacts (including AppImages if built)
+        rm -rf pca-* gopca-desktop-* gocsv-* windows-signed signing-status unsigned-* windows-installer msix-package
+
+        # Generate checksums for all artifacts (including AppImages and MSIX if built)
         if [ "${INSTALLER_AVAILABLE}" = "true" ]; then
-          shasum -a 256 gopca-*.zip gopca-*.tar.gz *.AppImage GoPCA-Setup-*.exe 2>/dev/null > checksums.txt || \
+          shasum -a 256 gopca-*.zip gopca-*.tar.gz *.AppImage *.msix GoPCA-Setup-*.exe 2>/dev/null > checksums.txt || \
+          shasum -a 256 gopca-*.zip gopca-*.tar.gz *.msix GoPCA-Setup-*.exe 2>/dev/null > checksums.txt || \
           shasum -a 256 gopca-*.zip gopca-*.tar.gz GoPCA-Setup-*.exe > checksums.txt
         else
-          shasum -a 256 gopca-*.zip gopca-*.tar.gz *.AppImage 2>/dev/null > checksums.txt || \
+          shasum -a 256 gopca-*.zip gopca-*.tar.gz *.AppImage *.msix 2>/dev/null > checksums.txt || \
+          shasum -a 256 gopca-*.zip gopca-*.tar.gz *.msix 2>/dev/null > checksums.txt || \
           shasum -a 256 gopca-*.zip gopca-*.tar.gz > checksums.txt
         fi
         
         # List final artifacts
         echo "=== Final release artifacts ==="
-        ls -lh gopca-*.zip gopca-*.tar.gz *.AppImage GoPCA-Setup-*.exe checksums.txt 2>/dev/null || \
+        ls -lh gopca-*.zip gopca-*.tar.gz *.AppImage *.msix GoPCA-Setup-*.exe checksums.txt 2>/dev/null || \
+        ls -lh gopca-*.zip gopca-*.tar.gz *.msix checksums.txt 2>/dev/null || \
         ls -lh gopca-*.zip gopca-*.tar.gz checksums.txt 2>/dev/null
         echo "==============================="
     
@@ -963,6 +1167,7 @@ jobs:
           artifacts/gopca-windows-x64.zip
           artifacts/gopca-linux-x64.tar.gz
           artifacts/*.AppImage
+          artifacts/*.msix
           artifacts/checksums.txt
         retention-days: 7
     
@@ -1038,6 +1243,14 @@ jobs:
         |-----------|----------|-------------|
         | **Windows Setup** | [\`GoPCA-Setup-${VERSION}.exe\`](../../releases/download/${VERSION}/GoPCA-Setup-${VERSION}.exe) | Complete installer with all GoPCA components${{ steps.check_signed.outputs.windows_signed == 'signed' && ' (digitally signed)' || '' }}<br>• Automated installation to Program Files<br>• Start Menu shortcuts<br>• Optional PATH configuration for CLI<br>• Uninstaller included |
 
+        ### Microsoft Store Package (For Windows 10/11)
+
+        | Package | Download | Description |
+        |---------|----------|-------------|
+        | **MSIX Package** | [\`GoPCA_{VERSION_NO_V}.0_x64.msix\`](../../releases/download/${VERSION}/GoPCA_*.msix) | Microsoft Store package for sideloading or Store submission<br>• Modern Windows app package format<br>• Sandboxed installation<br>• Suitable for enterprise deployment<br>• **Coming to Microsoft Store soon!** |
+
+        **Note**: The MSIX package is primarily for sideloading in enterprise environments or for submission to Microsoft Store. Most users should use the traditional installer above.
+
         ### Installation
 
         1. Download the bundle for your platform
@@ -1066,6 +1279,7 @@ jobs:
           artifacts/gopca-windows-x64.zip
           artifacts/gopca-linux-x64.tar.gz
           artifacts/*.AppImage
+          artifacts/*.msix
           artifacts/GoPCA-Setup-*.exe
           artifacts/checksums.txt
         generate_release_notes: false
