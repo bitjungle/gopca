@@ -5,6 +5,14 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.1.5] - 2025-10-09
+
+### Fixed
+- Corrected MSIX package identity name to match Microsoft Partner Center reservation
+  - Changed from `BitjungleGoPCA` to `bitjungle.GoPCA`
+  - Fixes Partner Center upload validation error
+  - Required for successful Microsoft Store submission
+
 ## [1.1.4] - 2025-10-09
 
 ### Added
