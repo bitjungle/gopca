@@ -742,8 +742,7 @@ jobs:
     - name: Build MSIX package
       shell: powershell
       run: |
-        $VERSION_NO_V = "${{ steps.get_version.outputs.version_no_v }}"
-        $MSIX_VERSION = "${VERSION_NO_V}.0"
+        $MSIX_VERSION = "${{ steps.get_version.outputs.msix_version }}.0"
 
         Write-Host "Building MSIX package for version $MSIX_VERSION"
 
@@ -788,8 +787,7 @@ jobs:
     - name: Sign MSIX package
       shell: powershell
       run: |
-        $VERSION_NO_V = "${{ steps.get_version.outputs.version_no_v }}"
-        $MSIX_VERSION = "${VERSION_NO_V}.0"
+        $MSIX_VERSION = "${{ steps.get_version.outputs.msix_version }}.0"
         $MSIX_FILE = "msix-build\GoPCA_${MSIX_VERSION}_x64.msix"
 
         Write-Host "Creating self-signed certificate for MSIX (Store will re-sign)"
