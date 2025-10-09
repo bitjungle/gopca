@@ -600,7 +600,7 @@ jobs:
   build-msix:
     name: Build MSIX Package
     runs-on: windows-latest
-    needs: [build-desktop, sign-windows-binaries]
+    needs: [build-desktop]
     if: always() && !cancelled()
 
     steps:
