@@ -736,50 +736,114 @@ jobs:
         ls -la msix-build/package/Assets/
 
     - name: Build MSIX package
-      shell: cmd
+      shell: powershell
       run: |
-        set VERSION_NO_V=${{ steps.get_version.outputs.version_no_v }}
-        set MSIX_VERSION=%VERSION_NO_V%.0
+        $VERSION_NO_V = "${{ steps.get_version.outputs.version_no_v }}"
+        $MSIX_VERSION = "${VERSION_NO_V}.0"
 
-        echo Building MSIX package for version %MSIX_VERSION%
+        Write-Host "Building MSIX package for version $MSIX_VERSION"
 
-        "C:\Program Files (x86)\Windows Kits\10\bin\10.0.22621.0\x64\MakeAppx.exe" pack /v /h SHA256 /d msix-build\package /p msix-build\GoPCA_%MSIX_VERSION%_x64.msix
+        # Find MakeAppx.exe dynamically
+        $sdkPath = "C:\Program Files (x86)\Windows Kits\10\bin"
+        if (Test-Path $sdkPath) {
+          $sdkVersions = Get-ChildItem $sdkPath -Directory | Sort-Object Name -Descending
+          $makeAppxPath = $null
 
-        if errorlevel 1 (
-          echo ERROR: MakeAppx.exe failed
-          exit /b 1
-        )
+          foreach ($version in $sdkVersions) {
+            $candidate = Join-Path $version.FullName "x64\MakeAppx.exe"
+            if (Test-Path $candidate) {
+              $makeAppxPath = $candidate
+              Write-Host "Found MakeAppx.exe: $makeAppxPath"
+              break
+            }
+          }
 
-        echo MSIX package created successfully
-        dir msix-build\*.msix
+          if (-not $makeAppxPath) {
+            Write-Host "ERROR: MakeAppx.exe not found in any SDK version"
+            exit 1
+          }
+        } else {
+          Write-Host "ERROR: Windows SDK not found at $sdkPath"
+          exit 1
+        }
+
+        # Build MSIX package
+        $packageDir = "msix-build\package"
+        $outputFile = "msix-build\GoPCA_${MSIX_VERSION}_x64.msix"
+
+        & $makeAppxPath pack /v /h SHA256 /d $packageDir /p $outputFile
+
+        if ($LASTEXITCODE -ne 0) {
+          Write-Host "ERROR: MakeAppx.exe failed with exit code $LASTEXITCODE"
+          exit 1
+        }
+
+        Write-Host "MSIX package created successfully"
+        Get-ChildItem msix-build\*.msix
 
     - name: Sign MSIX package
-      shell: cmd
+      shell: powershell
       run: |
-        set VERSION_NO_V=${{ steps.get_version.outputs.version_no_v }}
-        set MSIX_VERSION=%VERSION_NO_V%.0
-        set MSIX_FILE=msix-build\GoPCA_%MSIX_VERSION%_x64.msix
+        $VERSION_NO_V = "${{ steps.get_version.outputs.version_no_v }}"
+        $MSIX_VERSION = "${VERSION_NO_V}.0"
+        $MSIX_FILE = "msix-build\GoPCA_${MSIX_VERSION}_x64.msix"
 
-        echo Creating self-signed certificate for MSIX (Store will re-sign)
+        Write-Host "Creating self-signed certificate for MSIX (Store will re-sign)"
 
-        REM Create test certificate for MSIX packaging
-        powershell -Command "& { $cert = New-SelfSignedCertificate -Type Custom -Subject 'CN=${{ secrets.MS_WINDOWS_PUBLISHER_ID }}' -KeyUsage DigitalSignature -FriendlyName 'GoPCA MSIX Test' -CertStoreLocation 'Cert:\CurrentUser\My' -TextExtension @('2.5.29.37={text}1.3.6.1.5.5.7.3.3', '2.5.29.19={text}'); Export-PfxCertificate -Cert $cert -FilePath msix-cert.pfx -Password (ConvertTo-SecureString -String 'test' -Force -AsPlainText) }"
+        # Create test certificate for MSIX packaging
+        $cert = New-SelfSignedCertificate -Type Custom `
+          -Subject "CN=${{ secrets.MS_WINDOWS_PUBLISHER_ID }}" `
+          -KeyUsage DigitalSignature `
+          -FriendlyName "GoPCA MSIX Test" `
+          -CertStoreLocation "Cert:\CurrentUser\My" `
+          -TextExtension @("2.5.29.37={text}1.3.6.1.5.5.7.3.3", "2.5.29.19={text}")
 
-        echo Signing MSIX package with test certificate
-        "C:\Program Files (x86)\Windows Kits\10\bin\10.0.22621.0\x64\SignTool.exe" sign /fd SHA256 /a /f msix-cert.pfx /p test "%MSIX_FILE%"
+        Export-PfxCertificate -Cert $cert -FilePath msix-cert.pfx `
+          -Password (ConvertTo-SecureString -String "test" -Force -AsPlainText)
 
-        if errorlevel 1 (
-          echo WARNING: SignTool failed, MSIX may be unsigned
-          echo This is OK - Microsoft Store will re-sign the package
-        ) else (
-          echo MSIX package signed successfully with test certificate
-        )
+        # Find SignTool.exe dynamically
+        $sdkPath = "C:\Program Files (x86)\Windows Kits\10\bin"
+        if (Test-Path $sdkPath) {
+          $sdkVersions = Get-ChildItem $sdkPath -Directory | Sort-Object Name -Descending
+          $signToolPath = $null
 
-        echo Verifying MSIX signature
-        "C:\Program Files (x86)\Windows Kits\10\bin\10.0.22621.0\x64\SignTool.exe" verify /pa "%MSIX_FILE%"
+          foreach ($version in $sdkVersions) {
+            $candidate = Join-Path $version.FullName "x64\SignTool.exe"
+            if (Test-Path $candidate) {
+              $signToolPath = $candidate
+              Write-Host "Found SignTool.exe: $signToolPath"
+              break
+            }
+          }
 
-        REM Clean up certificate
-        del msix-cert.pfx
+          if (-not $signToolPath) {
+            Write-Host "WARNING: SignTool.exe not found, MSIX will be unsigned"
+            Write-Host "This is OK - Microsoft Store will re-sign the package"
+            exit 0
+          }
+        } else {
+          Write-Host "WARNING: Windows SDK not found, MSIX will be unsigned"
+          Write-Host "This is OK - Microsoft Store will re-sign the package"
+          exit 0
+        }
+
+        # Sign MSIX package
+        Write-Host "Signing MSIX package with test certificate"
+        & $signToolPath sign /fd SHA256 /a /f msix-cert.pfx /p test $MSIX_FILE
+
+        if ($LASTEXITCODE -ne 0) {
+          Write-Host "WARNING: SignTool failed, MSIX may be unsigned"
+          Write-Host "This is OK - Microsoft Store will re-sign the package"
+        } else {
+          Write-Host "MSIX package signed successfully with test certificate"
+
+          # Verify signature
+          Write-Host "Verifying MSIX signature"
+          & $signToolPath verify /pa $MSIX_FILE
+        }
+
+        # Clean up certificate
+        Remove-Item msix-cert.pfx -ErrorAction SilentlyContinue
 
     - name: Upload MSIX artifact
       uses: actions/upload-artifact@v4
