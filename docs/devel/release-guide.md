@@ -190,12 +190,13 @@ open https://github.com/bitjungle/gopca/releases/tag/vX.X.X
 ```
 
 Check that:
-- [ ] All binaries are attached (13 files + checksums)
+- [ ] All binaries are attached (14 files + checksums: 5 CLI, 4 Desktop, 4 GoCSV, 1 MSIX)
 - [ ] Release notes are accurate
 - [ ] Download links work
 - [ ] Checksums file is present
 - [ ] Linux AppImages are included for both GoPCA and GoCSV
 - [ ] macOS apps run without Gatekeeper warnings
+- [ ] MSIX package is included (`GoPCA_X.X.X.0_x64.msix`) for Microsoft Store submission
 
 ## Release Notes Generation
 
