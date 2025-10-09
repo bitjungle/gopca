@@ -839,13 +839,23 @@ jobs:
         } else {
           Write-Host "MSIX package signed successfully with test certificate"
 
-          # Verify signature
+          # Verify signature (will fail for self-signed cert, but shows it's signed)
           Write-Host "Verifying MSIX signature"
           & $signToolPath verify /pa $MSIX_FILE
+          if ($LASTEXITCODE -ne 0) {
+            Write-Host "NOTE: Verification failed (expected for self-signed certificate)"
+            Write-Host "The package IS signed, but the certificate is not trusted"
+            Write-Host "Microsoft Store will re-sign with a trusted certificate"
+          } else {
+            Write-Host "Signature verified successfully"
+          }
         }
 
         # Clean up certificate
         Remove-Item msix-cert.pfx -ErrorAction SilentlyContinue
+
+        # Ensure we don't fail the job on expected verification error
+        exit 0
 
     - name: Upload MSIX artifact
       uses: actions/upload-artifact@v4
