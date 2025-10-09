@@ -5,6 +5,25 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.1.4] - 2025-10-09
+
+### Added
+- **Microsoft Store Distribution** (#563, #560)
+  - Automated MSIX package generation in CI/CD workflow
+  - Self-signed temporary certificate (Microsoft Store re-signs on publish)
+  - Dynamic Windows SDK tool discovery (no hardcoded paths)
+  - Smart version format conversion (strips pre-release suffixes)
+  - Complete infrastructure with AppxManifest template and MSIX assets
+  - Comprehensive documentation in `docs/devel/msix-packaging.md`
+  - End-user installation guide in `docs/windows-installation.md`
+  - Resolves Windows SmartScreen warning showstopper
+
+### Documentation
+- Added MSIX package to release verification checklist
+- Updated release guide with Microsoft Store submission process
+- Created comprehensive MSIX technical documentation
+- Added Windows installation guide for end users
+
 ## [1.1.3] - 2025-01-10
 
 ### Changed
