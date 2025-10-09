@@ -190,12 +190,13 @@ open https://github.com/bitjungle/gopca/releases/tag/vX.X.X
 ```
 
 Check that:
-- [ ] All binaries are attached (13 files + checksums)
+- [ ] All binaries are attached (14 files + checksums: 5 CLI, 4 Desktop, 4 GoCSV, 1 MSIX)
 - [ ] Release notes are accurate
 - [ ] Download links work
 - [ ] Checksums file is present
 - [ ] Linux AppImages are included for both GoPCA and GoCSV
 - [ ] macOS apps run without Gatekeeper warnings
+- [ ] MSIX package is included (`GoPCA_X.X.X.0_x64.msix`) for Microsoft Store submission
 
 ## Release Notes Generation
 
@@ -235,14 +236,28 @@ Each release includes:
 
 ### Windows Installer
 - `GoPCA-Setup-vX.X.X.exe` - Windows installer containing all components
-  - Includes GoPCA Desktop, GoCSV, and PCA CLI  
+  - Includes GoPCA Desktop, GoCSV, and PCA CLI
   - Automated installation to Program Files
   - Start Menu shortcuts and PATH configuration
   - Built automatically in CI/CD when NSIS is available
   - Uses signed binaries when SignPath is configured
 
+### MSIX Package (Microsoft Store)
+- `GoPCA_X.X.X.0_x64.msix` - Microsoft Store package
+  - Modern Windows app package format
+  - Sandboxed installation for enhanced security
+  - Signed with self-signed certificate (Store re-signs on publish)
+  - Built automatically in CI/CD on every release
+  - Suitable for:
+    - Microsoft Store submission (primary use case)
+    - Enterprise sideloading via Intune/SCCM
+    - IT administrators who prefer MSIX format
+  - See [MSIX Packaging Guide](msix-packaging.md) for details
+
+**Note:** The MSIX package is signed with a temporary self-signed certificate during CI/CD build. When submitted to Microsoft Partner Center, Microsoft replaces this with their trusted Store certificate, eliminating SmartScreen warnings for end users.
+
 ### Verification
-- `checksums.txt` - SHA-256 checksums for all artifacts
+- `checksums.txt` - SHA-256 checksums for all artifacts (including MSIX)
 
 ## Version Numbering
 
@@ -605,12 +620,66 @@ The `.github/workflows/release.yml` workflow:
 
 - **Self-hosted runner**: Used for binary builds to reduce costs
   - Linux runner with NSIS installed for Windows installer creation
-- **GitHub-hosted runners**: Used for all testing
+- **GitHub-hosted runners**: Used for all testing and MSIX builds
 - **Code signing**:
   - **macOS**: Fully automated signing and notarization for all binaries (no Gatekeeper warnings)
   - **Windows**: Optional SignPath.io integration for digital signatures (when configured)
   - **Linux AppImages**: Automatically generated for both GoPCA and GoCSV Desktop apps
+  - **MSIX**: Self-signed during build (Microsoft Store re-signs on publish)
 - **Windows Installer**: Built on self-hosted Linux runner using NSIS
+- **MSIX Package**: Built on GitHub-hosted windows-latest runner with Windows SDK
+
+## Post-Release: Microsoft Store Submission
+
+After a successful release with MSIX package, submit to Microsoft Store:
+
+### One-Time Setup (Already Complete)
+
+- ✅ Microsoft Partner Center account created
+- ✅ App registered as "GoPCA"
+- ✅ Publisher ID obtained and added to GitHub Secrets
+- ✅ CI/CD configured to build MSIX automatically
+
+### Submission Process (After Each Release)
+
+1. **Download MSIX Package**:
+   ```bash
+   # Download from the latest release
+   wget https://github.com/bitjungle/gopca/releases/latest/download/GoPCA_X.X.X.0_x64.msix
+   ```
+
+2. **Log into Partner Center**:
+   - Visit [https://partner.microsoft.com](https://partner.microsoft.com)
+   - Navigate to Apps → GoPCA
+
+3. **Create New Submission**:
+   - Click "Start new submission"
+   - Upload the MSIX package
+   - Update version notes (copy from CHANGELOG.md)
+   - Verify store listing is current
+   - Submit for certification
+
+4. **Monitor Certification** (1-3 days):
+   - Check Partner Center dashboard for status
+   - Address any certification failures
+   - App goes live automatically upon approval
+
+5. **Post-Approval Updates**:
+   - Update README.md if first Store release (add Store badge)
+   - Announce Store availability
+   - Update docs/windows-installation.md to reflect Store link
+
+### Store Listing Maintenance
+
+Keep the following current in Partner Center:
+
+- **Description**: Match README.md overview
+- **Screenshots**: Update when UI changes significantly
+- **Version notes**: Copy from CHANGELOG.md for each release
+- **Support contact**: Ensure email/URL is monitored
+- **Privacy policy**: Keep link updated
+
+See [docs/devel/msix-packaging.md](msix-packaging.md) for detailed MSIX documentation.
 
 ## Questions?
 
