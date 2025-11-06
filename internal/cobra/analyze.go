@@ -8,6 +8,7 @@ package cobra
 
 import (
 	"fmt"
+	"math"
 	"strings"
 
 	"github.com/bitjungle/gopca/internal/core"
@@ -448,39 +449,69 @@ func runAnalyze(opts *AnalyzeOptions, inputFile string) error {
 		}
 	}
 
-	// Create preprocessor
-	preprocessor := core.NewPreprocessorWithScaleOnly(
-		config.MeanCenter,
-		config.StandardScale,
-		config.RobustScale,
-		config.ScaleOnly,
-		config.SNV,
-		config.VectorNorm,
-	)
-
-	// Apply preprocessing
-	processedData, err := preprocessor.FitTransform(data.Matrix)
-	if err != nil {
-		return fmt.Errorf("preprocessing failed: %w", err)
-	}
-
-	// Create and run PCA
+	// Create and run PCA (preprocessing is handled inside pca.Fit())
 	pca := core.NewPCAEngineForMethod(config.Method)
-	result, err := pca.Fit(processedData, config)
+	result, err := pca.Fit(data.Matrix, config)
 	if err != nil {
 		return fmt.Errorf("PCA analysis failed: %w", err)
+	}
+
+	// Recreate preprocessed data for metrics calculation
+	// This ensures metrics are calculated on the same preprocessed data that was used for PCA
+	var preprocessedData types.Matrix
+	var preprocessor *core.Preprocessor
+
+	// Check if we need to handle NIPALS with native missing values specially
+	hasMissing := false
+	for i := range data.Matrix {
+		for j := range data.Matrix[i] {
+			if math.IsNaN(data.Matrix[i][j]) {
+				hasMissing = true
+				break
+			}
+		}
+		if hasMissing {
+			break
+		}
+	}
+
+	usingNativeMissing := config.Method == "nipals" && config.MissingStrategy == types.MissingNative && hasMissing
+
+	if usingNativeMissing {
+		// For NIPALS with native missing values, only mean centering is applied (handled internally)
+		// We don't preprocess for metrics in this case
+		preprocessedData = data.Matrix
+		preprocessor = nil
+	} else if config.MeanCenter || config.StandardScale || config.RobustScale || config.ScaleOnly || config.SNV || config.VectorNorm {
+		// Re-create preprocessor with the same settings used by pca.Fit()
+		preprocessor = core.NewPreprocessorWithScaleOnly(
+			config.MeanCenter,
+			config.StandardScale,
+			config.RobustScale,
+			config.ScaleOnly,
+			config.SNV,
+			config.VectorNorm,
+		)
+		preprocessedData, err = preprocessor.FitTransform(data.Matrix)
+		if err != nil {
+			return fmt.Errorf("preprocessing for metrics failed: %w", err)
+		}
+	} else {
+		// No preprocessing
+		preprocessedData = data.Matrix
+		preprocessor = nil
 	}
 
 	// Output results based on format
 	switch opts.OutputFormat {
 	case "json":
-		return outputJSONFormat(result, data, inputFile, opts, config, preprocessor,
+		return outputJSONFormat(result, data, preprocessedData, inputFile, opts, config, preprocessor,
 			data.CategoricalColumns, data.NumericTargetColumns)
 	default: // table
 		outputScores := opts.OutputScores || opts.OutputAll
 		outputLoadings := opts.OutputLoadings || opts.OutputAll
 		outputVariance := opts.OutputVariance || opts.OutputAll
-		return outputTableFormat(result, data,
+		return outputTableFormat(result, data, preprocessedData,
 			outputScores, outputLoadings, outputVariance, opts.IncludeMetrics, opts.VarianceExplained)
 	}
 }

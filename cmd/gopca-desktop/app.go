@@ -1379,8 +1379,21 @@ func (a *App) ExportPCAModel(request ExportPCAModelRequest) error {
 		pcaConfig.VectorNorm,
 	)
 
-	// We need to fit the preprocessor to get the parameters
-	// But we already have them in the PCAResult
+	// Preprocess the data for metrics calculation
+	// This ensures metrics are calculated on the same preprocessed data that was used for PCA
+	var preprocessedData types.Matrix
+	if pcaConfig.MeanCenter || pcaConfig.StandardScale || pcaConfig.RobustScale ||
+	   pcaConfig.ScaleOnly || pcaConfig.SNV || pcaConfig.VectorNorm {
+		var err error
+		preprocessedData, err = preprocessor.FitTransform(request.Data)
+		if err != nil {
+			return fmt.Errorf("failed to preprocess data for export: %v", err)
+		}
+	} else {
+		// No preprocessing needed
+		preprocessedData = request.Data
+	}
+
 	// Create a mock CSVData structure for the output conversion
 	csvData := &pkgcsv.Data{
 		Headers:  request.Headers,
@@ -1400,7 +1413,7 @@ func (a *App) ExportPCAModel(request ExportPCAModelRequest) error {
 
 	// Convert to PCAOutputData using the shared function from pkg/csv with metadata
 	// Note: We don't have categorical/target data in the export request, so pass nil
-	outputData := pkgcsv.ConvertToPCAOutputDataWithMetadata(request.PCAResult, csvData, true,
+	outputData := pkgcsv.ConvertToPCAOutputDataWithMetadata(request.PCAResult, csvData, preprocessedData, true,
 		pcaConfig, preprocessor, nil, nil, exportMeta)
 
 	// Marshal to JSON

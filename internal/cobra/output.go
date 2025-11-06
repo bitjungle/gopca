@@ -19,7 +19,7 @@ import (
 )
 
 // outputTableFormat outputs PCA results in table format
-func outputTableFormat(result *types.PCAResult, data *pkgcsv.Data,
+func outputTableFormat(result *types.PCAResult, data *pkgcsv.Data, preprocessedData types.Matrix,
 	outputScores, outputLoadings, outputVariance, includeMetrics bool, varianceExplained float64) error {
 
 	// Calculate metrics if requested (skip for kernel PCA as it doesn't have loadings)
@@ -27,7 +27,7 @@ func outputTableFormat(result *types.PCAResult, data *pkgcsv.Data,
 	if includeMetrics && outputScores {
 		if result.Method != "kernel" {
 			var err error
-			metrics, err = core.CalculateMetricsFromPCAResult(result, data.Matrix)
+			metrics, err = core.CalculateMetricsFromPCAResult(result, preprocessedData)
 			if err != nil {
 				fmt.Fprintf(os.Stderr, "Warning: Failed to calculate metrics: %v\n", err)
 				// Create placeholder metrics
@@ -211,7 +211,7 @@ func outputTableFormat(result *types.PCAResult, data *pkgcsv.Data,
 }
 
 // outputJSONFormat outputs PCA results in JSON format
-func outputJSONFormat(result *types.PCAResult, data *pkgcsv.Data, inputFile string,
+func outputJSONFormat(result *types.PCAResult, data *pkgcsv.Data, preprocessedData types.Matrix, inputFile string,
 	opts *AnalyzeOptions, config types.PCAConfig, preprocessor *core.Preprocessor,
 	categoricalData map[string][]string, targetData map[string][]float64) error {
 
@@ -220,7 +220,7 @@ func outputJSONFormat(result *types.PCAResult, data *pkgcsv.Data, inputFile stri
 		InputFilename: filepath.Base(inputFile),
 	}
 	// Convert to PCAOutputData with metadata
-	outputData := pkgcsv.ConvertToPCAOutputDataWithMetadata(result, data, opts.IncludeMetrics,
+	outputData := pkgcsv.ConvertToPCAOutputDataWithMetadata(result, data, preprocessedData, opts.IncludeMetrics,
 		config, preprocessor, categoricalData, targetData, exportMeta)
 
 	// Generate output paths
