@@ -420,3 +420,113 @@ func TestNewPCAEngineForMethod(t *testing.T) {
 		})
 	}
 }
+
+// TestKernelPCA_PolynomialNormalization tests that "polynomial" is normalized to "poly"
+// This addresses issue #569 where validation accepts both forms but runtime only recognizes "poly"
+func TestKernelPCA_PolynomialNormalization(t *testing.T) {
+	engine := NewKernelPCAEngine()
+	data := generateLinearData()
+
+	// Test with "polynomial" string (should be normalized to "poly" internally)
+	config := types.PCAConfig{
+		Components:   2,
+		Method:       "kernel",
+		KernelType:   "polynomial", // This should be normalized to "poly"
+		KernelGamma:  0.1,
+		KernelDegree: 3,
+		KernelCoef0:  1.0,
+	}
+
+	result, err := engine.Fit(data, config)
+	if err != nil {
+		t.Fatalf("Failed to fit with 'polynomial' kernel type: %v", err)
+	}
+
+	// Verify the result contains normalized kernel_type
+	if result.KernelType != "poly" {
+		t.Errorf("Expected normalized kernel_type 'poly', got %s", result.KernelType)
+	}
+
+	// Verify scores were computed
+	if len(result.Scores) != len(data) {
+		t.Errorf("Expected %d scores, got %d", len(data), len(result.Scores))
+	}
+}
+
+// TestKernelPCA_PolynomialDefaultGamma tests that default gamma is applied for "polynomial"
+// This verifies the normalization happens before the default gamma logic (line 240 in kernel_pca.go)
+func TestKernelPCA_PolynomialDefaultGamma(t *testing.T) {
+	engine := NewKernelPCAEngine()
+	data := generateLinearData()
+
+	config := types.PCAConfig{
+		Components:   2,
+		Method:       "kernel",
+		KernelType:   "polynomial",
+		KernelGamma:  0, // Should get default value of 1/n_features
+		KernelDegree: 2,
+		KernelCoef0:  0,
+	}
+
+	result, err := engine.Fit(data, config)
+	if err != nil {
+		t.Fatalf("Failed to apply default gamma for polynomial: %v", err)
+	}
+
+	// Verify default gamma was applied (should be 1/n_features = 1/2 = 0.5)
+	expectedGamma := 1.0 / float64(len(data[0]))
+	actualGamma, ok := result.KernelParams["gamma"]
+	if !ok {
+		t.Fatal("KernelParams['gamma'] not found in result")
+	}
+	if actualGamma != expectedGamma {
+		t.Errorf("Expected default gamma %.2f, got %.2f", expectedGamma, actualGamma)
+	}
+}
+
+// TestKernelPCA_PolyVsPolynomial tests that "poly" and "polynomial" produce identical results
+func TestKernelPCA_PolyVsPolynomial(t *testing.T) {
+	data := generateLinearData()
+
+	baseConfig := types.PCAConfig{
+		Components:   2,
+		Method:       "kernel",
+		KernelGamma:  0.1,
+		KernelDegree: 3,
+		KernelCoef0:  1.0,
+	}
+
+	// Test with "poly"
+	configPoly := baseConfig
+	configPoly.KernelType = "poly"
+	enginePoly := NewKernelPCAEngine()
+	resultPoly, err := enginePoly.Fit(data, configPoly)
+	if err != nil {
+		t.Fatalf("Failed to fit with 'poly': %v", err)
+	}
+
+	// Test with "polynomial"
+	configPolynomial := baseConfig
+	configPolynomial.KernelType = "polynomial"
+	enginePolynomial := NewKernelPCAEngine()
+	resultPolynomial, err := enginePolynomial.Fit(data, configPolynomial)
+	if err != nil {
+		t.Fatalf("Failed to fit with 'polynomial': %v", err)
+	}
+
+	// Compare results - scores should be identical (or very close due to floating point)
+	if len(resultPoly.Scores) != len(resultPolynomial.Scores) {
+		t.Errorf("Score lengths differ: %d vs %d", len(resultPoly.Scores), len(resultPolynomial.Scores))
+	}
+
+	tolerance := 1e-10
+	for i := range resultPoly.Scores {
+		for j := range resultPoly.Scores[i] {
+			diff := math.Abs(resultPoly.Scores[i][j] - resultPolynomial.Scores[i][j])
+			if diff > tolerance {
+				t.Errorf("Scores differ at [%d][%d]: %.10f vs %.10f (diff: %.10e)",
+					i, j, resultPoly.Scores[i][j], resultPolynomial.Scores[i][j], diff)
+			}
+		}
+	}
+}
