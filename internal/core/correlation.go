@@ -351,7 +351,7 @@ func oneHotEncode(categories []string) map[string][]float64 {
 // For p-value calculation in hypothesis testing: P(T > |t|) = 2 * (1 - CDF(|t|))
 //
 // Implementation uses gonum's StudentsT distribution which properly implements the
-// complete beta function relationship. Prior to issue #570, this function used a
+// regularized incomplete beta function relationship. Prior to issue #570, this function used a
 // simple power approximation x^(df/2) instead of the correct incomplete beta function,
 // causing p-values to be inflated by 2-3× for small samples.
 //
