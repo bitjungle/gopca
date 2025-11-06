@@ -153,7 +153,7 @@ def main():
     print("Reference generation complete!")
     print("=" * 70)
     print("\nTo use these reference values in Go tests:")
-    print("  1. Run: go test -v ./internal/core/ -run TestStudentTCDF")
+    print("  1. Run: go test -v ./internal/core/ -run TestStudentTCDF_Validation")
     print("  2. The test will read this CSV and validate against the Go implementation")
     print()
 
