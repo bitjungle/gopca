@@ -136,7 +136,7 @@ func BenchmarkKernel_PCA(b *testing.B) {
 					KernelGamma: 0.01,
 				}
 				// Set polynomial-specific parameters
-				if kernel == "polynomial" {
+				if kernel == "polynomial" || kernel == "poly" {
 					config.KernelDegree = 3
 					config.KernelCoef0 = 1.0
 				}
