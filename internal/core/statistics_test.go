@@ -8,6 +8,7 @@ package core
 
 import (
 	"math"
+	"strings"
 	"testing"
 
 	"gonum.org/v1/gonum/mat"
@@ -190,6 +191,13 @@ func TestCalculateGroupEllipsesEdgeCases(t *testing.T) {
 			pcX:    2, // Out of bounds
 			pcY:    0,
 		},
+		{
+			name:   "nil scores matrix",
+			scores: nil,
+			groups: []string{"A", "B"},
+			pcX:    0,
+			pcY:    1,
+		},
 	}
 
 	for _, tt := range tests {
@@ -197,6 +205,13 @@ func TestCalculateGroupEllipsesEdgeCases(t *testing.T) {
 			ellipses, err := CalculateGroupEllipses(tt.scores, tt.groups, tt.pcX, tt.pcY, 0.95)
 
 			switch tt.name {
+			case "nil scores matrix":
+				if err == nil {
+					t.Error("Expected error for nil scores matrix")
+				}
+				if err != nil && !strings.Contains(err.Error(), "scores matrix is nil") {
+					t.Errorf("Expected 'scores matrix is nil' error, got: %v", err)
+				}
 			case "PC indices out of bounds":
 				if err == nil {
 					t.Error("Expected error for out of bounds PC indices")

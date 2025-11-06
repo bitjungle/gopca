@@ -106,12 +106,12 @@ func chiSquareValue(confidenceLevel float64, df int) float64 {
 // groups is a slice indicating the group membership of each observation.
 // pcX and pcY are the indices of the principal components to use (0-based).
 func CalculateGroupEllipses(scores mat.Matrix, groups []string, pcX, pcY int, confidenceLevel float64) (map[string]EllipseParams, error) {
-	rows, cols := scores.Dims()
-
 	// Validate inputs
 	if scores == nil {
 		return nil, fmt.Errorf("scores matrix is nil")
 	}
+
+	rows, cols := scores.Dims()
 	if len(groups) == 0 {
 		return nil, fmt.Errorf("groups slice is empty")
 	}
