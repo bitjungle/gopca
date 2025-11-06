@@ -13,6 +13,7 @@ import (
 
 	"gonum.org/v1/gonum/mat"
 	"gonum.org/v1/gonum/stat"
+	"gonum.org/v1/gonum/stat/distuv"
 )
 
 // CorrelationRequest defines the input for correlation calculations
@@ -339,32 +340,36 @@ func oneHotEncode(categories []string) map[string][]float64 {
 	return encoded
 }
 
-// studentTCDF approximates the cumulative distribution function of Student's t-distribution
-// For p-value calculation, we need P(T > |t|) = 2 * (1 - CDF(|t|))
+// studentTCDF computes the cumulative distribution function of Student's t-distribution.
+//
+// This function returns P(T ≤ t) for a t-distributed random variable with df degrees
+// of freedom. The CDF is computed using the regularized incomplete beta function:
+//
+//	P(T ≤ t) = 0.5 + 0.5 * sign(t) * (1 - I_x(df/2, 0.5))
+//	where x = df/(df + t²) and I_x is the regularized incomplete beta function
+//
+// For p-value calculation in hypothesis testing: P(T > |t|) = 2 * (1 - CDF(|t|))
+//
+// Implementation uses gonum's StudentsT distribution which properly implements the
+// complete beta function relationship. Prior to issue #570, this function used a
+// simple power approximation x^(df/2) instead of the correct incomplete beta function,
+// causing p-values to be inflated by 2-3× for small samples.
+//
+// References:
+//   - Abramowitz & Stegun (1972): Handbook of Mathematical Functions, Chapter 26
+//   - Johnson, Kotz & Balakrishnan (1995): Continuous Univariate Distributions, Vol 2
+//   - gonum.org/v1/gonum/stat/distuv documentation
+//
+// Complexity: O(1) - uses highly optimized incomplete beta implementation
 func studentTCDF(t, df float64) float64 {
-	// Use the fact that T^2 follows an F-distribution with (1, df) degrees of freedom
-	// And F(1,df) relates to the Beta distribution
-	// For simplicity and accuracy, we use an approximation suitable for our p-value needs
-
-	// For large df (>30), t-distribution approaches normal
-	if df > 30 {
-		return normalCDF(t)
+	// Use gonum's correct Student's t distribution implementation
+	// which uses the regularized incomplete beta function internally
+	dist := distuv.StudentsT{
+		Mu:    0,  // Standard t-distribution (location parameter = 0)
+		Sigma: 1,  // Standard t-distribution (scale parameter = 1)
+		Nu:    df, // Degrees of freedom (shape parameter)
 	}
-
-	// For smaller df, use approximation based on the relationship:
-	// P(T <= t) ≈ 0.5 + 0.5 * sign(t) * (1 - I_x(df/2, 0.5))
-	// where x = df/(df + t^2) and I_x is the regularized incomplete beta function
-
-	// Simplified but accurate approximation for our use case
-	x := df / (df + t*t)
-
-	// Use approximation of incomplete beta for common df values
-	// This gives reasonable p-values for hypothesis testing
-	if t >= 0 {
-		return 1 - 0.5*math.Pow(x, df/2)
-	} else {
-		return 0.5 * math.Pow(x, df/2)
-	}
+	return dist.CDF(t)
 }
 
 // normalCDF computes the cumulative distribution function of the standard normal distribution
