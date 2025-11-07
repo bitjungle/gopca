@@ -55,10 +55,11 @@ export function generateCLICommand(config: CLIConfig): string {
     // Add kernel parameters if using kernel PCA
     if (config.method === 'kernel') {
         cmd += ` --kernel-type ${config.kernelType}`;
-        if (config.kernelType === 'rbf' || config.kernelType === 'laplacian' || config.kernelType === 'sigmoid') {
+        if (config.kernelType === 'rbf') {
             cmd += ` --kernel-gamma ${config.kernelGamma}`;
         }
-        if (config.kernelType === 'polynomial' || config.kernelType === 'sigmoid') {
+        if (config.kernelType === 'polynomial' || config.kernelType === 'poly') {
+            cmd += ` --kernel-gamma ${config.kernelGamma}`;
             cmd += ` --kernel-degree ${config.kernelDegree}`;
             cmd += ` --kernel-coef0 ${config.kernelCoef0}`;
         }
