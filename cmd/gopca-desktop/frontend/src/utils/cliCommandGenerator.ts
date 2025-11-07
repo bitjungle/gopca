@@ -5,6 +5,7 @@ import { optimizeToRanges } from './rangeOptimizer';
 
 export interface CLIConfig {
     fileName?: string;
+    filePath?: string;
     components: number;
     method: string;
     kernelType?: string;
@@ -32,12 +33,16 @@ export interface CLIConfig {
 export function generateCLICommand(config: CLIConfig): string {
     let cmd = 'pca analyze';
 
+    // Use filePath if available (user file), otherwise fileName (built-in dataset)
+    // For built-in datasets, fileName is just for illustration
+    const pathToUse = config.filePath || config.fileName;
+
     // Add file path (with quotes if it contains spaces)
-    if (config.fileName) {
-        if (config.fileName.includes(' ')) {
-            cmd += ` "${config.fileName}"`;
+    if (pathToUse) {
+        if (pathToUse.includes(' ')) {
+            cmd += ` "${pathToUse}"`;
         } else {
-            cmd += ` ${config.fileName}`;
+            cmd += ` ${pathToUse}`;
         }
     }
 

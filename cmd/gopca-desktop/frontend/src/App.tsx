@@ -64,6 +64,7 @@ function AppContent() {
     const { setMode } = usePalette();
     const [fileData, setFileData] = useState<FileData | null>(null);
     const [fileName, setFileName] = useState<string>('');
+    const [filePath, setFilePath] = useState<string>(''); // Actual file path for CLI commands
     const [pcaResponse, setPcaResponse] = useState<PCAResponse | null>(null);
     const [loading, setLoading] = useState(false);
     const [fileError, setFileError] = useState<string | null>(null);
@@ -284,6 +285,7 @@ function AppContent() {
             const result = await LoadDatasetFile(filename);
             setFileData(result);
             setFileName(filename); // Store the sample dataset filename
+            setFilePath(''); // Built-in datasets don't have real file paths
             setPcaResponse(null);
             setExcludedRows([]);
             setExcludedColumns([]);
@@ -327,17 +329,26 @@ function AppContent() {
         setPcaError(null); // Clear any previous PCA errors
 
         try {
-            const parseResult = await SelectCSVFile();
+            const result = await SelectCSVFile();
 
             // User cancelled
-            if (!parseResult) {
+            if (!result) {
                 setLoading(false);
                 return;
             }
 
-            // Set a generic filename for display purposes
+            // Extract data and file path from result
+            const { data, filePath: selectedFilePath } = result;
+
+            // Ensure data is present
+            if (!data) {
+                throw new Error('No data returned from file selection');
+            }
+
+            // Set display name and actual file path
             setFileName('Selected File');
-            setFileData(parseResult);
+            setFilePath(selectedFilePath); // Store actual path for CLI commands
+            setFileData(data);
             setPcaResponse(null);
             // Reset exclusions and selections when loading new data
             setExcludedRows([]);
@@ -347,7 +358,7 @@ function AppContent() {
             setDatasetId(prev => prev + 1); // Force DataTable re-render
 
             // Calculate and set default gamma for kernel PCA
-            updateGammaForData(parseResult);
+            updateGammaForData(data);
         } catch (err) {
             console.error('File selection failed:', err);
             setFileError(`Failed to load file: ${err}`);
@@ -430,6 +441,7 @@ function AppContent() {
     const generateCLICommand = (): string => {
         return generateCLICommandUtil({
             fileName,
+            filePath,
             components: config.components,
             method: config.method,
             kernelType: config.kernelType,
