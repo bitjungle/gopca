@@ -45,6 +45,33 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Extracted NIPALS algorithm helpers (72% and 54% complexity reduction)
   - Improved testability with comprehensive unit tests
 
+## [1.1.5] - 2025-10-09
+
+### Fixed
+- Corrected MSIX package identity name to match Microsoft Partner Center reservation
+  - Changed from `BitjungleGoPCA` to `bitjungle.GoPCA`
+  - Fixes Partner Center upload validation error
+  - Required for successful Microsoft Store submission
+
+## [1.1.4] - 2025-10-09
+
+### Added
+- **Microsoft Store Distribution** (#563, #560)
+  - Automated MSIX package generation in CI/CD workflow
+  - Self-signed temporary certificate (Microsoft Store re-signs on publish)
+  - Dynamic Windows SDK tool discovery (no hardcoded paths)
+  - Smart version format conversion (strips pre-release suffixes)
+  - Complete infrastructure with AppxManifest template and MSIX assets
+  - Comprehensive documentation in `docs/devel/msix-packaging.md`
+  - End-user installation guide in `docs/windows-installation.md`
+  - Resolves Windows SmartScreen warning showstopper
+
+### Documentation
+- Added MSIX package to release verification checklist
+- Updated release guide with Microsoft Store submission process
+- Created comprehensive MSIX technical documentation
+- Added Windows installation guide for end users
+
 ## [1.1.3] - 2025-01-10
 
 ### Changed
