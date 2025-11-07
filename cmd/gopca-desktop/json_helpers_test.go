@@ -22,6 +22,7 @@ func TestToJSONSafe_EmptyData(t *testing.T) {
 	result := fd.ToJSONSafe()
 	if result == nil {
 		t.Fatal("Expected non-nil result for empty data")
+		return
 	}
 	if result.MissingMask != nil {
 		t.Error("Expected nil MissingMask for empty data")
@@ -42,6 +43,7 @@ func TestToJSONSafe_NoMissing(t *testing.T) {
 	result := fd.ToJSONSafe()
 	if result == nil {
 		t.Fatal("Expected non-nil result")
+		return
 	}
 	if result.MissingMask != nil {
 		t.Error("Expected nil MissingMask when no missing values - this is the key optimization")
@@ -65,9 +67,11 @@ func TestToJSONSafe_WithMissing(t *testing.T) {
 	result := fd.ToJSONSafe()
 	if result == nil {
 		t.Fatal("Expected non-nil result")
+		return
 	}
 	if result.MissingMask == nil {
 		t.Fatal("Expected non-nil MissingMask when missing values exist")
+		return
 	}
 	if !result.MissingMask[0][1] {
 		t.Error("Expected MissingMask[0][1] to be true for NaN at position [0][1]")
@@ -109,6 +113,7 @@ func TestToJSONSafe_LargeDatasetNoMissing(t *testing.T) {
 	result := fd.ToJSONSafe()
 	if result == nil {
 		t.Fatal("Expected non-nil result")
+		return
 	}
 	if result.MissingMask != nil {
 		t.Error("PERFORMANCE: Expected nil MissingMask for large dataset without missing values")
@@ -130,9 +135,11 @@ func TestToJSONSafe_EarlyNaN(t *testing.T) {
 	result := fd.ToJSONSafe()
 	if result == nil {
 		t.Fatal("Expected non-nil result")
+		return
 	}
 	if result.MissingMask == nil {
 		t.Fatal("Expected non-nil MissingMask")
+		return
 	}
 	if !result.MissingMask[0][0] {
 		t.Error("Expected MissingMask[0][0] to be true for NaN in first position")
@@ -165,6 +172,7 @@ func TestToJSONSafe_NumericTargetsWithNaN(t *testing.T) {
 	result := fd.ToJSONSafe()
 	if result == nil {
 		t.Fatal("Expected non-nil result")
+		return
 	}
 	// The main data has no NaN, so MissingMask should be nil
 	if result.MissingMask != nil {
