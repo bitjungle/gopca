@@ -24,15 +24,15 @@ type ExportMetadata struct {
 
 // ConvertToPCAOutputData converts PCAResult and Data to PCAOutputData for export
 // This function is shared between CLI and Desktop applications
-func ConvertToPCAOutputData(result *types.PCAResult, data *Data, includeMetrics bool,
+func ConvertToPCAOutputData(result *types.PCAResult, data *Data, preprocessedData types.Matrix, includeMetrics bool,
 	config types.PCAConfig, preprocessor *core.Preprocessor,
 	categoricalData map[string][]string, targetData map[string][]float64) *types.PCAOutputData {
-	return ConvertToPCAOutputDataWithMetadata(result, data, includeMetrics, config,
+	return ConvertToPCAOutputDataWithMetadata(result, data, preprocessedData, includeMetrics, config,
 		preprocessor, categoricalData, targetData, nil)
 }
 
 // ConvertToPCAOutputDataWithMetadata converts PCAResult and Data to PCAOutputData with optional metadata
-func ConvertToPCAOutputDataWithMetadata(result *types.PCAResult, data *Data, includeMetrics bool,
+func ConvertToPCAOutputDataWithMetadata(result *types.PCAResult, data *Data, preprocessedData types.Matrix, includeMetrics bool,
 	config types.PCAConfig, preprocessor *core.Preprocessor,
 	categoricalData map[string][]string, targetData map[string][]float64,
 	exportMeta *ExportMetadata) *types.PCAOutputData {
@@ -142,8 +142,8 @@ func ConvertToPCAOutputDataWithMetadata(result *types.PCAResult, data *Data, inc
 	}
 
 	// Add metrics if requested (skip for kernel PCA as it doesn't have loadings)
-	if includeMetrics && result.Method != "kernel" && data.Matrix != nil {
-		metrics, err := core.CalculateMetricsFromPCAResult(result, data.Matrix)
+	if includeMetrics && result.Method != "kernel" && preprocessedData != nil {
+		metrics, err := core.CalculateMetricsFromPCAResult(result, preprocessedData)
 		if err == nil && metrics != nil {
 			metricsData := &types.MetricsData{
 				HotellingT2: make([]float64, len(metrics)),

@@ -212,6 +212,12 @@ func (kpca *KernelPCAImpl) Fit(data types.Matrix, config types.PCAConfig) (*type
 		return nil, fmt.Errorf("invalid kernel configuration: %w", err)
 	}
 
+	// Normalize "polynomial" to canonical "poly" for internal consistency
+	// Both forms are accepted by validation and JSON schema, but internally we use "poly"
+	if config.KernelType == "polynomial" {
+		config.KernelType = "poly"
+	}
+
 	kpca.kernelType = KernelType(config.KernelType)
 
 	// Validate data

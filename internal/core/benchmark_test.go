@@ -128,17 +128,25 @@ func BenchmarkKernel_PCA(b *testing.B) {
 				data := generateBenchmarkData(size.rows, size.cols)
 				engine := NewPCAEngineForMethod("kernel")
 
+				// Configure kernel-specific parameters
+				config := types.PCAConfig{
+					Components:  min(5, size.cols/2),
+					Method:      "kernel",
+					KernelType:  kernel,
+					KernelGamma: 0.01,
+				}
+				// Set polynomial-specific parameters
+				if kernel == "polynomial" || kernel == "poly" {
+					config.KernelDegree = 3
+					config.KernelCoef0 = 1.0
+				}
+
 				b.ResetTimer()
 				b.ReportAllocs()
 
 				for i := 0; i < b.N; i++ {
 					matrix := utils.DenseToMatrix(data)
-					_, err := engine.FitTransform(matrix, types.PCAConfig{
-						Components:  min(5, size.cols/2),
-						Method:      "kernel",
-						KernelType:  kernel,
-						KernelGamma: 0.01,
-					})
+					_, err := engine.FitTransform(matrix, config)
 					if err != nil {
 						b.Fatal(err)
 					}
