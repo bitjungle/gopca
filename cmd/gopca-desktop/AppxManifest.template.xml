@@ -6,7 +6,7 @@
   IgnorableNamespaces="uap rescap">
 
   <Identity
-    Name="BitjungleGoPCA"
+    Name="bitjungle.GoPCA"
     Publisher="{{PUBLISHER}}"
     Version="{{VERSION}}" />
 
