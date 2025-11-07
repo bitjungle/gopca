@@ -22,51 +22,58 @@ func TestEventBus_NewEventBus(t *testing.T) {
 
 func TestEventBus_SubscribeAndPublish(t *testing.T) {
 	bus := NewEventBus()
-	received := false
+	received := make(chan bool, 1)
 
 	bus.Subscribe(EventDataLoaded, func(event Event) {
-		received = true
 		if event.Type != EventDataLoaded {
 			t.Errorf("expected type %v, got %v", EventDataLoaded, event.Type)
 		}
+		received <- true
 	})
 
 	bus.Publish(Event{Type: EventDataLoaded, Data: map[string]interface{}{"test": "data"}})
 
-	time.Sleep(50 * time.Millisecond)
-
-	if !received {
-		t.Error("event was not received by subscriber")
+	select {
+	case <-received:
+		// Success - event was received
+	case <-time.After(time.Second):
+		t.Error("timeout: event was not received by subscriber")
 	}
 }
 
 func TestEventBus_MultipleSubscribers(t *testing.T) {
 	bus := NewEventBus()
-	count := 0
+	received := make(chan struct{}, 2)
 
 	bus.Subscribe(EventDataLoaded, func(event Event) {
-		count++
+		received <- struct{}{}
 	})
 
 	bus.Subscribe(EventDataLoaded, func(event Event) {
-		count++
+		received <- struct{}{}
 	})
 
 	bus.Publish(Event{Type: EventDataLoaded})
 
-	time.Sleep(50 * time.Millisecond)
-
-	if count != 2 {
-		t.Errorf("expected 2 callbacks, got %d", count)
+	// Wait for both subscribers to receive the event
+	timeout := time.After(time.Second)
+	for i := 0; i < 2; i++ {
+		select {
+		case <-received:
+			// Success - subscriber received event
+		case <-timeout:
+			t.Errorf("timeout: only %d of 2 subscribers received event", i)
+			return
+		}
 	}
 }
 
 func TestEventBus_Unsubscribe(t *testing.T) {
 	bus := NewEventBus()
-	received := false
+	received := make(chan bool, 1)
 
 	handler := func(event Event) {
-		received = true
+		received <- true
 	}
 
 	unsubscribe := bus.Subscribe(EventDataLoaded, handler)
@@ -74,29 +81,32 @@ func TestEventBus_Unsubscribe(t *testing.T) {
 
 	bus.Publish(Event{Type: EventDataLoaded})
 
-	time.Sleep(50 * time.Millisecond)
-
-	if received {
+	// Should timeout since handler was unsubscribed
+	select {
+	case <-received:
 		t.Error("unsubscribed handler should not receive events")
+	case <-time.After(100 * time.Millisecond):
+		// Success - handler did not receive event (timeout expected)
 	}
 }
 
 func TestEventBus_PublishAsync(t *testing.T) {
 	bus := NewEventBus()
-	received := false
+	received := make(chan bool, 1)
 
 	bus.Subscribe(EventPCAStarted, func(event Event) {
 		time.Sleep(10 * time.Millisecond)
-		received = true
+		received <- true
 	})
 
 	ctx := context.Background()
 	bus.PublishAsync(ctx, Event{Type: EventPCAStarted})
 
-	time.Sleep(100 * time.Millisecond)
-
-	if !received {
-		t.Error("async event was not received")
+	select {
+	case <-received:
+		// Success - async event was received
+	case <-time.After(time.Second):
+		t.Error("timeout: async event was not received")
 	}
 }
 
@@ -144,17 +154,18 @@ func TestProgressTracker_Update(t *testing.T) {
 	bus := NewEventBus()
 	tracker := NewProgressTracker(bus, "test-task", 10)
 
-	received := false
+	received := make(chan bool, 1)
 	bus.Subscribe(EventProgressUpdate, func(event Event) {
-		received = true
+		received <- true
 	})
 
 	tracker.Update(5)
 
-	time.Sleep(50 * time.Millisecond)
-
-	if !received {
-		t.Error("progress update event not received")
+	select {
+	case <-received:
+		// Success - progress update event received
+	case <-time.After(time.Second):
+		t.Error("timeout: progress update event not received")
 	}
 }
 
