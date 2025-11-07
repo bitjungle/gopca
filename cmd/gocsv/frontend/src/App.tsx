@@ -125,7 +125,7 @@ function AppContent() {
                 setFileData(result);
                 setFileLoaded(true);
                 // Clear history when loading new file
-                ClearHistory();
+                await ClearHistory();
                 // Clear any previous analysis
                 setMissingValueStats(null);
                 setDataQualityReport(null);
@@ -150,7 +150,7 @@ function AppContent() {
                 setFileLoaded(true);
                 // Filename will be set by the event from backend
                 // Clear history when loading new file
-                ClearHistory();
+                await ClearHistory();
             } else {
                 console.error('Invalid file data received:', result);
                 throw new Error('No data found in file');
