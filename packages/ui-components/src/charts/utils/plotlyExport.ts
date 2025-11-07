@@ -87,6 +87,33 @@ export async function downloadPlot(
 }
 
 /**
+ * Escapes a CSV field value according to RFC 4180
+ *
+ * Fields containing commas, quotes, newlines, or carriage returns must be quoted.
+ * Internal quotes must be escaped by doubling them.
+ *
+ * @param field - The field value to escape
+ * @returns RFC 4180 compliant escaped field
+ */
+function escapeCSVField(field: any): string {
+  // Convert to string, handle null/undefined
+  const value = field == null ? '' : String(field);
+
+  // Check if field needs quoting (comma, quote, newline, or carriage return)
+  const needsQuoting = value.includes(',') ||
+                      value.includes('"') ||
+                      value.includes('\n') ||
+                      value.includes('\r');
+
+  if (needsQuoting) {
+    // Escape quotes by doubling them, then wrap in quotes
+    return `"${value.replace(/"/g, '""')}"`;
+  }
+
+  return value;
+}
+
+/**
  * Export plot data to CSV
  *
  * @param data - Plot data
@@ -120,7 +147,7 @@ headers.add('group');
 
   // Build CSV content
   const rows: string[] = [];
-  rows.push(Array.from(headers).join(','));
+  rows.push(Array.from(headers).map(escapeCSVField).join(','));
 
   // Combine all traces
   data.forEach(trace => {
@@ -128,19 +155,19 @@ headers.add('group');
     for (let i = 0; i < length; i++) {
       const row: string[] = [];
       if (headers.has('x')) {
-row.push(trace.x?.[i] ?? '');
+row.push(escapeCSVField(trace.x?.[i] ?? ''));
 }
       if (headers.has('y')) {
-row.push(trace.y?.[i] ?? '');
+row.push(escapeCSVField(trace.y?.[i] ?? ''));
 }
       if (headers.has('z')) {
-row.push(trace.z?.[i] ?? '');
+row.push(escapeCSVField(trace.z?.[i] ?? ''));
 }
       if (headers.has('label')) {
-row.push(trace.text?.[i] ?? '');
+row.push(escapeCSVField(trace.text?.[i] ?? ''));
 }
       if (headers.has('group')) {
-row.push(trace.name ?? '');
+row.push(escapeCSVField(trace.name ?? ''));
 }
       rows.push(row.join(','));
     }
