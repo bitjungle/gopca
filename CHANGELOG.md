@@ -5,6 +5,46 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.1.6] - 2025-11-07
+
+### Added
+- Microsoft Store distribution with automated MSIX packaging (#561, #560)
+- CSV format tooltip to data table in Step 1 (#547)
+
+### Fixed
+- Race conditions in EventBus tests preventing pre-commit hooks (#581, #580)
+- Nil dereference in CalculateGroupEllipses function (#578, #571)
+- Student's t-distribution CDF implementation for accurate p-values (#577, #570)
+- Kernel PCA method name normalization ('polynomial' → 'poly') (#576, #569)
+- CLI double-preprocessing and incorrect diagnostics data (#575, #572, #573)
+- Windows SDK tools dynamic location for MSIX builds (#562)
+- Z-axis component selector for 3D Biplot visualization (#535)
+- LaTeX math duplication by importing ui-components CSS (#534)
+- Preserve unselected rows in table after plot selection (#544)
+
+### Changed
+- Removed legacy missing-value helper functions (technical debt cleanup) (#579, #574)
+- Default coef0 value for polynomial kernel from 0 to 1 for better defaults (#542)
+- Simplified embedded stock dataset for accessibility to non-traders (#539)
+- Removed redundant CSV format text in Step 1 UI (#548)
+
+### Documentation
+- Optimized intro_to_pca.md illustration images for faster loading (#556)
+- Improved temporal PCA documentation and figures (#527, #455)
+
+### Testing
+- Comprehensive test coverage improvements for pkg packages (#553)
+  - pkg/csv: 26% → 73.8% coverage
+  - pkg/security: 50.6% → 85.8% coverage
+  - pkg/integration: 34.1% → 46.6% coverage
+- Fixed data races in EventBus tests with proper channel synchronization (#581)
+
+### Refactoring
+- Code quality improvements following DRY/KISS principles (#557)
+  - Consolidated JSON conversion helpers (~150 lines eliminated)
+  - Extracted NIPALS algorithm helpers (72% and 54% complexity reduction)
+  - Improved testability with comprehensive unit tests
+
 ## [1.1.3] - 2025-01-10
 
 ### Changed
