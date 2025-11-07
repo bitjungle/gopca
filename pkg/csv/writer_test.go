@@ -23,6 +23,7 @@ func TestNewWriter(t *testing.T) {
 
 	if writer == nil {
 		t.Fatal("expected non-nil writer")
+		return
 	}
 
 	if writer.opts.Delimiter != opts.Delimiter {

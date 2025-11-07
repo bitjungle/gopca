@@ -5,6 +5,7 @@ import { optimizeToRanges } from './rangeOptimizer';
 
 export interface CLIConfig {
     fileName?: string;
+    filePath?: string;
     components: number;
     method: string;
     kernelType?: string;
@@ -32,12 +33,16 @@ export interface CLIConfig {
 export function generateCLICommand(config: CLIConfig): string {
     let cmd = 'pca analyze';
 
+    // Use filePath if available (user file), otherwise fileName (built-in dataset)
+    // For built-in datasets, fileName is just for illustration
+    const pathToUse = config.filePath || config.fileName;
+
     // Add file path (with quotes if it contains spaces)
-    if (config.fileName) {
-        if (config.fileName.includes(' ')) {
-            cmd += ` "${config.fileName}"`;
+    if (pathToUse) {
+        if (pathToUse.includes(' ')) {
+            cmd += ` "${pathToUse}"`;
         } else {
-            cmd += ` ${config.fileName}`;
+            cmd += ` ${pathToUse}`;
         }
     }
 
@@ -50,10 +55,11 @@ export function generateCLICommand(config: CLIConfig): string {
     // Add kernel parameters if using kernel PCA
     if (config.method === 'kernel') {
         cmd += ` --kernel-type ${config.kernelType}`;
-        if (config.kernelType === 'rbf' || config.kernelType === 'laplacian' || config.kernelType === 'sigmoid') {
+        if (config.kernelType === 'rbf') {
             cmd += ` --kernel-gamma ${config.kernelGamma}`;
         }
-        if (config.kernelType === 'polynomial' || config.kernelType === 'sigmoid') {
+        if (config.kernelType === 'polynomial' || config.kernelType === 'poly') {
+            cmd += ` --kernel-gamma ${config.kernelGamma}`;
             cmd += ` --kernel-degree ${config.kernelDegree}`;
             cmd += ` --kernel-coef0 ${config.kernelCoef0}`;
         }

@@ -30,6 +30,10 @@ export const DocumentationViewer: React.FC<DocumentationViewerProps> = ({
 
   useEffect(() => {
     if (isOpen) {
+      // Reset state to show loading and clear stale content
+      setIsLoading(true);
+      setMarkdownContent('');
+
       // Load the markdown file
       fetch(markdownPath)
         .then(response => {

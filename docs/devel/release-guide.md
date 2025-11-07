@@ -20,6 +20,77 @@ The release process is fully automated via GitHub Actions. Once you push a versi
 - Version numbers consistent across all files
 - No linter configuration issues
 
+## Preventing Merge Conflicts
+
+To avoid conflicts during release PRs, keep `develop` and `main` branches synchronized:
+
+### Best Practice: Sync After Each Release
+
+After every release to `main`, immediately sync `develop`:
+
+```bash
+# After release tag is pushed and workflow completes
+git checkout develop
+git pull origin develop
+git merge origin/main
+git push origin develop
+```
+
+This ensures `develop` always has the complete release history from `main`.
+
+### Before Starting a New Release
+
+If you haven't synced recently, check for divergence:
+
+```bash
+# Check what's in main but not in develop
+git log develop..main --oneline
+
+# If you see release commits, sync now:
+git checkout develop
+git merge origin/main
+git push origin develop
+```
+
+### Common Conflict Scenarios
+
+**Scenario 1: CHANGELOG.md conflicts**
+- Cause: `main` has release entries (e.g., v1.1.5, v1.1.4) not in `develop`
+- Solution: Merge versions chronologically, newest first
+- Keep all version sections from both branches
+
+**Scenario 2: Version number conflicts (wails.json)**
+- Cause: You're releasing v1.1.6 but `main` has v1.1.5
+- Solution: Keep your new version (v1.1.6)
+
+**Scenario 3: New files in main (e.g., MSIX assets)**
+- Cause: Files added in previous releases to `main`
+- Solution: Accept `main`'s version with `git checkout --theirs <file>`
+
+### If Conflicts Occur During Release PR
+
+1. **Don't abort** - conflicts are normal if branches diverged
+2. **Merge main into your release branch**:
+   ```bash
+   git checkout release-vX.X.X
+   git merge origin/main
+   ```
+3. **Resolve systematically**:
+   - CHANGELOG.md: Keep all versions, yours at top
+   - wails.json: Keep your new version number
+   - New files: Usually accept main's version (`git checkout --theirs`)
+4. **Test after resolving**:
+   ```bash
+   make test
+   make lint
+   ```
+5. **Push resolved branch**:
+   ```bash
+   git push --force-with-lease
+   ```
+
+The CI checks will re-run on your resolved branch.
+
 ## Release Process
 
 ### Special Case: Releasing from develop Branch

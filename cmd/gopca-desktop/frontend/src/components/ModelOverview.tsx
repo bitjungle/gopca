@@ -105,8 +105,6 @@ export const ModelOverview: React.FC<ModelOverviewProps> = ({ pcaResult, selecte
           return `γ = ${kernelParams.gamma?.toFixed(4) || 'auto'}`;
         case 'polynomial':
           return `degree = ${kernelParams.degree || 3}, γ = ${kernelParams.gamma?.toFixed(4) || 'auto'}`;
-        case 'sigmoid':
-          return `γ = ${kernelParams.gamma?.toFixed(4) || 'auto'}, c₀ = ${kernelParams.coef0 || 0}`;
         case 'linear':
           return 'no parameters';
         default:
@@ -121,8 +119,6 @@ export const ModelOverview: React.FC<ModelOverviewProps> = ({ pcaResult, selecte
           return 'Radial Basis Function';
         case 'polynomial':
           return 'Polynomial';
-        case 'sigmoid':
-          return 'Sigmoid';
         case 'linear':
           return 'Linear';
         default:
