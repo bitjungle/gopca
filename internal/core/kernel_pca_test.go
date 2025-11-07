@@ -71,6 +71,7 @@ func TestKernelPCA_LinearKernel(t *testing.T) {
 	// Check result structure
 	if result == nil {
 		t.Fatal("Result is nil")
+		return
 	}
 
 	if len(result.Scores) != len(data) {
