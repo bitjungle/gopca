@@ -390,7 +390,7 @@ func (kpca *KernelPCAImpl) Fit(data types.Matrix, config types.PCAConfig) (*type
 		ComponentLabels:      componentLabels,
 		ComponentsComputed:   config.Components,
 		Method:               "kernel",
-		PreprocessingApplied: config.ScaleOnly || config.SNV || config.VectorNorm,
+		PreprocessingApplied: kpca.preprocessor != nil,
 		AllEigenvalues:       allEigvals,
 		KernelType:           string(kpca.kernelType),
 		KernelParams:         kernelParams,
