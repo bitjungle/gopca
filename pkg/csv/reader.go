@@ -400,7 +400,7 @@ func (r *Reader) parseAsMixedWithTargets(records [][]string, nullMap map[string]
 	csvData, categoricalData, targetData, err := types.ParseCSVMixedWithTargets(
 		strings.NewReader(recordsToString(records)),
 		format,
-		nil, // Auto-detect targets based on suffix
+		r.opts.TargetCols, // Use provided target columns
 	)
 	if err != nil {
 		return nil, err

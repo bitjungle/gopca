@@ -344,3 +344,128 @@ func TestParseInvalidNumeric(t *testing.T) {
 		t.Error("expected error for invalid numeric value")
 	}
 }
+
+// TestTargetColumns verifies that target columns are correctly excluded from the feature matrix
+// but remain available in NumericTargetColumns for visualization purposes.
+// This is a regression test for issue #598.
+func TestTargetColumns(t *testing.T) {
+	tests := []struct {
+		name             string
+		input            string
+		targetCols       []string
+		wantFeatureCols  int
+		wantTargetCols   int
+		expectedFeatures []string
+		expectedTargets  []string
+	}{
+		{
+			name: "single target column",
+			input: `"",A,B,C,Target
+row1,1,2,3,100
+row2,4,5,6,200`,
+			targetCols:       []string{"Target"},
+			wantFeatureCols:  3,
+			wantTargetCols:   1,
+			expectedFeatures: []string{"A", "B", "C"},
+			expectedTargets:  []string{"Target"},
+		},
+		{
+			name: "multiple target columns",
+			input: `"",A,B,C,Target1,Target2
+row1,1,2,3,100,101
+row2,4,5,6,200,201`,
+			targetCols:       []string{"Target1", "Target2"},
+			wantFeatureCols:  3,
+			wantTargetCols:   2,
+			expectedFeatures: []string{"A", "B", "C"},
+			expectedTargets:  []string{"Target1", "Target2"},
+		},
+		{
+			name: "target columns with whitespace in input string",
+			input: `"",A,B,C,Target1,Target2
+row1,1,2,3,100,101
+row2,4,5,6,200,201`,
+			targetCols:       []string{"Target1", "Target2"}, // Already trimmed (simulating analyze.go behavior)
+			wantFeatureCols:  3,
+			wantTargetCols:   2,
+			expectedFeatures: []string{"A", "B", "C"},
+			expectedTargets:  []string{"Target1", "Target2"},
+		},
+		{
+			name: "no target columns",
+			input: `"",A,B,C
+row1,1,2,3
+row2,4,5,6`,
+			targetCols:       nil,
+			wantFeatureCols:  3,
+			wantTargetCols:   0,
+			expectedFeatures: []string{"A", "B", "C"},
+			expectedTargets:  []string{},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			opts := DefaultOptions()
+			opts.TargetCols = tt.targetCols
+			if len(tt.targetCols) > 0 {
+				opts.ParseMode = ParseMixedWithTargets
+			}
+			reader := NewReader(opts)
+			data, err := reader.Read(strings.NewReader(tt.input))
+
+			if err != nil {
+				t.Fatalf("unexpected error: %v", err)
+			}
+
+			// Check feature matrix dimensions
+			if len(data.Headers) != tt.wantFeatureCols {
+				t.Errorf("feature columns = %d, want %d (got: %v)",
+					len(data.Headers), tt.wantFeatureCols, data.Headers)
+			}
+
+			// Check target columns count
+			if len(data.NumericTargetColumns) != tt.wantTargetCols {
+				t.Errorf("target columns = %d, want %d (got: %v)",
+					len(data.NumericTargetColumns), tt.wantTargetCols, data.NumericTargetColumns)
+			}
+
+			// Verify feature column names
+			for i, expected := range tt.expectedFeatures {
+				if i >= len(data.Headers) {
+					t.Errorf("missing feature column at index %d: %s", i, expected)
+					continue
+				}
+				if data.Headers[i] != expected {
+					t.Errorf("feature column %d = %s, want %s",
+						i, data.Headers[i], expected)
+				}
+			}
+
+			// Verify target column names
+			targetNames := make([]string, 0, len(data.NumericTargetColumns))
+			for name := range data.NumericTargetColumns {
+				targetNames = append(targetNames, name)
+			}
+			if len(targetNames) != len(tt.expectedTargets) {
+				t.Errorf("target column count = %d, want %d",
+					len(targetNames), len(tt.expectedTargets))
+			}
+			for _, expected := range tt.expectedTargets {
+				if _, exists := data.NumericTargetColumns[expected]; !exists {
+					t.Errorf("target column %s not found in NumericTargetColumns", expected)
+				}
+			}
+
+			// Verify that target columns are NOT in the feature matrix
+			for _, targetName := range tt.expectedTargets {
+				for _, featureName := range data.Headers {
+					if featureName == targetName {
+						t.Errorf("target column %s found in feature matrix (should be excluded)",
+							targetName)
+					}
+				}
+			}
+		})
+	}
+}
