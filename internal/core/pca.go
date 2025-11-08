@@ -206,7 +206,7 @@ func (p *PCAImpl) Fit(data types.Matrix, config types.PCAConfig) (*types.PCAResu
 		ComponentLabels:      componentLabels,
 		ComponentsComputed:   actualComponents,
 		Method:               config.Method,
-		PreprocessingApplied: config.MeanCenter || config.StandardScale || config.RobustScale,
+		PreprocessingApplied: p.preprocessor != nil,
 		Means:                means,
 		StdDevs:              stddevs,
 		AllEigenvalues:       allEigenvalues,
