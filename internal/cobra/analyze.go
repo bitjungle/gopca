@@ -220,7 +220,6 @@ func runAnalyze(opts *AnalyzeOptions, inputFile string) error {
 			parseOpts.TargetCols[i] = strings.TrimSpace(parseOpts.TargetCols[i])
 		}
 		// Enable mixed parsing with target column support
-		parseOpts.ParseMode = pkgcsv.ParseMixedWithTargets
 	}
 
 	// Load CSV data with target column detection
