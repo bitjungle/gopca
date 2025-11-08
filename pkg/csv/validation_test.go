@@ -19,6 +19,7 @@ func TestNewValidator(t *testing.T) {
 
 	if validator == nil {
 		t.Fatal("expected non-nil validator")
+		return
 	}
 
 	if validator.opts.Delimiter != opts.Delimiter {

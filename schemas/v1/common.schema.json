@@ -17,7 +17,7 @@
     "MissingValueStrategy": {
       "type": "string",
       "description": "Strategy for handling missing values in data",
-      "enum": ["error", "drop", "mean", "median", "native"]
+      "enum": ["error", "drop", "mean", "median", "zero", "native"]
     },
     "PCAMethod": {
       "type": "string",

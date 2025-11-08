@@ -1154,6 +1154,7 @@ return;
                                                 { value: 'drop', label: 'Drop Rows with Missing Values' },
                                                 { value: 'mean', label: 'Impute with Column Mean' },
                                                 { value: 'median', label: 'Impute with Column Median' },
+                                                { value: 'zero', label: 'Impute with Zero' },
                                                 { value: 'native', label: 'Native NIPALS Handling (NIPALS only)' }
                                             ]}
                                             className="w-full"

@@ -5,6 +5,17 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.1.7] - 2025-11-07
+
+### Fixed
+- RFC 4180 compliant CSV field escaping to prevent data corruption (#593, #588)
+- DocumentationViewer modal state reset to prevent stale content flash (#595, #589)
+- GoCSV async history clearing with proper await (#592, #587)
+- CLI command generator uses actual file paths instead of dataset names (#590, #585)
+
+### Changed
+- Removed dead code for non-existent kernel types (code cleanup) (#591, #586)
+
 ## [1.1.6] - 2025-11-07
 
 ### Added

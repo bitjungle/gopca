@@ -43,6 +43,9 @@ func (h *MissingValueHandler) HandleMissingValues(data types.Matrix, missingInfo
 	case types.MissingMedian:
 		return h.imputeWithMedian(data, missingInfo, selectedCols)
 
+	case types.MissingZero:
+		return h.imputeWithZero(data, missingInfo, selectedCols)
+
 	default:
 		return nil, fmt.Errorf("unsupported missing value strategy: %s", h.strategy)
 	}
@@ -124,6 +127,27 @@ func (h *MissingValueHandler) imputeWithMedian(data types.Matrix, missingInfo *t
 		for row := 0; row < len(data); row++ {
 			if math.IsNaN(imputedData[row][col]) {
 				imputedData[row][col] = median
+			}
+		}
+	}
+
+	return imputedData, nil
+}
+
+// imputeWithZero replaces missing values with zero
+func (h *MissingValueHandler) imputeWithZero(data types.Matrix, missingInfo *types.MissingValueInfo, selectedCols []int) (types.Matrix, error) {
+	// Create a copy of the data
+	imputedData := make(types.Matrix, len(data))
+	for i := range data {
+		imputedData[i] = make([]float64, len(data[i]))
+		copy(imputedData[i], data[i])
+	}
+
+	// Impute missing values with zero
+	for _, col := range missingInfo.ColumnIndices {
+		for row := 0; row < len(data); row++ {
+			if math.IsNaN(imputedData[row][col]) {
+				imputedData[row][col] = 0.0
 			}
 		}
 	}

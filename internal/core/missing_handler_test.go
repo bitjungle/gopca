@@ -114,6 +114,39 @@ func TestMissingValueHandler_HandleMissingValues(t *testing.T) {
 			},
 		},
 		{
+			name:         "Impute with zero",
+			strategy:     types.MissingZero,
+			selectedCols: []int{0, 1, 2, 3},
+			wantRows:     4,
+			checkResult: func(t *testing.T, result types.Matrix) {
+				// All NaN values should be replaced with 0.0
+				// Column 1: rows 0 and 2 should be 0.0
+				if math.IsNaN(result[0][1]) {
+					t.Errorf("Result[0][1] is still NaN, should be imputed with 0.0")
+				} else if result[0][1] != 0.0 {
+					t.Errorf("Expected zero imputation for [0][1], got %f, want 0.0", result[0][1])
+				}
+
+				if math.IsNaN(result[2][1]) {
+					t.Errorf("Result[2][1] is still NaN, should be imputed with 0.0")
+				} else if result[2][1] != 0.0 {
+					t.Errorf("Expected zero imputation for [2][1], got %f, want 0.0", result[2][1])
+				}
+
+				// Column 2: row 1 should be 0.0
+				if math.IsNaN(result[1][2]) {
+					t.Errorf("Result[1][2] is still NaN, should be imputed with 0.0")
+				} else if result[1][2] != 0.0 {
+					t.Errorf("Expected zero imputation for [1][2], got %f, want 0.0", result[1][2])
+				}
+
+				// Non-NaN values should be unchanged
+				if result[1][1] != 6.0 {
+					t.Errorf("Non-NaN value changed: [1][1] = %f, want 6.0", result[1][1])
+				}
+			},
+		},
+		{
 			name:         "No missing values in selected columns",
 			strategy:     types.MissingDrop,
 			selectedCols: []int{0, 3}, // Columns without missing values
