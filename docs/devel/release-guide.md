@@ -563,6 +563,30 @@ If self-hosted runner is offline:
 - Check runner status: Settings → Actions → Runners
 - The workflow will wait for runner to come online
 
+### Release Notes Variable Substitution Issues
+
+If release notes contain literal `{VERSION_NO_V}` text or wildcard links like `GoPCA_*.msix`:
+
+**Root Cause**: The `VERSION_NO_V` variable wasn't defined in the "Generate release body with changelog" step of `.github/workflows/release.yml`.
+
+**Fix**:
+1. Ensure `VERSION_NO_V="${VERSION#v}"` is defined early in the step (after VERSION is set)
+2. Use bash variable syntax `${VERSION_NO_V}` not `{VERSION_NO_V}` in heredoc templates
+3. Replace wildcards in links with actual filenames using `${VERSION_NO_V}`
+
+**To Fix a Released Version**:
+```bash
+# Download current release notes
+gh release view vX.X.X --json body --jq '.body' > /tmp/release_notes.md
+
+# Fix the text (replace X.X.X with actual version)
+sed -i '' 's/GoPCA_{VERSION_NO_V}\.0_x64\.msix/GoPCA_X.X.X.0_x64.msix/g' /tmp/release_notes.md
+sed -i '' 's|releases/download/vX\.X\.X/GoPCA_\*\.msix|releases/download/vX.X.X/GoPCA_X.X.X.0_x64.msix|g' /tmp/release_notes.md
+
+# Update the release
+gh release edit vX.X.X --notes-file /tmp/release_notes.md
+```
+
 ## Windows Code Signing (Manual Process)
 
 After the automated release workflow completes, the Windows installer needs to be manually signed to avoid security warnings.
