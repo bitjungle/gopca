@@ -116,6 +116,21 @@ For major releases with many features accumulated in develop:
 
 When using Claude Code or another AI assistant to create a release, the assistant can automate most steps:
 
+**What requires MANUAL action FIRST:**
+- ❌ **Update CHANGELOG.md** - MUST be done before running prepare-release.sh
+  ```bash
+  # List PRs merged since last release
+  gh pr list --state merged --base develop --limit 30 \
+    --json number,title,mergedAt --jq '.[] | "\(.number): \(.title) (\(.mergedAt[:10]))"'
+
+  # Identify which PRs belong to this release (merged after previous release date)
+  # Edit CHANGELOG.md with:
+  # - Version and date header: ## [X.X.X] - YYYY-MM-DD
+  # - Organized sections: Added, Fixed, Changed, Documentation, etc.
+  # - PR numbers for each change
+  # - Commit the updated CHANGELOG.md
+  ```
+
 **What the AI CAN do automatically:**
 1. ✅ Check current version and determine next version
 2. ✅ Verify main branch and clean working directory
@@ -128,11 +143,15 @@ When using Claude Code or another AI assistant to create a release, the assistan
 9. ✅ Monitor release workflow progress
 
 **What requires MANUAL action:**
+- ❌ **Update CHANGELOG.md FIRST** - See above (CRITICAL - do not skip!)
 - ❌ **Merge the PR** - Must be done via GitHub web interface due to branch protection rules
 
 **AI Assistant Instructions:**
 ```bash
-# The AI will execute these automatically:
+# FIRST: Update CHANGELOG.md manually (see above)
+# Commit the CHANGELOG.md changes before proceeding
+
+# Then the AI will execute these automatically:
 ./scripts/prepare-release.sh vX.X.X
 git push -u origin release-vX.X.X
 gh pr create --title "Release vX.X.X" --body "Preparing release vX.X.X"
