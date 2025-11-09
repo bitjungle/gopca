@@ -5,6 +5,23 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.1.8] - 2025-11-09
+
+### Added
+- **Bundled MSIX Package** for Microsoft Store (#608, #567)
+  - Single installation package containing both GoPCA Desktop and GoCSV
+  - Both apps installed in same directory enabling tight integration
+  - Enables "Open in GoPCA" and "Open GoCSV" cross-app features
+  - Includes comprehensive MSIX packaging documentation
+  - Suitable for Microsoft Store submission and enterprise sideloading
+
+### Fixed
+- CustomSelect component keyboard navigation with type-to-search filtering (#607)
+- Preprocessor state now used for PreprocessingApplied metadata field (#606)
+- Non-comma delimiter handling in mixed parsing and CLI validation (#605, #599, #600)
+- --target-columns CLI flag now parsed and applied correctly (#604)
+- Missing-strategy zero implementation for imputation (#603)
+
 ## [1.1.7] - 2025-11-07
 
 ### Fixed
