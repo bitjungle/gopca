@@ -196,13 +196,49 @@ EXAMPLES:
 	return cmd
 }
 
+// parseDelimiter converts a delimiter string to a rune, handling escape sequences
+// and validating the input according to CSV standards.
+// Common escape sequences like \t (tab), \n (newline), and \r (carriage return)
+// are automatically converted to their respective rune values.
+// Returns an error if the delimiter is empty or contains more than one character.
+func parseDelimiter(delimStr string) (rune, error) {
+	if delimStr == "" {
+		return 0, fmt.Errorf("delimiter cannot be empty")
+	}
+
+	// Handle common escape sequences
+	switch delimStr {
+	case "\\t":
+		return '\t', nil
+	case "\\n":
+		return '\n', nil
+	case "\\r":
+		return '\r', nil
+	}
+
+	// Convert to rune and validate single character
+	runes := []rune(delimStr)
+	if len(runes) != 1 {
+		return 0, fmt.Errorf("delimiter must be a single character, got %d characters", len(runes))
+	}
+
+	return runes[0], nil
+}
+
 // runAnalyze executes the analyze command
 func runAnalyze(opts *AnalyzeOptions, inputFile string) error {
 	// Parse CSV options
 	parseOpts := pkgcsv.DefaultOptions()
 	parseOpts.HasHeaders = !opts.NoHeaders
 	parseOpts.HasRowNames = !opts.NoIndex
-	parseOpts.Delimiter = rune(opts.Delimiter[0])
+
+	// Parse delimiter with validation and escape sequence handling
+	var err error
+	parseOpts.Delimiter, err = parseDelimiter(opts.Delimiter)
+	if err != nil {
+		return fmt.Errorf("invalid delimiter: %w", err)
+	}
+
 	parseOpts.ParseMode = pkgcsv.ParseMixedWithTargets
 
 	// Parse NA values
@@ -215,7 +251,11 @@ func runAnalyze(opts *AnalyzeOptions, inputFile string) error {
 
 	// Parse target columns
 	if opts.TargetCols != "" {
-		parseOpts.TargetSuffix = "#target"
+		parseOpts.TargetCols = strings.Split(opts.TargetCols, ",")
+		for i := range parseOpts.TargetCols {
+			parseOpts.TargetCols[i] = strings.TrimSpace(parseOpts.TargetCols[i])
+		}
+		// Enable mixed parsing with target column support
 	}
 
 	// Load CSV data with target column detection

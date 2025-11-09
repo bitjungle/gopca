@@ -1398,7 +1398,7 @@ func (a *App) ExportPCAModel(request ExportPCAModelRequest) error {
 	// This ensures metrics are calculated on the same preprocessed data that was used for PCA
 	var preprocessedData types.Matrix
 	if pcaConfig.MeanCenter || pcaConfig.StandardScale || pcaConfig.RobustScale ||
-	   pcaConfig.ScaleOnly || pcaConfig.SNV || pcaConfig.VectorNorm {
+		pcaConfig.ScaleOnly || pcaConfig.SNV || pcaConfig.VectorNorm {
 		var err error
 		preprocessedData, err = preprocessor.FitTransform(request.Data)
 		if err != nil {

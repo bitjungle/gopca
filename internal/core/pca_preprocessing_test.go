@@ -113,6 +113,45 @@ func TestPCAWithDifferentPreprocessing(t *testing.T) {
 				// The preprocessor should have been applied
 			},
 		},
+		{
+			name: "Scale only (variance scaling without centering)",
+			config: types.PCAConfig{
+				Components: 2,
+				ScaleOnly:  true,
+				Method:     "svd",
+			},
+			checkFunction: func(t *testing.T, result *types.PCAResult) {
+				if !result.PreprocessingApplied {
+					t.Error("PreprocessingApplied should be true with ScaleOnly")
+				}
+			},
+		},
+		{
+			name: "SNV (Standard Normal Variate)",
+			config: types.PCAConfig{
+				Components: 2,
+				SNV:        true,
+				Method:     "svd",
+			},
+			checkFunction: func(t *testing.T, result *types.PCAResult) {
+				if !result.PreprocessingApplied {
+					t.Error("PreprocessingApplied should be true with SNV")
+				}
+			},
+		},
+		{
+			name: "VectorNorm (L2 normalization)",
+			config: types.PCAConfig{
+				Components: 2,
+				VectorNorm: true,
+				Method:     "svd",
+			},
+			checkFunction: func(t *testing.T, result *types.PCAResult) {
+				if !result.PreprocessingApplied {
+					t.Error("PreprocessingApplied should be true with VectorNorm")
+				}
+			},
+		},
 	}
 
 	for _, tt := range tests {

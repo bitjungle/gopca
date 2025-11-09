@@ -21,6 +21,8 @@ const (
 	MissingMean MissingValueStrategy = "mean"
 	// MissingMedian replaces missing values with column median
 	MissingMedian MissingValueStrategy = "median"
+	// MissingZero replaces missing values with zero
+	MissingZero MissingValueStrategy = "zero"
 	// MissingNative allows NIPALS to handle missing values natively (NIPALS only)
 	MissingNative MissingValueStrategy = "native"
 )

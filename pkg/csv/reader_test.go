@@ -344,3 +344,358 @@ func TestParseInvalidNumeric(t *testing.T) {
 		t.Error("expected error for invalid numeric value")
 	}
 }
+
+// TestTargetColumns verifies that target columns are correctly excluded from the feature matrix
+// but remain available in NumericTargetColumns for visualization purposes.
+// This is a regression test for issue #598.
+func TestTargetColumns(t *testing.T) {
+	tests := []struct {
+		name             string
+		input            string
+		targetCols       []string
+		wantFeatureCols  int
+		wantTargetCols   int
+		expectedFeatures []string
+		expectedTargets  []string
+	}{
+		{
+			name: "single target column",
+			input: `"",A,B,C,Target
+row1,1,2,3,100
+row2,4,5,6,200`,
+			targetCols:       []string{"Target"},
+			wantFeatureCols:  3,
+			wantTargetCols:   1,
+			expectedFeatures: []string{"A", "B", "C"},
+			expectedTargets:  []string{"Target"},
+		},
+		{
+			name: "multiple target columns",
+			input: `"",A,B,C,Target1,Target2
+row1,1,2,3,100,101
+row2,4,5,6,200,201`,
+			targetCols:       []string{"Target1", "Target2"},
+			wantFeatureCols:  3,
+			wantTargetCols:   2,
+			expectedFeatures: []string{"A", "B", "C"},
+			expectedTargets:  []string{"Target1", "Target2"},
+		},
+		{
+			name: "target columns with whitespace in input string",
+			input: `"",A,B,C,Target1,Target2
+row1,1,2,3,100,101
+row2,4,5,6,200,201`,
+			targetCols:       []string{"Target1", "Target2"}, // Already trimmed (simulating analyze.go behavior)
+			wantFeatureCols:  3,
+			wantTargetCols:   2,
+			expectedFeatures: []string{"A", "B", "C"},
+			expectedTargets:  []string{"Target1", "Target2"},
+		},
+		{
+			name: "no target columns",
+			input: `"",A,B,C
+row1,1,2,3
+row2,4,5,6`,
+			targetCols:       nil,
+			wantFeatureCols:  3,
+			wantTargetCols:   0,
+			expectedFeatures: []string{"A", "B", "C"},
+			expectedTargets:  []string{},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			opts := DefaultOptions()
+			opts.TargetCols = tt.targetCols
+			if len(tt.targetCols) > 0 {
+				opts.ParseMode = ParseMixedWithTargets
+			}
+			reader := NewReader(opts)
+			data, err := reader.Read(strings.NewReader(tt.input))
+
+			if err != nil {
+				t.Fatalf("unexpected error: %v", err)
+			}
+
+			// Check feature matrix dimensions
+			if len(data.Headers) != tt.wantFeatureCols {
+				t.Errorf("feature columns = %d, want %d (got: %v)",
+					len(data.Headers), tt.wantFeatureCols, data.Headers)
+			}
+
+			// Check target columns count
+			if len(data.NumericTargetColumns) != tt.wantTargetCols {
+				t.Errorf("target columns = %d, want %d (got: %v)",
+					len(data.NumericTargetColumns), tt.wantTargetCols, data.NumericTargetColumns)
+			}
+
+			// Verify feature column names
+			for i, expected := range tt.expectedFeatures {
+				if i >= len(data.Headers) {
+					t.Errorf("missing feature column at index %d: %s", i, expected)
+					continue
+				}
+				if data.Headers[i] != expected {
+					t.Errorf("feature column %d = %s, want %s",
+						i, data.Headers[i], expected)
+				}
+			}
+
+			// Verify target column names
+			targetNames := make([]string, 0, len(data.NumericTargetColumns))
+			for name := range data.NumericTargetColumns {
+				targetNames = append(targetNames, name)
+			}
+			if len(targetNames) != len(tt.expectedTargets) {
+				t.Errorf("target column count = %d, want %d",
+					len(targetNames), len(tt.expectedTargets))
+			}
+			for _, expected := range tt.expectedTargets {
+				if _, exists := data.NumericTargetColumns[expected]; !exists {
+					t.Errorf("target column %s not found in NumericTargetColumns", expected)
+				}
+			}
+
+			// Verify that target columns are NOT in the feature matrix
+			for _, targetName := range tt.expectedTargets {
+				for _, featureName := range data.Headers {
+					if featureName == targetName {
+						t.Errorf("target column %s found in feature matrix (should be excluded)",
+							targetName)
+					}
+				}
+			}
+		})
+	}
+}
+
+// TestSemicolonDelimiterMixed verifies that semicolon-delimited files work correctly
+// in ParseMixed mode with proper RFC 4180 escaping.
+// This is a regression test for issue #599.
+func TestSemicolonDelimiterMixed(t *testing.T) {
+	input := `A;B;C
+1;2;3
+4;5;6`
+
+	opts := DefaultOptions()
+	opts.Delimiter = ';'
+	opts.ParseMode = ParseMixed
+	opts.HasRowNames = false
+
+	reader := NewReader(opts)
+	data, err := reader.Read(strings.NewReader(input))
+
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+
+	// All columns are numeric in this test
+	if len(data.Headers) != 3 {
+		t.Errorf("expected 3 numeric headers, got %d (headers: %v)", len(data.Headers), data.Headers)
+	}
+
+	if data.Rows != 2 {
+		t.Errorf("expected 2 rows, got %d", data.Rows)
+	}
+
+	// Verify there are no categorical columns (all numeric)
+	if len(data.CategoricalColumns) != 0 {
+		t.Errorf("expected 0 categorical columns, got %d", len(data.CategoricalColumns))
+	}
+}
+
+// TestSemicolonDelimiterWithTargets verifies that semicolon-delimited files work correctly
+// in ParseMixedWithTargets mode with proper RFC 4180 escaping.
+// This is a regression test for issues #599 and #600.
+func TestSemicolonDelimiterWithTargets(t *testing.T) {
+	input := `"";A;B;C;Target
+row1;1;2;3;100
+row2;4;5;6;200`
+
+	opts := DefaultOptions()
+	opts.Delimiter = ';'
+	opts.TargetCols = []string{"Target"}
+	opts.ParseMode = ParseMixedWithTargets
+
+	reader := NewReader(opts)
+	data, err := reader.Read(strings.NewReader(input))
+
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+
+	// Feature columns should be A, B, C (not Target)
+	if len(data.Headers) != 3 {
+		t.Errorf("feature columns = %d, want 3 (got: %v)", len(data.Headers), data.Headers)
+	}
+
+	// Target columns should contain Target
+	if len(data.NumericTargetColumns) != 1 {
+		t.Errorf("target columns = %d, want 1", len(data.NumericTargetColumns))
+	}
+
+	if _, exists := data.NumericTargetColumns["Target"]; !exists {
+		t.Error("Target column not found in NumericTargetColumns")
+	}
+}
+
+// TestTabDelimiterMixed verifies that tab-delimited files work correctly
+// in ParseMixed mode with proper RFC 4180 escaping.
+// This is a regression test for issue #599.
+func TestTabDelimiterMixed(t *testing.T) {
+	input := "A\tB\tC\n1\t2\t3\n4\t5\t6"
+
+	opts := DefaultOptions()
+	opts.Delimiter = '\t'
+	opts.ParseMode = ParseMixed
+	opts.HasRowNames = false
+
+	reader := NewReader(opts)
+	data, err := reader.Read(strings.NewReader(input))
+
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+
+	// All columns are numeric in this test
+	if len(data.Headers) != 3 {
+		t.Errorf("expected 3 numeric headers, got %d (headers: %v)", len(data.Headers), data.Headers)
+	}
+
+	if data.Rows != 2 {
+		t.Errorf("expected 2 rows, got %d", data.Rows)
+	}
+
+	// Verify there are no categorical columns (all numeric)
+	if len(data.CategoricalColumns) != 0 {
+		t.Errorf("expected 0 categorical columns, got %d", len(data.CategoricalColumns))
+	}
+}
+
+// TestTabDelimiterWithTargets verifies that tab-delimited files work correctly
+// in ParseMixedWithTargets mode.
+// This is a regression test for issues #599 and #600.
+func TestTabDelimiterWithTargets(t *testing.T) {
+	input := "A\tB\tC\tTarget\n1\t2\t3\t100\n4\t5\t6\t200"
+
+	opts := DefaultOptions()
+	opts.Delimiter = '\t'
+	opts.HasRowNames = false // No row names in this simplified test
+	opts.TargetCols = []string{"Target"}
+	opts.ParseMode = ParseMixedWithTargets
+
+	reader := NewReader(opts)
+	data, err := reader.Read(strings.NewReader(input))
+
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+
+	// Feature columns should be A, B, C (not Target)
+	if len(data.Headers) != 3 {
+		t.Errorf("feature columns = %d, want 3 (got: %v)", len(data.Headers), data.Headers)
+	}
+
+	// Target columns should contain Target
+	if len(data.NumericTargetColumns) != 1 {
+		t.Errorf("target columns = %d, want 1", len(data.NumericTargetColumns))
+	}
+
+	// Verify we have 2 rows of data
+	if data.Rows != 2 {
+		t.Errorf("expected 2 rows, got %d", data.Rows)
+	}
+}
+
+// TestRFC4180EscapingWithDelimiters verifies that the recordsToString method
+// properly escapes fields containing the delimiter character according to RFC 4180.
+// This ensures that fields with semicolons in semicolon-delimited files are quoted.
+func TestRFC4180EscapingWithDelimiters(t *testing.T) {
+	tests := []struct {
+		name      string
+		delimiter rune
+		input     string
+		wantRows  int
+	}{
+		{
+			name:      "semicolon delimiter with semicolon in field",
+			delimiter: ';',
+			input: `Name;Description
+Alice;"Developer; Team Lead"
+Bob;"Manager; Director"`,
+			wantRows: 2,
+		},
+		{
+			name:      "tab delimiter with tab in field - should be quoted",
+			delimiter: '\t',
+			input:     "Name\tDescription\nAlice\t\"Developer\tSenior\"\nBob\t\"Manager\tExecutive\"",
+			wantRows:  2,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			opts := DefaultOptions()
+			opts.Delimiter = tt.delimiter
+			opts.ParseMode = ParseMixed
+			opts.HasRowNames = false
+
+			reader := NewReader(opts)
+			data, err := reader.Read(strings.NewReader(tt.input))
+
+			if err != nil {
+				t.Fatalf("unexpected error: %v", err)
+			}
+
+			if data.Rows != tt.wantRows {
+				t.Errorf("expected %d rows, got %d", tt.wantRows, data.Rows)
+			}
+		})
+	}
+}
+
+// TestPollOfPollsCSV is a regression test for the bug where semicolon-delimited
+// European format files (pollofpolls.csv) failed to load in GoPCA Desktop.
+// The file uses semicolons as delimiters and commas as decimal separators.
+// This test verifies issues #599 and #600 are fixed.
+func TestPollOfPollsCSV(t *testing.T) {
+	// Test with actual pollofpolls.csv file
+	opts := EuropeanOptions() // Semicolon delimiter, comma decimal separator
+	opts.ParseMode = ParseMixed
+
+	reader := NewReader(opts)
+	data, err := reader.ReadFile("../../testdata/pollofpolls/pollofpolls.csv")
+
+	if err != nil {
+		t.Fatalf("failed to read pollofpolls.csv: %v", err)
+	}
+
+	// Verify basic structure
+	if data.Rows <= 0 {
+		t.Errorf("expected rows > 0, got %d", data.Rows)
+	}
+
+	if len(data.Headers) <= 0 {
+		t.Errorf("expected headers, got %d", len(data.Headers))
+	}
+
+	// The file should have row names (poll dates)
+	if len(data.RowNames) != data.Rows {
+		t.Errorf("expected %d row names, got %d", data.Rows, len(data.RowNames))
+	}
+
+	// Verify we can parse numeric columns (parties)
+	if data.Columns <= 0 {
+		t.Errorf("expected columns > 0, got %d", data.Columns)
+	}
+
+	// Spot check: verify we have some numeric data
+	if len(data.Matrix) > 0 && len(data.Matrix[0]) > 0 {
+		// First value should be a reasonable number (percentage)
+		firstVal := data.Matrix[0][0]
+		if math.IsNaN(firstVal) || firstVal < 0 || firstVal > 100 {
+			t.Errorf("first data value seems invalid: %f (expected 0-100)", firstVal)
+		}
+	}
+}

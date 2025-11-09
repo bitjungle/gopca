@@ -7,6 +7,7 @@
 package csv
 
 import (
+	"bytes"
 	"encoding/csv"
 	"fmt"
 	"io"
@@ -364,7 +365,7 @@ func (r *Reader) parseAsMixed(records [][]string, nullMap map[string]bool) (*Dat
 
 	// Use existing mixed parser
 	csvData, categoricalData, err := types.ParseCSVMixed(
-		strings.NewReader(recordsToString(records)),
+		strings.NewReader(r.recordsToString(records)),
 		format,
 	)
 	if err != nil {
@@ -398,9 +399,9 @@ func (r *Reader) parseAsMixedWithTargets(records [][]string, nullMap map[string]
 
 	// Use existing parser with target detection
 	csvData, categoricalData, targetData, err := types.ParseCSVMixedWithTargets(
-		strings.NewReader(recordsToString(records)),
+		strings.NewReader(r.recordsToString(records)),
 		format,
-		nil, // Auto-detect targets based on suffix
+		r.opts.TargetCols, // Use provided target columns
 	)
 	if err != nil {
 		return nil, err
@@ -449,26 +450,21 @@ func (r *Reader) getSelectedColumns(totalCols int) []int {
 	return selected
 }
 
-// recordsToString converts records back to CSV string for compatibility
-func recordsToString(records [][]string) string {
-	var sb strings.Builder
-	for _, record := range records {
-		for i, field := range record {
-			if i > 0 {
-				sb.WriteRune(',')
-			}
-			// Simple CSV escaping
-			if strings.ContainsAny(field, ",\"\n") {
-				sb.WriteRune('"')
-				sb.WriteString(strings.ReplaceAll(field, "\"", "\"\""))
-				sb.WriteRune('"')
-			} else {
-				sb.WriteString(field)
-			}
-		}
-		sb.WriteRune('\n')
+// recordsToString converts records back to CSV string using RFC 4180 compliant encoding.
+// Uses the standard library's csv.Writer to ensure proper escaping and delimiter handling.
+// This method respects the configured delimiter from r.opts and handles all special characters
+// (quotes, delimiters, newlines, carriage returns) according to RFC 4180.
+func (r *Reader) recordsToString(records [][]string) string {
+	var buf bytes.Buffer
+	writer := csv.NewWriter(&buf)
+	writer.Comma = r.opts.Delimiter
+
+	if err := writer.WriteAll(records); err != nil {
+		// This should never happen with a bytes.Buffer
+		return ""
 	}
-	return sb.String()
+
+	return buf.String()
 }
 
 // ParseFile is a convenience function for simple CSV parsing

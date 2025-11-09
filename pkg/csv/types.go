@@ -39,6 +39,7 @@ type Options struct {
 	NullValues       []string  // Strings to treat as missing values
 	ParseMode        ParseMode // How to parse the data
 	TargetSuffix     string    // Suffix to identify target columns (e.g., "#target")
+	TargetCols       []string  // Explicit list of target column names to exclude from PCA
 
 	// Reading options (for large files)
 	SkipRows      int   // Number of rows to skip at start

@@ -315,3 +315,94 @@ func TestParseExcludeColumns(t *testing.T) {
 		})
 	}
 }
+
+// TestParseDelimiter verifies delimiter parsing with validation and escape sequences.
+// This is a regression test for issue #600.
+func TestParseDelimiter(t *testing.T) {
+	tests := []struct {
+		name        string
+		input       string
+		expected    rune
+		expectError bool
+	}{
+		{
+			name:        "comma delimiter",
+			input:       ",",
+			expected:    ',',
+			expectError: false,
+		},
+		{
+			name:        "semicolon delimiter",
+			input:       ";",
+			expected:    ';',
+			expectError: false,
+		},
+		{
+			name:        "pipe delimiter",
+			input:       "|",
+			expected:    '|',
+			expectError: false,
+		},
+		{
+			name:        "tab escape sequence",
+			input:       "\\t",
+			expected:    '\t',
+			expectError: false,
+		},
+		{
+			name:        "newline escape sequence",
+			input:       "\\n",
+			expected:    '\n',
+			expectError: false,
+		},
+		{
+			name:        "carriage return escape sequence",
+			input:       "\\r",
+			expected:    '\r',
+			expectError: false,
+		},
+		{
+			name:        "empty delimiter - should error",
+			input:       "",
+			expected:    0,
+			expectError: true,
+		},
+		{
+			name:        "multi-character delimiter - should error",
+			input:       "ab",
+			expected:    0,
+			expectError: true,
+		},
+		{
+			name:        "multi-character delimiter - should error",
+			input:       "|||",
+			expected:    0,
+			expectError: true,
+		},
+		{
+			name:        "unicode character",
+			input:       "→",
+			expected:    '→',
+			expectError: false,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			result, err := parseDelimiter(tt.input)
+
+			if tt.expectError {
+				if err == nil {
+					t.Errorf("parseDelimiter(%q) expected error, got nil", tt.input)
+				}
+			} else {
+				if err != nil {
+					t.Errorf("parseDelimiter(%q) unexpected error: %v", tt.input, err)
+				}
+				if result != tt.expected {
+					t.Errorf("parseDelimiter(%q) = %q, want %q", tt.input, result, tt.expected)
+				}
+			}
+		})
+	}
+}

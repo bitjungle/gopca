@@ -188,8 +188,8 @@ return filteredOptions.length - 1;
             setSearchTerm('');
           }, 1500);
 
-          // Highlight first matching option
-          const firstMatch = options.findIndex(option =>
+          // Highlight first matching option (use filteredOptions for correct index)
+          const firstMatch = filteredOptions.findIndex(option =>
             option.label.toLowerCase().startsWith(newSearchTerm.toLowerCase())
           );
           if (firstMatch >= 0) {
@@ -257,29 +257,48 @@ return filteredOptions.length - 1;
     }
 
     // If we have groups, render grouped options
+    // When filtering is active, we need to filter groups and track indices correctly
     if (Object.keys(groupedOptions.groups).length > 0) {
+      let currentIndex = 0;
+
+      // Filter ungrouped options
+      const filteredUngrouped = groupedOptions.ungrouped.filter(opt =>
+        filteredOptions.includes(opt)
+      );
+
+      // Filter grouped options
+      const filteredGroups: { [key: string]: SelectOption[] } = {};
+      Object.entries(groupedOptions.groups).forEach(([groupName, groupOptions]) => {
+        const filtered = groupOptions.filter(opt => filteredOptions.includes(opt));
+        if (filtered.length > 0) {
+          filteredGroups[groupName] = filtered;
+        }
+      });
+
       return (
         <>
-          {groupedOptions.ungrouped.map((option) =>
-            renderOption(option, options.indexOf(option))
-          )}
-          {Object.entries(groupedOptions.groups).map(([groupName, groupOptions]) => (
+          {filteredUngrouped.map((option) => {
+            const idx = currentIndex++;
+            return renderOption(option, idx);
+          })}
+          {Object.entries(filteredGroups).map(([groupName, groupOptions]) => (
             <div key={groupName}>
               <div className="px-3 py-1 text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider bg-gray-50 dark:bg-gray-800/50">
                 {groupName}
               </div>
-              {groupOptions.map(option =>
-                renderOption(option, options.indexOf(option))
-              )}
+              {groupOptions.map(option => {
+                const idx = currentIndex++;
+                return renderOption(option, idx);
+              })}
             </div>
           ))}
         </>
       );
     }
 
-    // Otherwise render flat list
-    return filteredOptions.map((option) =>
-      renderOption(option, options.indexOf(option))
+    // Otherwise render flat list (use index in filteredOptions, not full options)
+    return filteredOptions.map((option, index) =>
+      renderOption(option, index)
     );
   };
 
