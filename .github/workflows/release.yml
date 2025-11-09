@@ -598,9 +598,9 @@ jobs:
         retention-days: 1
 
   build-msix:
-    name: Build MSIX Package
+    name: Build Bundled MSIX Package
     runs-on: windows-latest
-    needs: [build-desktop]
+    needs: [build-desktop, build-gocsv]
     if: always() && !cancelled()
 
     steps:
@@ -666,6 +666,12 @@ jobs:
         name: gopca-desktop-windows-latest
         path: windows-desktop
 
+    - name: Download Windows GoCSV artifact
+      uses: actions/download-artifact@v4
+      with:
+        name: gocsv-windows-latest
+        path: windows-gocsv
+
     - name: Download signed Windows artifacts
       if: steps.update_signed.outputs.use_signed == 'true'
       uses: actions/download-artifact@v4
@@ -674,12 +680,12 @@ jobs:
         path: windows-signed
       continue-on-error: true
 
-    - name: Prepare GoPCA.exe for MSIX
+    - name: Prepare executables for MSIX
       shell: bash
       run: |
         mkdir -p msix-build
 
-        # Use signed binary if available, otherwise unsigned
+        # Prepare GoPCA.exe (use signed binary if available, otherwise unsigned)
         if [ "${{ steps.update_signed.outputs.use_signed }}" = "true" ] && [ -f "windows-signed/GoPCA.exe" ]; then
           echo "Using signed GoPCA.exe"
           cp windows-signed/GoPCA.exe msix-build/GoPCA.exe
@@ -695,6 +701,25 @@ jobs:
           exit 1
         fi
 
+        # Prepare GoCSV.exe (use signed binary if available, otherwise unsigned)
+        if [ "${{ steps.update_signed.outputs.use_signed }}" = "true" ] && [ -f "windows-signed/GoCSV.exe" ]; then
+          echo "Using signed GoCSV.exe"
+          cp windows-signed/GoCSV.exe msix-build/GoCSV.exe
+        elif [ -f "windows-gocsv/GoCSV.exe" ]; then
+          echo "Using unsigned GoCSV.exe"
+          cp windows-gocsv/GoCSV.exe msix-build/GoCSV.exe
+        elif [ -f "windows-gocsv/GoCSV-amd64.exe" ]; then
+          echo "Using unsigned GoCSV-amd64.exe (cross-compiled)"
+          cp windows-gocsv/GoCSV-amd64.exe msix-build/GoCSV.exe
+        else
+          echo "ERROR: No GoCSV.exe found!"
+          ls -la windows-gocsv/
+          exit 1
+        fi
+
+        echo "=== Executables prepared for MSIX ==="
+        ls -lh msix-build/*.exe
+
     - name: Generate AppxManifest.xml
       shell: bash
       run: |
@@ -704,20 +729,35 @@ jobs:
         # Use cleaned MSIX version (pre-release suffix already stripped)
         MSIX_VERSION="${{ steps.get_version.outputs.msix_version }}.0"
 
-        echo "Generating AppxManifest.xml"
+        echo "Generating bundled MSIX package manifest"
         echo "  Version: $MSIX_VERSION"
         echo "  Publisher: $PUBLISHER"
+        echo "  Apps: GoPCA Desktop + GoCSV Desktop"
 
         # Create package structure
         mkdir -p msix-build/package/Assets
 
-        # Copy Assets
+        # Copy GoPCA Assets
+        echo "Copying GoPCA assets..."
         cp cmd/gopca-desktop/Assets/*.png msix-build/package/Assets/
 
-        # Copy GoPCA.exe
-        cp msix-build/GoPCA.exe msix-build/package/
+        # Copy GoCSV Assets
+        echo "Copying GoCSV assets..."
+        if [ -d "cmd/gocsv/Assets" ]; then
+          cp cmd/gocsv/Assets/*.png msix-build/package/Assets/
+        else
+          echo "ERROR: GoCSV Assets directory not found!"
+          echo "Expected location: cmd/gocsv/Assets/"
+          echo "See cmd/gocsv/Assets/README.md for asset requirements"
+          exit 1
+        fi
 
-        # Generate manifest from template
+        # Copy both executables
+        echo "Copying executables..."
+        cp msix-build/GoPCA.exe msix-build/package/
+        cp msix-build/GoCSV.exe msix-build/package/
+
+        # Generate manifest from template (now includes both apps)
         sed -e "s|{{VERSION}}|${MSIX_VERSION}|g" \
             -e "s|{{PUBLISHER}}|${PUBLISHER}|g" \
             cmd/gopca-desktop/AppxManifest.template.xml > msix-build/package/AppxManifest.xml
@@ -734,7 +774,18 @@ jobs:
           exit 1
         fi
 
-        echo "✓ Manifest generated successfully"
+        # Verify both applications are in manifest
+        if ! grep -q 'Id="GoPCA"' msix-build/package/AppxManifest.xml; then
+          echo "ERROR: GoPCA application not found in manifest"
+          exit 1
+        fi
+
+        if ! grep -q 'Id="GoCSV"' msix-build/package/AppxManifest.xml; then
+          echo "ERROR: GoCSV application not found in manifest"
+          exit 1
+        fi
+
+        echo "✓ Bundled manifest generated successfully"
         echo "Package contents:"
         ls -la msix-build/package/
         ls -la msix-build/package/Assets/

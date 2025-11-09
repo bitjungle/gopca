@@ -1,8 +1,26 @@
 # MSIX Packaging for Microsoft Store
 
-This document explains the MSIX packaging process for GoPCA Desktop, enabling distribution through the Microsoft Store.
+This document explains the MSIX packaging process for the GoPCA Suite, bundling both GoPCA Desktop and GoCSV Desktop in a single MSIX package for Microsoft Store distribution.
 
 ## Overview
+
+The GoPCA Suite MSIX package bundles both GoPCA Desktop and GoCSV Desktop applications together, enabling their tight integration features on Microsoft Store installations.
+
+### Why Bundle Both Apps?
+
+**Integration Benefits:**
+- "Open GoCSV" button in GoPCA works automatically
+- "Open in GoPCA" button in GoCSV works seamlessly
+- No manual installation of companion app required
+- Single install for complete PCA workflow
+
+**Technical Benefits:**
+- Both apps installed to same directory
+- Existing integration code works without changes
+- Apps appear as separate entries in Start Menu
+- Clean single-package uninstall
+
+### MSIX Advantages
 
 MSIX is the modern Windows app package format that provides:
 - **Trusted installation** - No SmartScreen warnings when distributed via Microsoft Store
@@ -17,31 +35,38 @@ MSIX is the modern Windows app package format that provides:
 
 ```
 cmd/gopca-desktop/
-├── AppxManifest.template.xml    # Template with {{VERSION}} and {{PUBLISHER}} placeholders
-└── Assets/                      # MSIX icon assets
+├── AppxManifest.template.xml    # Template with both app definitions
+└── Assets/                      # GoPCA MSIX icon assets
     ├── StoreLogo.png           # 50x50 Store logo
-    ├── Square44x44Logo.png     # 44x44 App list icon
-    └── Square150x150Logo.png   # 150x150 Start menu tile
+    ├── Square44x44Logo.png     # 44x44 GoPCA app list icon
+    └── Square150x150Logo.png   # 150x150 GoPCA start menu tile
+
+cmd/gocsv/
+└── Assets/                      # GoCSV MSIX icon assets
+    ├── GoCSV_Square44x44Logo.png      # 44x44 GoCSV app list icon
+    ├── GoCSV_Square150x150Logo.png    # 150x150 GoCSV start menu tile
+    └── README.md               # Asset specifications
 
 scripts/
 ├── windows/
-│   └── build-msix.sh           # Core MSIX build script
+│   └── build-msix.sh           # Core MSIX build script (supports dual apps)
 └── test-msix-build.sh          # Local testing script (uses .env secrets)
 
 .github/workflows/release.yml
-├── build-msix job              # Automated MSIX build in CI/CD
+├── build-msix job              # Automated bundled MSIX build in CI/CD
 └── create-release job          # Includes MSIX in GitHub releases
 ```
 
 ### Build Process Flow
 
 1. **Checkout code** - Get repository with templates and assets
-2. **Download GoPCA.exe** - From build-desktop job (signed or unsigned)
-3. **Generate manifest** - Substitute version and publisher in template
-4. **Create package structure** - Copy exe, manifest, and assets
-5. **Build MSIX** - Use MakeAppx.exe to create package
-6. **Sign MSIX** - Self-signed certificate (Store re-signs on publish)
-7. **Upload artifact** - Make available for release
+2. **Download executables** - Both GoPCA.exe and GoCSV.exe from build jobs
+3. **Copy assets** - GoPCA and GoCSV icon assets to package
+4. **Generate manifest** - Substitute version and publisher, includes both app definitions
+5. **Create package structure** - Copy both executables, manifest, and all assets
+6. **Build MSIX** - Use MakeAppx.exe to create bundled package
+7. **Sign MSIX** - Self-signed certificate (Store re-signs on publish)
+8. **Upload artifact** - Make available for release
 
 ## Secrets Configuration
 
@@ -86,18 +111,29 @@ This conversion happens automatically in the build scripts.
 
 ## AppxManifest Template
 
-The template (`cmd/gopca-desktop/AppxManifest.template.xml`) uses placeholders:
+The template (`cmd/gopca-desktop/AppxManifest.template.xml`) defines both applications and uses placeholders:
 
 ```xml
 <Identity
-    Name="BitjungleGoPCA"
+    Name="bitjungle.GoPCA"
     Publisher="{{PUBLISHER}}"
     Version="{{VERSION}}" />
+
+<Applications>
+  <Application Id="GoPCA" Executable="GoPCA.exe" ...>
+    <!-- GoPCA Desktop configuration -->
+  </Application>
+  <Application Id="GoCSV" Executable="GoCSV.exe" ...>
+    <!-- GoCSV Desktop configuration -->
+  </Application>
+</Applications>
 ```
 
 During build:
 - `{{VERSION}}` → `1.1.3.0`
 - `{{PUBLISHER}}` → `CN=12345678-90AB-CDEF-1234-567890ABCDEF`
+
+Both applications appear as separate entries in the Windows Start Menu, but share the same installation directory for seamless integration.
 
 ## Local Testing
 
@@ -131,20 +167,26 @@ ls -la build/msix-test/package/
 On a Windows machine with Windows SDK installed:
 
 ```bash
-# Ensure GoPCA.exe exists
-make pca-build
+# Ensure both applications are built
+make pca-build   # GoPCA Desktop
+make csv-build   # GoCSV Desktop
 
-# Run build script
+# Ensure GoCSV MSIX assets exist
+# See cmd/gocsv/Assets/README.md for requirements
+
+# Run build script with both executables
 ./scripts/windows/build-msix.sh \
     --version 1.1.4 \
     --publisher "CN=YOUR-PUBLISHER-GUID" \
-    --exe cmd/gopca-desktop/build/bin/GoPCA.exe \
+    --gopca-exe cmd/gopca-desktop/build/bin/GoPCA.exe \
+    --gocsv-exe cmd/gocsv/build/bin/GoCSV.exe \
     --output build/msix
 ```
 
 This creates:
 - Package structure: `build/msix/package/`
 - MSIX file: `build/msix/GoPCA_1.1.4.0_x64.msix`
+- Package contains: Both GoPCA.exe and GoCSV.exe
 
 ### Install and Test MSIX
 
@@ -161,12 +203,18 @@ On Windows 10/11:
    Add-AppxPackage -Path .\GoPCA_1.1.4.0_x64.msix
    ```
 
-3. **Launch app**:
+3. **Verify both apps installed**:
    - Open Start Menu
-   - Search for "GoPCA"
-   - Click to launch
+   - Search for "GoPCA" - should appear
+   - Search for "GoCSV" - should also appear
+   - Both apps installed from single package
 
-4. **Uninstall** (if needed):
+4. **Test integration**:
+   - Launch GoPCA Desktop
+   - Click "Open GoCSV" → should launch GoCSV
+   - In GoCSV, click "Open in GoPCA" → should launch GoPCA with data
+
+5. **Uninstall** (removes both apps):
    ```powershell
    Get-AppxPackage *GoPCA* | Remove-AppxPackage
    ```
@@ -178,11 +226,13 @@ On Windows 10/11:
 The `build-msix` job in `.github/workflows/release.yml`:
 
 1. Runs on `windows-latest` runner
-2. Depends on `build-desktop` and `sign-windows-binaries` jobs
-3. Uses GitHub Secrets for Publisher ID
-4. Builds MSIX with MakeAppx.exe
-5. Signs with self-signed certificate
-6. Uploads as workflow artifact
+2. Depends on `build-desktop`, `build-gocsv`, and `sign-windows-binaries` jobs
+3. Downloads both GoPCA.exe and GoCSV.exe artifacts
+4. Uses GitHub Secrets for Publisher ID
+5. Copies both sets of MSIX assets
+6. Builds bundled MSIX with MakeAppx.exe
+7. Signs with self-signed certificate
+8. Uploads as workflow artifact
 
 ### Testing Workflow
 
@@ -205,6 +255,51 @@ On release (tag push):
 2. Included in GitHub release assets
 3. Added to `checksums.txt`
 4. Mentioned in release notes
+
+## Bundled Package Considerations
+
+### Start Menu Behavior
+
+The bundled MSIX package creates **two separate Start Menu entries**:
+- **GoPCA** - Primary PCA analysis application
+- **GoCSV** - CSV data preparation tool
+
+Users can launch either app independently. The apps share the same installation directory, enabling automatic discovery for integration features.
+
+### Integration Detection
+
+The existing integration code in `pkg/integration/app_integration.go` automatically detects both apps when installed from the bundled MSIX:
+
+```go
+// Windows same-directory detection (lines 204-208)
+case "windows":
+    paths = append(paths,
+        filepath.Join(execDir, "GoCSV.exe"),
+        filepath.Join(execDir, "gocsv.exe"),
+    )
+```
+
+No code changes were needed - the bundled installation naturally satisfies the same-directory check.
+
+### Package Size
+
+The bundled MSIX package is approximately **30-40MB**, which is acceptable by Microsoft Store standards. This includes:
+- GoPCA.exe (~15-20MB)
+- GoCSV.exe (~15-20MB)
+- MSIX assets for both apps
+- AppxManifest.xml
+
+### Asset Requirements
+
+Before building the MSIX package, ensure GoCSV assets exist:
+
+```bash
+# Required files (see cmd/gocsv/Assets/README.md for specifications)
+cmd/gocsv/Assets/GoCSV_Square150x150Logo.png  # 150x150px Start Menu tile
+cmd/gocsv/Assets/GoCSV_Square44x44Logo.png    # 44x44px App list icon
+```
+
+The build script will fail with clear error messages if these assets are missing.
 
 ## Microsoft Store Submission
 
@@ -235,11 +330,17 @@ On release (tag push):
    - Microsoft will validate the package
 
 5. **Complete Store Listing**:
-   - Description
-   - Screenshots (1280x720 or 1920x1080 recommended)
-   - App category: Developer tools / Education
-   - Privacy policy URL
-   - Support contact info
+   - **Description**: Mention both GoPCA and GoCSV in the app description
+     - Highlight the integrated workflow
+     - Explain that one install provides both tools
+     - Emphasize seamless data preparation → analysis workflow
+   - **Screenshots** (1280x720 or 1920x1080 recommended):
+     - Include screenshots of both GoPCA and GoCSV
+     - Show integration features (Open GoCSV button, etc.)
+     - Demonstrate the workflow from CSV editing to PCA analysis
+   - **App category**: Developer tools / Education / Productivity
+   - **Privacy policy URL**
+   - **Support contact info**
 
 6. **Submit for Certification**:
    - Review all sections
@@ -334,6 +435,24 @@ This certificate:
 - Install certificate to Trusted Root (for sideloading)
 - Or submit to Store (users won't need certificate)
 
+#### 6. GoCSV Assets Missing
+
+**Error**: "GoCSV Assets directory not found" or "GoCSV MSIX assets are missing"
+
+**Solution**:
+- Create required assets: `cmd/gocsv/Assets/GoCSV_Square150x150Logo.png` and `GoCSV_Square44x44Logo.png`
+- See `cmd/gocsv/Assets/README.md` for asset specifications
+- Generate from existing icons: `magick cmd/gocsv/build/icons/icon-256.png -resize 150x150 cmd/gocsv/Assets/GoCSV_Square150x150Logo.png`
+
+#### 7. Only GoPCA Appears in Start Menu
+
+**Error**: GoCSV app not showing in Start Menu after installation
+
+**Solution**:
+- Verify manifest includes both Application entries: `grep 'Id="GoCSV"' msix-build/package/AppxManifest.xml`
+- Check GoCSV.exe was copied to package: `ls msix-build/package/GoCSV.exe`
+- Reinstall package after ensuring both apps in manifest
+
 ### Debugging
 
 Enable verbose output in build scripts:
@@ -359,30 +478,48 @@ Check CI/CD logs:
 1. **Test Before Release**:
    - Use `workflow_dispatch` to test MSIX build
    - Install and test on clean Windows VM
+   - Verify **both apps appear in Start Menu**
+   - Test integration features:
+     - "Open GoCSV" button in GoPCA
+     - "Open in GoPCA" button in GoCSV
+     - Data export/import between apps
    - Verify all app functions work in MSIX container
 
 2. **Version Consistency**:
    - Ensure version matches across:
      - Git tag
-     - `wails.json`
-     - `package.json`
+     - Both `wails.json` files (GoPCA and GoCSV)
+     - Both `package.json` files
      - AppxManifest.xml (auto-generated)
 
 3. **Asset Quality**:
    - Use high-quality icons (150x150 minimum)
    - Ensure assets are PNG format
-   - Test icons appear correctly in Start Menu
+   - **Test both GoPCA and GoCSV icons** appear correctly in Start Menu
+   - Verify visual distinction between the two apps
 
 4. **Store Listing**:
-   - Prepare screenshots ahead of time
-   - Write clear, compelling description
+   - Prepare screenshots ahead of time **for both apps**
+   - Write clear, compelling description **mentioning integrated suite**
+   - Highlight the bundled nature as a feature
    - Have privacy policy ready
-   - Test search keywords
+   - Test search keywords (both "GoPCA" and "GoCSV")
 
 5. **Update Cadence**:
    - Submit MSIX updates regularly
    - Keep in sync with GitHub releases
+   - **Coordinate versions** - both apps in bundle should match
    - Note: Store certification takes 1-3 days
+
+6. **Pre-Submission Checklist**:
+   - [ ] Both GoPCA.exe and GoCSV.exe built
+   - [ ] GoCSV MSIX assets created and validated
+   - [ ] Package builds without errors
+   - [ ] Both apps appear in test installation
+   - [ ] Integration features tested and working
+   - [ ] Package size under 50MB
+   - [ ] Screenshots show both apps
+   - [ ] Store listing mentions bundled apps
 
 ## Resources
 
