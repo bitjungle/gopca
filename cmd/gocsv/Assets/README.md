@@ -54,7 +54,7 @@ These assets are referenced in `cmd/gopca-desktop/AppxManifest.template.xml`:
              EntryPoint="Windows.FullTrustApplication">
   <uap:VisualElements
     DisplayName="GoCSV"
-    Description="CSV data preparation tool for GoPCA Suite"
+    Description="CSV Data Preparation Tool for GoPCA Suite"
     Square150x150Logo="Assets\GoCSV_Square150x150Logo.png"
     Square44x44Logo="Assets\GoCSV_Square44x44Logo.png"
     ... />
