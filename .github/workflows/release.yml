@@ -1322,6 +1322,7 @@ jobs:
       run: |
         # Extract the changelog content for this version
         VERSION="${GITHUB_REF#refs/tags/}"
+        VERSION_NO_V="${VERSION#v}"
         echo "Extracting changelog for version: $VERSION"
 
         # Use the extraction script
@@ -1374,7 +1375,7 @@ jobs:
 
         | Package | Download | Description |
         |---------|----------|-------------|
-        | **MSIX Package** | [\`GoPCA_{VERSION_NO_V}.0_x64.msix\`](../../releases/download/${VERSION}/GoPCA_*.msix) | Microsoft Store package for sideloading or Store submission<br>• Modern Windows app package format<br>• Sandboxed installation<br>• Suitable for enterprise deployment<br>• **Coming to Microsoft Store soon!** |
+        | **MSIX Package** | [\`GoPCA_${VERSION_NO_V}.0_x64.msix\`](../../releases/download/${VERSION}/GoPCA_${VERSION_NO_V}.0_x64.msix) | Microsoft Store package for sideloading or Store submission<br>• Modern Windows app package format<br>• Sandboxed installation<br>• Suitable for enterprise deployment<br>• **Coming to Microsoft Store soon!** |
 
         **Note**: The MSIX package is primarily for sideloading in enterprise environments or for submission to Microsoft Store. Most users should use the traditional installer above.
 
