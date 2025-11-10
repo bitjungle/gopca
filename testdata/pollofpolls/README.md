@@ -9,3 +9,4 @@ curl -o pollofpolls_raw.csv "https://www.pollofpolls.no/lastned.csv?tabell=gallu
 ```
 This command downloads the latest data as a CSV file. Windows 1252 encoding. 
 
+Regjeringer is sourced from [Wikipedia](https://no.wikipedia.org/wiki/Liste_over_Norges_regjeringer).
