@@ -6,12 +6,10 @@ from __future__ import annotations
 import argparse
 import csv
 import re
-from datetime import datetime
 from pathlib import Path
 from typing import NamedTuple
 
 PARENTHESIZED_INTEGER = re.compile(r"\s*\(\s*\d+\s*\)")
-
 
 class GovernmentPeriod(NamedTuple):
     """Represents a government period with start date, end date, and parties."""
