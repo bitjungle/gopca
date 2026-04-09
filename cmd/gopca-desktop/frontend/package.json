@@ -15,7 +15,7 @@
     "@tailwindcss/typography": "^0.5.16",
     "@tanstack/react-table": "^8.21.3",
     "@tanstack/react-virtual": "^3.13.12",
-    "@types/plotly.js": "^3.0.3",
+    "@types/plotly.js": "^3.0.10",
     "file-saver": "^2.0.5",
     "html-to-image": "^1.11.13",
     "lucide-react": "^0.539.0",
