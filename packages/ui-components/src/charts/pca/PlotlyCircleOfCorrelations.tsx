@@ -322,23 +322,33 @@ export class PlotlyCircleOfCorrelations {
 
     // Add arrow annotations for vectors
     const { correlationsX, correlationsY, magnitudes } = this.prepareData();
-    const arrowAnnotations = correlationsX.map((_x, i) => ({
-      x: correlationsX[i],
-      y: correlationsY[i],
-      ax: 0,
-      ay: 0,
-      xref: 'x' as any,
-      yref: 'y' as any,
-      axref: 'x' as any,
-      ayref: 'y' as any,
-      showarrow: true,
-      arrowhead: 2,
-      arrowsize: 1,
-      arrowwidth: this.config.arrowWidth,
-      arrowcolor: this.config.colorByMagnitude
-        ? `hsl(${240 - magnitudes[i] * 240}, 70%, 50%)`
-        : '#3b82f6'
-    }));
+    const arrowAnnotations = correlationsX.map((_x, i) => {
+      let arrowColor: string;
+      if (this.config.colorByMagnitude) {
+        arrowColor = `hsl(${240 - magnitudes[i] * 240}, 70%, 50%)`;
+      } else if (this.config.colorScheme && this.config.colorScheme.length > 0) {
+        // Use the same palette index as the line trace for this variable so
+        // arrowhead and line always share the same color.
+        arrowColor = this.config.colorScheme[i % this.config.colorScheme.length];
+      } else {
+        arrowColor = '#3b82f6';
+      }
+      return {
+        x: correlationsX[i],
+        y: correlationsY[i],
+        ax: 0,
+        ay: 0,
+        xref: 'x' as any,
+        yref: 'y' as any,
+        axref: 'x' as any,
+        ayref: 'y' as any,
+        showarrow: true,
+        arrowhead: 2,
+        arrowsize: 1,
+        arrowwidth: this.config.arrowWidth,
+        arrowcolor: arrowColor
+      };
+    });
 
     layout.annotations = [...(layout.annotations || []), ...arrowAnnotations];
 
@@ -367,12 +377,8 @@ export const PCACircleOfCorrelations: React.FC<{
 }> = ({ data, config }) => {
   const plot = useMemo(() => new PlotlyCircleOfCorrelations(data, config), [data, config]);
 
-  // Create a key based on the colorScheme to force re-render when palette changes
-  const colorSchemeKey = config?.colorScheme ? JSON.stringify(config.colorScheme) : 'default';
-
   return (
     <PlotlyWithFullscreen
-      key={`circle-correlations-${colorSchemeKey}`}
       data={plot.getTraces()}
       layout={plot.getEnhancedLayout()}
       config={plot.getConfig()}
