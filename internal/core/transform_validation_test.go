@@ -107,59 +107,6 @@ func irisTrainTest(t *testing.T) (train, test types.Matrix) {
 	return data[:120], data[120:]
 }
 
-// matFrobeniusNorm computes the Frobenius norm of a matrix stored as [][]float64.
-// ||A||_F = sqrt(sum(a_ij^2))
-func matFrobeniusNorm(m types.Matrix) float64 {
-	sum := 0.0
-	for _, row := range m {
-		for _, v := range row {
-			sum += v * v
-		}
-	}
-	return math.Sqrt(sum)
-}
-
-// multiplyMatrices computes C = A @ B (matrix multiplication, [][]float64).
-func multiplyMatrices(A, B [][]float64) [][]float64 {
-	n, k := len(A), len(A[0])
-	m := len(B[0])
-	C := make([][]float64, n)
-	for i := range C {
-		C[i] = make([]float64, m)
-		for j := 0; j < m; j++ {
-			for r := 0; r < k; r++ {
-				C[i][j] += A[i][r] * B[r][j]
-			}
-		}
-	}
-	return C
-}
-
-// transposeMatrix returns the transpose of a [][]float64 matrix.
-func transposeMatrix(A [][]float64) [][]float64 {
-	n, m := len(A), len(A[0])
-	T := make([][]float64, m)
-	for i := range T {
-		T[i] = make([]float64, n)
-		for j := 0; j < n; j++ {
-			T[i][j] = A[j][i]
-		}
-	}
-	return T
-}
-
-// subtractMatrices computes A - B element-wise.
-func subtractMatrices(A, B [][]float64) [][]float64 {
-	result := make([][]float64, len(A))
-	for i := range A {
-		result[i] = make([]float64, len(A[i]))
-		for j := range A[i] {
-			result[i][j] = A[i][j] - B[i][j]
-		}
-	}
-	return result
-}
-
 // assertScoresEqual compares two score matrices element-wise allowing for sign ambiguity.
 // PCA is defined up to sign flips of components (both scores and loadings flip together).
 // Reference: Bro & Smilde (2014) – sign ambiguity is expected and acceptable.
