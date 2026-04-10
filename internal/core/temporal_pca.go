@@ -358,10 +358,7 @@ func (t *TemporalPCAImpl) Fit(data types.Matrix, config types.PCAConfig) (*types
 			ComponentLabels:            componentLabels,
 			SingularValues:             t.singularVals,
 			Method:                     "temporal",
-			Means:                      nil, // Not applicable for temporal PCA with SSA approach
-			StdDevs:                    nil, // Not applicable for temporal PCA with SSA approach
 			ComponentsComputed:         1,
-			Config:                     config,
 			PreprocessingApplied:       t.preprocessor != nil,
 			TemporalEigenvectors:       utils.MatrixToSlice(temporalEigenvectors), // Add trivial U matrix for single sample case
 			TemporalVariableImportance: types.Matrix(variableImportance),          // Add variable importance for single sample case
@@ -491,11 +488,8 @@ func (t *TemporalPCAImpl) Fit(data types.Matrix, config types.PCAConfig) (*types
 		CumulativeVar:              cumulativeVar,
 		ComponentLabels:            componentLabels,
 		SingularValues:             t.singularVals,
-		Means:                      nil, // Not applicable for temporal PCA with SSA approach
-		StdDevs:                    nil, // Not applicable for temporal PCA with SSA approach
 		Method:                     "temporal",
 		ComponentsComputed:         t.nComponents,
-		Config:                     config,
 		AllEigenvalues:             allEigenvalues, // Store all eigenvalues for diagnostic purposes
 		PreprocessingApplied:       t.preprocessor != nil,
 		TemporalEigenvectors:       utils.MatrixToSlice(temporalEigenvectors), // Add U matrix for temporal loadings visualization

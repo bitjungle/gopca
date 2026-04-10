@@ -79,13 +79,7 @@ type PCAResult struct {
 	// All eigenvalues (including non-retained) for diagnostic calculations
 	AllEigenvalues []float64 `json:"all_eigenvalues,omitempty"`
 	// Additional fields for temporal PCA and other methods
-	ExplainedVariance  []float64 `json:"explained_variance_values,omitempty"`  // Raw explained variance values
-	CumulativeVariance []float64 `json:"cumulative_variance_values,omitempty"` // Cumulative explained variance
-	SingularValues     []float64 `json:"singular_values,omitempty"`            // Singular values from SVD
-	Mean               []float64 `json:"mean,omitempty"`                       // Feature means (for transform)
-	Scale              []float64 `json:"scale,omitempty"`                      // Feature scales (for transform)
-	Components         int       `json:"components,omitempty"`                 // Number of components retained
-	Config             PCAConfig `json:"config,omitempty"`                     // Configuration used for fitting
+	SingularValues []float64 `json:"singular_values,omitempty"` // Singular values from SVD
 	// Temporal PCA specific fields
 	TemporalEigenvectors       Matrix `json:"temporal_eigenvectors,omitempty"`        // U matrix from SVD (lags × components) for temporal PCA
 	TemporalVariableImportance Matrix `json:"temporal_variable_importance,omitempty"` // Aggregated variable importance (components × variables)
