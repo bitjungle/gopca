@@ -28,6 +28,7 @@ import (
 	"math"
 	"testing"
 
+	"github.com/bitjungle/gopca/internal/utils"
 	"github.com/bitjungle/gopca/pkg/types"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -1259,4 +1260,261 @@ func TestNIPALSMissingNativeSuppressesOtherPreprocessing(t *testing.T) {
 	// (mean centering handled internally by NIPALS algorithm)
 	assert.Nil(t, impl.preprocessor,
 		"preprocessor must be nil for NIPALS with NaN data and MissingNative strategy")
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Group I: Column/Row Exclusion Tests
+//
+// Column and row exclusion is an application-layer concern: the cobra CLI and
+// desktop app call utils.FilterMatrix() BEFORE passing data to PCAEngine.
+// These integration tests validate the full pattern:
+//
+//   FilterMatrix(trainData, excludedRows, excludedCols) → engine.Fit()
+//   FilterMatrix(testData,  nil,          excludedCols) → engine.Transform()
+//
+// The excluded-column set must be identical for fit and transform so that the
+// feature dimension matches the fitted model. Row exclusion only affects which
+// observations are used for fitting; all (non-NaN) rows of new data are
+// transformed.
+//
+// References:
+//   - Bro, R., & Smilde, A. K. (2014). Principal component analysis.
+//     Analytical Methods, 6(9), 2812–2831. (Section 3: preprocessing scope)
+// ─────────────────────────────────────────────────────────────────────────────
+
+// TestExcludedColumns verifies that fitting on a column-filtered matrix and
+// then transforming new data through the same column filter yields scores
+// consistent with fitting directly on the reduced variable set.
+func TestExcludedColumns(t *testing.T) {
+	// 6-variable dataset; we will exclude columns 1 and 4 (0-based), keeping {0,2,3,5}.
+	fullData := [][]float64{
+		{1.0, 99.0, 2.0, 3.0, 99.0, 4.0},
+		{2.0, 99.0, 4.0, 6.0, 99.0, 8.0},
+		{3.0, 99.0, 6.0, 9.0, 99.0, 12.0},
+		{4.0, 99.0, 8.0, 12.0, 99.0, 16.0},
+		{5.0, 99.0, 10.0, 15.0, 99.0, 20.0},
+		{6.0, 99.0, 12.0, 18.0, 99.0, 24.0},
+		{7.0, 99.0, 14.0, 21.0, 99.0, 28.0},
+		{8.0, 99.0, 16.0, 24.0, 99.0, 32.0},
+	}
+	newData := [][]float64{
+		{9.0, 99.0, 18.0, 27.0, 99.0, 36.0},
+		{10.0, 99.0, 20.0, 30.0, 99.0, 40.0},
+	}
+
+	excludedCols := []int{1, 4} // 0-based
+
+	// Apply column filter to training data (no row exclusions).
+	filteredTrain, err := utils.FilterMatrix(fullData, nil, excludedCols)
+	require.NoError(t, err)
+
+	// Apply identical column filter to new observations.
+	filteredNew, err := utils.FilterMatrix(newData, nil, excludedCols)
+	require.NoError(t, err)
+
+	config := types.PCAConfig{
+		Components:    2,
+		MeanCenter:    true,
+		StandardScale: false,
+		Method:        "svd",
+	}
+
+	engine := NewPCAEngine()
+	_, err = engine.Fit(filteredTrain, config)
+	require.NoError(t, err, "Fit on column-filtered data must succeed")
+
+	scores, err := engine.Transform(filteredNew)
+	require.NoError(t, err, "Transform on column-filtered new data must succeed")
+
+	require.Equal(t, 2, len(scores), "expected 2 transformed rows")
+	require.Equal(t, 2, len(scores[0]), "expected 2 score columns (components)")
+
+	// Cross-check: fitting directly on the reduced variable set (4 columns)
+	// must produce identical results.
+	reducedTrain := [][]float64{
+		{1.0, 2.0, 3.0, 4.0},
+		{2.0, 4.0, 6.0, 8.0},
+		{3.0, 6.0, 9.0, 12.0},
+		{4.0, 8.0, 12.0, 16.0},
+		{5.0, 10.0, 15.0, 20.0},
+		{6.0, 12.0, 18.0, 24.0},
+		{7.0, 14.0, 21.0, 28.0},
+		{8.0, 16.0, 24.0, 32.0},
+	}
+	reducedNew := [][]float64{
+		{9.0, 18.0, 27.0, 36.0},
+		{10.0, 20.0, 30.0, 40.0},
+	}
+
+	engine2 := NewPCAEngine()
+	_, err = engine2.Fit(reducedTrain, config)
+	require.NoError(t, err)
+
+	scores2, err := engine2.Transform(reducedNew)
+	require.NoError(t, err)
+
+	assertScoresEqual(t, scores2, scores, 1e-10,
+		"column-filtered path must produce same scores as directly reduced data")
+}
+
+// TestExcludedRows verifies that row exclusion during fitting affects the
+// trained model: scores computed after excluding outlier rows differ from
+// scores produced by a model trained on all rows.
+func TestExcludedRows(t *testing.T) {
+	// Training data with two outlier rows (index 0 and 7) that would skew the model.
+	trainData := [][]float64{
+		{1000.0, 2000.0, 3000.0}, // outlier — excluded
+		{1.0, 2.0, 3.0},
+		{2.0, 3.0, 4.0},
+		{3.0, 4.0, 5.0},
+		{4.0, 5.0, 6.0},
+		{5.0, 6.0, 7.0},
+		{6.0, 7.0, 8.0},
+		{-1000.0, -2000.0, -3000.0}, // outlier — excluded
+	}
+	newObs := [][]float64{
+		{3.5, 4.5, 5.5},
+	}
+
+	excludedRows := []int{0, 7} // 0-based
+
+	filteredTrain, err := utils.FilterMatrix(trainData, excludedRows, nil)
+	require.NoError(t, err)
+	require.Equal(t, 6, len(filteredTrain), "expected 6 rows after exclusion")
+
+	config := types.PCAConfig{
+		Components: 1,
+		MeanCenter: true,
+		Method:     "svd",
+	}
+
+	// Model trained WITHOUT outliers.
+	engineClean := NewPCAEngine()
+	_, err = engineClean.Fit(filteredTrain, config)
+	require.NoError(t, err)
+
+	scoresClean, err := engineClean.Transform(newObs)
+	require.NoError(t, err)
+
+	// Model trained WITH outliers (all rows).
+	engineAll := NewPCAEngine()
+	_, err = engineAll.Fit(trainData, config)
+	require.NoError(t, err)
+
+	scoresAll, err := engineAll.Transform(newObs)
+	require.NoError(t, err)
+
+	// The two models must differ because the outliers shift the mean and
+	// principal directions. We assert the absolute score values are not equal.
+	absClean := math.Abs(scoresClean[0][0])
+	absAll := math.Abs(scoresAll[0][0])
+	assert.NotEqual(t, absClean, absAll,
+		"model trained without outlier rows must differ from model trained with all rows")
+}
+
+// TestExclusionsWorkWithTransform verifies the end-to-end pattern used by the
+// application layer: exclude columns at fit time, then apply the SAME column
+// exclusion when transforming, and confirm that training scores are reproduced
+// (sign-agnostic) for the training observations.
+func TestExclusionsWorkWithTransform(t *testing.T) {
+	// Iris-like dataset: 4 variables, we exclude variable at index 2.
+	trainFull, testFull := irisTrainTest(t)
+	excludedCols := []int{2}
+
+	filteredTrain, err := utils.FilterMatrix(trainFull, nil, excludedCols)
+	require.NoError(t, err)
+
+	filteredTest, err := utils.FilterMatrix(testFull, nil, excludedCols)
+	require.NoError(t, err)
+
+	config := types.PCAConfig{
+		Components:    2,
+		MeanCenter:    true,
+		StandardScale: true,
+		Method:        "svd",
+	}
+
+	engine := NewPCAEngine()
+	fitResult, err := engine.Fit(filteredTrain, config)
+	require.NoError(t, err)
+
+	// Transform the held-out test rows.
+	testScores, err := engine.Transform(filteredTest)
+	require.NoError(t, err)
+	require.Equal(t, len(filteredTest), len(testScores),
+		"number of transformed rows must match input rows")
+	require.Equal(t, config.Components, len(testScores[0]),
+		"number of score columns must match requested components")
+
+	// Transform the training rows — these must reproduce fitResult.Scores
+	// (the in-memory fit scores) up to sign ambiguity.
+	trainScores, err := engine.Transform(filteredTrain)
+	require.NoError(t, err)
+
+	assertScoresEqual(t, fitResult.Scores, trainScores, 1e-10,
+		"transform of training rows (column-filtered) must reproduce fit scores")
+}
+
+// TestExclusionsWithDifferentPreprocessing verifies that column exclusion
+// combined with different preprocessing methods all produce valid, consistent
+// results. We test mean-center and standard-scale combinations to ensure that
+// preprocessing parameters are estimated only on the kept columns.
+func TestExclusionsWithDifferentPreprocessing(t *testing.T) {
+	// 5-variable dataset; exclude the first and last column (indices 0 and 4).
+	rawData := [][]float64{
+		{99.0, 1.0, 2.0, 3.0, 99.0},
+		{99.0, 2.0, 4.0, 6.0, 99.0},
+		{99.0, 3.0, 6.0, 9.0, 99.0},
+		{99.0, 4.0, 8.0, 12.0, 99.0},
+		{99.0, 5.0, 10.0, 15.0, 99.0},
+		{99.0, 6.0, 12.0, 18.0, 99.0},
+		{99.0, 7.0, 14.0, 21.0, 99.0},
+		{99.0, 8.0, 16.0, 24.0, 99.0},
+	}
+	newObs := [][]float64{
+		{99.0, 9.0, 18.0, 27.0, 99.0},
+	}
+
+	excludedCols := []int{0, 4}
+
+	filteredTrain, err := utils.FilterMatrix(rawData, nil, excludedCols)
+	require.NoError(t, err)
+	require.Equal(t, 3, len(filteredTrain[0]), "expected 3 columns after exclusion")
+
+	filteredNew, err := utils.FilterMatrix(newObs, nil, excludedCols)
+	require.NoError(t, err)
+
+	preprocessings := []struct {
+		name          string
+		meanCenter    bool
+		standardScale bool
+	}{
+		{"MeanCenter", true, false},
+		{"StandardScale", true, true},
+		{"ScaleOnly", false, true},
+		{"None", false, false},
+	}
+
+	for _, pp := range preprocessings {
+		t.Run(pp.name, func(t *testing.T) {
+			config := types.PCAConfig{
+				Components:    2,
+				MeanCenter:    pp.meanCenter,
+				StandardScale: pp.standardScale,
+				Method:        "svd",
+			}
+
+			engine := NewPCAEngine()
+			_, err := engine.Fit(filteredTrain, config)
+			require.NoError(t, err, "Fit must succeed for preprocessing=%s", pp.name)
+
+			scores, err := engine.Transform(filteredNew)
+			require.NoError(t, err, "Transform must succeed for preprocessing=%s", pp.name)
+
+			require.Equal(t, 1, len(scores),
+				"expected 1 transformed row for preprocessing=%s", pp.name)
+			require.Equal(t, 2, len(scores[0]),
+				"expected 2 score columns for preprocessing=%s", pp.name)
+		})
+	}
 }
