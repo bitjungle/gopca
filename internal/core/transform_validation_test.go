@@ -118,11 +118,18 @@ func assertScoresEqual(t *testing.T, expected, actual types.Matrix, tol float64,
 
 	nComponents := len(expected[0])
 	for c := 0; c < nComponents; c++ {
-		// Determine sign by comparing first non-zero element
+		// Determine sign by scanning rows for the first element whose absolute
+		// value is above a safe epsilon. Using only row 0 is fragile: if that
+		// score is (near) zero the sign decision would be undefined and tests
+		// could become flaky.
 		sign := 1.0
-		if math.Abs(expected[0][c]) > 1e-14 {
-			if (expected[0][c] > 0) != (actual[0][c] > 0) {
-				sign = -1.0
+		const signEps = 1e-10
+		for i, row := range expected {
+			if math.Abs(row[c]) > signEps {
+				if (row[c] > 0) != (actual[i][c] > 0) {
+					sign = -1.0
+				}
+				break
 			}
 		}
 		for i, row := range expected {
@@ -268,7 +275,11 @@ func TestTransformUsesTrainingMean(t *testing.T) {
 // TestTransformUsesTrainingStdDev verifies that standard scaling in Transform
 // uses the training standard deviations, not re-estimated ones from new data.
 func TestTransformUsesTrainingStdDev(t *testing.T) {
-	// Training data: column 1 has std=1, column 2 has std=10
+	// Training data: columns are [1..5] and [10..50].
+	// Sample std devs (Bessel-corrected, n-1=4): col1 ≈ 1.5811, col2 ≈ 15.811.
+	// The test reads trainStds from the preprocessor directly, so the assertion
+	// is independent of the exact values — what matters is that Transform uses
+	// the TRAINING std, not a re-estimated std from the test data.
 	trainData := types.Matrix{
 		{1.0, 10.0},
 		{2.0, 20.0},
@@ -344,7 +355,10 @@ func TestTransformUsesTrainingStdDev(t *testing.T) {
 
 // TestInverseTransformRoundtrip verifies that InverseTransform reverses the
 // preprocessing operations to within machine precision for known inputs.
-// Tested independently for each preprocessing type.
+// Covers column-wise preprocessing methods: mean_center, standard_scale,
+// robust_scale, and scale_only. Row-wise methods (SNV, VectorNorm) cannot be
+// fully reversed — see TestSNVInverseTransformLimitation and
+// TestVectorNormInverseTransformLimitation for their documented behaviour.
 func TestInverseTransformRoundtrip(t *testing.T) {
 	// Well-conditioned test data with distinct column statistics
 	data := types.Matrix{
@@ -583,6 +597,48 @@ func TestSNVInverseTransformLimitation(t *testing.T) {
 		for j, v := range row {
 			assert.InDelta(t, v, recovered[i][j], 1e-10,
 				"SNV InverseTransform: row %d col %d should be unchanged", i, j)
+		}
+	}
+}
+
+// TestVectorNormInverseTransformLimitation documents and validates the known
+// limitation that InverseTransform for VectorNorm (L2 row normalisation) only
+// reverses column-wise operations. Because VectorNorm divides each row by its
+// L2 norm — a row-wise operation — the original row scales cannot be recovered
+// from column statistics alone.
+//
+// Reference: preprocessing.go InverseTransform docstring.
+func TestVectorNormInverseTransformLimitation(t *testing.T) {
+	data := types.Matrix{
+		{3.0, 4.0, 0.0}, // L2 norm = 5
+		{1.0, 0.0, 0.0}, // L2 norm = 1
+		{0.0, 3.0, 4.0}, // L2 norm = 5
+	}
+
+	// VectorNorm alone (no column-wise preprocessing)
+	prep := NewPreprocessorFull(false, false, false, false, true)
+	transformed, err := prep.FitTransform(data)
+	require.NoError(t, err)
+
+	// Verify VectorNorm was applied: each transformed row should have L2 norm ≈ 1
+	for i, row := range transformed {
+		normSq := 0.0
+		for _, v := range row {
+			normSq += v * v
+		}
+		assert.InDelta(t, 1.0, math.Sqrt(normSq), 1e-10,
+			"VectorNorm row %d: L2 norm should be 1", i)
+	}
+
+	// InverseTransform on VectorNorm-only preprocessing returns the input unchanged
+	// (VectorNorm is a row-wise transform; InverseTransform only handles column-wise ops)
+	recovered, err := prep.InverseTransform(transformed)
+	require.NoError(t, err)
+
+	for i, row := range transformed {
+		for j, v := range row {
+			assert.InDelta(t, v, recovered[i][j], 1e-10,
+				"VectorNorm InverseTransform: row %d col %d should be unchanged", i, j)
 		}
 	}
 }
@@ -949,14 +1005,108 @@ func TestModelPersistenceRoundtrip_ScaleOnly(t *testing.T) {
 	}, "scale_only")
 }
 
+// TestModelPersistenceRoundtrip_NoPreprocessing verifies that a model trained
+// with no preprocessing can be JSON-serialized and used for Transform without
+// errors or silent behavior changes.
+//
+// When no preprocessing flags are set, impl.preprocessor is nil — the CLI path
+// projects raw data directly onto the deserialized loadings. This test covers
+// that path explicitly because the shared testModelPersistenceRoundtrip helper
+// always reconstructs a Preprocessor, which would fail on nil mean slices.
+func TestModelPersistenceRoundtrip_NoPreprocessing(t *testing.T) {
+	train, test := irisTrainTest(t)
+
+	config := types.PCAConfig{
+		Components: 2, Method: "svd",
+		// No MeanCenter, StandardScale, RobustScale, ScaleOnly, SNV, or VectorNorm
+	}
+
+	engine := NewPCAEngine()
+	fitResult, err := engine.Fit(train, config)
+	require.NoError(t, err)
+
+	impl := engine.(*PCAImpl)
+	assert.Nil(t, impl.preprocessor,
+		"preprocessor must be nil when no preprocessing is configured")
+
+	// Serialize loadings to JSON and deserialize (the CLI save/load path)
+	modelComponents := types.ModelComponents{
+		Loadings: fitResult.Loadings,
+	}
+
+	modelJSON, err := json.Marshal(modelComponents)
+	require.NoError(t, err, "model serialization failed")
+
+	var restoredModel types.ModelComponents
+	err = json.Unmarshal(modelJSON, &restoredModel)
+	require.NoError(t, err, "model deserialization failed")
+	require.NotEmpty(t, restoredModel.Loadings, "deserialized loadings must not be empty")
+
+	// In-memory path: use the fitted engine
+	origScores, err := engine.Transform(test)
+	require.NoError(t, err)
+
+	// Persistent path: project raw test data directly onto deserialized loadings,
+	// no preprocessing applied (matches CLI behavior when preprocessor is nil)
+	nSamples := len(test)
+	nFeatures := len(test[0])
+	nComponents := len(restoredModel.Loadings[0])
+
+	X := mat.NewDense(nSamples, nFeatures, nil)
+	for i, row := range test {
+		for j, v := range row {
+			X.Set(i, j, v)
+		}
+	}
+
+	L := mat.NewDense(nFeatures, nComponents, nil)
+	for i, row := range restoredModel.Loadings {
+		for j, v := range row {
+			L.Set(i, j, v)
+		}
+	}
+
+	restoredScores := mat.NewDense(nSamples, nComponents, nil)
+	restoredScores.Mul(X, L)
+
+	for i := 0; i < len(origScores); i++ {
+		for c := 0; c < nComponents; c++ {
+			assert.InDelta(t, origScores[i][c], restoredScores.At(i, c), 1e-12,
+				"no_preprocessing persistence roundtrip: scores[%d][%d] mismatch", i, c)
+		}
+	}
+}
+
+// TestModelPersistenceRoundtrip_SNV verifies that an SNV-preprocessed model
+// survives JSON serialization. SNV is row-wise so no column statistics are
+// stored; the test confirms no serialization errors occur and that fresh
+// row-wise normalization is applied correctly after deserialization.
+func TestModelPersistenceRoundtrip_SNV(t *testing.T) {
+	testModelPersistenceRoundtrip(t, types.PCAConfig{
+		Components: 2, SNV: true, Method: "svd",
+	}, "snv")
+}
+
+// TestModelPersistenceRoundtrip_VectorNorm mirrors TestModelPersistenceRoundtrip_SNV
+// for VectorNorm (L2 row normalization).
+func TestModelPersistenceRoundtrip_VectorNorm(t *testing.T) {
+	testModelPersistenceRoundtrip(t, types.PCAConfig{
+		Components: 2, VectorNorm: true, Method: "svd",
+	}, "vector_norm")
+}
+
 // testModelPersistenceRoundtrip is the shared implementation for Group F tests.
 // It simulates the full CLI model save/load/transform pipeline:
 //  1. Fit in-memory
-//  2. Extract preprocessing params (as the CLI output.go would)
-//  3. Serialize to JSON and deserialize (full roundtrip)
+//  2. Extract preprocessing params AND loadings (as the CLI output.go would)
+//  3. Serialize BOTH to JSON and deserialize (full roundtrip)
 //  4. Restore preprocessor via SetFittedParameters
-//  5. Transform test data with both preprocessors
+//  5. Project using deserialized loadings (not the in-memory *mat.Dense)
 //  6. Assert identical results to 1e-12
+//
+// Roundtripping the loadings is essential: using impl.loadings directly would
+// miss any silent precision loss or shape error in JSON serialization of the
+// model — the silent-failure mode the CLI is most vulnerable to.
 func testModelPersistenceRoundtrip(t *testing.T, config types.PCAConfig, name string) {
 	t.Helper()
 	train, test := irisTrainTest(t)
@@ -969,7 +1119,7 @@ func testModelPersistenceRoundtrip(t *testing.T, config types.PCAConfig, name st
 	impl := engine.(*PCAImpl)
 	prep := impl.preprocessor
 
-	// Step 2: Extract parameters (simulates what output.go does)
+	// Step 2: Extract preprocessing params and loadings (simulates output.go)
 	params := types.PreprocessingParams{}
 	if prep != nil {
 		params.FeatureMeans = prep.GetMeans()
@@ -990,13 +1140,26 @@ func testModelPersistenceRoundtrip(t *testing.T, config types.PCAConfig, name st
 		Parameters:    params,
 	}
 
-	// Step 3: JSON roundtrip (this is the serialization/deserialization step)
-	jsonBytes, err := json.Marshal(prepInfo)
-	require.NoError(t, err, "serialization failed")
+	modelComponents := types.ModelComponents{
+		Loadings: fitResult.Loadings,
+	}
+
+	// Step 3: JSON roundtrip for BOTH preprocessing info and loadings
+	prepJSON, err := json.Marshal(prepInfo)
+	require.NoError(t, err, "preprocessing serialization failed")
+
+	modelJSON, err := json.Marshal(modelComponents)
+	require.NoError(t, err, "model serialization failed")
 
 	var restoredInfo types.PreprocessingInfo
-	err = json.Unmarshal(jsonBytes, &restoredInfo)
-	require.NoError(t, err, "deserialization failed")
+	err = json.Unmarshal(prepJSON, &restoredInfo)
+	require.NoError(t, err, "preprocessing deserialization failed")
+
+	var restoredModel types.ModelComponents
+	err = json.Unmarshal(modelJSON, &restoredModel)
+	require.NoError(t, err, "model deserialization failed")
+
+	require.NotEmpty(t, restoredModel.Loadings, "deserialized loadings must not be empty")
 
 	// Step 4: Restore preprocessor from JSON-deserialized params
 	restoredPrep := NewPreprocessorWithScaleOnly(
@@ -1013,30 +1176,40 @@ func testModelPersistenceRoundtrip(t *testing.T, config types.PCAConfig, name st
 	)
 	require.NoError(t, err, "SetFittedParameters failed")
 
-	// Step 5: Transform test data with both preprocessors
-	// In-memory path
+	// Step 5: In-memory path (reference)
 	origScores, err := engine.Transform(test)
 	require.NoError(t, err)
 
-	// Persistent path: apply restored preprocessor then project onto loadings
+	// Persistent path: preprocess with restored params, project with deserialized loadings.
+	// This is the exact path the CLI `pca transform` command takes.
 	processedTest, err := restoredPrep.Transform(test)
 	require.NoError(t, err)
 
 	nSamples := len(processedTest)
-	nCols := len(processedTest[0])
-	X := mat.NewDense(nSamples, nCols, nil)
+	nFeatures := len(processedTest[0])
+	nComponents := len(restoredModel.Loadings[0])
+
+	X := mat.NewDense(nSamples, nFeatures, nil)
 	for i, row := range processedTest {
 		for j, v := range row {
 			X.Set(i, j, v)
 		}
 	}
-	restoredScores := mat.NewDense(nSamples, fitResult.ComponentsComputed, nil)
-	restoredScores.Mul(X, impl.loadings)
+
+	// Build loadings matrix from deserialized [][]float64 (nFeatures x nComponents)
+	L := mat.NewDense(nFeatures, nComponents, nil)
+	for i, row := range restoredModel.Loadings {
+		for j, v := range row {
+			L.Set(i, j, v)
+		}
+	}
+
+	restoredScores := mat.NewDense(nSamples, nComponents, nil)
+	restoredScores.Mul(X, L)
 
 	// Step 6: Compare — must match to 1e-12
 	for i := 0; i < len(origScores); i++ {
-		for c := 0; c < fitResult.ComponentsComputed; c++ {
-			// Allow for sign ambiguity (both should have the same sign since same loadings)
+		for c := 0; c < nComponents; c++ {
 			assert.InDelta(t, origScores[i][c], restoredScores.At(i, c), 1e-12,
 				"%s persistence roundtrip: scores[%d][%d] mismatch", name, i, c)
 		}
@@ -1092,19 +1265,19 @@ func TestTransformSingleSample(t *testing.T) {
 	}
 
 	engine := NewPCAEngine()
-	_, err := engine.Fit(train, config)
+	fitResult, err := engine.Fit(train, config)
 	require.NoError(t, err)
 
-	// Transform a single observation
-	singleSample := types.Matrix{train[0]} // Use first training sample
+	// Transform a single observation (first training sample)
+	singleSample := types.Matrix{train[0]}
 	scores, err := engine.Transform(singleSample)
 	require.NoError(t, err)
 
 	assert.Len(t, scores, 1, "single-sample transform must return 1 score row")
 	assert.Len(t, scores[0], 3, "must have 3 components")
 
-	// The score for the first training sample should match the training score
-	fitResult, _ := NewPCAEngine().Fit(train, config)
+	// The score for the first training sample must match the Fit scores from the
+	// same engine — no second Fit() to avoid sign ambiguity across independent runs.
 	assertScoresEqual(t, fitResult.Scores[:1], scores, 1e-9, "single sample transform")
 }
 
