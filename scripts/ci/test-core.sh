@@ -12,9 +12,9 @@ echo "=== Running Core GoPCA Tests ==="
 # Show Go version
 echo "Go version: $(go version)"
 
-# Ensure module graph is fully resolved (handles new transitive deps across Go versions)
-echo "Tidying module dependencies..."
-go mod tidy
+# Download dependencies (module graph is already tidy from the CI workflow step)
+echo "Downloading dependencies..."
+go mod download
 
 # Run tests with proper exclusions
 echo "Running tests (excluding desktop package)..."
