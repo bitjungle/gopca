@@ -11,6 +11,7 @@ import (
 	"math"
 	"sort"
 
+	"github.com/bitjungle/gopca/internal/config"
 	"github.com/bitjungle/gopca/pkg/security"
 	"github.com/bitjungle/gopca/pkg/types"
 	"gonum.org/v1/gonum/mat"
@@ -177,13 +178,15 @@ func (kpca *KernelPCAImpl) eigenDecomposition(K *mat.Dense, k int) ([]float64, [
 		return vals[idx[i]] > vals[idx[j]]
 	})
 
-	// Store all eigenvalues in sorted order for variance calculation
+	// Store all eigenvalues in sorted order for variance calculation.
+	// Near-zero or negative eigenvalues (numerical noise) are clamped to the
+	// minimum threshold to prevent division-by-zero during eigenvector normalization.
+	minEig := config.DefaultAlgorithmConfig().KernelPCA.MinEigenvalue
 	allSortedVals := make([]float64, nVals)
 	for i := 0; i < nVals; i++ {
 		allSortedVals[i] = vals[idx[i]]
-		// Handle near-zero or negative eigenvalues
-		if allSortedVals[i] < 1e-10 {
-			allSortedVals[i] = 1e-10
+		if allSortedVals[i] < minEig {
+			allSortedVals[i] = minEig
 		}
 	}
 
