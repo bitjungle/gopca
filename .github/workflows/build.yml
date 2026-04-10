@@ -56,7 +56,7 @@ jobs:
           ${{ runner.os }}-go-
     
     - name: Download dependencies
-      run: go mod download
+      run: go mod tidy
     
     - name: Set up Python for validation
       uses: actions/setup-python@v5
