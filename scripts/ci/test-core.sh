@@ -12,7 +12,7 @@ echo "=== Running Core GoPCA Tests ==="
 # Show Go version
 echo "Go version: $(go version)"
 
-# Download dependencies if needed
+# Download dependencies (module graph is already tidy from the CI workflow step)
 echo "Downloading dependencies..."
 go mod download
 
