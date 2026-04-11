@@ -4,15 +4,31 @@
 // The author respectfully requests that it not be used for
 // military, warfare, or surveillance applications.
 
-import React, { useState, useRef, useEffect, lazy, Suspense } from 'react';
+import React, { useState, useCallback, useEffect, lazy, Suspense } from 'react';
 import './App.css';
-import { RunPCA, LoadDatasetFile, GetVersion, GetGUIConfig, LoadCSVFile, CheckGoCSVStatus, OpenInGoCSV, LaunchGoCSV, DownloadGoCSV, SaveFile, SelectCSVFile } from '../wailsjs/go/main/App';
+import { ExportPCAModel } from '../wailsjs/go/main/App';
 import { Copy, Check } from 'lucide-react';
-import { EventsOn } from '../wailsjs/runtime/runtime';
 import { DataTable, SelectionTable, MatrixIllustration, HelpWrapper, DocumentationViewer, ModelOverview, AboutDialog } from './components';
-import { setupPlotlyWailsIntegration } from '@gopca/ui-components';
+import { ThemeProvider, ThemeToggle, ConfirmDialog, CustomSelect, ErrorBoundary, ErrorAlert } from '@gopca/ui-components';
+import { HelpProvider, useHelp } from './contexts/HelpContext';
+import { PaletteProvider, usePalette } from './contexts/PaletteContext';
+import { HelpDisplay } from './components/HelpDisplay';
+import { PaletteSelector } from './components/PaletteSelector';
+import { FontSizeControl } from './components/FontSizeControl';
+import logo from './assets/images/GoPCA-logo-1024-transp.png';
+import { generateCLICommand as generateCLICommandUtil } from './utils/cliCommandGenerator';
+import { logger } from './utils/logger';
 
-// Lazy load visualization components for better performance
+// Hooks
+import { useAppInit } from './hooks/useAppInit';
+import { useFileData } from './hooks/useFileData';
+import { useGoCSVIntegration } from './hooks/useGoCSVIntegration';
+import { usePCAConfig } from './hooks/usePCAConfig';
+import { usePCARunner } from './hooks/usePCARunner';
+import { useVisualization, PlotType } from './hooks/useVisualization';
+import { useUIState } from './hooks/useUIState';
+
+// Lazy-loaded visualization components
 const ScoresPlot = lazy(() => import('./components/visualizations/ScoresPlot').then(m => ({ default: m.ScoresPlot })));
 const Scores3DPlot = lazy(() => import('./components/visualizations/Scores3DPlot').then(m => ({ default: m.Scores3DPlot })));
 const ScreePlot = lazy(() => import('./components/visualizations/ScreePlot').then(m => ({ default: m.ScreePlot })));
@@ -26,422 +42,152 @@ const TemporalLoadingsPlot = lazy(() => import('./components/visualizations/Temp
 const TemporalVariableImportancePlot = lazy(() => import('./components/visualizations/TemporalVariableImportancePlot').then(m => ({ default: m.TemporalVariableImportancePlot })));
 const KernelMatrixHeatmap = lazy(() => import('./components/visualizations/KernelMatrixHeatmap').then(m => ({ default: m.KernelMatrixHeatmap })));
 const SampleContributionPlot = lazy(() => import('./components/visualizations/SampleContributionPlot').then(m => ({ default: m.SampleContributionPlot })));
-import { FileData, PCARequest, PCAResponse } from './types';
-import { ThemeProvider, ThemeToggle, ConfirmDialog, CustomSelect, ErrorBoundary, ErrorAlert } from '@gopca/ui-components';
-import { HelpProvider, useHelp } from './contexts/HelpContext';
-import { PaletteProvider, usePalette } from './contexts/PaletteContext';
-import { HelpDisplay } from './components/HelpDisplay';
-import { PaletteSelector } from './components/PaletteSelector';
-import { FontSizeControl } from './components/FontSizeControl';
-import { config } from '../wailsjs/go/models';
-import logo from './assets/images/GoPCA-logo-1024-transp.png';
-import { generateCLICommand as generateCLICommandUtil } from './utils/cliCommandGenerator';
-
-// Plot-specific palette configuration
-type PlotPaletteConfig = {
-    hasPalette: boolean;
-    paletteType: 'categorical' | 'continuous' | 'dynamic'; // dynamic means depends on Color by selection
-};
-
-const PLOT_PALETTE_CONFIG: Record<string, PlotPaletteConfig> = {
-    'scores': { hasPalette: true, paletteType: 'dynamic' },
-    'scores3d': { hasPalette: true, paletteType: 'dynamic' },
-    'scree': { hasPalette: true, paletteType: 'categorical' },
-    'loadings': { hasPalette: true, paletteType: 'categorical' },
-    'biplot': { hasPalette: true, paletteType: 'dynamic' },
-    'biplot3d': { hasPalette: true, paletteType: 'dynamic' },
-    'correlations': { hasPalette: true, paletteType: 'categorical' },
-    'diagnostics': { hasPalette: true, paletteType: 'dynamic' },
-    'eigencorrelation': { hasPalette: true, paletteType: 'continuous' },
-    'temporal-loadings': { hasPalette: true, paletteType: 'categorical' },
-    'temporal-variable-importance': { hasPalette: true, paletteType: 'continuous' },
-    'kernel-matrix': { hasPalette: false, paletteType: 'continuous' }, // Uses fixed colorscale
-    'sample-contributions': { hasPalette: true, paletteType: 'categorical' } // Actually uses categorical
-};
 
 function AppContent() {
     const { currentHelp, currentHelpKey } = useHelp();
     const { setMode } = usePalette();
-    const [fileData, setFileData] = useState<FileData | null>(null);
-    const [fileName, setFileName] = useState<string>('');
-    const [filePath, setFilePath] = useState<string>(''); // Actual file path for CLI commands
-    const [pcaResponse, setPcaResponse] = useState<PCAResponse | null>(null);
-    const [loading, setLoading] = useState(false);
-    const [fileError, setFileError] = useState<string | null>(null);
-    const [pcaError, setPcaError] = useState<string | null>(null);
-    const [version, setVersion] = useState<string>('');
-    const [guiConfig, setGuiConfig] = useState<config.GUIConfig | null>(null);
 
-    // Selection state
-    const [excludedRows, setExcludedRows] = useState<number[]>([]);
-    const [excludedColumns, setExcludedColumns] = useState<number[]>([]);
-    const [selectedPlot, setSelectedPlot] = useState<'scores' | 'scores3d' | 'scree' | 'loadings' | 'biplot' | 'biplot3d' | 'correlations' | 'diagnostics' | 'eigencorrelation' | 'temporal-loadings' | 'temporal-variable-importance' | 'kernel-matrix' | 'sample-contributions'>('scores');
-    const [selectedXComponent, setSelectedXComponent] = useState(0);
-    const [selectedYComponent, setSelectedYComponent] = useState(1);
-    const [selectedZComponent, setSelectedZComponent] = useState(2);
-    const [selectedLoadingComponent, setSelectedLoadingComponent] = useState(0);
+    // ── File data ────────────────────────────────────────────────────────────
+    const {
+        fileData, fileName, filePath, fileError, datasetId, loading: fileLoading,
+        loadDataset, handleNativeFileSelect, setFileDataDirect, clearFileError,
+    } = useFileData();
+
+    // ── PCA configuration & exclusions ───────────────────────────────────────
+    const {
+        config, setConfig,
+        excludedRows, excludedColumns,
+        setExcludedRows, setExcludedColumns,
+        updateGammaForData, resetExclusions,
+    } = usePCAConfig();
+
+    // ── selectedGroupColumn lifted here to break the circular dep between
+    //    usePCARunner (needs it to build requests) and useVisualization
+    //    (needs it to drive palette mode). Both hooks receive it as a param.
     const [selectedGroupColumn, setSelectedGroupColumn] = useState<string | null>(null);
-    const [showEllipses, setShowEllipses] = useState(false);
-    const [confidenceLevel, setConfidenceLevel] = useState<0.90 | 0.95 | 0.99>(0.95);
-    const [showRowLabels, setShowRowLabels] = useState(false);
-    const [maxLabelsToShow, setMaxLabelsToShow] = useState(10);
-    const [showDocumentation, setShowDocumentation] = useState(false);
-    const [showAboutDialog, setShowAboutDialog] = useState(false);
-    const [datasetId, setDatasetId] = useState(0); // Force DataTable re-render on dataset change
-    const [showCopied, setShowCopied] = useState(false);
-    const [loadingsPlotType, setLoadingsPlotType] = useState<'bar' | 'line' | null>(null); // null means auto
-    const [plotFontScale, setPlotFontScale] = useState(1.0); // Font scale factor for all plots
 
-    // Refs for smooth scrolling
-    const pcaErrorRef = useRef<HTMLDivElement>(null);
-    const pcaResultsRef = useRef<HTMLDivElement>(null);
-    const mainScrollRef = useRef<HTMLDivElement>(null);
+    // ── PCA runner ───────────────────────────────────────────────────────────
+    const {
+        pcaResponse, pcaError, loading: pcaLoading,
+        pcaHasExclusions, pcaResultsRef, pcaErrorRef,
+        runPCA, clearPcaError, clearPcaResponse,
+    } = usePCARunner(fileData, config, excludedRows, excludedColumns, selectedGroupColumn);
 
-    // PCA configuration
-    const [config, setConfig] = useState({
-        components: 5,
-        meanCenter: true,
-        standardScale: false,
-        robustScale: false,
-        scaleOnly: false,
-        snv: false,
-        vectorNorm: false,
-        method: 'SVD',
-        missingStrategy: 'error',
-        // Kernel PCA parameters
-        kernelType: 'rbf',
-        kernelGamma: 1.0,
-        kernelDegree: 3,
-        kernelCoef0: 1.0,
-        // Temporal PCA parameters
-        temporalLags: 10,
-        varianceExplained: 0.0
-        // Confidence ellipse parameters
-    });
+    // ── Visualization state ───────────────────────────────────────────────────
+    const {
+        selectedPlot, setSelectedPlot,
+        selectedXComponent, setSelectedXComponent,
+        selectedYComponent, setSelectedYComponent,
+        selectedZComponent, setSelectedZComponent,
+        selectedLoadingComponent, setSelectedLoadingComponent,
+        showEllipses, setShowEllipses,
+        confidenceLevel, setConfidenceLevel,
+        showRowLabels, setShowRowLabels,
+        maxLabelsToShow, setMaxLabelsToShow,
+        loadingsPlotType, setLoadingsPlotType,
+        plotFontScale, setPlotFontScale,
+        getColumnData, handlePlotSelectionChange,
+    } = useVisualization(pcaResponse, fileData, fileLoading || pcaLoading, selectedGroupColumn, setExcludedRows);
 
-    // GoCSV integration state
-    const [goCSVStatus, setGoCSVStatus] = useState<{installed: boolean, path?: string, error?: string} | null>(null);
-    const [isCheckingGoCSV, setIsCheckingGoCSV] = useState(false);
-    const [showGoCSVDownloadDialog, setShowGoCSVDownloadDialog] = useState(false);
+    // Combined loading state
+    const loading = fileLoading || pcaLoading;
 
-    // Track if current PCA result was generated with exclusions applied
-    const [pcaHasExclusions, setPcaHasExclusions] = useState(false);
-
-    const updateGammaForData = (data: FileData) => {
-        if (data && data.data && data.data[0]) {
-            const numFeatures = data.data[0].length;
-            setConfig(prev => ({
-                ...prev,
-                kernelGamma: 1.0 / numFeatures,
-                components: Math.min(5, numFeatures)  // Default to 5 or number of features if less
-            }));
-        }
-    };
-
-    // Fetch version and GUI config on mount
+    // Alert the user when a new Kernel PCA result arrives and the current plot
+    // is incompatible. useVisualization already switches the plot via its own
+    // effect; this effect adds the user-visible alert.
     useEffect(() => {
-        // Make SaveFile available globally for Plotly integration
-        if (typeof SaveFile !== 'undefined') {
-            (window as any).SaveFile = SaveFile;
-            // SaveFile made available globally for Plotly integration
-        }
-
-        // Setup Plotly-Wails integration for export functionality
-        setupPlotlyWailsIntegration();
-
-        GetVersion().then((v) => {
-            setVersion(v);
-        }).catch((err) => {
-            console.error('Failed to get version:', err);
-        });
-
-        GetGUIConfig().then((config) => {
-            setGuiConfig(config);
-        }).catch((err) => {
-            console.error('Failed to get GUI config:', err);
-        });
-
-        // Check GoCSV installation status on startup
-        CheckGoCSVStatus().then((status) => {
-            setGoCSVStatus(status);
-        }).catch((err) => {
-            console.error('Failed to check GoCSV status:', err);
-        });
-
-        // Listen for file to load on startup
-        const unsubscribe = EventsOn('load-file-on-startup', async (filePath: string) => {
-            setLoading(true);
-            setFileError(null);
-            setPcaError(null);
-
-            try {
-                const result = await LoadCSVFile(filePath);
-                setFileData(result);
-                setPcaResponse(null);
-                setExcludedRows([]);
-                setExcludedColumns([]);
-                setSelectedGroupColumn(null);
-                setMode('none'); // Reset palette mode
-                setDatasetId(prev => prev + 1); // Force DataTable re-render
-                updateGammaForData(result);
-            } catch (err) {
-                setFileError(`Failed to load file: ${err}`);
-            } finally {
-                setLoading(false);
-            }
-        });
-
-        // Cleanup event listener on unmount
-        return () => {
-            unsubscribe();
-        };
-    }, []);
-
-    // Auto-switch visualization when Kernel PCA is selected and incompatible plot is active
-    useEffect(() => {
-        if (pcaResponse && pcaResponse.result && pcaResponse.result.method === 'kernel') {
-            if (selectedPlot === 'loadings' || selectedPlot === 'diagnostics' || selectedPlot === 'eigencorrelation') {
-                // Switch to scores plot as a safe default
-                setSelectedPlot('scores');
+        if (pcaResponse?.result?.method === 'kernel') {
+            if (selectedPlot === 'correlations' || selectedPlot === 'biplot' || selectedPlot === 'biplot3d') {
+                alert('The selected visualization is not supported for Kernel PCA. Switching to Scores Plot.');
             }
         }
-    }, [pcaResponse, selectedPlot]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [pcaResponse]);
 
-    // Update palette mode based on selected plot type
-    useEffect(() => {
-        // Only update palette mode if we have a PCA result
-        if (!pcaResponse || !pcaResponse.result) {
-            return;
-        }
+    // ── Row / column selection handlers ───────────────────────────────────────
+    const handleRowSelectionChange = useCallback((selectedRows: number[]) => {
+        if (!fileData) return;
+        const allIndices = Array.from({ length: fileData.data.length }, (_, i) => i);
+        setExcludedRows(allIndices.filter(i => !selectedRows.includes(i)));
+    }, [fileData, setExcludedRows]);
 
-        const plotConfig = PLOT_PALETTE_CONFIG[selectedPlot];
-        if (!plotConfig || !plotConfig.hasPalette) {
-            setMode('none');
-            return;
-        }
+    const handleColumnSelectionChange = useCallback((selectedColumns: number[]) => {
+        if (!fileData) return;
+        const allIndices = Array.from({ length: fileData.headers.length }, (_, i) => i);
+        setExcludedColumns(allIndices.filter(i => !selectedColumns.includes(i)));
+    }, [fileData, setExcludedColumns]);
 
-        // For plots with fixed palette types, set the mode immediately
-        if (plotConfig.paletteType === 'categorical') {
-            setMode('categorical');
-        } else if (plotConfig.paletteType === 'continuous') {
-            setMode('continuous');
-        } else if (plotConfig.paletteType === 'dynamic') {
-            // For dynamic plots, the mode is controlled by the Color by selection
-            // Don't change the mode here to avoid conflicts with the Color by control
-            // If no group column is selected and plot needs a palette, set a default
-            if (!selectedGroupColumn) {
-                // For dynamic plots without a selection, we still want to show the palette control
-                // Set to categorical as a reasonable default that works for most plots
-                setMode('categorical');
-            }
-            // Otherwise, let the Color by control handle the mode
-        }
-    }, [selectedPlot, pcaResponse, setMode, selectedGroupColumn]);
+    // ── Dataset loading helpers ───────────────────────────────────────────────
+    const handleLoadDataset = useCallback(async (filename: string, defaultGroupColumn?: string) => {
+        const result = await loadDataset(filename, defaultGroupColumn);
+        if (!result) return;
+        const { data, defaultGroupColumn: groupCol } = result;
+        resetExclusions();
+        clearPcaResponse();
 
-    // Helper function to get column data and type
-    const getColumnData = (columnName: string | null): { values?: string[] | number[], type?: 'categorical' | 'continuous' } => {
-        if (!columnName || !fileData) {
-            return {};
-        }
-
-        // Handle special "Row Index" column
-        if (columnName === 'Row Index') {
-            // Generate 1-based row indices for the current data
-            // Use the actual number of samples in the PCA result if available
-            const numSamples = pcaResponse?.result?.scores?.length || fileData.data.length;
-            const indices = Array.from({ length: numSamples }, (_, i) => i + 1);
-            return { values: indices, type: 'continuous' };
-        }
-
-        // CRITICAL FIX: Use filtered data from PCA response when rows have been dropped
-        // This ensures categorical/numeric column data aligns with the reduced scores matrix
-        if (pcaResponse?.filteredCategoricalColumns && columnName in pcaResponse.filteredCategoricalColumns) {
-            return { values: pcaResponse.filteredCategoricalColumns[columnName], type: 'categorical' };
-        }
-
-        if (pcaResponse?.filteredNumericTargetColumns && columnName in pcaResponse.filteredNumericTargetColumns) {
-            return { values: pcaResponse.filteredNumericTargetColumns[columnName], type: 'continuous' };
-        }
-
-        // Fall back to original data if no filtered data is available
-        if (fileData.categoricalColumns && columnName in fileData.categoricalColumns) {
-            return { values: fileData.categoricalColumns[columnName], type: 'categorical' };
-        }
-
-        if (fileData.numericTargetColumns && columnName in fileData.numericTargetColumns) {
-            return { values: fileData.numericTargetColumns[columnName], type: 'continuous' };
-        }
-
-        return {};
-    };
-
-    // Centralized dataset loading function
-    const loadDataset = async (filename: string, defaultGroupColumn?: string) => {
-        setLoading(true);
-        setFileError(null);
-        setPcaError(null);
-
-        try {
-            const result = await LoadDatasetFile(filename);
-            setFileData(result);
-            setFileName(filename); // Store the sample dataset filename
-            setFilePath(''); // Built-in datasets don't have real file paths
-            setPcaResponse(null);
-            setExcludedRows([]);
-            setExcludedColumns([]);
-            setDatasetId(prev => prev + 1); // Force DataTable re-render
-
-            // Validate group column exists before setting
-            if (defaultGroupColumn && result) {
-                const isCategorical = result.categoricalColumns && defaultGroupColumn in result.categoricalColumns;
-                const isContinuous = result.numericTargetColumns && defaultGroupColumn in result.numericTargetColumns;
-                const isValid = isCategorical || isContinuous;
-
-                if (isValid) {
-                    setSelectedGroupColumn(defaultGroupColumn);
-                    // Set the appropriate palette mode based on column type
-                    if (isCategorical) {
-                        setMode('categorical');
-                    } else if (isContinuous) {
-                        setMode('continuous');
-                    }
-                } else {
-                    console.warn(`Column "${defaultGroupColumn}" not found in ${filename}, setting group column to null`);
-                    setSelectedGroupColumn(null);
-                    setMode('none');
-                }
+        if (groupCol && data) {
+            const isCategorical = data.categoricalColumns && groupCol in data.categoricalColumns;
+            const isContinuous = data.numericTargetColumns && groupCol in data.numericTargetColumns;
+            if (isCategorical || isContinuous) {
+                setSelectedGroupColumn(groupCol);
+                setMode(isCategorical ? 'categorical' : 'continuous');
             } else {
+                logger.warn(`Column "${groupCol}" not found in ${filename}, setting group column to null`);
                 setSelectedGroupColumn(null);
                 setMode('none');
             }
-
-            updateGammaForData(result);
-        } catch (err) {
-            setFileError(`Failed to load ${filename}: ${err}`);
-        } finally {
-            setLoading(false);
-        }
-    };
-
-    const handleNativeFileSelect = async () => {
-        setLoading(true);
-        setFileError(null);
-        setPcaError(null); // Clear any previous PCA errors
-
-        try {
-            const result = await SelectCSVFile();
-
-            // User cancelled
-            if (!result) {
-                setLoading(false);
-                return;
-            }
-
-            // Extract data and file path from result
-            const { data, filePath: selectedFilePath } = result;
-
-            // Ensure data is present
-            if (!data) {
-                throw new Error('No data returned from file selection');
-            }
-
-            // Set display name and actual file path
-            setFileName('Selected File');
-            setFilePath(selectedFilePath); // Store actual path for CLI commands
-            setFileData(data);
-            setPcaResponse(null);
-            // Reset exclusions and selections when loading new data
-            setExcludedRows([]);
-            setExcludedColumns([]);
+        } else {
             setSelectedGroupColumn(null);
-            setMode('none'); // Reset palette mode
-            setDatasetId(prev => prev + 1); // Force DataTable re-render
-
-            // Calculate and set default gamma for kernel PCA
-            updateGammaForData(data);
-        } catch (err) {
-            console.error('File selection failed:', err);
-            setFileError(`Failed to load file: ${err}`);
-            setFileData(null);
-        } finally {
-            setLoading(false);
+            setMode('none');
         }
-    };
 
-    const handleGoCSVAction = async () => {
-        setIsCheckingGoCSV(true);
+        updateGammaForData(data);
+    }, [loadDataset, resetExclusions, clearPcaResponse, setSelectedGroupColumn, setMode, updateGammaForData]);
+
+    const handleNativeFileSelectWithReset = useCallback(async () => {
+        const data = await handleNativeFileSelect();
+        if (!data) return;
+        resetExclusions();
+        clearPcaResponse();
+        setSelectedGroupColumn(null);
+        setMode('none');
+        updateGammaForData(data);
+    }, [handleNativeFileSelect, resetExclusions, clearPcaResponse, setSelectedGroupColumn, setMode, updateGammaForData]);
+
+    // ── Run PCA — also resets PC selectors ────────────────────────────────────
+    const handleRunPCA = useCallback(async () => {
+        await runPCA();
+        setSelectedXComponent(0);
+        setSelectedYComponent(1);
+    }, [runPCA, setSelectedXComponent, setSelectedYComponent]);
+
+    // ── Export model ──────────────────────────────────────────────────────────
+    const handleExportModel = useCallback(async () => {
+        if (!pcaResponse?.success || !pcaResponse.result || !fileData) return;
 
         try {
-            // Check if GoCSV is installed
-            const status = await CheckGoCSVStatus();
-            setGoCSVStatus(status);
-
-            if (status.installed) {
-                // If installed and we have data, open it in GoCSV
-                if (fileData) {
-                    await OpenInGoCSV(fileData);
-                } else {
-                    // If no data, just launch GoCSV without a file
-                    await LaunchGoCSV();
-                }
-            } else {
-                // If not installed, show download dialog
-                setShowGoCSVDownloadDialog(true);
-            }
-        } catch (err) {
-            console.error('GoCSV action failed:', err);
-            alert(`Failed to perform GoCSV action: ${err}`);
-        } finally {
-            setIsCheckingGoCSV(false);
-        }
-    };
-
-    const handleRowSelectionChange = React.useCallback((selectedRows: number[]) => {
-        // Convert selected indices to excluded indices
-        if (fileData) {
-            const allIndices = Array.from({ length: fileData.data.length }, (_, i) => i);
-            const excluded = allIndices.filter(i => !selectedRows.includes(i));
-            setExcludedRows(excluded);
-        }
-    }, [fileData]);
-
-    // Handle plot selection changes
-    const handlePlotSelectionChange = React.useCallback((indices: number[]) => {
-        if (loading || !fileData || indices.length === 0) {
-            return;
-        }
-
-        // Toggle selected indices in excluded rows
-        setExcludedRows(prev => {
-            const newExcluded = new Set(prev);
-            indices.forEach(idx => {
-                if (newExcluded.has(idx)) {
-                    newExcluded.delete(idx);
-                } else {
-                    newExcluded.add(idx);
-                }
+            const { ExportPCAModelRequest } = await import('../wailsjs/go/models').then(m => m.main);
+            const request = new ExportPCAModelRequest({
+                data: fileData.data,
+                headers: fileData.headers,
+                rowNames: fileData.rowNames,
+                pcaResult: pcaResponse.result,
+                config,
+                excludedRows,
+                excludedColumns,
+                filename: fileName,
             });
-            return Array.from(newExcluded);
-        });
-    }, [fileData, loading]);
-
-    const handleColumnSelectionChange = React.useCallback((selectedColumns: number[]) => {
-        // Convert selected indices to excluded indices
-        if (fileData) {
-            const allIndices = Array.from({ length: fileData.headers.length }, (_, i) => i);
-            const excluded = allIndices.filter(i => !selectedColumns.includes(i));
-            setExcludedColumns(excluded);
+            await ExportPCAModel(request);
+        } catch (err) {
+            logger.error('Failed to export model:', err);
+            alert(`Failed to export model: ${err}`);
         }
-    }, [fileData]);
+    }, [pcaResponse, fileData, config, excludedRows, excludedColumns, fileName]);
 
-    const handleLogoClick = () => {
-        setShowAboutDialog(true);
-    };
-
-    const generateCLICommand = (): string => {
+    // ── CLI command ───────────────────────────────────────────────────────────
+    const generateCLICommand = useCallback((): string => {
         return generateCLICommandUtil({
-            fileName,
-            filePath,
+            fileName, filePath,
             components: config.components,
             method: config.method,
             kernelType: config.kernelType,
@@ -458,122 +204,38 @@ function AppContent() {
             scaleOnly: config.scaleOnly,
             missingStrategy: config.missingStrategy,
             excludedColumns,
-            excludedRows
+            excludedRows,
         });
-    };
+    }, [fileName, filePath, config, excludedColumns, excludedRows]);
 
-    const copyToClipboard = async (text: string) => {
-        try {
-            await navigator.clipboard.writeText(text);
-            setShowCopied(true);
-            setTimeout(() => setShowCopied(false), 2000);
-        } catch (err) {
-            console.error('Failed to copy to clipboard:', err);
-        }
-    };
+    // ── App init (version, guiConfig, Plotly–Wails, startup file) ────────────
+    const onStartupFile = useCallback((data: import('./types').FileData) => {
+        setFileDataDirect(data, 'Startup File', '');
+        resetExclusions();
+        clearPcaResponse();
+        setSelectedGroupColumn(null);
+        setMode('none');
+        updateGammaForData(data);
+    }, [setFileDataDirect, resetExclusions, clearPcaResponse, setSelectedGroupColumn, setMode, updateGammaForData]);
 
-    const runPCA = async () => {
-        if (!fileData) {
-return;
-}
+    const { version, guiConfig } = useAppInit(onStartupFile);
 
-        setLoading(true);
-        setPcaError(null);
+    // ── GoCSV integration ─────────────────────────────────────────────────────
+    const {
+        goCSVStatus, isCheckingGoCSV,
+        showGoCSVDownloadDialog, setShowGoCSVDownloadDialog,
+        handleGoCSVAction, handleGoCSVDownload,
+    } = useGoCSVIntegration();
 
-        try {
-            const request: PCARequest = {
-                data: fileData.data,
-                missingMask: fileData.missingMask,
-                headers: fileData.headers,
-                rowNames: fileData.rowNames,
-                ...config,
-                excludedRows,
-                excludedColumns,
-                // Add group information if a group column is selected
-                ...(selectedGroupColumn && fileData.categoricalColumns && {
-                    groupColumn: selectedGroupColumn,
-                    groupLabels: fileData.categoricalColumns[selectedGroupColumn]
-                }),
-                // Add metadata for eigencorrelations if available
-                metadataNumeric: fileData.numericTargetColumns || {},
-                metadataCategorical: fileData.categoricalColumns || {},
-                calculateEigencorrelations: (fileData.numericTargetColumns && Object.keys(fileData.numericTargetColumns).length > 0) ||
-                                          (fileData.categoricalColumns && Object.keys(fileData.categoricalColumns).length > 0)
-            };
-            const result = await RunPCA(request);
-            if (result.success) {
-                setPcaResponse(result);
-                // Reset PC selections to default
-                setSelectedXComponent(0);
-                setSelectedYComponent(1);
-                // Clear any previous errors
-                setPcaError(null);
+    // ── UI state (modals, clipboard, scroll ref) ──────────────────────────────
+    const {
+        showDocumentation, setShowDocumentation,
+        showAboutDialog, setShowAboutDialog,
+        showCopied, mainScrollRef,
+        handleLogoClick, copyToClipboard,
+    } = useUIState();
 
-                // Track whether this PCA was run with exclusions (for UI feedback)
-                // Note: We keep the original fileData intact - the backend handles exclusions
-                setPcaHasExclusions(excludedRows.length > 0);
-
-                // Check if Kernel PCA is selected with unsupported visualization
-                if (config.method === 'kernel' &&
-                    (selectedPlot === 'correlations' || selectedPlot === 'biplot' || selectedPlot === 'biplot3d')) {
-                    // Switch to scores plot
-                    setSelectedPlot('scores');
-                    // Alert user about the automatic switch
-                    alert('The selected visualization is not supported for Kernel PCA. Switching to Scores Plot.');
-                }
-
-                // Smooth scroll to results
-                setTimeout(() => {
-                    pcaResultsRef.current?.scrollIntoView({
-                        behavior: 'smooth',
-                        block: 'start'
-                    });
-                }, 100);
-            } else {
-                setPcaError(result.error || 'PCA analysis failed');
-                setPcaResponse(null);
-                // Smooth scroll to error
-                setTimeout(() => {
-                    pcaErrorRef.current?.scrollIntoView({
-                        behavior: 'smooth',
-                        block: 'start'
-                    });
-                }, 100);
-            }
-        } catch (err) {
-            setPcaError(`Failed to run PCA: ${err}`);
-        } finally {
-            setLoading(false);
-        }
-    };
-
-    const handleExportModel = async () => {
-        if (!pcaResponse?.success || !pcaResponse.result || !fileData) {
-return;
-}
-
-        try {
-            const { ExportPCAModel } = await import('../wailsjs/go/main/App');
-            const { ExportPCAModelRequest } = await import('../wailsjs/go/models').then(m => m.main);
-
-            const request = new ExportPCAModelRequest({
-                data: fileData.data,
-                headers: fileData.headers,
-                rowNames: fileData.rowNames,
-                pcaResult: pcaResponse.result,
-                config,
-                excludedRows,
-                excludedColumns,
-                filename: fileName  // Add the original filename
-            });
-
-            await ExportPCAModel(request);
-        } catch (err) {
-            console.error('Failed to export model:', err);
-            alert(`Failed to export model: ${err}`);
-        }
-    };
-
+    // ── JSX ───────────────────────────────────────────────────────────────────
     return (
         <div className="flex flex-col h-screen bg-gray-50 dark:bg-gray-900 text-gray-900 dark:text-white transition-colors duration-200">
             <header className="sticky top-0 z-50 bg-white dark:bg-gray-800 shadow-lg backdrop-blur-sm bg-opacity-95 dark:bg-opacity-95">
@@ -602,7 +264,6 @@ return;
                                 className="p-2 rounded-lg bg-gray-200 dark:bg-gray-700 hover:bg-gray-300 dark:hover:bg-gray-600 transition-colors duration-200"
                                 aria-label="Open documentation"
                             >
-                                {/* Book icon */}
                                 <svg
                                     xmlns="http://www.w3.org/2000/svg"
                                     fill="none"
@@ -628,7 +289,7 @@ return;
 
             <main ref={mainScrollRef} className="flex-1 overflow-auto p-6">
                 <div className="max-w-7xl mx-auto space-y-6">
-                    {/* File Upload Section */}
+                    {/* Step 1: Load Data */}
                     <div className="bg-white dark:bg-gray-800 rounded-lg p-6 shadow-lg border border-gray-200 dark:border-gray-700">
                         <h2 className="text-xl font-semibold mb-6">Step 1: Load Data</h2>
                         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-[1fr_2fr_1fr] gap-6">
@@ -639,7 +300,7 @@ return;
                                 </label>
                                 <HelpWrapper helpKey="choose-file">
                                     <button
-                                        onClick={handleNativeFileSelect}
+                                        onClick={handleNativeFileSelectWithReset}
                                         disabled={loading}
                                         className="w-full px-4 py-2 text-sm font-semibold text-white bg-blue-600 rounded-full hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
                                     >
@@ -647,14 +308,13 @@ return;
                                     </button>
                                 </HelpWrapper>
 
-                                {/* GoCSV Integration Button */}
                                 <div className="mt-4">
                                     <p className="text-sm text-gray-600 dark:text-gray-400 mb-2">
                                         Or Use the Data Editor
                                     </p>
                                     <HelpWrapper helpKey="gocsv-integration">
                                         <button
-                                            onClick={handleGoCSVAction}
+                                            onClick={() => handleGoCSVAction(fileData)}
                                             disabled={isCheckingGoCSV}
                                             className="w-full px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                                         >
@@ -681,7 +341,7 @@ return;
                                 <div className="space-y-2">
                                     <HelpWrapper helpKey="sample-dataset-corn">
                                         <button
-                                            onClick={() => loadDataset('corn.csv')}
+                                            onClick={() => handleLoadDataset('corn.csv')}
                                             className="w-full px-4 py-2 text-sm bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors"
                                             disabled={loading}
                                         >
@@ -690,7 +350,7 @@ return;
                                     </HelpWrapper>
                                     <HelpWrapper helpKey="sample-dataset-iris">
                                         <button
-                                            onClick={() => loadDataset('iris.csv', 'species')}
+                                            onClick={() => handleLoadDataset('iris.csv', 'species')}
                                             className="w-full px-4 py-2 text-sm bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors"
                                             disabled={loading}
                                         >
@@ -699,7 +359,7 @@ return;
                                     </HelpWrapper>
                                     <HelpWrapper helpKey="sample-dataset-wine">
                                         <button
-                                            onClick={() => loadDataset('wine.csv', 'target')}
+                                            onClick={() => handleLoadDataset('wine.csv', 'target')}
                                             className="w-full px-4 py-2 text-sm bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors"
                                             disabled={loading}
                                         >
@@ -708,7 +368,7 @@ return;
                                     </HelpWrapper>
                                     <HelpWrapper helpKey="sample-dataset-swiss-roll">
                                         <button
-                                            onClick={() => loadDataset('swiss_roll.csv', 'color #target')}
+                                            onClick={() => handleLoadDataset('swiss_roll.csv', 'color #target')}
                                             className="w-full px-4 py-2 text-sm bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors"
                                             disabled={loading}
                                         >
@@ -717,7 +377,7 @@ return;
                                     </HelpWrapper>
                                     <HelpWrapper helpKey="sample-dataset-stocks">
                                         <button
-                                            onClick={() => loadDataset('stocks.csv')}
+                                            onClick={() => handleLoadDataset('stocks.csv')}
                                             className="w-full px-4 py-2 text-sm bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors"
                                             disabled={loading}
                                         >
@@ -729,21 +389,20 @@ return;
                         </div>
                     </div>
 
-                    {/* File Error Display */}
+                    {/* File Error */}
                     {fileError && (
                         <ErrorAlert
                             type="error"
                             title="File Error"
                             message={fileError}
-                            onDismiss={() => setFileError(null)}
+                            onDismiss={clearFileError}
                         />
                     )}
 
-                    {/* Data Display */}
+                    {/* Loaded Data Table */}
                     {fileData && (
                         <div className="bg-white dark:bg-gray-800 rounded-lg p-6 shadow-lg border border-gray-200 dark:border-gray-700">
                             <h2 className="text-xl font-semibold mb-4">Loaded Data</h2>
-                            {/* Check if dataset is large (>10,000 cells) */}
                             {fileData.data.length * fileData.headers.length > 10000 ? (
                                 <SelectionTable
                                     key={`dataset-${datasetId}`}
@@ -759,7 +418,7 @@ return;
                             ) : (
                                 <ErrorBoundary
                                     onError={(error, errorInfo) => {
-                                        console.error('DataTable Error:', error, errorInfo);
+                                        logger.error('DataTable Error:', error, errorInfo);
                                     }}
                                 >
                                     <HelpWrapper helpKey="data-table-format">
@@ -769,31 +428,29 @@ return;
                                             rowNames={fileData.rowNames}
                                             data={fileData.data}
                                             title="Input Data"
-                                        enableRowSelection={true}
-                                        enableColumnSelection={true}
-                                        onRowSelectionChange={handleRowSelectionChange}
-                                        onColumnSelectionChange={handleColumnSelectionChange}
-                                        externalSelectedRows={fileData.data.map((_, i) => i).filter(i => !excludedRows.includes(i))}
-                                        highlightExternalSelections={true}
-                                    />
+                                            enableRowSelection={true}
+                                            enableColumnSelection={true}
+                                            onRowSelectionChange={handleRowSelectionChange}
+                                            onColumnSelectionChange={handleColumnSelectionChange}
+                                            externalSelectedRows={fileData.data.map((_, i) => i).filter(i => !excludedRows.includes(i))}
+                                            highlightExternalSelections={true}
+                                        />
                                     </HelpWrapper>
                                 </ErrorBoundary>
                             )}
                         </div>
                     )}
 
-                    {/* Configuration Section */}
+                    {/* Step 2: Configure PCA */}
                     {fileData && (
                         <div className="bg-white dark:bg-gray-800 rounded-lg p-6 shadow-lg border border-gray-200 dark:border-gray-700">
                             <h2 className="text-xl font-semibold mb-6">Step 2: Configure PCA</h2>
 
-                            {/* Two-column layout */}
                             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
                                 {/* Left Column - Core PCA Configuration */}
                                 <div className="space-y-4">
                                     <h3 className="text-sm font-semibold text-gray-700 dark:text-gray-300">PCA Options</h3>
 
-                                    {/* Basic Configuration */}
                                     <div className="p-3 bg-gray-50 dark:bg-gray-700/50 rounded-lg space-y-4">
                                         <HelpWrapper helpKey="num-components">
                                             <label className="block text-sm font-medium mb-2">
@@ -814,69 +471,47 @@ return;
                                                 Method
                                             </label>
                                             <CustomSelect
-                                            value={config.method}
-                                            onChange={(value) => {
-                                                const newMethod = value;
-                                                const oldMethod = config.method;
-                                                const newConfig = { ...config, method: newMethod };
+                                                value={config.method}
+                                                onChange={(value) => {
+                                                    const newMethod = value;
+                                                    const oldMethod = config.method;
+                                                    const newConfig = { ...config, method: newMethod };
 
-                                                // If switching to kernel PCA and current preprocessing is invalid
-                                                if (newMethod === 'kernel') {
-                                                    // Check if current preprocessing is invalid for kernel PCA
-                                                    // Valid options for kernel PCA are: none (all false) or scale-only
-                                                    if (newConfig.meanCenter || newConfig.standardScale || newConfig.robustScale) {
-                                                        // Reset to "None" - the default valid option
-                                                        newConfig.meanCenter = false;
+                                                    if (newMethod === 'kernel') {
+                                                        if (newConfig.meanCenter || newConfig.standardScale || newConfig.robustScale) {
+                                                            newConfig.meanCenter = false;
+                                                            newConfig.standardScale = false;
+                                                            newConfig.robustScale = false;
+                                                            newConfig.scaleOnly = false;
+                                                        }
+                                                    } else if (oldMethod === 'kernel' && newMethod !== 'kernel') {
+                                                        newConfig.meanCenter = true;
                                                         newConfig.standardScale = false;
                                                         newConfig.robustScale = false;
                                                         newConfig.scaleOnly = false;
                                                     }
-                                                    // scaleOnly is valid, so we keep it as-is
-                                                } else if (oldMethod === 'kernel' && newMethod !== 'kernel') {
-                                                    // When switching FROM kernel PCA to other methods, restore default preprocessing
-                                                    // This prevents the bug where SVD runs on uncentered data after using kernel PCA
-                                                    // Restore default preprocessing for standard PCA methods
-                                                    // Mean centering is the default and most important for SVD/NIPALS
-                                                    newConfig.meanCenter = true;
-                                                    newConfig.standardScale = false;
-                                                    newConfig.robustScale = false;
-                                                    newConfig.scaleOnly = false;
-                                                }
 
-                                                setConfig(newConfig);
-                                            }}
-                                            options={[
-                                                { value: 'SVD', label: 'SVD' },
-                                                { value: 'NIPALS', label: 'NIPALS' },
-                                                { value: 'kernel', label: 'Kernel PCA' },
-                                                { value: 'temporal', label: 'Temporal PCA' }
-                                            ]}
-                                            className="w-full"
-                                        />
+                                                    setConfig(newConfig);
+                                                }}
+                                                options={[
+                                                    { value: 'SVD', label: 'SVD' },
+                                                    { value: 'NIPALS', label: 'NIPALS' },
+                                                    { value: 'kernel', label: 'Kernel PCA' },
+                                                    { value: 'temporal', label: 'Temporal PCA' }
+                                                ]}
+                                                className="w-full"
+                                            />
                                         </HelpWrapper>
                                     </div>
 
-                                    {/* Method-specific information */}
                                     {config.method === 'SVD' && (
                                         <div className="p-4 bg-blue-50 dark:bg-blue-900/20 rounded-lg space-y-3">
                                             <h4 className="font-medium text-sm text-blue-900 dark:text-blue-100">SVD Method</h4>
                                             <div className="space-y-2 text-sm text-blue-800 dark:text-blue-200">
-                                                <p className="flex items-start">
-                                                    <span className="mr-2">•</span>
-                                                    <span>Gold standard for PCA using Singular Value Decomposition</span>
-                                                </p>
-                                                <p className="flex items-start">
-                                                    <span className="mr-2">•</span>
-                                                    <span>Fast and numerically stable for complete datasets</span>
-                                                </p>
-                                                <p className="flex items-start">
-                                                    <span className="mr-2">•</span>
-                                                    <span>Computes all components simultaneously</span>
-                                                </p>
-                                                <p className="flex items-start">
-                                                    <span className="mr-2">•</span>
-                                                    <span>Best choice for most applications</span>
-                                                </p>
+                                                <p className="flex items-start"><span className="mr-2">•</span><span>Gold standard for PCA using Singular Value Decomposition</span></p>
+                                                <p className="flex items-start"><span className="mr-2">•</span><span>Fast and numerically stable for complete datasets</span></p>
+                                                <p className="flex items-start"><span className="mr-2">•</span><span>Computes all components simultaneously</span></p>
+                                                <p className="flex items-start"><span className="mr-2">•</span><span>Best choice for most applications</span></p>
                                             </div>
                                         </div>
                                     )}
@@ -885,33 +520,19 @@ return;
                                         <div className="p-4 bg-green-50 dark:bg-green-900/20 rounded-lg space-y-3">
                                             <h4 className="font-medium text-sm text-green-900 dark:text-green-100">NIPALS Method</h4>
                                             <div className="space-y-2 text-sm text-green-800 dark:text-green-200">
-                                                <p className="flex items-start">
-                                                    <span className="mr-2">•</span>
-                                                    <span>Nonlinear Iterative Partial Least Squares algorithm</span>
-                                                </p>
-                                                <p className="flex items-start">
-                                                    <span className="mr-2">•</span>
-                                                    <span>Handles missing data gracefully</span>
-                                                </p>
-                                                <p className="flex items-start">
-                                                    <span className="mr-2">•</span>
-                                                    <span>Computes components sequentially</span>
-                                                </p>
-                                                <p className="flex items-start">
-                                                    <span className="mr-2">•</span>
-                                                    <span>Ideal for large datasets when only few components needed</span>
-                                                </p>
+                                                <p className="flex items-start"><span className="mr-2">•</span><span>Nonlinear Iterative Partial Least Squares algorithm</span></p>
+                                                <p className="flex items-start"><span className="mr-2">•</span><span>Handles missing data gracefully</span></p>
+                                                <p className="flex items-start"><span className="mr-2">•</span><span>Computes components sequentially</span></p>
+                                                <p className="flex items-start"><span className="mr-2">•</span><span>Ideal for large datasets when only few components needed</span></p>
                                             </div>
                                         </div>
                                     )}
 
-                                    {/* Kernel PCA Options */}
                                     {config.method === 'kernel' && (
                                         <div className="p-4 bg-gray-50 dark:bg-gray-700/50 rounded-lg space-y-4">
                                             <h4 className="font-medium text-sm">Kernel PCA Options</h4>
 
-                                            {/* Memory warning for large datasets */}
-                                            {fileData && fileData.data && fileData.data.length > 5000 && (
+                                            {fileData.data.length > 5000 && (
                                                 <div className="p-3 bg-yellow-100 dark:bg-yellow-900/50 border border-yellow-300 dark:border-yellow-700 rounded-lg">
                                                     <p className="text-sm text-yellow-800 dark:text-yellow-200">
                                                         <strong>⚠️ Warning:</strong> Kernel PCA with {fileData.data.length.toLocaleString()} samples
@@ -927,9 +548,7 @@ return;
 
                                             <div className="space-y-4">
                                                 <HelpWrapper helpKey="kernel-type">
-                                                    <label className="block text-sm font-medium mb-1">
-                                                        Kernel Type
-                                                    </label>
+                                                    <label className="block text-sm font-medium mb-1">Kernel Type</label>
                                                     <CustomSelect
                                                         value={config.kernelType}
                                                         onChange={(value) => setConfig({ ...config, kernelType: value })}
@@ -942,9 +561,7 @@ return;
                                                     />
                                                 </HelpWrapper>
                                                 <HelpWrapper helpKey="kernel-gamma">
-                                                    <label className="block text-sm font-medium mb-1">
-                                                        Gamma
-                                                    </label>
+                                                    <label className="block text-sm font-medium mb-1">Gamma</label>
                                                     <input
                                                         type="number"
                                                         value={config.kernelGamma}
@@ -960,9 +577,7 @@ return;
                                                 {config.kernelType === 'poly' && (
                                                     <>
                                                         <HelpWrapper helpKey="kernel-degree">
-                                                            <label className="block text-sm font-medium mb-1">
-                                                                Degree
-                                                            </label>
+                                                            <label className="block text-sm font-medium mb-1">Degree</label>
                                                             <input
                                                                 type="number"
                                                                 value={config.kernelDegree}
@@ -973,9 +588,7 @@ return;
                                                             />
                                                         </HelpWrapper>
                                                         <HelpWrapper helpKey="kernel-coef0">
-                                                            <label className="block text-sm font-medium mb-1">
-                                                                Coef0
-                                                            </label>
+                                                            <label className="block text-sm font-medium mb-1">Coef0</label>
                                                             <input
                                                                 type="number"
                                                                 value={config.kernelCoef0}
@@ -996,31 +609,17 @@ return;
                                         </div>
                                     )}
 
-                                    {/* Temporal PCA Options */}
                                     {config.method === 'temporal' && (
                                         <div className="p-4 bg-purple-50 dark:bg-purple-900/20 rounded-lg space-y-4">
                                             <h4 className="font-medium text-sm text-purple-900 dark:text-purple-100">Temporal PCA Options</h4>
-
                                             <div className="space-y-2 text-sm text-purple-800 dark:text-purple-200">
-                                                <p className="flex items-start">
-                                                    <span className="mr-2">•</span>
-                                                    <span>Time-Delay PCA for time-series analysis</span>
-                                                </p>
-                                                <p className="flex items-start">
-                                                    <span className="mr-2">•</span>
-                                                    <span>Captures temporal dynamics and dependencies</span>
-                                                </p>
-                                                <p className="flex items-start">
-                                                    <span className="mr-2">•</span>
-                                                    <span>Based on SSA (Singular Spectrum Analysis) methodology</span>
-                                                </p>
+                                                <p className="flex items-start"><span className="mr-2">•</span><span>Time-Delay PCA for time-series analysis</span></p>
+                                                <p className="flex items-start"><span className="mr-2">•</span><span>Captures temporal dynamics and dependencies</span></p>
+                                                <p className="flex items-start"><span className="mr-2">•</span><span>Based on SSA (Singular Spectrum Analysis) methodology</span></p>
                                             </div>
-
                                             <div className="space-y-4">
                                                 <HelpWrapper helpKey="temporal-lags">
-                                                    <label className="block text-sm font-medium mb-1">
-                                                        Number of Time Lags
-                                                    </label>
+                                                    <label className="block text-sm font-medium mb-1">Number of Time Lags</label>
                                                     <input
                                                         type="number"
                                                         value={config.temporalLags}
@@ -1036,7 +635,6 @@ return;
                                                         Number of time points to include in lag matrix. Use 24 for daily cycles in hourly data, 7 for weekly patterns in daily data.
                                                     </p>
                                                 </HelpWrapper>
-
                                                 <div className="p-3 bg-purple-100 dark:bg-purple-900/30 rounded-lg">
                                                     <p className="text-xs text-purple-800 dark:text-purple-200">
                                                         <strong>Lag Selection Guidelines:</strong><br/>
@@ -1046,8 +644,7 @@ return;
                                                         • General exploration: Start with T/4 (where T = number of samples)
                                                     </p>
                                                 </div>
-
-                                                {fileData && fileData.data && config.temporalLags >= fileData.data.length && (
+                                                {config.temporalLags >= fileData.data.length && (
                                                     <div className="p-3 bg-yellow-100 dark:bg-yellow-900/50 border border-yellow-300 dark:border-yellow-700 rounded-lg">
                                                         <p className="text-sm text-yellow-800 dark:text-yellow-200">
                                                             <strong>⚠️ Warning:</strong> Number of lags ({config.temporalLags}) should be less than the number of samples ({fileData.data.length}).
@@ -1056,7 +653,6 @@ return;
                                                     </div>
                                                 )}
                                             </div>
-
                                             <p className="text-xs text-gray-500 dark:text-gray-400 mt-2">
                                                 Creates a lag matrix where each row contains L consecutive observations, enabling capture of temporal patterns.
                                             </p>
@@ -1068,23 +664,14 @@ return;
                                 <div className="space-y-4">
                                     <h3 className="text-sm font-semibold text-gray-700 dark:text-gray-300">Preprocessing Options</h3>
 
-                                    {/* Step 1: Row-wise preprocessing */}
                                     <HelpWrapper helpKey="row-preprocessing" className="p-3 bg-gray-50 dark:bg-gray-700/50 rounded-lg">
                                         <label className="block text-sm font-medium mb-2">
                                             Step 1: Row-wise Preprocessing (optional)
                                         </label>
                                         <CustomSelect
-                                            value={
-                                                config.snv ? 'snv' :
-                                                config.vectorNorm ? 'vector-norm' :
-                                                'none'
-                                            }
+                                            value={config.snv ? 'snv' : config.vectorNorm ? 'vector-norm' : 'none'}
                                             onChange={(value) => {
-                                                setConfig({
-                                                    ...config,
-                                                    snv: value === 'snv',
-                                                    vectorNorm: value === 'vector-norm'
-                                                });
+                                                setConfig({ ...config, snv: value === 'snv', vectorNorm: value === 'vector-norm' });
                                             }}
                                             options={[
                                                 { value: 'none', label: 'None' },
@@ -1098,7 +685,6 @@ return;
                                         </p>
                                     </HelpWrapper>
 
-                                    {/* Step 2: Column-wise preprocessing */}
                                     <HelpWrapper helpKey="column-preprocessing" className="p-3 bg-gray-50 dark:bg-gray-700/50 rounded-lg">
                                         <label className="block text-sm font-medium mb-2">
                                             Step 2: Column-wise Preprocessing
@@ -1111,16 +697,13 @@ return;
                                                 config.meanCenter ? 'center' : 'none'
                                             }
                                             onChange={(value) => {
-                                                // For kernel PCA, only allow none or scale-only
-                                                if (config.method === 'kernel' && !['none', 'scale-only'].includes(value)) {
-                                                    return;
-                                                }
+                                                if (config.method === 'kernel' && !['none', 'scale-only'].includes(value)) return;
                                                 setConfig({
                                                     ...config,
                                                     meanCenter: value === 'center' || value === 'standard',
                                                     standardScale: value === 'standard',
                                                     robustScale: value === 'robust',
-                                                    scaleOnly: value === 'scale-only'
+                                                    scaleOnly: value === 'scale-only',
                                                 });
                                             }}
                                             options={[
@@ -1141,7 +724,6 @@ return;
                                         </p>
                                     </HelpWrapper>
 
-                                    {/* Missing Data Strategy */}
                                     <HelpWrapper helpKey="missing-strategy" className="p-3 bg-gray-50 dark:bg-gray-700/50 rounded-lg">
                                         <label className="block text-sm font-medium mb-2">
                                             Missing Data Strategy
@@ -1163,16 +745,14 @@ return;
                                             Choose how to handle missing values (NaN) in your data
                                         </p>
                                     </HelpWrapper>
-
-                                    {/* Diagnostic Metrics Option */}
                                 </div>
                             </div>
 
-                            {/* Go PCA! button - centered and spanning both columns */}
+                            {/* Go PCA! button */}
                             <div className="mt-6 flex justify-center">
                                 <HelpWrapper helpKey="go-pca-button">
                                     <button
-                                        onClick={runPCA}
+                                        onClick={handleRunPCA}
                                         disabled={loading}
                                         className="px-6 py-2 bg-blue-600 hover:bg-blue-700 disabled:bg-gray-400 dark:disabled:bg-gray-600 rounded-lg font-medium text-white"
                                     >
@@ -1206,7 +786,7 @@ return;
                         </div>
                     )}
 
-                    {/* PCA Error Display - shown between Step 2 and Results */}
+                    {/* PCA Error */}
                     {pcaError && fileData && (
                         <div ref={pcaErrorRef}>
                             <ErrorAlert
@@ -1214,17 +794,16 @@ return;
                                 title="Analysis Error"
                                 message={pcaError}
                                 suggestion="Please check your data and parameters, then try again"
-                                onDismiss={() => setPcaError(null)}
+                                onDismiss={clearPcaError}
                             />
                         </div>
                     )}
 
-                    {/* PCA Results */}
+                    {/* Step 3: Results */}
                     {pcaResponse?.success && pcaResponse.result && (
                         <div ref={pcaResultsRef} className="bg-white dark:bg-gray-800 rounded-lg p-6 shadow-lg border border-gray-200 dark:border-gray-700">
                             <h2 className="text-xl font-semibold mb-4">Step 3: Interpret PCA Model</h2>
 
-                            {/* Info message about missing data handling */}
                             {pcaResponse.info && (
                                 <div className="mb-4 p-3 bg-blue-100 dark:bg-blue-800 border border-blue-300 dark:border-blue-600 rounded-lg">
                                     <p className="text-blue-700 dark:text-blue-200 text-sm">
@@ -1233,23 +812,19 @@ return;
                                 </div>
                             )}
 
-                            {/* Explained Variance and Model Overview Grid */}
                             <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 items-stretch">
-                                {/* Explained Variance */}
                                 <HelpWrapper helpKey="explained-variance" className="h-full">
                                     <div className="bg-gray-100 dark:bg-gray-700 rounded-lg p-4 h-full flex flex-col">
                                         <div className="mb-2">
                                             <h3 className="text-lg font-semibold">Explained Variance</h3>
                                         </div>
                                         <div className="space-y-2 flex-grow">
-                                            {pcaResponse.result.explained_variance_ratio.map((percentage, i) => {
-                                                return (
-                                                    <div key={i} className="flex justify-between">
-                                                        <span>{pcaResponse.result?.component_labels?.[i] || `PC${i+1}`}:</span>
-                                                        <span>{percentage.toFixed(2)}%</span>
-                                                    </div>
-                                                );
-                                            })}
+                                            {pcaResponse.result.explained_variance_ratio.map((percentage, i) => (
+                                                <div key={i} className="flex justify-between">
+                                                    <span>{pcaResponse.result?.component_labels?.[i] || `PC${i+1}`}:</span>
+                                                    <span>{percentage.toFixed(2)}%</span>
+                                                </div>
+                                            ))}
                                             <div className="border-t border-gray-300 dark:border-gray-600 pt-2 font-semibold">
                                                 <div className="flex justify-between">
                                                     <span>Cumulative:</span>
@@ -1262,7 +837,6 @@ return;
                                     </div>
                                 </HelpWrapper>
 
-                                {/* Model Overview */}
                                 <ModelOverview
                                     pcaResult={pcaResponse.result}
                                     selectedPC={selectedXComponent}
@@ -1271,7 +845,7 @@ return;
                                 />
                             </div>
 
-                            {/* Plot Selector and Visualization */}
+                            {/* Visualizations */}
                             <div className="mt-6">
                                 {/* Tier 1: Primary Controls */}
                                 <div className="flex items-center justify-between mb-3 pb-3 border-b border-gray-200 dark:border-gray-600">
@@ -1280,28 +854,19 @@ return;
                                         <HelpWrapper helpKey={`${selectedPlot}-plot`}>
                                             <CustomSelect
                                                 value={selectedPlot}
-                                                onChange={(value) => setSelectedPlot(value as 'scores' | 'scores3d' | 'scree' | 'loadings' | 'biplot' | 'biplot3d' | 'correlations' | 'diagnostics' | 'eigencorrelation' | 'temporal-loadings' | 'temporal-variable-importance' | 'kernel-matrix' | 'sample-contributions')}
+                                                onChange={(value) => setSelectedPlot(value as PlotType)}
                                                 options={[
                                                     { value: 'scores', label: 'Scores Plot' },
                                                     { value: 'scores3d', label: '3D Scores Plot' },
                                                     { value: 'scree', label: 'Scree Plot' },
-                                                    // Loadings plot not available for kernel PCA (different space) or temporal PCA (dimension mismatch)
                                                     ...(pcaResponse.result.method !== 'kernel' && pcaResponse.result.method !== 'temporal' ? [{ value: 'loadings', label: 'Loadings Plot' }] : []),
-                                                    // Temporal loadings pattern - only for temporal PCA
                                                     ...(pcaResponse.result.method === 'temporal' ? [{ value: 'temporal-loadings', label: 'Temporal Loadings' }] : []),
-                                                    // Variable importance plot - only for temporal PCA
                                                     ...(pcaResponse.result.method === 'temporal' ? [{ value: 'temporal-variable-importance', label: 'Variable Importance' }] : []),
-                                                    // Biplot - available for standard PCA with preprocessing (not for kernel PCA or temporal PCA)
                                                     ...(pcaResponse.result.preprocessing_applied && pcaResponse.result.method !== 'kernel' && pcaResponse.result.method !== 'temporal' ? [{ value: 'biplot', label: 'Biplot' }] : []),
-                                                    // 3D Biplot and Circle of Correlations - not available for kernel PCA or temporal PCA
                                                     ...(pcaResponse.result.preprocessing_applied && pcaResponse.result.method !== 'kernel' && pcaResponse.result.method !== 'temporal' ? [{ value: 'biplot3d', label: '3D Biplot' }] : []),
                                                     ...(pcaResponse.result.preprocessing_applied && pcaResponse.result.method !== 'kernel' && pcaResponse.result.method !== 'temporal' ? [{ value: 'correlations', label: 'Circle of Correlations' }] : []),
-                                                    // Diagnostic plot not available for:
-                                                    // - Kernel PCA: Works in transformed feature space, RSS calculation not meaningful
-                                                    // - Temporal PCA: Dimension mismatch - scores have n-lags+1 samples while original data has n samples
                                                     ...(pcaResponse.result.method !== 'kernel' && pcaResponse.result.method !== 'temporal' ? [{ value: 'diagnostics', label: 'Diagnostic Plot' }] : []),
                                                     ...(pcaResponse.result.eigencorrelations && pcaResponse.result.method !== 'kernel' ? [{ value: 'eigencorrelation', label: 'Eigencorrelation Plot' }] : []),
-                                                    // Kernel PCA specific visualizations
                                                     ...(pcaResponse.result.method === 'kernel' ? [
                                                         { value: 'kernel-matrix', label: 'Kernel Matrix Heatmap' },
                                                         { value: 'sample-contributions', label: 'Sample Contributions' }
@@ -1326,7 +891,6 @@ return;
                                 {/* Tier 2: Context-Sensitive Controls */}
                                 <div className="mb-4">
                                     <div className="flex flex-wrap items-center gap-4">
-                                        {/* Data Display Group - Always show Color by control since Row Index is always available */}
                                         {(selectedPlot === 'scores' || selectedPlot === 'scores3d' || selectedPlot === 'biplot' || selectedPlot === 'biplot3d' || selectedPlot === 'diagnostics') && fileData && (
                                             <div className="flex items-center gap-3 px-3 py-2 bg-gray-50 dark:bg-gray-800 rounded-lg">
                                                 <HelpWrapper helpKey="group-coloring" className="flex items-center gap-2">
@@ -1336,28 +900,22 @@ return;
                                                         onChange={(value) => {
                                                             const selectedValue = value || null;
                                                             setSelectedGroupColumn(selectedValue);
-
-                                                            // Auto-switch palette mode based on column type
                                                             if (!selectedValue) {
                                                                 setMode('none');
                                                                 setShowEllipses(false);
                                                             } else if (selectedValue === 'Row Index') {
-                                                                // Row Index is always continuous
                                                                 setMode('continuous');
-                                                                setShowEllipses(false); // Ellipses only work with categorical data
+                                                                setShowEllipses(false);
                                                             } else if (fileData.numericTargetColumns && selectedValue in fileData.numericTargetColumns) {
                                                                 setMode('continuous');
-                                                                setShowEllipses(false); // Ellipses only work with categorical data
+                                                                setShowEllipses(false);
                                                             } else if (fileData.categoricalColumns && selectedValue in fileData.categoricalColumns) {
                                                                 setMode('categorical');
-                                                                // Keep current showEllipses state for categorical columns
                                                             }
                                                         }}
                                                         options={[
                                                             { value: '', label: 'None' },
-                                                            // Row Index - always available as a continuous option
                                                             { value: 'Row Index', label: '📊 Row Index', group: 'Continuous' },
-                                                            // Categorical columns
                                                             ...(fileData.categoricalColumns && Object.keys(fileData.categoricalColumns).length > 0
                                                                 ? Object.keys(fileData.categoricalColumns).map((colName) => ({
                                                                     value: colName,
@@ -1365,7 +923,6 @@ return;
                                                                     group: 'Categorical'
                                                                 }))
                                                                 : []),
-                                                            // Continuous columns
                                                             ...(fileData.numericTargetColumns && Object.keys(fileData.numericTargetColumns).length > 0
                                                                 ? Object.keys(fileData.numericTargetColumns).map((colName) => ({
                                                                     value: colName,
@@ -1380,7 +937,6 @@ return;
                                             </div>
                                         )}
 
-                                        {/* Plot Options Group - For Scores Plot, 3D Scores Plot, Biplot, and Diagnostic Plot */}
                                         {(selectedPlot === 'scores' || selectedPlot === 'scores3d' || selectedPlot === 'biplot' || selectedPlot === 'biplot3d' || selectedPlot === 'diagnostics') && (
                                             <div className="flex items-center gap-3 px-3 py-2 bg-gray-50 dark:bg-gray-800 rounded-lg">
                                                 <HelpWrapper helpKey="row-labels" className="flex items-center gap-2">
@@ -1407,13 +963,10 @@ return;
                                                         />
                                                     </div>
                                                 )}
-                                                {/* Confidence Level for Diagnostic Plot Thresholds */}
                                                 {selectedPlot === 'diagnostics' && (
                                                     <div className="flex items-center gap-2 ml-3">
                                                         <HelpWrapper helpKey="diagnostic-threshold">
-                                                            <label className="text-sm text-gray-600 dark:text-gray-400">
-                                                                Threshold:
-                                                            </label>
+                                                            <label className="text-sm text-gray-600 dark:text-gray-400">Threshold:</label>
                                                         </HelpWrapper>
                                                         <CustomSelect
                                                             value={confidenceLevel.toFixed(2)}
@@ -1461,7 +1014,6 @@ return;
                                             </div>
                                         )}
 
-                                        {/* Component Selectors Group */}
                                         {(selectedPlot === 'scores' || selectedPlot === 'scores3d' || selectedPlot === 'biplot' || selectedPlot === 'biplot3d' || selectedPlot === 'correlations') && pcaResponse.result.scores[0]?.length > 2 && (
                                             <div className="flex items-center gap-3 px-3 py-2 bg-gray-50 dark:bg-gray-800 rounded-lg">
                                                 <div className="flex items-center gap-2">
@@ -1505,7 +1057,6 @@ return;
                                             </div>
                                         )}
 
-                                        {/* Loadings Plot Component Selector */}
                                         {selectedPlot === 'loadings' && pcaResponse.result?.method !== 'kernel' && (
                                             <div className="flex items-center gap-3 px-3 py-2 bg-gray-50 dark:bg-gray-800 rounded-lg">
                                                 <label className="text-sm text-gray-600 dark:text-gray-400">Component:</label>
@@ -1522,9 +1073,7 @@ return;
                                                 <label className="text-sm text-gray-600 dark:text-gray-400">Plot type:</label>
                                                 <CustomSelect
                                                     value={loadingsPlotType || (pcaResponse.result?.loadings[0]?.length > (guiConfig?.visualization?.loadings_variable_threshold || 100) ? 'line' : 'bar')}
-                                                    onChange={(value) => {
-                                                        setLoadingsPlotType(value as 'bar' | 'line');
-                                                    }}
+                                                    onChange={(value) => setLoadingsPlotType(value as 'bar' | 'line')}
                                                     options={[
                                                         { value: 'bar', label: 'Bar Chart' },
                                                         { value: 'line', label: 'Line Chart' }
@@ -1536,10 +1085,11 @@ return;
                                     </div>
                                 </div>
 
+                                {/* Plot area */}
                                 <div className="bg-gray-50 dark:bg-gray-700 rounded-lg" style={{ height: '500px' }}>
                                     <ErrorBoundary
                                         onError={(error, errorInfo) => {
-                                            console.error('Visualization Error:', error, errorInfo);
+                                            logger.error('Visualization Error:', error, errorInfo);
                                         }}
                                     >
                                         <Suspense fallback={
@@ -1710,7 +1260,7 @@ return;
                                     </ErrorBoundary>
                                 </div>
 
-                                {/* Export Model button - centered below plot */}
+                                {/* Export Model */}
                                 <div className="mt-6 flex justify-center">
                                     <HelpWrapper helpKey="export-model">
                                         <button
@@ -1722,38 +1272,26 @@ return;
                                     </HelpWrapper>
                                 </div>
                             </div>
-
                         </div>
                     )}
                 </div>
             </main>
 
-            {/* Documentation Viewer */}
             <DocumentationViewer
                 isOpen={showDocumentation}
                 onClose={() => setShowDocumentation(false)}
             />
 
-            {/* About Dialog */}
             <AboutDialog
                 isOpen={showAboutDialog}
                 onClose={() => setShowAboutDialog(false)}
                 version={version}
             />
 
-            {/* GoCSV Download Confirmation Dialog */}
             <ConfirmDialog
                 isOpen={showGoCSVDownloadDialog}
                 onClose={() => setShowGoCSVDownloadDialog(false)}
-                onConfirm={async () => {
-                    setShowGoCSVDownloadDialog(false);
-                    try {
-                        await DownloadGoCSV();
-                    } catch (error) {
-                        console.error('Error downloading GoCSV:', error);
-                        alert('Failed to open download page: ' + error);
-                    }
-                }}
+                onConfirm={handleGoCSVDownload}
                 title="GoCSV Not Installed"
                 message="GoCSV is not installed. Would you like to download it?"
                 confirmText="Download"
@@ -1770,7 +1308,7 @@ function App() {
                 <HelpProvider>
                     <ErrorBoundary
                         onError={(error, errorInfo) => {
-                            console.error('App Error Boundary:', error, errorInfo);
+                            logger.error('App Error Boundary:', error, errorInfo);
                         }}
                     >
                         <AppContent />
