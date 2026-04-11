@@ -1,4 +1,4 @@
-// Copyright 2025 bitjungle - Rune Mathisen. All rights reserved.
+// Copyright 2025-2026 bitjungle - Rune Mathisen. All rights reserved.
 // Performance optimization utilities for Plotly visualizations
 
 import { Data } from 'plotly.js';

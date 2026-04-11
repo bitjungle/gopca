@@ -1,4 +1,4 @@
-// Copyright 2025 bitjungle - Rune Mathisen. All rights reserved.
+// Copyright 2025-2026 bitjungle - Rune Mathisen. All rights reserved.
 // Export utilities for high-quality Plotly visualizations
 
 import { PlotlyHTMLElement } from 'plotly.js';

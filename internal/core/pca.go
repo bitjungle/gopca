@@ -1,4 +1,4 @@
-// Copyright 2025 bitjungle - Rune Mathisen. All rights reserved.
+// Copyright 2025-2026 bitjungle - Rune Mathisen. All rights reserved.
 // Use of this source code is governed by the MIT license
 // that can be found in the LICENSE file.
 // The author respectfully requests that it not be used for
@@ -10,6 +10,7 @@ import (
 	"fmt"
 	"math"
 
+	"github.com/bitjungle/gopca/internal/config"
 	"github.com/bitjungle/gopca/internal/utils"
 	"github.com/bitjungle/gopca/pkg/types"
 	"gonum.org/v1/gonum/mat"
@@ -262,9 +263,11 @@ func (p *PCAImpl) nipalsAlgorithm(X *mat.Dense, nComponents int) (*mat.Dense, *m
 	// Working copy of X for deflation
 	Xwork := CreateWorkingCopy(X)
 
-	// Tolerance for convergence
-	const tolerance = 1e-8
-	const maxIter = 1000
+	// Convergence parameters from centralized algorithm config.
+	// See internal/config/config.go for documentation and rationale.
+	algConfig := config.DefaultAlgorithmConfig()
+	tolerance := algConfig.NIPALS.Tolerance
+	maxIter := algConfig.NIPALS.MaxIterations
 
 	for k := 0; k < nComponents; k++ {
 		// Find column with maximum variance for initialization
@@ -395,9 +398,11 @@ func (p *PCAImpl) nipalsAlgorithmWithMissing(X *mat.Dense, nComponents int) (*ma
 		centerMatrixWithMissing(Xwork, columnMeans)
 	}
 
-	// Tolerance for convergence
-	const tolerance = 1e-8
-	const maxIter = 1000
+	// Convergence parameters from centralized algorithm config.
+	// See internal/config/config.go for documentation and rationale.
+	algConfig := config.DefaultAlgorithmConfig()
+	tolerance := algConfig.NIPALS.Tolerance
+	maxIter := algConfig.NIPALS.MaxIterations
 
 	for k := 0; k < nComponents; k++ {
 		// Find column with maximum variance (considering only non-missing values)

@@ -1,4 +1,4 @@
-// Copyright 2025 bitjungle - Rune Mathisen. All rights reserved.
+// Copyright 2025-2026 bitjungle - Rune Mathisen. All rights reserved.
 // Use of this source code is governed by the MIT license
 // that can be found in the LICENSE file.
 // The author respectfully requests that it not be used for
@@ -60,7 +60,7 @@ export const AboutDialog: React.FC<AboutDialogProps> = ({
 
                     <div className="border-t border-gray-200 dark:border-gray-700 pt-4 w-full">
                         <p className="text-sm text-gray-700 dark:text-gray-300">
-                            © 2025 bitjungle - Rune Mathisen
+                            © 2025-2026 bitjungle - Rune Mathisen
                         </p>
                         <p className="text-sm text-gray-700 dark:text-gray-300">
                             All rights reserved.

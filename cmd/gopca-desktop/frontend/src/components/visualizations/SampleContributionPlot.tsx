@@ -1,4 +1,4 @@
-// Copyright 2025 bitjungle - Rune Mathisen. All rights reserved.
+// Copyright 2025-2026 bitjungle - Rune Mathisen. All rights reserved.
 // Sample Contribution Plot - Shows which samples contribute most to each PC
 
 import React, { useState, useMemo } from 'react';
