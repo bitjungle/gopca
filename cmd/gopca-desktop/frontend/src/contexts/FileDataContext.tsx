@@ -4,7 +4,7 @@
 // The author respectfully requests that it not be used for
 // military, warfare, or surveillance applications.
 
-import React, { createContext, useContext } from 'react';
+import React, { createContext, useContext, useMemo } from 'react';
 import { useFileData, FileDataResult } from '../hooks/useFileData';
 
 /**
@@ -28,7 +28,19 @@ export function useFileDataContext(): FileDataResult {
 }
 
 export const FileDataProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-    const value = useFileData();
+    const {
+        fileData, fileName, filePath, fileError, datasetId, loading,
+        setFileError, loadDataset, handleNativeFileSelect, setFileDataDirect, clearFileError,
+    } = useFileData();
+
+    // Memoize the context value so consumers only re-render when state they
+    // care about actually changes. Callbacks are stable (useCallback in hook).
+    const value = useMemo<FileDataResult>(() => ({
+        fileData, fileName, filePath, fileError, datasetId, loading,
+        setFileError, loadDataset, handleNativeFileSelect, setFileDataDirect, clearFileError,
+    }), [fileData, fileName, filePath, fileError, datasetId, loading,
+        setFileError, loadDataset, handleNativeFileSelect, setFileDataDirect, clearFileError]);
+
     return (
         <FileDataContext.Provider value={value}>
             {children}

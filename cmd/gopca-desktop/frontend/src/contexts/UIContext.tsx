@@ -4,7 +4,7 @@
 // The author respectfully requests that it not be used for
 // military, warfare, or surveillance applications.
 
-import React, { createContext, useContext } from 'react';
+import React, { createContext, useContext, useMemo } from 'react';
 import { useUIState, UIStateResult } from '../hooks/useUIState';
 
 /**
@@ -25,7 +25,25 @@ export function useUIContext(): UIStateResult {
 }
 
 export const UIProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-    const value = useUIState();
+    const {
+        showDocumentation, setShowDocumentation,
+        showAboutDialog, setShowAboutDialog,
+        showCopied, mainScrollRef,
+        handleLogoClick, copyToClipboard,
+    } = useUIState();
+
+    // Memoize the context value so consumers only re-render when state they
+    // care about actually changes. Callbacks are stable (useCallback in hook).
+    const value = useMemo<UIStateResult>(() => ({
+        showDocumentation, setShowDocumentation,
+        showAboutDialog, setShowAboutDialog,
+        showCopied, mainScrollRef,
+        handleLogoClick, copyToClipboard,
+    }), [showDocumentation, setShowDocumentation,
+        showAboutDialog, setShowAboutDialog,
+        showCopied, mainScrollRef,
+        handleLogoClick, copyToClipboard]);
+
     return (
         <UIContext.Provider value={value}>
             {children}

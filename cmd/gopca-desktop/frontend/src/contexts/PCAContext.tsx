@@ -4,7 +4,7 @@
 // The author respectfully requests that it not be used for
 // military, warfare, or surveillance applications.
 
-import React, { createContext, useContext, useState, useCallback } from 'react';
+import React, { createContext, useContext, useState, useCallback, useMemo } from 'react';
 import { ExportPCAModel } from '../../wailsjs/go/main/App';
 import { usePCAConfig, PCAConfigState } from '../hooks/usePCAConfig';
 import { usePCARunner } from '../hooks/usePCARunner';
@@ -201,7 +201,9 @@ export const PCAProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         resetOnNewFile(data, null);
     }, [setFileDataDirect, resetOnNewFile]);
 
-    const value: PCAContextType = {
+    // Memoize the context value so consumers only re-render when state they
+    // care about actually changes. Callbacks are stable (useCallback above).
+    const value = useMemo<PCAContextType>(() => ({
         config, setConfig,
         excludedRows, excludedColumns,
         setExcludedRows, setExcludedColumns,
@@ -214,7 +216,20 @@ export const PCAProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         handleExportModel, generateCLICommand,
         handleRowSelectionChange, handleColumnSelectionChange,
         handleStartupFile,
-    };
+    }), [
+        config, setConfig,
+        excludedRows, excludedColumns,
+        setExcludedRows, setExcludedColumns,
+        updateGammaForData, resetExclusions,
+        selectedGroupColumn, setSelectedGroupColumn,
+        pcaResponse, pcaError, pcaLoading, loading,
+        pcaHasExclusions, pcaResultsRef, pcaErrorRef,
+        runPCA, clearPcaError, clearPcaResponse,
+        handleLoadDataset, handleNativeFileSelectWithReset,
+        handleExportModel, generateCLICommand,
+        handleRowSelectionChange, handleColumnSelectionChange,
+        handleStartupFile,
+    ]);
 
     return (
         <PCAContext.Provider value={value}>

@@ -4,7 +4,7 @@
 // The author respectfully requests that it not be used for
 // military, warfare, or surveillance applications.
 
-import React, { lazy, Suspense } from 'react';
+import React, { lazy, Suspense, useMemo } from 'react';
 import { ErrorBoundary, ErrorAlert, CustomSelect } from '@gopca/ui-components';
 import { HelpWrapper, ModelOverview } from '../index';
 import { FontSizeControl } from '../FontSizeControl';
@@ -68,6 +68,50 @@ export function ResultsSection({ guiConfig }: ResultsSectionProps) {
         getColumnData, handlePlotSelectionChange,
     } = useVisualizationContext();
     const { setMode } = usePalette();
+
+    // Memoize the available plot options — depends on PCA method and whether
+    // preprocessing and eigencorrelations are present in the result.
+    const plotOptions = useMemo(() => {
+        if (!pcaResponse?.result) return [];
+        const { method, preprocessing_applied, eigencorrelations } = pcaResponse.result;
+        return [
+            { value: 'scores', label: 'Scores Plot' },
+            { value: 'scores3d', label: '3D Scores Plot' },
+            { value: 'scree', label: 'Scree Plot' },
+            ...(method !== 'kernel' && method !== 'temporal' ? [{ value: 'loadings', label: 'Loadings Plot' }] : []),
+            ...(method === 'temporal' ? [{ value: 'temporal-loadings', label: 'Temporal Loadings' }] : []),
+            ...(method === 'temporal' ? [{ value: 'temporal-variable-importance', label: 'Variable Importance' }] : []),
+            ...(preprocessing_applied && method !== 'kernel' && method !== 'temporal' ? [{ value: 'biplot', label: 'Biplot' }] : []),
+            ...(preprocessing_applied && method !== 'kernel' && method !== 'temporal' ? [{ value: 'biplot3d', label: '3D Biplot' }] : []),
+            ...(preprocessing_applied && method !== 'kernel' && method !== 'temporal' ? [{ value: 'correlations', label: 'Circle of Correlations' }] : []),
+            ...(method !== 'kernel' && method !== 'temporal' ? [{ value: 'diagnostics', label: 'Diagnostic Plot' }] : []),
+            ...(eigencorrelations && method !== 'kernel' ? [{ value: 'eigencorrelation', label: 'Eigencorrelation Plot' }] : []),
+            ...(method === 'kernel' ? [
+                { value: 'kernel-matrix', label: 'Kernel Matrix Heatmap' },
+                { value: 'sample-contributions', label: 'Sample Contributions' }
+            ] : []),
+        ];
+    }, [pcaResponse?.result]);
+
+    // Memoize the Color-by column options — depends on fileData column metadata.
+    const groupColumnOptions = useMemo(() => [
+        { value: '', label: 'None' },
+        { value: 'Row Index', label: '📊 Row Index', group: 'Continuous' },
+        ...(fileData?.categoricalColumns && Object.keys(fileData.categoricalColumns).length > 0
+            ? Object.keys(fileData.categoricalColumns).map((colName) => ({
+                value: colName,
+                label: `🏷️ ${colName}`,
+                group: 'Categorical',
+            }))
+            : []),
+        ...(fileData?.numericTargetColumns && Object.keys(fileData.numericTargetColumns).length > 0
+            ? Object.keys(fileData.numericTargetColumns).map((colName) => ({
+                value: colName,
+                label: `📊 ${colName}`,
+                group: 'Continuous',
+            }))
+            : []),
+    ], [fileData?.categoricalColumns, fileData?.numericTargetColumns]);
 
     return (
         <>
@@ -140,23 +184,7 @@ export function ResultsSection({ guiConfig }: ResultsSectionProps) {
                                     <CustomSelect
                                         value={selectedPlot}
                                         onChange={(value) => setSelectedPlot(value as PlotType)}
-                                        options={[
-                                            { value: 'scores', label: 'Scores Plot' },
-                                            { value: 'scores3d', label: '3D Scores Plot' },
-                                            { value: 'scree', label: 'Scree Plot' },
-                                            ...(pcaResponse.result.method !== 'kernel' && pcaResponse.result.method !== 'temporal' ? [{ value: 'loadings', label: 'Loadings Plot' }] : []),
-                                            ...(pcaResponse.result.method === 'temporal' ? [{ value: 'temporal-loadings', label: 'Temporal Loadings' }] : []),
-                                            ...(pcaResponse.result.method === 'temporal' ? [{ value: 'temporal-variable-importance', label: 'Variable Importance' }] : []),
-                                            ...(pcaResponse.result.preprocessing_applied && pcaResponse.result.method !== 'kernel' && pcaResponse.result.method !== 'temporal' ? [{ value: 'biplot', label: 'Biplot' }] : []),
-                                            ...(pcaResponse.result.preprocessing_applied && pcaResponse.result.method !== 'kernel' && pcaResponse.result.method !== 'temporal' ? [{ value: 'biplot3d', label: '3D Biplot' }] : []),
-                                            ...(pcaResponse.result.preprocessing_applied && pcaResponse.result.method !== 'kernel' && pcaResponse.result.method !== 'temporal' ? [{ value: 'correlations', label: 'Circle of Correlations' }] : []),
-                                            ...(pcaResponse.result.method !== 'kernel' && pcaResponse.result.method !== 'temporal' ? [{ value: 'diagnostics', label: 'Diagnostic Plot' }] : []),
-                                            ...(pcaResponse.result.eigencorrelations && pcaResponse.result.method !== 'kernel' ? [{ value: 'eigencorrelation', label: 'Eigencorrelation Plot' }] : []),
-                                            ...(pcaResponse.result.method === 'kernel' ? [
-                                                { value: 'kernel-matrix', label: 'Kernel Matrix Heatmap' },
-                                                { value: 'sample-contributions', label: 'Sample Contributions' }
-                                            ] : [])
-                                        ]}
+                                        options={plotOptions}
                                         className="min-w-[200px]"
                                     />
                                 </HelpWrapper>
@@ -198,24 +226,7 @@ export function ResultsSection({ guiConfig }: ResultsSectionProps) {
                                                         setMode('categorical');
                                                     }
                                                 }}
-                                                options={[
-                                                    { value: '', label: 'None' },
-                                                    { value: 'Row Index', label: '📊 Row Index', group: 'Continuous' },
-                                                    ...(fileData.categoricalColumns && Object.keys(fileData.categoricalColumns).length > 0
-                                                        ? Object.keys(fileData.categoricalColumns).map((colName) => ({
-                                                            value: colName,
-                                                            label: `🏷️ ${colName}`,
-                                                            group: 'Categorical'
-                                                        }))
-                                                        : []),
-                                                    ...(fileData.numericTargetColumns && Object.keys(fileData.numericTargetColumns).length > 0
-                                                        ? Object.keys(fileData.numericTargetColumns).map((colName) => ({
-                                                            value: colName,
-                                                            label: `📊 ${colName}`,
-                                                            group: 'Continuous'
-                                                        }))
-                                                        : [])
-                                                ]}
+                                                options={groupColumnOptions}
                                                 className="min-w-[150px]"
                                             />
                                         </HelpWrapper>

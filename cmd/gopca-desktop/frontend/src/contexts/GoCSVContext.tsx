@@ -4,7 +4,7 @@
 // The author respectfully requests that it not be used for
 // military, warfare, or surveillance applications.
 
-import React, { createContext, useContext } from 'react';
+import React, { createContext, useContext, useMemo } from 'react';
 import { useGoCSVIntegration, GoCSVIntegrationResult } from '../hooks/useGoCSVIntegration';
 
 /**
@@ -26,7 +26,19 @@ export function useGoCSVContext(): GoCSVIntegrationResult {
 }
 
 export const GoCSVProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-    const value = useGoCSVIntegration();
+    const {
+        goCSVStatus, isCheckingGoCSV, showGoCSVDownloadDialog,
+        setShowGoCSVDownloadDialog, handleGoCSVAction, handleGoCSVDownload,
+    } = useGoCSVIntegration();
+
+    // Memoize the context value so consumers only re-render when state they
+    // care about actually changes. Callbacks are stable (useCallback in hook).
+    const value = useMemo<GoCSVIntegrationResult>(() => ({
+        goCSVStatus, isCheckingGoCSV, showGoCSVDownloadDialog,
+        setShowGoCSVDownloadDialog, handleGoCSVAction, handleGoCSVDownload,
+    }), [goCSVStatus, isCheckingGoCSV, showGoCSVDownloadDialog,
+        setShowGoCSVDownloadDialog, handleGoCSVAction, handleGoCSVDownload]);
+
     return (
         <GoCSVContext.Provider value={value}>
             {children}
