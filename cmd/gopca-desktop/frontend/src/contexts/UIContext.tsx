@@ -32,8 +32,11 @@ export const UIProvider: React.FC<{ children: React.ReactNode }> = ({ children }
         handleLogoClick, copyToClipboard,
     } = useUIState();
 
-    // Memoize the context value so consumers only re-render when state they
-    // care about actually changes. Callbacks are stable (useCallback in hook).
+    // Memoize the context value to avoid creating a new object reference on
+    // every provider render (e.g. parent re-renders). This prevents all context
+    // consumers from re-rendering when none of these deps have changed.
+    // Note: any change to a dep still re-renders ALL consumers — React context
+    // does not support per-field subscriptions without context splitting.
     const value = useMemo<UIStateResult>(() => ({
         showDocumentation, setShowDocumentation,
         showAboutDialog, setShowAboutDialog,
