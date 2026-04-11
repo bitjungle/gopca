@@ -1,4 +1,4 @@
-// Copyright 2025 bitjungle - Rune Mathisen. All rights reserved.
+// Copyright 2025-2026 bitjungle - Rune Mathisen. All rights reserved.
 // Plotly-based PCA Scores Plot
 
 import React from 'react';

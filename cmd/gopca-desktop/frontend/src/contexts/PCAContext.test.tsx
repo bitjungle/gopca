@@ -1,4 +1,4 @@
-// Copyright 2025 bitjungle - Rune Mathisen. All rights reserved.
+// Copyright 2025-2026 bitjungle - Rune Mathisen. All rights reserved.
 import React from 'react';
 import { describe, it, expect, vi } from 'vitest';
 import { render, screen } from '@testing-library/react';

@@ -1,4 +1,4 @@
-// Copyright 2025 bitjungle - Rune Mathisen. All rights reserved.
+// Copyright 2025-2026 bitjungle - Rune Mathisen. All rights reserved.
 // Utility for optimizing arrays of indices to range notation
 
 /**
