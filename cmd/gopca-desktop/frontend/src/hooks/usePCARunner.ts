@@ -86,7 +86,7 @@ export function usePCARunner(
                 }, 100);
             }
         } catch (err) {
-            setPcaError(`Failed to run PCA: ${err}`);
+            setPcaError(`Failed to run PCA: ${err instanceof Error ? err.message : String(err)}`);
         } finally {
             setLoading(false);
         }
