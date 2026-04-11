@@ -4,7 +4,7 @@
 // The author respectfully requests that it not be used for
 // military, warfare, or surveillance applications.
 
-import React, { createContext, useContext } from 'react';
+import React, { createContext, useContext, useMemo } from 'react';
 import { useUIState, UIStateResult } from '../hooks/useUIState';
 
 /**
@@ -25,7 +25,28 @@ export function useUIContext(): UIStateResult {
 }
 
 export const UIProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-    const value = useUIState();
+    const {
+        showDocumentation, setShowDocumentation,
+        showAboutDialog, setShowAboutDialog,
+        showCopied, mainScrollRef,
+        handleLogoClick, copyToClipboard,
+    } = useUIState();
+
+    // Memoize the context value to avoid creating a new object reference on
+    // every provider render (e.g. parent re-renders). This prevents all context
+    // consumers from re-rendering when none of these deps have changed.
+    // Note: any change to a dep still re-renders ALL consumers — React context
+    // does not support per-field subscriptions without context splitting.
+    const value = useMemo<UIStateResult>(() => ({
+        showDocumentation, setShowDocumentation,
+        showAboutDialog, setShowAboutDialog,
+        showCopied, mainScrollRef,
+        handleLogoClick, copyToClipboard,
+    }), [showDocumentation, setShowDocumentation,
+        showAboutDialog, setShowAboutDialog,
+        showCopied, mainScrollRef,
+        handleLogoClick, copyToClipboard]);
+
     return (
         <UIContext.Provider value={value}>
             {children}

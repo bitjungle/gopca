@@ -4,7 +4,7 @@
 // The author respectfully requests that it not be used for
 // military, warfare, or surveillance applications.
 
-import React, { createContext, useContext } from 'react';
+import React, { createContext, useContext, useMemo } from 'react';
 import { useFileData, FileDataResult } from '../hooks/useFileData';
 
 /**
@@ -28,7 +28,22 @@ export function useFileDataContext(): FileDataResult {
 }
 
 export const FileDataProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-    const value = useFileData();
+    const {
+        fileData, fileName, filePath, fileError, datasetId, loading,
+        setFileError, loadDataset, handleNativeFileSelect, setFileDataDirect, clearFileError,
+    } = useFileData();
+
+    // Memoize the context value to avoid creating a new object reference on
+    // every provider render (e.g. parent re-renders). This prevents all context
+    // consumers from re-rendering when none of these deps have changed.
+    // Note: any change to a dep still re-renders ALL consumers — React context
+    // does not support per-field subscriptions without context splitting.
+    const value = useMemo<FileDataResult>(() => ({
+        fileData, fileName, filePath, fileError, datasetId, loading,
+        setFileError, loadDataset, handleNativeFileSelect, setFileDataDirect, clearFileError,
+    }), [fileData, fileName, filePath, fileError, datasetId, loading,
+        setFileError, loadDataset, handleNativeFileSelect, setFileDataDirect, clearFileError]);
+
     return (
         <FileDataContext.Provider value={value}>
             {children}

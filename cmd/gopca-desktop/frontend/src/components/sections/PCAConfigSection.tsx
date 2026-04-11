@@ -51,7 +51,7 @@ export function PCAConfigSection({ onRunPCA }: PCAConfigSectionProps) {
                                 min="1"
                                 max={Math.min(fileData.headers.length, fileData.data.length)}
                                 value={config.components}
-                                onChange={(e) => setConfig({ ...config, components: parseInt(e.target.value) || 5 })}
+                                onChange={(e) => setConfig(prev => ({ ...prev, components: parseInt(e.target.value) || 5 }))}
                                 className="w-full px-3 py-2 bg-gray-100 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg text-gray-900 dark:text-white"
                             />
                         </HelpWrapper>
@@ -63,25 +63,24 @@ export function PCAConfigSection({ onRunPCA }: PCAConfigSectionProps) {
                             <CustomSelect
                                 value={config.method}
                                 onChange={(value: string) => {
-                                    const newMethod = value;
-                                    const oldMethod = config.method;
-                                    const newConfig = { ...config, method: newMethod };
-
-                                    if (newMethod === 'kernel') {
-                                        if (newConfig.meanCenter || newConfig.standardScale || newConfig.robustScale) {
-                                            newConfig.meanCenter = false;
-                                            newConfig.standardScale = false;
-                                            newConfig.robustScale = false;
-                                            newConfig.scaleOnly = false;
+                                    setConfig(prev => {
+                                        const newMethod = value;
+                                        const next = { ...prev, method: newMethod };
+                                        if (newMethod === 'kernel') {
+                                            if (next.meanCenter || next.standardScale || next.robustScale) {
+                                                next.meanCenter = false;
+                                                next.standardScale = false;
+                                                next.robustScale = false;
+                                                next.scaleOnly = false;
+                                            }
+                                        } else if (prev.method === 'kernel' && newMethod !== 'kernel') {
+                                            next.meanCenter = true;
+                                            next.standardScale = false;
+                                            next.robustScale = false;
+                                            next.scaleOnly = false;
                                         }
-                                    } else if (oldMethod === 'kernel' && newMethod !== 'kernel') {
-                                        newConfig.meanCenter = true;
-                                        newConfig.standardScale = false;
-                                        newConfig.robustScale = false;
-                                        newConfig.scaleOnly = false;
-                                    }
-
-                                    setConfig(newConfig);
+                                        return next;
+                                    });
                                 }}
                                 options={[
                                     { value: 'SVD', label: 'SVD' },
@@ -141,7 +140,7 @@ export function PCAConfigSection({ onRunPCA }: PCAConfigSectionProps) {
                                     <label className="block text-sm font-medium mb-1">Kernel Type</label>
                                     <CustomSelect
                                         value={config.kernelType}
-                                        onChange={(value: string) => setConfig({ ...config, kernelType: value })}
+                                        onChange={(value: string) => setConfig(prev => ({ ...prev, kernelType: value }))}
                                         options={[
                                             { value: 'rbf', label: 'RBF (Gaussian)' },
                                             { value: 'linear', label: 'Linear' },
@@ -159,7 +158,7 @@ export function PCAConfigSection({ onRunPCA }: PCAConfigSectionProps) {
                                         min="0.001"
                                         onChange={(e) => {
                                             const value = parseFloat(e.target.value);
-                                            setConfig({ ...config, kernelGamma: isNaN(value) ? 1.0 : value });
+                                            setConfig(prev => ({ ...prev, kernelGamma: isNaN(value) ? 1.0 : value }));
                                         }}
                                         className="w-full px-3 py-2 bg-gray-100 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg text-gray-900 dark:text-white"
                                     />
@@ -173,7 +172,7 @@ export function PCAConfigSection({ onRunPCA }: PCAConfigSectionProps) {
                                                 value={config.kernelDegree}
                                                 min="1"
                                                 max="10"
-                                                onChange={(e) => setConfig({ ...config, kernelDegree: parseInt(e.target.value) || 3 })}
+                                                onChange={(e) => setConfig(prev => ({ ...prev, kernelDegree: parseInt(e.target.value) || 3 }))}
                                                 className="w-full px-3 py-2 bg-gray-100 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg text-gray-900 dark:text-white"
                                             />
                                         </HelpWrapper>
@@ -185,7 +184,7 @@ export function PCAConfigSection({ onRunPCA }: PCAConfigSectionProps) {
                                                 step="0.1"
                                                 onChange={(e) => {
                                                     const value = parseFloat(e.target.value);
-                                                    setConfig({ ...config, kernelCoef0: isNaN(value) ? 1.0 : value });
+                                                    setConfig(prev => ({ ...prev, kernelCoef0: isNaN(value) ? 1.0 : value }));
                                                 }}
                                                 className="w-full px-3 py-2 bg-gray-100 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg text-gray-900 dark:text-white"
                                             />
@@ -217,7 +216,7 @@ export function PCAConfigSection({ onRunPCA }: PCAConfigSectionProps) {
                                         max="100"
                                         onChange={(e) => {
                                             const value = parseInt(e.target.value);
-                                            setConfig({ ...config, temporalLags: isNaN(value) || value < 2 ? 2 : value });
+                                            setConfig(prev => ({ ...prev, temporalLags: isNaN(value) || value < 2 ? 2 : value }));
                                         }}
                                         className="w-full px-3 py-2 bg-gray-100 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg text-gray-900 dark:text-white"
                                     />
@@ -261,7 +260,7 @@ export function PCAConfigSection({ onRunPCA }: PCAConfigSectionProps) {
                         <CustomSelect
                             value={config.snv ? 'snv' : config.vectorNorm ? 'vector-norm' : 'none'}
                             onChange={(value: string) => {
-                                setConfig({ ...config, snv: value === 'snv', vectorNorm: value === 'vector-norm' });
+                                setConfig(prev => ({ ...prev, snv: value === 'snv', vectorNorm: value === 'vector-norm' }));
                             }}
                             options={[
                                 { value: 'none', label: 'None' },
@@ -287,13 +286,15 @@ export function PCAConfigSection({ onRunPCA }: PCAConfigSectionProps) {
                                 config.meanCenter ? 'center' : 'none'
                             }
                             onChange={(value: string) => {
-                                if (config.method === 'kernel' && !['none', 'scale-only'].includes(value)) return;
-                                setConfig({
-                                    ...config,
-                                    meanCenter: value === 'center' || value === 'standard',
-                                    standardScale: value === 'standard',
-                                    robustScale: value === 'robust',
-                                    scaleOnly: value === 'scale-only',
+                                setConfig(prev => {
+                                    if (prev.method === 'kernel' && !['none', 'scale-only'].includes(value)) return prev;
+                                    return {
+                                        ...prev,
+                                        meanCenter: value === 'center' || value === 'standard',
+                                        standardScale: value === 'standard',
+                                        robustScale: value === 'robust',
+                                        scaleOnly: value === 'scale-only',
+                                    };
                                 });
                             }}
                             options={[
@@ -320,7 +321,7 @@ export function PCAConfigSection({ onRunPCA }: PCAConfigSectionProps) {
                         </label>
                         <CustomSelect
                             value={config.missingStrategy}
-                            onChange={(value: string) => setConfig({ ...config, missingStrategy: value })}
+                            onChange={(value: string) => setConfig(prev => ({ ...prev, missingStrategy: value }))}
                             options={[
                                 { value: 'error', label: 'Show Error (default)' },
                                 { value: 'drop', label: 'Drop Rows with Missing Values' },
