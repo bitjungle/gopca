@@ -5,6 +5,39 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.2.0] - 2026-04-11
+
+### Added
+- React Context state management for GoPCA Desktop, eliminating prop drilling from App.tsx (#630, #505)
+  - 5 new context providers: `FileDataContext`, `PCAContext`, `VisualizationContext`, `UIContext`, `GoCSVContext`
+  - Extracted `DataLoadSection`, `PCAConfigSection`, and `ResultsSection` as focused sub-components
+  - App.tsx reduced to a lean provider stack (~191 lines)
+- Transform and preprocessing validation test suite (#625, #480)
+  - 33 new tests validating the complete PCA transform operation and preprocessing pipeline
+  - `internal/core` test coverage: 88.1% (requirement: >80%)
+
+### Fixed
+- Arrow colors in Circle of Correlations now follow the palette correctly (#626, #513)
+  - Arrowhead color was hardcoded to `#3b82f6` instead of reading from the active color scheme
+
+### Changed
+- Upgrade Plotly.js from v2.35.3 to v3.5.0 (#622, #618)
+  - Includes fix for `customdata` handling and other upstream improvements
+- Upgrade Wails framework from v2.10.2 to v2.12.0 (#623, #619)
+- Refactor App.tsx: extract 7 custom hooks from monolithic `AppContent` component (#629, #503, #507)
+  - `useAppInit`, `useFileData`, `useGoCSVIntegration`, `usePCAConfig`, `usePCARunner`, `useVisualization`, `useUIState`
+  - Adds production-safe `logger.ts` — suppresses all console output in production builds
+- Optimize React context rendering in GoPCA Desktop (#631, #506)
+  - `useMemo` on all 5 context value objects prevents unnecessary consumer re-renders on parent re-renders
+  - Functional `setConfig` updater form eliminates stale closure bugs in `PCAConfigSection`
+  - `useMemo` for derived arrays (`plotOptions`, `groupColumnOptions`) in `ResultsSection`
+- Centralize NIPALS and Kernel PCA algorithm constants (#628, #484)
+  - `NIPALSConfig` (tolerance: 1e-8, maxIterations: 1000) and `KernelPCAConfig` (minEigenvalue: 1e-10) in `internal/config`
+  - Eliminates duplicated `const` blocks across PCA algorithm files
+- Remove dead fields from `PCAResult` struct (#627, #459)
+  - Six fields never set or read in production removed: `ExplainedVariance`, `CumulativeVariance`, `Mean`, `Scale`, `Components`, `Config`
+- Update copyright year range to 2025-2026 across all source files and LICENSE (#632)
+
 ## [1.1.8] - 2025-11-09
 
 ### Added
@@ -253,6 +286,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - JSON model export/import capability
 - Extensive documentation and help system
 
+[1.2.0]: https://github.com/bitjungle/gopca/compare/v1.1.8...v1.2.0
+[1.1.8]: https://github.com/bitjungle/gopca/releases/tag/v1.1.8
+[1.1.7]: https://github.com/bitjungle/gopca/releases/tag/v1.1.7
+[1.1.6]: https://github.com/bitjungle/gopca/releases/tag/v1.1.6
+[1.1.5]: https://github.com/bitjungle/gopca/releases/tag/v1.1.5
+[1.1.4]: https://github.com/bitjungle/gopca/releases/tag/v1.1.4
+[1.1.3]: https://github.com/bitjungle/gopca/releases/tag/v1.1.3
+[1.1.2]: https://github.com/bitjungle/gopca/releases/tag/v1.1.2
 [1.1.1]: https://github.com/bitjungle/gopca/releases/tag/v1.1.1
 [1.1.0]: https://github.com/bitjungle/gopca/releases/tag/v1.1.0
 [1.0.2]: https://github.com/bitjungle/gopca/releases/tag/v1.0.2
