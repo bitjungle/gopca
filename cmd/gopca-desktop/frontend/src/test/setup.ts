@@ -1,4 +1,4 @@
-// Copyright 2025 bitjungle - Rune Mathisen. All rights reserved.
+// Copyright 2025-2026 bitjungle - Rune Mathisen. All rights reserved.
 // Test setup: extends expect with jest-dom matchers.
 import '@testing-library/jest-dom';
 import { vi } from 'vitest';

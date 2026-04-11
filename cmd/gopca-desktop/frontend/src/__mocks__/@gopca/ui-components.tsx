@@ -1,4 +1,4 @@
-// Copyright 2025 bitjungle - Rune Mathisen. All rights reserved.
+// Copyright 2025-2026 bitjungle - Rune Mathisen. All rights reserved.
 // Mock for @gopca/ui-components — used in Vitest.
 import React from 'react';
 import { vi } from 'vitest';
