@@ -1353,7 +1353,7 @@ jobs:
         | Platform | Download | Contents |
         |----------|----------|----------|
         | **macOS** | [\`gopca-macos-universal.zip\`](../../releases/download/${VERSION}/gopca-macos-universal.zip) | • \`pca-intel\` and \`pca-arm64\` CLI tools<br>• \`GoPCA.app\` (signed & notarized)<br>• \`GoCSV.app\` (signed & notarized) |
-        | **Windows** | [\`gopca-windows-x64.zip\`](../../releases/download/${VERSION}/gopca-windows-x64.zip) | • \`pca.exe\` CLI tool${{ steps.check_signed.outputs.windows_signed == 'signed' && ' (digitally signed)' || '' }}<br>• \`GoPCA.exe\`${{ steps.check_signed.outputs.windows_signed == 'signed' && ' (digitally signed)' || '' }}<br>• \`GoCSV.exe\`${{ steps.check_signed.outputs.windows_signed == 'signed' && ' (digitally signed)' || '' }} |
+        | **Windows** | [\`gopca-windows-x64.zip\`](../../releases/download/${VERSION}/gopca-windows-x64.zip) | • \`pca.exe\` CLI tool<br>• \`GoPCA.exe\`<br>• \`GoCSV.exe\`<br>• ⚠️ Unsigned executables — SmartScreen warning expected<br>• 👉 [Install from Microsoft Store](https://apps.microsoft.com/detail/9n8hcxgrjzt5) to avoid warnings |
         | **Linux** | [\`gopca-linux-x64.tar.gz\`](../../releases/download/${VERSION}/gopca-linux-x64.tar.gz) | • \`pca-x64\` and \`pca-arm64\` CLI tools<br>• \`GoPCA\` app<br>• \`GoCSV\` editor |
 
         ### Linux AppImages (Recommended for Linux desktop users)
