@@ -265,7 +265,6 @@ The workflow will:
 2. Build Desktop apps (3 platforms + Linux AppImage)
 3. Build GoCSV apps (3 platforms + Linux AppImage)
 4. Sign and notarize macOS applications (fully automated, no Gatekeeper issues)
-5. Sign Windows binaries (if SignPath configured)
 6. Generate SHA-256 checksums
 7. Create GitHub release with all artifacts
 8. Generate release notes from merged PRs
@@ -330,7 +329,7 @@ Each release includes:
   - Automated installation to Program Files
   - Start Menu shortcuts and PATH configuration
   - Built automatically in CI/CD when NSIS is available
-  - Uses signed binaries when SignPath is configured
+  - Not digitally signed; users install via Microsoft Store for a warning-free experience
 
 ### MSIX Package (Microsoft Store)
 - `GoPCA_X.X.X.0_x64.msix` - Microsoft Store package
@@ -606,61 +605,46 @@ sed -i '' 's|releases/download/vX\.X\.X/GoPCA_\*\.msix|releases/download/vX.X.X/
 gh release edit vX.X.X --notes-file /tmp/release_notes.md
 ```
 
-## Windows Code Signing (Manual Process)
+## Windows Code Signing
 
-After the automated release workflow completes, the Windows installer needs to be manually signed to avoid security warnings.
+The Windows installer (`GoPCA-Setup-vX.X.X.exe`) released on GitHub is **not digitally signed**. This is intentional — we distribute GoPCA on Windows through the **Microsoft Store**, which handles signing and trust automatically.
 
-### Prerequisites
+### Why No Signed Installer?
 
-- SignPath.io account (free tier works)
-- Access to the project's SignPath organization
-- Signing certificate configured in SignPath
+Code signing certificates are expensive and require annual renewal. We evaluated SignPath.io for automated signing but dropped it because the free tier does not support GitHub Actions integration. Rather than paying for a certificate, we invested in Microsoft Partner Center distribution instead.
 
-### Signing Process
+### Microsoft Store as the Windows Signing Strategy
 
-1. **Download the unsigned installer**
+The MSIX package built by CI/CD is submitted to Microsoft Partner Center after each release. Microsoft:
+- Verifies the package
+- Re-signs it with a Microsoft-trusted certificate
+- Publishes it to the Store
+
+Store-installed GoPCA has **zero SmartScreen warnings** and receives automatic updates. This is the recommended installation path for Windows users.
+
+### After Each Release: Submit MSIX to Microsoft Store
+
+1. **Download MSIX Package** from the GitHub release:
    ```bash
-   # From the release page, download:
-   GoPCA-Setup-vX.X.X.exe
+   wget https://github.com/bitjungle/gopca/releases/latest/download/GoPCA_X.X.X.0_x64.msix
    ```
 
-2. **Sign with SignPath**
-   - Go to [SignPath.io](https://app.signpath.io)
-   - Navigate to your organization
-   - Click "Upload and Sign"
-   - Select the downloaded installer file
-   - Choose the appropriate signing certificate
-   - Wait for signing to complete (usually ~1 minute)
-   - Download the signed file
+2. **Log into Partner Center**: [partner.microsoft.com](https://partner.microsoft.com) → Apps → GoPCA
 
-3. **Update the GitHub release**
-   ```bash
-   # Rename the signed file
-   mv GoPCA-Setup-vX.X.X.exe GoPCA-Setup-vX.X.X-signed.exe
-   
-   # Upload to the existing release
-   gh release upload vX.X.X GoPCA-Setup-vX.X.X-signed.exe
-   ```
+3. **Create New Submission**:
+   - Click "Start new submission"
+   - Upload the MSIX package
+   - Copy version notes from CHANGELOG.md
+   - Submit for certification
 
-4. **Update release notes**
-   - Edit the release on GitHub
-   - Change the Windows installer download link from:
-     ```
-     GoPCA-Setup-vX.X.X.exe
-     ```
-     to:
-     ```
-     GoPCA-Setup-vX.X.X-signed.exe
-     ```
-   - Add a note: "(digitally signed)" next to the Windows installer link
+4. **Monitor Certification** (typically 1-3 business days):
+   - Check Partner Center dashboard for status
+   - Address any certification failures if they arise
+   - App goes live automatically upon approval
 
-### Why Manual Signing?
+### Windows Installer (GitHub Releases)
 
-The free SignPath tier doesn't support automated GitHub Actions integration with repository-based policies. Manual signing through the web interface works reliably and only adds ~5 minutes to the release process.
-
-### Future Improvements
-
-If we upgrade to a paid SignPath plan, we can re-enable the automated signing in `.github/workflows/release.yml` (currently commented out).
+The unsigned `.exe` installer remains available on GitHub Releases for users who need offline installs or prefer a traditional setup. Users who download it will see a SmartScreen warning and must click "More info" → "Run anyway". This is documented in [docs/windows-installation.md](../windows-installation.md).
 
 ## Version Information
 
@@ -737,7 +721,7 @@ The `.github/workflows/release.yml` workflow:
 - **GitHub-hosted runners**: Used for all testing and MSIX builds
 - **Code signing**:
   - **macOS**: Fully automated signing and notarization for all binaries (no Gatekeeper warnings)
-  - **Windows**: Optional SignPath.io integration for digital signatures (when configured)
+  - **Windows**: Installer is unsigned; Microsoft Store is the recommended distribution channel (MSIX submitted to Partner Center after each release)
   - **Linux AppImages**: Automatically generated for both GoPCA and GoCSV Desktop apps
   - **MSIX**: Self-signed during build (Microsoft Store re-signs on publish)
 - **Windows Installer**: Built on self-hosted Linux runner using NSIS

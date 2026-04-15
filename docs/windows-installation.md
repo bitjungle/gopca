@@ -4,10 +4,12 @@ This guide explains the different ways to install GoPCA on Windows and how to ha
 
 ## Recommended Installation Methods
 
-### Option 1: Microsoft Store (Coming Soon - Recommended)
+### Option 1: Microsoft Store (Recommended)
+
+The easiest and most secure way to install GoPCA on Windows.
 
 **Benefits:**
-- ✅ Zero security warnings
+- ✅ Zero security warnings — Microsoft verifies and signs all Store apps
 - ✅ Automatic updates
 - ✅ One-click installation
 - ✅ Clean uninstallation
@@ -15,16 +17,17 @@ This guide explains the different ways to install GoPCA on Windows and how to ha
 
 **How to Install:**
 
-1. Open Microsoft Store
-2. Search for "GoPCA"
-3. Click "Install"
-4. Launch from Start Menu
+1. Open the [GoPCA page in the Microsoft Store](https://apps.microsoft.com/detail/9n8hcxgrjzt5)
+2. Click **Get** or **Install**
+3. Launch GoPCA from the Start Menu
 
-> **Note**: Microsoft Store distribution is currently under review. This option will be available soon!
+> **Note:** After a new GitHub release, the updated version typically appears in the Store within a few days as it goes through Microsoft's certification process.
 
 ---
 
-### Option 2: Windows Installer (Current Recommended)
+### Option 2: Windows Installer
+
+For users who prefer a traditional Windows installation or need to install offline.
 
 **Benefits:**
 - ✅ Traditional Windows installation
@@ -80,7 +83,7 @@ The installer will create:
 4. Run applications:
    - Double-click `GoPCA.exe` for the desktop app
    - Double-click `GoCSV.exe` for the CSV editor
-   - Run `bin\pca.exe` from command line for CLI
+   - Run `pca.exe` from command line for CLI
 
 **To Add CLI to PATH (Optional):**
 
@@ -89,46 +92,34 @@ The installer will create:
 3. Click "Environment Variables" button
 4. Under "System variables", select "Path" → Edit
 5. Click "New"
-6. Add: `C:\Tools\GoPCA\bin` (adjust to your extraction location)
+6. Add: `C:\Tools\GoPCA` (adjust to your extraction location)
 7. Click OK on all dialogs
 8. Restart Command Prompt
 
 ---
 
-### Option 4: MSIX Package (Advanced Users / IT Admins)
+### Option 4: MSIX Package (IT Admins / Enterprise)
+
+For enterprise deployment via Intune/SCCM or sideloading in managed environments.
 
 **Benefits:**
 - ✅ Modern Windows package format
 - ✅ Sandboxed execution
 - ✅ Clean uninstall
-- ⚠️ Requires certificate installation (sideloading)
-- ⚠️ Not recommended for most users
+- ✅ Suitable for enterprise deployment
+- ⚠️ Requires certificate installation for sideloading (not needed for Store installs)
 
-**How to Install (Sideloading):**
-
-1. Download [`GoPCA_X.X.X.0_x64.msix`](https://github.com/bitjungle/gopca/releases/latest)
-2. Right-click MSIX file → Properties → Digital Signatures
-3. Select signature → Details → View Certificate
-4. Install Certificate → Local Machine → Place in: Trusted Root Certification Authorities
-5. Double-click MSIX file → Install
-6. Launch from Start Menu
-
-**PowerShell Installation:**
+**PowerShell Installation (Sideloading):**
 
 ```powershell
 # Install MSIX package
-Add-AppxPackage -Path ".\GoPCA_1.1.4.0_x64.msix"
+Add-AppxPackage -Path ".\GoPCA_1.2.0.0_x64.msix"
 
 # Uninstall (if needed)
 Get-AppxPackage *GoPCA* | Remove-AppxPackage
 ```
 
-**Note:** MSIX packages are primarily intended for:
-- Enterprise deployment via Intune/SCCM
-- Testing before Microsoft Store submission
-- Users who prefer the MSIX package format
-
-Most users should use the **Windows Installer** or wait for **Microsoft Store** availability.
+**Note:** The MSIX packages on GitHub Releases are self-signed during the CI/CD build. When submitted to Microsoft Partner Center, Microsoft replaces this with their trusted Store certificate. For most users, installing via the **Microsoft Store** (Option 1) is simpler and requires no certificate management.
 
 ---
 
@@ -146,7 +137,7 @@ Windows Defender SmartScreen prevented an unrecognized app from starting.
 This happens because:
 
 1. **Lack of Reputation**: The software is new or not downloaded frequently enough to build "reputation" with Microsoft
-2. **No Extended Validation Certificate**: The current installer uses a standard code signing certificate (or is unsigned during testing)
+2. **Unsigned Installer**: The GitHub release installer is not digitally signed
 
 **This is NOT because the software is malicious.** It's a normal part of Windows trying to protect users from unknown software.
 
@@ -157,11 +148,15 @@ This happens because:
 - ✅ **Open source**: All code is publicly available on [GitHub](https://github.com/bitjungle/gopca)
 - ✅ **Transparent build process**: Built automatically via GitHub Actions
 - ✅ **Checksums provided**: Verify file integrity with SHA-256 checksums
-- ✅ **Community vetted**: Used by researchers and data scientists
+- ✅ **Available on Microsoft Store**: Microsoft-verified and signed for Store installs
 
 ### How to Proceed Safely
 
-**Option 1: Click "More info" → "Run anyway"**
+**Option 1: Install from Microsoft Store (no warnings)**
+
+The [Microsoft Store version](https://apps.microsoft.com/detail/9n8hcxgrjzt5) is verified and signed by Microsoft — SmartScreen will never appear.
+
+**Option 2: Click "More info" → "Run anyway"**
 
 If you downloaded from the official [GitHub Releases](https://github.com/bitjungle/gopca/releases) page:
 
@@ -169,7 +164,7 @@ If you downloaded from the official [GitHub Releases](https://github.com/bitjung
 2. Click "Run anyway"
 3. The installer will proceed
 
-**Option 2: Verify the Download**
+**Option 3: Verify the Download**
 
 Before running, verify the file integrity:
 
@@ -181,13 +176,6 @@ Before running, verify the file integrity:
    ```
 4. Compare the hash with `checksums.txt`
 5. If they match, the file is authentic and unmodified
-
-**Option 3: Wait for Microsoft Store (Coming Soon)**
-
-The Microsoft Store version will have ZERO warnings because:
-- Microsoft verifies and signs all Store apps
-- Store apps are automatically trusted by Windows
-- No SmartScreen warnings ever appear
 
 ### What About Antivirus?
 
@@ -239,7 +227,7 @@ If your antivirus blocks GoPCA:
 
 **Solutions**:
 1. Use "Run anyway" option (safe if downloaded from official releases)
-2. Wait for Microsoft Store version (no warnings)
+2. Install from [Microsoft Store](https://apps.microsoft.com/detail/9n8hcxgrjzt5) instead (no warnings)
 3. Contact your IT admin if on managed PC
 
 ### Portable Version Won't Extract
@@ -258,7 +246,7 @@ If your antivirus blocks GoPCA:
 **Solutions**:
 1. Restart Command Prompt (new PATH not loaded)
 2. Verify PATH entry: `echo %PATH%` should include GoPCA directory
-3. Try full path: `C:\Program Files\GoPCA\bin\pca.exe --version`
+3. Try full path: `C:\Program Files\GoPCA\pca.exe --version`
 
 ---
 
