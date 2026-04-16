@@ -343,7 +343,7 @@ Each release includes:
     - IT administrators who prefer MSIX format
   - See [MSIX Packaging Guide](msix-packaging.md) for details
 
-**Note:** The MSIX package is signed with a temporary self-signed certificate during CI/CD build. When submitted to Microsoft Partner Center, Microsoft replaces this with their trusted Store certificate, eliminating SmartScreen warnings for end users.
+**Note:** The MSIX package is signed with a temporary self-signed certificate during CI/CD build. When submitted to Microsoft Partner Center, Microsoft replaces this with their trusted Store certificate, eliminating SmartScreen warnings for end users. See [MSIX Deploy to Store Guide](msix-deploy-to-ms-store.md) for submission instructions.
 
 ### Verification
 - `checksums.txt` - SHA-256 checksums for all artifacts (including MSIX)
