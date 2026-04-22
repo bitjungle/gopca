@@ -7,7 +7,7 @@
 import React, { useState, useRef, useEffect } from 'react';
 import './App.css';
 import { CSVGrid, ValidationResults, MissingValueSummary, MissingValueDialog, DataQualityDashboard, UndoRedoControls, ImportWizard, DataTransformDialog, DocumentationViewer, AboutDialog } from './components';
-import { ConfirmDialog, ErrorBoundary } from '@gopca/ui-components';
+import { ConfirmDialog, ErrorBoundary, ErrorAlert } from '@gopca/ui-components';
 import { ThemeProvider, ThemeToggle } from '@gopca/ui-components';
 import logo from './assets/images/GoCSV-logo-1024-transp.png';
 import { LoadCSV, SaveCSV, SaveExcel, ValidateForGoPCA, AnalyzeMissingValues, FillMissingValues, AnalyzeDataQuality, CheckGoPCAStatus, OpenInGoPCA, DownloadGoPCA, ExecuteCellEdit, ExecuteHeaderEdit, ClearHistory, GetVersion } from '../wailsjs/go/main/App';
@@ -37,6 +37,8 @@ function AppContent() {
     const [showAboutDialog, setShowAboutDialog] = useState(false);
     const [showDownloadConfirm, setShowDownloadConfirm] = useState(false);
     const [version, setVersion] = useState<string>('');
+    const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
+    const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
     // Ref for scrolling to Step 2
     const step2Ref = useRef<HTMLDivElement>(null);
@@ -47,6 +49,9 @@ function AppContent() {
     useEffect(() => {
         const unsubscribe = EventsOn('file-loaded', (filename: string) => {
             setFileName(filename);
+        });
+        const unsubscribeUnsaved = EventsOn('unsaved-state-changed', (dirty: boolean) => {
+            setHasUnsavedChanges(dirty);
         });
 
         // Check GoPCA status on startup
@@ -67,13 +72,14 @@ function AppContent() {
                 if (filePath.match(/\.(csv|tsv|xlsx|xls)$/i)) {
                     await handleDroppedFile(filePath);
                 } else {
-                    alert('Please drop a supported file type: CSV, TSV, or Excel files');
+                    setErrorMessage('Unsupported file type. Please drop a CSV, TSV, or Excel file.');
                 }
             }
         }, false);
 
         return () => {
             unsubscribe();
+            unsubscribeUnsaved();
             OnFileDropOff();
         };
     }, []);
@@ -131,7 +137,7 @@ function AppContent() {
                 setDataQualityReport(null);
                 setValidationResult(null);
             } else {
-                alert('Failed to load file or file is empty');
+                setErrorMessage('Could not load file — the file appears to be empty or invalid. Is it a valid CSV, TSV, or Excel file?');
             }
         } catch (error) {
             console.error('Error loading dropped file:', error);
@@ -158,7 +164,7 @@ function AppContent() {
         } catch (error: any) {
             console.error('Error loading file:', error);
             const errorMsg = error?.message || error?.toString() || 'Unknown error';
-            alert('Error loading file: ' + errorMsg);
+            setErrorMessage('Could not load file — ' + errorMsg);
             setFileLoaded(false);
             setFileName(null);
         } finally {
@@ -233,7 +239,7 @@ return;
             setShowMissingValueSummary(true);
         } catch (error) {
             console.error('Error analyzing missing values:', error);
-            alert('Error analyzing missing values: ' + error);
+            setErrorMessage('Could not analyze missing values — ' + (error instanceof Error ? error.message : String(error)));
         }
     };
 
@@ -259,7 +265,7 @@ return;
             }
         } catch (error) {
             console.error('Error filling missing values:', error);
-            alert('Error filling missing values: ' + error);
+            setErrorMessage('Could not fill missing values — ' + (error instanceof Error ? error.message : String(error)));
         }
     };
 
@@ -292,8 +298,17 @@ return;
                             className="h-12 cursor-pointer hover:opacity-90 transition-opacity flex-shrink-0"
                             onClick={handleLogoClick}
                         />
-                        <div>
+                        <div className="flex items-center gap-3">
                             <p className="text-sm text-gray-600 dark:text-gray-400">Data Editor for GoPCA</p>
+                            {hasUnsavedChanges && (
+                                <span
+                                    title="Unsaved changes"
+                                    className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-xs font-medium bg-amber-100 text-amber-800 dark:bg-amber-900/40 dark:text-amber-300"
+                                >
+                                    <span className="w-1.5 h-1.5 rounded-full bg-amber-500" />
+                                    Unsaved
+                                </span>
+                            )}
                         </div>
                     </div>
                     <div className="flex items-center gap-4">
@@ -326,6 +341,15 @@ return;
             {/* Main content area */}
             <main className="flex-1 overflow-y-auto p-4 md:p-6 max-w-7xl mx-auto w-full">
                 <div className="space-y-6">
+                    {/* Error display */}
+                    {errorMessage && (
+                        <ErrorAlert
+                            title="Error"
+                            message={errorMessage}
+                            onDismiss={() => setErrorMessage(null)}
+                        />
+                    )}
+
                     {/* Step 1: Load Data - matching GoPCA's card style */}
                     <div className="bg-white dark:bg-gray-800 rounded-xl shadow-md p-6 animate-fadeIn">
                         <h2 className="text-lg font-semibold mb-4 text-gray-800 dark:text-gray-200">
@@ -427,7 +451,7 @@ return;
                                                 setShowDataQualityReport(true);
                                             } catch (error) {
                                                 console.error('Error analyzing data quality:', error);
-                                                alert('Error analyzing data quality: ' + error);
+                                                setErrorMessage('Could not analyze data quality — ' + (error instanceof Error ? error.message : String(error)));
                                             } finally {
                                                 setIsAnalyzingQuality(false);
                                             }
@@ -558,7 +582,7 @@ return;
                                                 await OpenInGoPCA(fileData);
                                             } catch (error) {
                                                 console.error('Error opening in GoPCA:', error);
-                                                alert('Error opening in GoPCA: ' + error);
+                                                setErrorMessage('Could not open in GoPCA — ' + (error instanceof Error ? error.message : String(error)));
                                             }
                                         }}
                                         disabled={!gopcaStatus || isCheckingGoPCA}
@@ -590,7 +614,7 @@ return;
                                                         await SaveCSV(fileData);
                                                     } catch (error) {
                                                         console.error('Error saving file:', error);
-                                                        alert('Error saving file: ' + error);
+                                                        setErrorMessage('Could not save file — ' + (error instanceof Error ? error.message : String(error)));
                                                     }
                                                 }
                                             }}
@@ -605,7 +629,7 @@ return;
                                                         await SaveExcel(fileData);
                                                     } catch (error) {
                                                         console.error('Error saving Excel file:', error);
-                                                        alert('Error saving Excel file: ' + error);
+                                                        setErrorMessage('Could not save Excel file — ' + (error instanceof Error ? error.message : String(error)));
                                                     }
                                                 }
                                             }}

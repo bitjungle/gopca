@@ -30,9 +30,10 @@ import (
 
 // App struct
 type App struct {
-	ctx         context.Context
-	history     *CommandHistory
-	currentData *FileData
+	ctx               context.Context
+	history           *CommandHistory
+	currentData       *FileData
+	hasUnsavedChanges bool
 }
 
 // NewApp creates a new App application struct
@@ -46,6 +47,34 @@ func NewApp() *App {
 // so we can call the runtime methods
 func (a *App) startup(ctx context.Context) {
 	a.ctx = ctx
+}
+
+// markDirty marks the app as having unsaved changes and notifies the frontend.
+// Only emits an event on the first transition to dirty to avoid noise.
+func (a *App) markDirty() {
+	if !a.hasUnsavedChanges {
+		a.hasUnsavedChanges = true
+		if a.ctx != nil {
+			wailsruntime.EventsEmit(a.ctx, "unsaved-state-changed", true)
+		}
+	}
+}
+
+// markClean marks the app as having no unsaved changes and notifies the frontend.
+// Called after a successful save or when a new file is loaded.
+func (a *App) markClean() {
+	if a.hasUnsavedChanges {
+		a.hasUnsavedChanges = false
+		if a.ctx != nil {
+			wailsruntime.EventsEmit(a.ctx, "unsaved-state-changed", false)
+		}
+	}
+}
+
+// HasUnsavedChanges returns true if there are unsaved data changes.
+// Used by OnBeforeClose to determine whether to prompt the user.
+func (a *App) HasUnsavedChanges() bool {
+	return a.hasUnsavedChanges
 }
 
 // ValidationResult represents the result of GoPCA validation
@@ -134,6 +163,7 @@ func (a *App) LoadCSV(filePath string) (*FileData, error) {
 	a.currentData = fileData
 	// Clear history when loading new file
 	a.history.Clear()
+	a.markClean()
 	if a.ctx != nil {
 		wailsruntime.EventsEmit(a.ctx, "undo-redo-state-changed", a.GetUndoRedoState())
 	}
@@ -561,6 +591,7 @@ func (a *App) SaveCSV(data *FileData) error {
 	}
 
 	wailsruntime.EventsEmit(a.ctx, "file-saved", filepath.Base(selection))
+	a.markClean()
 	return nil
 }
 
@@ -701,6 +732,7 @@ func (a *App) SaveExcel(data *FileData) error {
 	}
 
 	wailsruntime.EventsEmit(a.ctx, "file-saved", filepath.Base(selection))
+	a.markClean()
 	return nil
 }
 
@@ -938,6 +970,7 @@ func (a *App) FillMissingValues(data *FileData, request FillMissingValuesRequest
 		}
 	}
 
+	a.markDirty()
 	return result, nil
 }
 
@@ -2164,6 +2197,7 @@ func (a *App) Undo(data *FileData) (*FileData, error) {
 	if err := a.history.Undo(data); err != nil {
 		return nil, err
 	}
+	a.markDirty()
 	// Emit event to update UI
 	wailsruntime.EventsEmit(a.ctx, "undo-redo-state-changed", a.GetUndoRedoState())
 	// Return the modified data
@@ -2175,6 +2209,7 @@ func (a *App) Redo(data *FileData) (*FileData, error) {
 	if err := a.history.Redo(data); err != nil {
 		return nil, err
 	}
+	a.markDirty()
 	// Emit event to update UI
 	wailsruntime.EventsEmit(a.ctx, "undo-redo-state-changed", a.GetUndoRedoState())
 	// Return the modified data
@@ -2206,6 +2241,7 @@ func (a *App) executeCommand(cmd Command, data *FileData, operation string) (*Fi
 		return nil, fmt.Errorf("%s: %w", operation, err)
 	}
 	a.currentData = data // Store the current data
+	a.markDirty()
 
 	if a.ctx != nil {
 		wailsruntime.EventsEmit(a.ctx, "undo-redo-state-changed", a.GetUndoRedoState())
@@ -2978,6 +3014,7 @@ func (a *App) ApplyTransformation(data *FileData, options TransformOptions) (*Tr
 		return nil, fmt.Errorf("apply transformation: %w", err)
 	}
 	a.currentData = data // Store the current data
+	a.markDirty()
 	if a.ctx != nil {
 		wailsruntime.EventsEmit(a.ctx, "undo-redo-state-changed", a.GetUndoRedoState())
 	}
