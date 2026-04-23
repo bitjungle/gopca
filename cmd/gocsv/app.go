@@ -446,109 +446,18 @@ func (a *App) combineAllColumns(csvData *types.CSVData, categoricalData map[stri
 	}
 }
 
-// ValidateForGoPCA validates that the CSV data is compatible with GoPCA
+// ValidateForGoPCA validates that the CSV data is compatible with GoPCA.
 func (a *App) ValidateForGoPCA(data *FileData) *ValidationResult {
-	var warnings []string
-	var numericColumns int
-	var categoricalColumns int
-	var targetColumns int
-	var totalMissing int
-
-	// Check minimum data requirements
-	if data.Rows < 2 {
-		warnings = append(warnings, "ERROR: Data must have at least 2 rows (found "+fmt.Sprintf("%d", data.Rows)+")")
+	in := integration.ValidationInput{
+		Headers:     data.Headers,
+		Data:        data.Data,
+		ColumnTypes: data.ColumnTypes,
+		RowNames:    data.RowNames,
+		Rows:        data.Rows,
+		Columns:     data.Columns,
 	}
-
-	// Count column types using our pre-detected types
-	for _, colType := range data.ColumnTypes {
-		switch colType {
-		case "numeric":
-			numericColumns++
-		case "categorical":
-			categoricalColumns++
-		case "target":
-			targetColumns++
-		}
-	}
-
-	// Check for missing values in the data
-	for colIdx, header := range data.Headers {
-		missingInCol := 0
-
-		for i := 0; i < data.Rows; i++ {
-			if i >= len(data.Data) {
-				break
-			}
-			value := data.Data[i][colIdx]
-
-			// Check for missing values
-			trimmed := strings.TrimSpace(value)
-			if trimmed == "" || trimmed == "NA" || trimmed == "N/A" ||
-				trimmed == "nan" || trimmed == "NaN" || trimmed == "null" || trimmed == "NULL" {
-				missingInCol++
-				totalMissing++
-			}
-		}
-
-		// Report high missing value percentage
-		if data.Rows > 0 {
-			missingPercent := float64(missingInCol) / float64(data.Rows) * 100
-			if missingPercent > 50 {
-				warnings = append(warnings, fmt.Sprintf("WARNING: Column '%s' has %.1f%% missing values", header, missingPercent))
-			}
-		}
-	}
-
-	// Report column type summary
-	if categoricalColumns > 0 {
-		warnings = append(warnings, fmt.Sprintf("INFO: %d categorical column(s) detected - these will be excluded from PCA but available for visualization", categoricalColumns))
-	}
-
-	if targetColumns > 0 {
-		warnings = append(warnings, fmt.Sprintf("INFO: %d target column(s) detected - these will be excluded from PCA but available for visualization", targetColumns))
-	}
-
-	// Check if we have enough numeric columns for PCA
-	if numericColumns < 2 {
-		warnings = append(warnings, fmt.Sprintf("ERROR: Need at least 2 numeric columns for PCA (found %d)", numericColumns))
-	} else if numericColumns < 3 {
-		warnings = append(warnings, fmt.Sprintf("WARNING: Only %d numeric columns found - PCA results may be limited", numericColumns))
-	} else {
-		warnings = append(warnings, fmt.Sprintf("INFO: %d numeric columns will be used for PCA analysis", numericColumns))
-	}
-
-	// Report overall missing data
-	totalCells := data.Rows * data.Columns
-	if totalCells > 0 {
-		missingPercent := float64(totalMissing) / float64(totalCells) * 100
-		if missingPercent > 0 {
-			warnings = append(warnings, fmt.Sprintf("INFO: Dataset contains %.1f%% missing values (%d cells)", missingPercent, totalMissing))
-		}
-	}
-
-	// Check for reasonable data size
-	if data.Rows > 10000 {
-		warnings = append(warnings, fmt.Sprintf("INFO: Large dataset detected (%d rows) - processing may take time", data.Rows))
-	}
-
-	// Check if row names were detected
-	if len(data.RowNames) > 0 {
-		warnings = append(warnings, "INFO: Row names detected in first column")
-	}
-
-	// Determine if data is valid (no ERRORs)
-	isValid := true
-	for _, warning := range warnings {
-		if strings.HasPrefix(warning, "ERROR:") {
-			isValid = false
-			break
-		}
-	}
-
-	return &ValidationResult{
-		IsValid:  isValid,
-		Messages: warnings,
-	}
+	res := integration.ValidateForGoPCA(in)
+	return &ValidationResult{IsValid: res.IsValid, Messages: res.Messages}
 }
 
 // SaveCSV saves the data to a CSV file
