@@ -1196,7 +1196,7 @@ func (a *App) previewCSV(filePath string, options ImportOptions, preview *FilePr
 	// Detect column types
 	preview.ColumnTypes = make([]string, preview.TotalCols)
 	for i := 0; i < preview.TotalCols; i++ {
-		preview.ColumnTypes[i] = a.detectColumnType(allData, i)
+		preview.ColumnTypes[i] = pkgcsv.DetectColumnType(allData, i)
 	}
 
 	// Detect delimiter if not specified
@@ -1284,7 +1284,7 @@ func (a *App) previewExcel(filePath string, options ImportOptions, preview *File
 	// Detect column types
 	preview.ColumnTypes = make([]string, preview.TotalCols)
 	for i := 0; i < preview.TotalCols; i++ {
-		preview.ColumnTypes[i] = a.detectColumnType(rows, i)
+		preview.ColumnTypes[i] = pkgcsv.DetectColumnType(rows, i)
 	}
 
 	return preview, nil
@@ -1410,7 +1410,7 @@ func (a *App) importCSVWithOptions(filePath string, options ImportOptions) (*Fil
 
 	// Detect column types and process data
 	for i, header := range fileData.Headers {
-		colType := a.detectColumnType(allData, i)
+		colType := pkgcsv.DetectColumnType(allData, i)
 		fileData.ColumnTypes[header] = colType
 
 		if strings.HasSuffix(header, "#target") {
@@ -1550,7 +1550,7 @@ func (a *App) importExcelWithOptions(filePath string, options ImportOptions) (*F
 
 	// Detect column types
 	for i, header := range fileData.Headers {
-		colType := a.detectColumnType(rows, i)
+		colType := pkgcsv.DetectColumnType(rows, i)
 		fileData.ColumnTypes[header] = colType
 
 		if strings.HasSuffix(header, "#target") {
@@ -1622,53 +1622,6 @@ func (a *App) SelectFileForImport() (string, error) {
 	}
 
 	return filePath, nil
-}
-
-// detectColumnType detects the type of a column based on its values
-func (a *App) detectColumnType(data [][]string, colIndex int) string {
-	if len(data) == 0 || colIndex < 0 {
-		return "unknown"
-	}
-
-	// Count different types
-	numericCount := 0
-	totalCount := 0
-	uniqueValues := make(map[string]bool)
-
-	for _, row := range data {
-		if colIndex >= len(row) {
-			continue
-		}
-
-		value := strings.TrimSpace(row[colIndex])
-		if value == "" {
-			continue
-		}
-
-		totalCount++
-		uniqueValues[value] = true
-
-		// Try to parse as float
-		if _, err := strconv.ParseFloat(value, 64); err == nil {
-			numericCount++
-		}
-	}
-
-	if totalCount == 0 {
-		return "empty"
-	}
-
-	// If more than 90% of non-empty values are numeric, consider it numeric
-	if float64(numericCount)/float64(totalCount) > 0.9 {
-		return "numeric"
-	}
-
-	// If unique values are less than 20% of total values or less than 20, consider it categorical
-	if float64(len(uniqueValues))/float64(totalCount) < 0.2 || len(uniqueValues) < 20 {
-		return "categorical"
-	}
-
-	return "text"
 }
 
 // TransformationType represents the type of transformation
