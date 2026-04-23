@@ -277,8 +277,12 @@ func detectOutliers(data [][]string, rows, colIdx int, stats ColumnStatistics) [
 		return outliers
 	}
 
-	lowerBound := *stats.Q1 - 1.5**stats.IQR
-	upperBound := *stats.Q3 + 1.5**stats.IQR
+	iqrPositive := stats.IQR != nil && *stats.IQR > 0
+	var lowerBound, upperBound float64
+	if iqrPositive {
+		lowerBound = *stats.Q1 - 1.5*(*stats.IQR)
+		upperBound = *stats.Q3 + 1.5*(*stats.IQR)
+	}
 	zThreshold := 3.0
 
 	for rowIdx := 0; rowIdx < rows && rowIdx < len(data); rowIdx++ {
@@ -294,7 +298,7 @@ func detectOutliers(data [][]string, rows, colIdx int, stats ColumnStatistics) [
 			continue
 		}
 
-		if num < lowerBound || num > upperBound {
+		if iqrPositive && (num < lowerBound || num > upperBound) {
 			outliers = append(outliers, OutlierInfo{
 				RowIndex: rowIdx,
 				Value:    value,

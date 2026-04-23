@@ -12,7 +12,7 @@ import (
 )
 
 // generateQualityIssues inspects the analysis report and correlation map and
-// returns a list of data quality issues ordered by severity.
+// returns a list of detected data quality issues.
 func generateQualityIssues(report *DataQualityReport, correlations map[string]map[string]float64) []QualityIssue {
 	issues := []QualityIssue{}
 

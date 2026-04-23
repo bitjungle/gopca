@@ -154,10 +154,10 @@ func TestAnalyzeDistribution_Normal(t *testing.T) {
 // ─── detectOutliers ──────────────────────────────────────────────────────────
 
 func TestDetectOutliers_Clear(t *testing.T) {
-	// 9 values near 5, one extreme outlier
+	// 9 values near 5, one extreme outlier well above Z=3
 	data := [][]string{
 		{"5"}, {"5"}, {"5"}, {"5"}, {"5"},
-		{"5"}, {"5"}, {"5"}, {"5"}, {"1000"},
+		{"5"}, {"5"}, {"5"}, {"5"}, {"9999"},
 	}
 	stats := analyzeNumericStats(data, len(data), 0)
 	outliers := detectOutliers(data, len(data), 0, stats)
@@ -166,12 +166,12 @@ func TestDetectOutliers_Clear(t *testing.T) {
 	}
 	found := false
 	for _, o := range outliers {
-		if o.Value == "1000" {
+		if o.Value == "9999" {
 			found = true
 		}
 	}
 	if !found {
-		t.Error("expected 1000 to be detected as outlier")
+		t.Error("expected 9999 to be detected as outlier")
 	}
 }
 
