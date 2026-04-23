@@ -22,6 +22,7 @@ import (
 	pkgcsv "github.com/bitjungle/gopca/pkg/csv"
 
 	"github.com/bitjungle/gopca/internal/version"
+	"github.com/bitjungle/gopca/pkg/dataquality"
 	"github.com/bitjungle/gopca/pkg/integration"
 	"github.com/bitjungle/gopca/pkg/types"
 	wailsruntime "github.com/wailsapp/wails/v2/pkg/runtime"
@@ -736,185 +737,47 @@ func (a *App) SaveExcel(data *FileData) error {
 	return nil
 }
 
-// MissingValueStats represents statistics about missing values in the data
-type MissingValueStats struct {
-	TotalCells     int                       `json:"totalCells"`
-	MissingCells   int                       `json:"missingCells"`
-	MissingPercent float64                   `json:"missingPercent"`
-	ColumnStats    map[string]*ColumnMissing `json:"columnStats"`
-	RowStats       map[int]*RowMissing       `json:"rowStats"`
-}
-
-// ColumnMissing represents missing value stats for a column
-type ColumnMissing struct {
-	Name           string  `json:"name"`
-	TotalValues    int     `json:"totalValues"`
-	MissingValues  int     `json:"missingValues"`
-	MissingPercent float64 `json:"missingPercent"`
-	Pattern        string  `json:"pattern"` // "random", "systematic", "top", "bottom"
-}
-
-// RowMissing represents missing value stats for a row
-type RowMissing struct {
-	Index          int     `json:"index"`
-	TotalValues    int     `json:"totalValues"`
-	MissingValues  int     `json:"missingValues"`
-	MissingPercent float64 `json:"missingPercent"`
-}
-
-// AnalyzeMissingValues analyzes missing value patterns in the data
-func (a *App) AnalyzeMissingValues(data *FileData) *MissingValueStats {
-	if data == nil || len(data.Data) == 0 {
-		return &MissingValueStats{
-			ColumnStats: make(map[string]*ColumnMissing),
-			RowStats:    make(map[int]*RowMissing),
-		}
-	}
-
-	stats := &MissingValueStats{
-		TotalCells:  data.Rows * data.Columns,
-		ColumnStats: make(map[string]*ColumnMissing),
-		RowStats:    make(map[int]*RowMissing),
-	}
-
-	// Analyze by column
-	for colIdx, header := range data.Headers {
-		colStats := &ColumnMissing{
-			Name:        header,
-			TotalValues: data.Rows,
-		}
-
-		missingIndices := []int{}
-		for rowIdx := 0; rowIdx < data.Rows; rowIdx++ {
-			if rowIdx >= len(data.Data) || colIdx >= len(data.Data[rowIdx]) {
-				continue
-			}
-			value := strings.TrimSpace(data.Data[rowIdx][colIdx])
-			if isMissingValue(value) {
-				colStats.MissingValues++
-				stats.MissingCells++
-				missingIndices = append(missingIndices, rowIdx)
-			}
-		}
-
-		if colStats.TotalValues > 0 {
-			colStats.MissingPercent = float64(colStats.MissingValues) / float64(colStats.TotalValues) * 100
-		}
-
-		// Detect pattern
-		colStats.Pattern = detectMissingPattern(missingIndices, data.Rows)
-		stats.ColumnStats[header] = colStats
-	}
-
-	// Analyze by row
-	for rowIdx := 0; rowIdx < data.Rows; rowIdx++ {
-		rowStats := &RowMissing{
-			Index:       rowIdx,
-			TotalValues: data.Columns,
-		}
-
-		if rowIdx < len(data.Data) {
-			for colIdx := 0; colIdx < data.Columns && colIdx < len(data.Data[rowIdx]); colIdx++ {
-				value := strings.TrimSpace(data.Data[rowIdx][colIdx])
-				if isMissingValue(value) {
-					rowStats.MissingValues++
-				}
-			}
-		}
-
-		if rowStats.TotalValues > 0 {
-			rowStats.MissingPercent = float64(rowStats.MissingValues) / float64(rowStats.TotalValues) * 100
-		}
-
-		// Only include rows with missing values
-		if rowStats.MissingValues > 0 {
-			stats.RowStats[rowIdx] = rowStats
-		}
-	}
-
-	// Calculate overall percentage
-	if stats.TotalCells > 0 {
-		stats.MissingPercent = float64(stats.MissingCells) / float64(stats.TotalCells) * 100
-	}
-
-	return stats
-}
-
-// detectMissingPattern analyzes the pattern of missing values
-func detectMissingPattern(missingIndices []int, totalRows int) string {
-	if len(missingIndices) == 0 {
-		return "none"
-	}
-
-	// Check if all missing are at the top
-	allTop := true
-	for i, idx := range missingIndices {
-		if idx != i {
-			allTop = false
-			break
-		}
-	}
-	if allTop {
-		return "top"
-	}
-
-	// Check if all missing are at the bottom
-	allBottom := true
-	startIdx := totalRows - len(missingIndices)
-	for i, idx := range missingIndices {
-		if idx != startIdx+i {
-			allBottom = false
-			break
-		}
-	}
-	if allBottom {
-		return "bottom"
-	}
-
-	// Check for systematic pattern (regular intervals)
-	if len(missingIndices) > 2 {
-		intervals := []int{}
-		for i := 1; i < len(missingIndices); i++ {
-			intervals = append(intervals, missingIndices[i]-missingIndices[i-1])
-		}
-
-		// Check if all intervals are the same
-		systematic := true
-		if len(intervals) > 0 {
-			firstInterval := intervals[0]
-			for _, interval := range intervals[1:] {
-				if interval != firstInterval {
-					systematic = false
-					break
-				}
-			}
-			if systematic && firstInterval > 1 {
-				return "systematic"
-			}
-		}
-	}
-
-	return "random"
-}
-
-// FillMissingValuesRequest represents a request to fill missing values
+// FillMissingValuesRequest represents a request to fill missing values.
 type FillMissingValuesRequest struct {
 	Strategy string `json:"strategy"` // "mean", "median", "mode", "forward", "backward", "custom"
 	Column   string `json:"column"`   // Column name, or empty for all columns
 	Value    string `json:"value"`    // Custom value for "custom" strategy
 }
 
-// FillMissingValues fills missing values in the data according to the specified strategy
+// AnalyzeMissingValues analyzes missing value patterns in the data.
+// Delegates to the dataquality package.
+func (a *App) AnalyzeMissingValues(data *FileData) *dataquality.MissingValueStats {
+	if data == nil || len(data.Data) == 0 {
+		return &dataquality.MissingValueStats{
+			ColumnStats: make(map[string]*dataquality.ColumnMissing),
+			RowStats:    make(map[int]*dataquality.RowMissing),
+		}
+	}
+	return dataquality.AnalyzeMissing(data.Data, data.Headers)
+}
+
+// FillMissingValues fills missing values in the data according to the specified strategy.
+// Delegates to the dataquality package.
 func (a *App) FillMissingValues(data *FileData, request FillMissingValuesRequest) (*FileData, error) {
 	if data == nil || len(data.Data) == 0 {
 		return nil, fmt.Errorf("no data to process")
 	}
 
-	// Clone the data to avoid modifying the original
+	req := dataquality.FillRequest{
+		Strategy: request.Strategy,
+		Column:   request.Column,
+		Value:    request.Value,
+	}
+
+	newData, err := dataquality.Fill(data.Data, data.Headers, data.ColumnTypes, req)
+	if err != nil {
+		return nil, err
+	}
+
 	result := &FileData{
 		Headers:              data.Headers,
 		RowNames:             data.RowNames,
-		Data:                 make([][]string, len(data.Data)),
+		Data:                 newData,
 		Rows:                 data.Rows,
 		Columns:              data.Columns,
 		CategoricalColumns:   data.CategoricalColumns,
@@ -922,204 +785,8 @@ func (a *App) FillMissingValues(data *FileData, request FillMissingValuesRequest
 		ColumnTypes:          data.ColumnTypes,
 	}
 
-	// Deep copy the data
-	for i := range data.Data {
-		result.Data[i] = make([]string, len(data.Data[i]))
-		copy(result.Data[i], data.Data[i])
-	}
-
-	// Determine which columns to process
-	columnsToProcess := []int{}
-	if request.Column == "" {
-		// Process all columns
-		for i := 0; i < data.Columns; i++ {
-			columnsToProcess = append(columnsToProcess, i)
-		}
-	} else {
-		// Find the specific column
-		found := false
-		for i, header := range data.Headers {
-			if header == request.Column {
-				columnsToProcess = append(columnsToProcess, i)
-				found = true
-				break
-			}
-		}
-		if !found {
-			return nil, fmt.Errorf("column '%s' not found", request.Column)
-		}
-	}
-
-	// Apply the fill strategy
-	for _, colIdx := range columnsToProcess {
-		switch request.Strategy {
-		case "mean":
-			fillWithMean(result, colIdx)
-		case "median":
-			fillWithMedian(result, colIdx)
-		case "mode":
-			fillWithMode(result, colIdx)
-		case "forward":
-			fillForward(result, colIdx)
-		case "backward":
-			fillBackward(result, colIdx)
-		case "custom":
-			fillWithCustomValue(result, colIdx, request.Value)
-		default:
-			return nil, fmt.Errorf("unknown fill strategy: %s", request.Strategy)
-		}
-	}
-
 	a.markDirty()
 	return result, nil
-}
-
-// fillWithMean fills missing values with the column mean (numeric columns only)
-func fillWithMean(data *FileData, colIdx int) {
-	if colIdx >= len(data.Headers) {
-		return
-	}
-
-	// Check if column is numeric
-	colType := "numeric"
-	if data.ColumnTypes != nil {
-		if t, exists := data.ColumnTypes[data.Headers[colIdx]]; exists {
-			colType = t
-		}
-	}
-
-	if colType != "numeric" {
-		// For non-numeric columns, use mode instead
-		fillWithMode(data, colIdx)
-		return
-	}
-
-	// Use utility function to fill with mean
-	fillMissingWithMean(data.Data, colIdx)
-}
-
-// fillWithMedian fills missing values with the column median (numeric columns only)
-func fillWithMedian(data *FileData, colIdx int) {
-	if colIdx >= len(data.Headers) {
-		return
-	}
-
-	// Check if column is numeric
-	colType := "numeric"
-	if data.ColumnTypes != nil {
-		if t, exists := data.ColumnTypes[data.Headers[colIdx]]; exists {
-			colType = t
-		}
-	}
-
-	if colType != "numeric" {
-		// For non-numeric columns, use mode instead
-		fillWithMode(data, colIdx)
-		return
-	}
-
-	// Use utility function to fill with median
-	fillMissingWithMedian(data.Data, colIdx)
-}
-
-// fillWithMode fills missing values with the most frequent value
-func fillWithMode(data *FileData, colIdx int) {
-	if colIdx >= len(data.Headers) {
-		return
-	}
-
-	// Count occurrences of each value
-	valueCounts := make(map[string]int)
-	for rowIdx := 0; rowIdx < data.Rows && rowIdx < len(data.Data); rowIdx++ {
-		if colIdx < len(data.Data[rowIdx]) {
-			value := strings.TrimSpace(data.Data[rowIdx][colIdx])
-			if !isMissingValue(value) {
-				valueCounts[value]++
-			}
-		}
-	}
-
-	if len(valueCounts) == 0 {
-		return // No valid values
-	}
-
-	// Find mode (most frequent value)
-	mode := ""
-	maxCount := 0
-	for value, count := range valueCounts {
-		if count > maxCount {
-			maxCount = count
-			mode = value
-		}
-	}
-
-	// Fill missing values
-	for rowIdx := 0; rowIdx < data.Rows && rowIdx < len(data.Data); rowIdx++ {
-		if colIdx < len(data.Data[rowIdx]) {
-			value := strings.TrimSpace(data.Data[rowIdx][colIdx])
-			if isMissingValue(value) {
-				data.Data[rowIdx][colIdx] = mode
-			}
-		}
-	}
-}
-
-// fillForward fills missing values with the previous non-missing value
-func fillForward(data *FileData, colIdx int) {
-	if colIdx >= len(data.Headers) {
-		return
-	}
-
-	lastValidValue := ""
-	for rowIdx := 0; rowIdx < data.Rows && rowIdx < len(data.Data); rowIdx++ {
-		if colIdx < len(data.Data[rowIdx]) {
-			value := strings.TrimSpace(data.Data[rowIdx][colIdx])
-			if isMissingValue(value) {
-				if lastValidValue != "" {
-					data.Data[rowIdx][colIdx] = lastValidValue
-				}
-			} else {
-				lastValidValue = value
-			}
-		}
-	}
-}
-
-// fillBackward fills missing values with the next non-missing value
-func fillBackward(data *FileData, colIdx int) {
-	if colIdx >= len(data.Headers) {
-		return
-	}
-
-	lastValidValue := ""
-	for rowIdx := data.Rows - 1; rowIdx >= 0 && rowIdx < len(data.Data); rowIdx-- {
-		if colIdx < len(data.Data[rowIdx]) {
-			value := strings.TrimSpace(data.Data[rowIdx][colIdx])
-			if isMissingValue(value) {
-				if lastValidValue != "" {
-					data.Data[rowIdx][colIdx] = lastValidValue
-				}
-			} else {
-				lastValidValue = value
-			}
-		}
-	}
-}
-
-// fillWithCustomValue fills missing values with a custom value
-func fillWithCustomValue(data *FileData, colIdx int, customValue string) {
-	if colIdx >= len(data.Headers) {
-		return
-	}
-
-	for rowIdx := 0; rowIdx < data.Rows && rowIdx < len(data.Data); rowIdx++ {
-		if colIdx < len(data.Data[rowIdx]) {
-			value := strings.TrimSpace(data.Data[rowIdx][colIdx])
-			if isMissingValue(value) {
-				data.Data[rowIdx][colIdx] = customValue
-			}
-		}
-	}
 }
 
 // GetVersion returns the application version

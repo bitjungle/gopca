@@ -42,6 +42,8 @@ export function GetUndoRedoState():Promise<main.UndoRedoState>;
 
 export function GetVersion():Promise<string>;
 
+export function HasUnsavedChanges():Promise<boolean>;
+
 export function ImportFile(arg1:string,arg2:main.ImportOptions):Promise<main.FileData>;
 
 export function LoadCSV(arg1:string):Promise<main.FileData>;
