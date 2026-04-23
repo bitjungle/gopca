@@ -1,4 +1,4 @@
-export namespace main {
+export namespace dataquality {
 	
 	export class OutlierInfo {
 	    rowIndex: number;
@@ -278,6 +278,71 @@ export namespace main {
 		}
 	}
 	
+	
+	export class RowMissing {
+	    index: number;
+	    totalValues: number;
+	    missingValues: number;
+	    missingPercent: number;
+	
+	    static createFrom(source: any = {}) {
+	        return new RowMissing(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.index = source["index"];
+	        this.totalValues = source["totalValues"];
+	        this.missingValues = source["missingValues"];
+	        this.missingPercent = source["missingPercent"];
+	    }
+	}
+	export class MissingValueStats {
+	    totalCells: number;
+	    missingCells: number;
+	    missingPercent: number;
+	    columnStats: Record<string, ColumnMissing>;
+	    rowStats: Record<number, RowMissing>;
+	
+	    static createFrom(source: any = {}) {
+	        return new MissingValueStats(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.totalCells = source["totalCells"];
+	        this.missingCells = source["missingCells"];
+	        this.missingPercent = source["missingPercent"];
+	        this.columnStats = this.convertValues(source["columnStats"], ColumnMissing, true);
+	        this.rowStats = this.convertValues(source["rowStats"], RowMissing, true);
+	    }
+	
+		convertValues(a: any, classs: any, asMap: boolean = false): any {
+		    if (!a) {
+		        return a;
+		    }
+		    if (a.slice && a.map) {
+		        return (a as any[]).map(elem => this.convertValues(elem, classs));
+		    } else if ("object" === typeof a) {
+		        if (asMap) {
+		            for (const key of Object.keys(a)) {
+		                a[key] = new classs(a[key]);
+		            }
+		            return a;
+		        }
+		        return new classs(a);
+		    }
+		    return a;
+		}
+	}
+	
+	
+	
+
+}
+
+export namespace main {
+	
 	export class FileData {
 	    headers: string[];
 	    rowNames?: string[];
@@ -362,7 +427,6 @@ export namespace main {
 	        this.error = source["error"];
 	    }
 	}
-	
 	export class ImportFileInfo {
 	    fileName: string;
 	    filePath: string;
@@ -417,66 +481,6 @@ export namespace main {
 	        this.selectedColumns = source["selectedColumns"];
 	    }
 	}
-	export class RowMissing {
-	    index: number;
-	    totalValues: number;
-	    missingValues: number;
-	    missingPercent: number;
-	
-	    static createFrom(source: any = {}) {
-	        return new RowMissing(source);
-	    }
-	
-	    constructor(source: any = {}) {
-	        if ('string' === typeof source) source = JSON.parse(source);
-	        this.index = source["index"];
-	        this.totalValues = source["totalValues"];
-	        this.missingValues = source["missingValues"];
-	        this.missingPercent = source["missingPercent"];
-	    }
-	}
-	export class MissingValueStats {
-	    totalCells: number;
-	    missingCells: number;
-	    missingPercent: number;
-	    columnStats: Record<string, ColumnMissing>;
-	    rowStats: Record<number, RowMissing>;
-	
-	    static createFrom(source: any = {}) {
-	        return new MissingValueStats(source);
-	    }
-	
-	    constructor(source: any = {}) {
-	        if ('string' === typeof source) source = JSON.parse(source);
-	        this.totalCells = source["totalCells"];
-	        this.missingCells = source["missingCells"];
-	        this.missingPercent = source["missingPercent"];
-	        this.columnStats = this.convertValues(source["columnStats"], ColumnMissing, true);
-	        this.rowStats = this.convertValues(source["rowStats"], RowMissing, true);
-	    }
-	
-		convertValues(a: any, classs: any, asMap: boolean = false): any {
-		    if (!a) {
-		        return a;
-		    }
-		    if (a.slice && a.map) {
-		        return (a as any[]).map(elem => this.convertValues(elem, classs));
-		    } else if ("object" === typeof a) {
-		        if (asMap) {
-		            for (const key of Object.keys(a)) {
-		                a[key] = new classs(a[key]);
-		            }
-		            return a;
-		        }
-		        return new classs(a);
-		    }
-		    return a;
-		}
-	}
-	
-	
-	
-	
 	export class TransformOptions {
 	    type: string;
 	    columns: string[];

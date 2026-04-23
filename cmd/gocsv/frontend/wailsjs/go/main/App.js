@@ -82,6 +82,10 @@ export function GetVersion() {
   return window['go']['main']['App']['GetVersion']();
 }
 
+export function HasUnsavedChanges() {
+  return window['go']['main']['App']['HasUnsavedChanges']();
+}
+
 export function ImportFile(arg1, arg2) {
   return window['go']['main']['App']['ImportFile'](arg1, arg2);
 }

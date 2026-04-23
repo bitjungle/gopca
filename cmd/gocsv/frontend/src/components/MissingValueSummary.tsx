@@ -5,10 +5,10 @@
 // military, warfare, or surveillance applications.
 
 import React from 'react';
-import { main } from '../../wailsjs/go/models';
+import { dataquality } from '../../wailsjs/go/models';
 
 interface MissingValueSummaryProps {
-    stats: main.MissingValueStats | null;
+    stats: dataquality.MissingValueStats | null;
     isOpen: boolean;
     onClose: () => void;
 }
