@@ -12,7 +12,7 @@ import { ThemeProvider, ThemeToggle } from '@gopca/ui-components';
 import logo from './assets/images/GoCSV-logo-1024-transp.png';
 import { LoadCSV, SaveCSV, SaveExcel, ValidateForGoPCA, AnalyzeMissingValues, FillMissingValues, AnalyzeDataQuality, CheckGoPCAStatus, OpenInGoPCA, DownloadGoPCA, ExecuteCellEdit, ExecuteHeaderEdit, ClearHistory, GetVersion } from '../wailsjs/go/main/App';
 import { EventsOn, OnFileDrop, OnFileDropOff } from '../wailsjs/runtime/runtime';
-import { main } from '../wailsjs/go/models';
+import { main, dataquality } from '../wailsjs/go/models';
 
 type FileData = main.FileData;
 
@@ -23,10 +23,10 @@ function AppContent() {
     const [isLoading, setIsLoading] = useState(false);
     const [validationResult, setValidationResult] = useState<{ isValid: boolean; messages: string[] } | null>(null);
     const [isValidating, setIsValidating] = useState(false);
-    const [missingValueStats, setMissingValueStats] = useState<main.MissingValueStats | null>(null);
+    const [missingValueStats, setMissingValueStats] = useState<dataquality.MissingValueStats | null>(null);
     const [showMissingValueSummary, setShowMissingValueSummary] = useState(false);
     const [showMissingValueDialog, setShowMissingValueDialog] = useState(false);
-    const [dataQualityReport, setDataQualityReport] = useState<main.DataQualityReport | null>(null);
+    const [dataQualityReport, setDataQualityReport] = useState<dataquality.DataQualityReport | null>(null);
     const [showDataQualityReport, setShowDataQualityReport] = useState(false);
     const [isAnalyzingQuality, setIsAnalyzingQuality] = useState(false);
     const [gopcaStatus, setGopcaStatus] = useState<main.GoPCAStatus | null>(null);

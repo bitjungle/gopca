@@ -6,10 +6,10 @@
 
 import React, { useMemo } from 'react';
 import { PlotlyBarChart } from '@gopca/ui-components';
-import { main } from '../../wailsjs/go/models';
+import { dataquality } from '../../wailsjs/go/models';
 
 interface PlotlyDistributionChartProps {
-    distribution: main.DistributionInfo;
+    distribution: dataquality.DistributionInfo;
     columnName: string;
 }
 
