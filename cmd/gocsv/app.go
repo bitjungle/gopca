@@ -10,11 +10,9 @@ import (
 	"context"
 	"encoding/csv"
 	"fmt"
-	"math"
 	"os"
 	"os/exec"
 	"path/filepath"
-	"sort"
 	"strconv"
 	"strings"
 	"time"
@@ -24,6 +22,7 @@ import (
 	"github.com/bitjungle/gopca/internal/version"
 	"github.com/bitjungle/gopca/pkg/dataquality"
 	"github.com/bitjungle/gopca/pkg/integration"
+	"github.com/bitjungle/gopca/pkg/transform"
 	"github.com/bitjungle/gopca/pkg/types"
 	wailsruntime "github.com/wailsapp/wails/v2/pkg/runtime"
 	"github.com/xuri/excelize/v2"
@@ -1811,544 +1810,71 @@ func (a *App) ApplyTransformation(data *FileData, options TransformOptions) (*Tr
 	return cmd.result, nil
 }
 
-// applyTransformationInternal is the internal implementation of transformation
+// applyTransformationInternal delegates to pkg/transform and maps the result
+// back into the FileData-based TransformationResult expected by the Wails layer.
 func (a *App) applyTransformationInternal(data *FileData, options TransformOptions) (*TransformationResult, error) {
 	if data == nil || len(data.Data) == 0 {
 		return nil, fmt.Errorf("no data to transform")
 	}
 
-	result := &TransformationResult{
-		Success:            true,
-		TransformedColumns: []string{},
-		Messages:           []string{},
+	in := transform.Input{
+		Data:               data.Data,
+		Headers:            data.Headers,
+		ColumnTypes:        data.ColumnTypes,
+		CategoricalColumns: data.CategoricalColumns,
+		Rows:               data.Rows,
+		Columns:            data.Columns,
+	}
+	opts := transform.Options{
+		Type:     transform.Type(options.Type),
+		Columns:  options.Columns,
+		BinCount: options.BinCount,
+		MinValue: options.MinValue,
+		MaxValue: options.MaxValue,
 	}
 
-	// Create a copy of the data
+	res, err := transform.Apply(in, opts)
+	if err != nil {
+		return nil, err
+	}
+
 	newData := &FileData{
-		Headers:              make([]string, len(data.Headers)),
-		Data:                 make([][]string, len(data.Data)),
+		Headers:              res.Headers,
+		Data:                 res.Data,
 		Rows:                 data.Rows,
-		Columns:              data.Columns,
-		CategoricalColumns:   make(map[string][]string),
+		Columns:              res.Columns,
+		CategoricalColumns:   res.CategoricalColumns,
 		NumericTargetColumns: make(map[string][]types.JSONFloat64),
-		ColumnTypes:          make(map[string]string),
+		ColumnTypes:          res.ColumnTypes,
 	}
-
-	// Copy headers
-	copy(newData.Headers, data.Headers)
-
-	// Copy data
-	for i := range data.Data {
-		newData.Data[i] = make([]string, len(data.Data[i]))
-		copy(newData.Data[i], data.Data[i])
-	}
-
-	// Copy row names if present
 	if data.RowNames != nil {
 		newData.RowNames = make([]string, len(data.RowNames))
 		copy(newData.RowNames, data.RowNames)
 	}
-
-	// Copy column types
-	for k, v := range data.ColumnTypes {
-		newData.ColumnTypes[k] = v
+	// Carry over any numeric target columns untouched.
+	for k, v := range data.NumericTargetColumns {
+		newData.NumericTargetColumns[k] = v
 	}
 
-	// Apply transformation based on type
-	switch options.Type {
-	case TransformLog, TransformSqrt, TransformSquare:
-		err := a.applyMathTransformation(newData, options, result)
-		if err != nil {
-			return nil, err
-		}
-	case TransformStandardize:
-		err := a.applyStandardization(newData, options, result)
-		if err != nil {
-			return nil, err
-		}
-	case TransformMinMax:
-		err := a.applyMinMaxScaling(newData, options, result)
-		if err != nil {
-			return nil, err
-		}
-	case TransformBin:
-		err := a.applyBinning(newData, options, result)
-		if err != nil {
-			return nil, err
-		}
-	case TransformOneHot:
-		err := a.applyOneHotEncoding(newData, options, result)
-		if err != nil {
-			return nil, err
-		}
-	default:
-		return nil, fmt.Errorf("unsupported transformation type: %s", options.Type)
-	}
-
-	result.Data = newData
-	return result, nil
+	return &TransformationResult{
+		Success:            true,
+		TransformedColumns: res.TransformedColumns,
+		NewColumns:         res.NewColumns,
+		Messages:           res.Messages,
+		Data:               newData,
+	}, nil
 }
 
-// applyMathTransformation applies mathematical transformations (log, sqrt, square)
-func (a *App) applyMathTransformation(data *FileData, options TransformOptions, result *TransformationResult) error {
-	for _, colName := range options.Columns {
-		// Find column index
-		colIndex := -1
-		for i, header := range data.Headers {
-			if header == colName {
-				colIndex = i
-				break
-			}
-		}
-
-		if colIndex == -1 {
-			result.Messages = append(result.Messages, fmt.Sprintf("Column '%s' not found", colName))
-			continue
-		}
-
-		// Check if column is numeric
-		if data.ColumnTypes[colName] != "numeric" {
-			result.Messages = append(result.Messages, fmt.Sprintf("Column '%s' is not numeric, skipping", colName))
-			continue
-		}
-
-		// Apply transformation
-		transformedCount := 0
-		for i := range data.Data {
-			if colIndex >= len(data.Data[i]) {
-				continue
-			}
-
-			value := strings.TrimSpace(data.Data[i][colIndex])
-			if value == "" {
-				continue
-			}
-
-			num, err := strconv.ParseFloat(value, 64)
-			if err != nil {
-				continue
-			}
-
-			var transformed float64
-			switch options.Type {
-			case TransformLog:
-				if num <= 0 {
-					result.Messages = append(result.Messages, fmt.Sprintf("Warning: Non-positive value in row %d, column '%s' - cannot apply log", i+1, colName))
-					continue
-				}
-				transformed = math.Log(num)
-			case TransformSqrt:
-				if num < 0 {
-					result.Messages = append(result.Messages, fmt.Sprintf("Warning: Negative value in row %d, column '%s' - cannot apply sqrt", i+1, colName))
-					continue
-				}
-				transformed = math.Sqrt(num)
-			case TransformSquare:
-				transformed = num * num
-			}
-
-			data.Data[i][colIndex] = fmt.Sprintf("%.6g", transformed)
-			transformedCount++
-		}
-
-		result.TransformedColumns = append(result.TransformedColumns, colName)
-		result.Messages = append(result.Messages, fmt.Sprintf("Transformed %d values in column '%s'", transformedCount, colName))
-	}
-
-	return nil
-}
-
-// applyStandardization applies z-score standardization
-func (a *App) applyStandardization(data *FileData, options TransformOptions, result *TransformationResult) error {
-	for _, colName := range options.Columns {
-		// Find column index
-		colIndex := -1
-		for i, header := range data.Headers {
-			if header == colName {
-				colIndex = i
-				break
-			}
-		}
-
-		if colIndex == -1 {
-			result.Messages = append(result.Messages, fmt.Sprintf("Column '%s' not found", colName))
-			continue
-		}
-
-		// Check if column is numeric
-		if data.ColumnTypes[colName] != "numeric" {
-			result.Messages = append(result.Messages, fmt.Sprintf("Column '%s' is not numeric, skipping", colName))
-			continue
-		}
-
-		// Collect values
-		values := []float64{}
-		indices := []int{}
-		for i := range data.Data {
-			if colIndex >= len(data.Data[i]) {
-				continue
-			}
-
-			value := strings.TrimSpace(data.Data[i][colIndex])
-			if value == "" {
-				continue
-			}
-
-			num, err := strconv.ParseFloat(value, 64)
-			if err != nil {
-				continue
-			}
-
-			values = append(values, num)
-			indices = append(indices, i)
-		}
-
-		if len(values) < 2 {
-			result.Messages = append(result.Messages, fmt.Sprintf("Column '%s' has insufficient numeric values for standardization", colName))
-			continue
-		}
-
-		// Calculate mean and std dev
-		mean := 0.0
-		for _, v := range values {
-			mean += v
-		}
-		mean /= float64(len(values))
-
-		variance := 0.0
-		for _, v := range values {
-			variance += (v - mean) * (v - mean)
-		}
-		variance /= float64(len(values))
-		stdDev := math.Sqrt(variance)
-
-		if stdDev < 1e-10 {
-			result.Messages = append(result.Messages, fmt.Sprintf("Column '%s' has zero variance, cannot standardize", colName))
-			continue
-		}
-
-		// Apply standardization
-		for i, idx := range indices {
-			standardized := (values[i] - mean) / stdDev
-			data.Data[idx][colIndex] = fmt.Sprintf("%.6g", standardized)
-		}
-
-		result.TransformedColumns = append(result.TransformedColumns, colName)
-		result.Messages = append(result.Messages, fmt.Sprintf("Standardized %d values in column '%s' (mean=%.3f, std=%.3f)", len(values), colName, mean, stdDev))
-	}
-
-	return nil
-}
-
-// applyMinMaxScaling applies min-max scaling
-func (a *App) applyMinMaxScaling(data *FileData, options TransformOptions, result *TransformationResult) error {
-	targetMin := options.MinValue
-	targetMax := options.MaxValue
-	if targetMax <= targetMin {
-		targetMin = 0.0
-		targetMax = 1.0
-	}
-
-	for _, colName := range options.Columns {
-		// Find column index
-		colIndex := -1
-		for i, header := range data.Headers {
-			if header == colName {
-				colIndex = i
-				break
-			}
-		}
-
-		if colIndex == -1 {
-			result.Messages = append(result.Messages, fmt.Sprintf("Column '%s' not found", colName))
-			continue
-		}
-
-		// Check if column is numeric
-		if data.ColumnTypes[colName] != "numeric" {
-			result.Messages = append(result.Messages, fmt.Sprintf("Column '%s' is not numeric, skipping", colName))
-			continue
-		}
-
-		// Collect values and find min/max
-		values := []float64{}
-		indices := []int{}
-		minVal := math.Inf(1)
-		maxVal := math.Inf(-1)
-
-		for i := range data.Data {
-			if colIndex >= len(data.Data[i]) {
-				continue
-			}
-
-			value := strings.TrimSpace(data.Data[i][colIndex])
-			if value == "" {
-				continue
-			}
-
-			num, err := strconv.ParseFloat(value, 64)
-			if err != nil {
-				continue
-			}
-
-			values = append(values, num)
-			indices = append(indices, i)
-
-			if num < minVal {
-				minVal = num
-			}
-			if num > maxVal {
-				maxVal = num
-			}
-		}
-
-		if len(values) == 0 {
-			result.Messages = append(result.Messages, fmt.Sprintf("Column '%s' has no numeric values", colName))
-			continue
-		}
-
-		if maxVal <= minVal {
-			result.Messages = append(result.Messages, fmt.Sprintf("Column '%s' has constant values, cannot scale", colName))
-			continue
-		}
-
-		// Apply min-max scaling
-		for i, idx := range indices {
-			scaled := (values[i]-minVal)/(maxVal-minVal)*(targetMax-targetMin) + targetMin
-			data.Data[idx][colIndex] = fmt.Sprintf("%.6g", scaled)
-		}
-
-		result.TransformedColumns = append(result.TransformedColumns, colName)
-		result.Messages = append(result.Messages, fmt.Sprintf("Scaled %d values in column '%s' to range [%.2f, %.2f]", len(values), colName, targetMin, targetMax))
-	}
-
-	return nil
-}
-
-// applyBinning applies binning to numeric columns
-func (a *App) applyBinning(data *FileData, options TransformOptions, result *TransformationResult) error {
-	binCount := options.BinCount
-	if binCount <= 0 {
-		binCount = 5 // Default to 5 bins
-	}
-
-	for _, colName := range options.Columns {
-		// Find column index
-		colIndex := -1
-		for i, header := range data.Headers {
-			if header == colName {
-				colIndex = i
-				break
-			}
-		}
-
-		if colIndex == -1 {
-			result.Messages = append(result.Messages, fmt.Sprintf("Column '%s' not found", colName))
-			continue
-		}
-
-		// Check if column is numeric
-		if data.ColumnTypes[colName] != "numeric" {
-			result.Messages = append(result.Messages, fmt.Sprintf("Column '%s' is not numeric, skipping", colName))
-			continue
-		}
-
-		// Collect values and find min/max
-		values := []float64{}
-		indices := []int{}
-		minVal := math.Inf(1)
-		maxVal := math.Inf(-1)
-
-		for i := range data.Data {
-			if colIndex >= len(data.Data[i]) {
-				continue
-			}
-
-			value := strings.TrimSpace(data.Data[i][colIndex])
-			if value == "" {
-				continue
-			}
-
-			num, err := strconv.ParseFloat(value, 64)
-			if err != nil {
-				continue
-			}
-
-			values = append(values, num)
-			indices = append(indices, i)
-
-			if num < minVal {
-				minVal = num
-			}
-			if num > maxVal {
-				maxVal = num
-			}
-		}
-
-		if len(values) == 0 {
-			result.Messages = append(result.Messages, fmt.Sprintf("Column '%s' has no numeric values", colName))
-			continue
-		}
-
-		// Create bins
-		binWidth := (maxVal - minVal) / float64(binCount)
-
-		// Apply binning
-		for i, idx := range indices {
-			binIndex := int((values[i] - minVal) / binWidth)
-			if binIndex >= binCount {
-				binIndex = binCount - 1
-			}
-
-			binLabel := fmt.Sprintf("Bin_%d", binIndex+1)
-			data.Data[idx][colIndex] = binLabel
-		}
-
-		// Update column type to categorical
-		data.ColumnTypes[colName] = "categorical"
-
-		// Update categorical columns
-		catValues := make([]string, len(data.Data))
-		for i := range data.Data {
-			if colIndex < len(data.Data[i]) {
-				catValues[i] = data.Data[i][colIndex]
-			}
-		}
-		data.CategoricalColumns[colName] = catValues
-
-		result.TransformedColumns = append(result.TransformedColumns, colName)
-		result.Messages = append(result.Messages, fmt.Sprintf("Binned %d values in column '%s' into %d bins", len(values), colName, binCount))
-	}
-
-	return nil
-}
-
-// applyOneHotEncoding applies one-hot encoding to categorical columns
-func (a *App) applyOneHotEncoding(data *FileData, options TransformOptions, result *TransformationResult) error {
-	for _, colName := range options.Columns {
-		// Find column index
-		colIndex := -1
-		for i, header := range data.Headers {
-			if header == colName {
-				colIndex = i
-				break
-			}
-		}
-
-		if colIndex == -1 {
-			result.Messages = append(result.Messages, fmt.Sprintf("Column '%s' not found", colName))
-			continue
-		}
-
-		// Check if column is categorical
-		if data.ColumnTypes[colName] != "categorical" {
-			result.Messages = append(result.Messages, fmt.Sprintf("Column '%s' is not categorical, skipping", colName))
-			continue
-		}
-
-		// Get unique values
-		uniqueValues := make(map[string]bool)
-		for i := range data.Data {
-			if colIndex >= len(data.Data[i]) {
-				continue
-			}
-			value := strings.TrimSpace(data.Data[i][colIndex])
-			if value != "" {
-				uniqueValues[value] = true
-			}
-		}
-
-		if len(uniqueValues) == 0 {
-			result.Messages = append(result.Messages, fmt.Sprintf("Column '%s' has no values", colName))
-			continue
-		}
-
-		if len(uniqueValues) > 20 {
-			result.Messages = append(result.Messages, fmt.Sprintf("Column '%s' has too many unique values (%d), skipping one-hot encoding", colName, len(uniqueValues)))
-			continue
-		}
-
-		// Create sorted list of unique values
-		sortedValues := make([]string, 0, len(uniqueValues))
-		for val := range uniqueValues {
-			sortedValues = append(sortedValues, val)
-		}
-		sort.Strings(sortedValues)
-
-		// Add new columns for each unique value
-		newColumns := []string{}
-		for _, val := range sortedValues {
-			newColName := fmt.Sprintf("%s_%s", colName, val)
-			data.Headers = append(data.Headers, newColName)
-			data.ColumnTypes[newColName] = "numeric"
-			newColumns = append(newColumns, newColName)
-
-			// Add the encoded values
-			for i := range data.Data {
-				if colIndex < len(data.Data[i]) && strings.TrimSpace(data.Data[i][colIndex]) == val {
-					data.Data[i] = append(data.Data[i], "1")
-				} else {
-					data.Data[i] = append(data.Data[i], "0")
-				}
-			}
-		}
-
-		// Remove original column
-		data.Headers = append(data.Headers[:colIndex], data.Headers[colIndex+1:]...)
-		delete(data.ColumnTypes, colName)
-		delete(data.CategoricalColumns, colName)
-
-		for i := range data.Data {
-			if colIndex < len(data.Data[i]) {
-				data.Data[i] = append(data.Data[i][:colIndex], data.Data[i][colIndex+1:]...)
-			}
-		}
-
-		data.Columns = len(data.Headers)
-
-		result.TransformedColumns = append(result.TransformedColumns, colName)
-		result.NewColumns = append(result.NewColumns, newColumns...)
-		result.Messages = append(result.Messages, fmt.Sprintf("One-hot encoded column '%s' into %d new columns", colName, len(newColumns)))
-
-		// Adjust indices for remaining columns
-		for j := range options.Columns {
-			if j > 0 && options.Columns[j] != colName {
-				// Need to find and update column index if it was after the removed column
-				for _, h := range data.Headers {
-					if h == options.Columns[j] {
-						// Update for next iteration
-						break
-					}
-				}
-			}
-		}
-	}
-
-	return nil
-}
-
-// GetTransformableColumns returns columns that can be transformed
+// GetTransformableColumns returns columns eligible for the given transformation type.
 func (a *App) GetTransformableColumns(data *FileData, transformType TransformationType) []string {
-	columns := []string{}
-
-	for _, header := range data.Headers {
-		colType := data.ColumnTypes[header]
-
-		switch transformType {
-		case TransformLog, TransformSqrt, TransformSquare, TransformStandardize, TransformMinMax, TransformBin:
-			// These transformations require numeric columns
-			if colType == "numeric" && !strings.HasSuffix(header, "#target") {
-				columns = append(columns, header)
-			}
-		case TransformOneHot:
-			// One-hot encoding requires categorical columns
-			if colType == "categorical" {
-				columns = append(columns, header)
-			}
-		}
+	in := transform.Input{
+		Data:        data.Data,
+		Headers:     data.Headers,
+		ColumnTypes: data.ColumnTypes,
+		Rows:        data.Rows,
+		Columns:     data.Columns,
 	}
-
-	return columns
+	return transform.GetTransformableColumns(in, transform.Type(transformType))
 }
 
 // ExecuteDeleteRows deletes multiple rows with undo support
