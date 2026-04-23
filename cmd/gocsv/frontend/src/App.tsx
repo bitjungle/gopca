@@ -37,6 +37,7 @@ function AppContent() {
     const [showAboutDialog, setShowAboutDialog] = useState(false);
     const [showDownloadConfirm, setShowDownloadConfirm] = useState(false);
     const [version, setVersion] = useState<string>('');
+    const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
     const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
     // Ref for scrolling to Step 2
@@ -48,6 +49,9 @@ function AppContent() {
     useEffect(() => {
         const unsubscribe = EventsOn('file-loaded', (filename: string) => {
             setFileName(filename);
+        });
+        const unsubscribeUnsaved = EventsOn('unsaved-state-changed', (dirty: boolean) => {
+            setHasUnsavedChanges(dirty);
         });
 
         // Check GoPCA status on startup
@@ -75,6 +79,7 @@ function AppContent() {
 
         return () => {
             unsubscribe();
+            unsubscribeUnsaved();
             OnFileDropOff();
         };
     }, []);
@@ -293,8 +298,17 @@ return;
                             className="h-12 cursor-pointer hover:opacity-90 transition-opacity flex-shrink-0"
                             onClick={handleLogoClick}
                         />
-                        <div>
+                        <div className="flex items-center gap-3">
                             <p className="text-sm text-gray-600 dark:text-gray-400">Data Editor for GoPCA</p>
+                            {hasUnsavedChanges && (
+                                <span
+                                    title="Unsaved changes"
+                                    className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-xs font-medium bg-amber-100 text-amber-800 dark:bg-amber-900/40 dark:text-amber-300"
+                                >
+                                    <span className="w-1.5 h-1.5 rounded-full bg-amber-500" />
+                                    Unsaved
+                                </span>
+                            )}
                         </div>
                     </div>
                     <div className="flex items-center gap-4">

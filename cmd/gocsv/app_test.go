@@ -135,6 +135,82 @@ func TestAppMultiStepUndoRedo(t *testing.T) {
 	}
 }
 
+// TestUnsavedChanges verifies that HasUnsavedChanges, markDirty, and markClean
+// track state transitions correctly without requiring a Wails context.
+// Note: ctx is nil here so EventsEmit is not called; this is intentional.
+func TestUnsavedChanges(t *testing.T) {
+	t.Run("InitialStateIsClean", func(t *testing.T) {
+		app := NewApp()
+		if app.HasUnsavedChanges() {
+			t.Error("expected clean on fresh app")
+		}
+	})
+
+	t.Run("MarkDirtySetsDirty", func(t *testing.T) {
+		app := NewApp()
+		app.markDirty()
+		if !app.HasUnsavedChanges() {
+			t.Error("expected dirty after markDirty")
+		}
+	})
+
+	t.Run("MarkCleanClearsDirty", func(t *testing.T) {
+		app := NewApp()
+		app.markDirty()
+		app.markClean()
+		if app.HasUnsavedChanges() {
+			t.Error("expected clean after markClean")
+		}
+	})
+
+	t.Run("ExecuteCellEditMarksDirty", func(t *testing.T) {
+		app := NewApp()
+		data := &FileData{
+			Headers: []string{"A"},
+			Data:    [][]string{{"1"}},
+			Rows:    1, Columns: 1,
+		}
+		app.currentData = data
+		_, err := app.executeCommand(NewCellEditCommand(0, 0, "1", "2"), data, "edit")
+		if err != nil {
+			t.Fatalf("executeCommand failed: %v", err)
+		}
+		if !app.HasUnsavedChanges() {
+			t.Error("expected dirty after executeCommand")
+		}
+	})
+
+	t.Run("MarkCleanAfterEditResetsFlag", func(t *testing.T) {
+		app := NewApp()
+		data := &FileData{
+			Headers: []string{"A"},
+			Data:    [][]string{{"1"}},
+			Rows:    1, Columns: 1,
+		}
+		app.currentData = data
+		_, _ = app.executeCommand(NewCellEditCommand(0, 0, "1", "2"), data, "edit")
+		app.markClean()
+		if app.HasUnsavedChanges() {
+			t.Error("expected clean after markClean following edit")
+		}
+	})
+
+	t.Run("SimulatedLoadResetsFlag", func(t *testing.T) {
+		app := NewApp()
+		app.markDirty()
+
+		// Simulate what LoadCSV does internally
+		data := &FileData{Headers: []string{"X"}, Data: [][]string{{"1"}}, Rows: 1, Columns: 1}
+		app.currentData = data
+		app.history.Clear()
+		app.markClean()
+
+		if app.HasUnsavedChanges() {
+			t.Error("expected clean after simulated LoadCSV")
+		}
+	})
+}
+
 func TestCommandHistoryWithMultipleOperations(t *testing.T) {
 	// Create app
 	app := NewApp()
