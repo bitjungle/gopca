@@ -152,6 +152,30 @@ func TestApply_Bin_NonNumericColumn(t *testing.T) {
 	}
 }
 
+func TestApply_Bin_ConstantColumn(t *testing.T) {
+	// All values identical — binWidth would be 0 → must be handled gracefully.
+	in := Input{
+		Data:               [][]string{{"5"}, {"5"}, {"5"}},
+		Headers:            []string{"X"},
+		ColumnTypes:        map[string]string{"X": "numeric"},
+		CategoricalColumns: map[string][]string{},
+		Rows:               3,
+		Columns:            1,
+	}
+
+	res, err := Apply(in, Options{Type: Bin, Columns: []string{"X"}})
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+
+	if len(res.TransformedColumns) != 0 {
+		t.Error("expected no transformed columns for constant-value column")
+	}
+	if len(res.Messages) == 0 {
+		t.Error("expected message explaining why binning was skipped")
+	}
+}
+
 func TestApply_Bin_NoNumericValues(t *testing.T) {
 	in := Input{
 		Data:               [][]string{{""}},

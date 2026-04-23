@@ -38,7 +38,9 @@ func Apply(in Input, opts Options) (*Result, error) {
 
 	catCols := make(map[string][]string, len(in.CategoricalColumns))
 	for k, v := range in.CategoricalColumns {
-		catCols[k] = v
+		values := make([]string, len(v))
+		copy(values, v)
+		catCols[k] = values
 	}
 
 	result := &Result{

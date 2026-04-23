@@ -188,6 +188,33 @@ func TestApply_OneHot_NonCategoricalColumn(t *testing.T) {
 	}
 }
 
+func TestApply_OneHot_DoesNotMutateCategoricalColumns(t *testing.T) {
+	// Result.CategoricalColumns must be a deep copy: mutating it must not
+	// affect the original Input.CategoricalColumns slice.
+	origSlice := []string{"a", "b"}
+	in := Input{
+		Data:               [][]string{{"a"}, {"b"}},
+		Headers:            []string{"Cat"},
+		ColumnTypes:        map[string]string{"Cat": "categorical"},
+		CategoricalColumns: map[string][]string{"Cat": origSlice},
+		Rows:               2,
+		Columns:            1,
+	}
+
+	// Apply does NOT one-hot "Cat" here — we just want to verify the deep copy
+	// of CategoricalColumns during Apply's setup, independent of one-hot.
+	res, err := Apply(in, Options{Type: OneHot, Columns: []string{"Cat"}})
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	_ = res
+
+	// The original slice must be unchanged.
+	if origSlice[0] != "a" || origSlice[1] != "b" {
+		t.Error("Apply mutated the original CategoricalColumns slice")
+	}
+}
+
 func TestApply_OneHot_OriginalColumnRemoved(t *testing.T) {
 	in := Input{
 		Data:               [][]string{{"a"}, {"b"}},

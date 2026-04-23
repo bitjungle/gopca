@@ -67,6 +67,11 @@ func applyBin(data [][]string, columnTypes map[string]string, catCols map[string
 			continue
 		}
 
+		if maxVal <= minVal {
+			result.Messages = append(result.Messages, fmt.Sprintf("Column '%s' has constant values, cannot bin", colName))
+			continue
+		}
+
 		binWidth := (maxVal - minVal) / float64(binCount)
 
 		for i, idx := range indices {
