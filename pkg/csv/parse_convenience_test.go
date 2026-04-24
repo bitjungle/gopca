@@ -94,8 +94,11 @@ func TestParseFile_ValidCSV(t *testing.T) {
 }
 
 func TestParseFile_NonexistentFile(t *testing.T) {
+	// Use a path under t.TempDir() that is guaranteed never to be created,
+	// avoiding reliance on a hard-coded path that may exist on some hosts.
+	path := filepath.Join(t.TempDir(), "does-not-exist.csv")
 	opts := DefaultOptions()
-	_, err := ParseFile("/path/that/does/not/exist/data.csv", opts)
+	_, err := ParseFile(path, opts)
 	if err == nil {
 		t.Error("expected error for nonexistent file, got nil")
 	}
