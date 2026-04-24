@@ -338,217 +338,37 @@ func (a *App) parseCSVContent(content string, ext string) (*FileData, error) {
 	// If we have categorical or target columns, we need to combine them with numeric data
 	// for the full data display
 	if len(categoricalData) > 0 || len(numericTargetData) > 0 {
-		// Get all original headers to preserve column order
-		allOriginalHeaders := a.getAllOriginalHeaders(content, successfulFormat)
-		fileData = a.combineAllColumns(csvData, categoricalData, numericTargetData, allOriginalHeaders)
+		// Get all original headers to preserve column order, then merge all column types.
+		allOriginalHeaders := pkgcsv.GetOriginalHeaders(content, successfulFormat)
+		combined := pkgcsv.CombineColumns(csvData, categoricalData, numericTargetData, allOriginalHeaders)
+		fileData = &FileData{
+			Headers:              combined.Headers,
+			RowNames:             combined.RowNames,
+			Data:                 combined.Data,
+			Rows:                 combined.Rows,
+			Columns:              combined.Columns,
+			CategoricalColumns:   combined.CategoricalColumns,
+			NumericTargetColumns: ConvertFloat64MapToJSON(combined.NumericTargetData),
+			ColumnTypes:          combined.ColumnTypes,
+		}
 	}
 
 	return fileData, nil
 }
 
-// getAllOriginalHeaders extracts all headers from CSV content in their original order
-func (a *App) getAllOriginalHeaders(content string, format types.CSVFormat) []string {
-	csvReader := csv.NewReader(strings.NewReader(content))
-	csvReader.Comma = format.FieldDelimiter
-	csvReader.LazyQuotes = true
-	csvReader.TrimLeadingSpace = true
 
-	// Read first line to get headers
-	records, err := csvReader.Read()
-	if err != nil || len(records) == 0 {
-		return []string{}
-	}
-
-	// If the format has headers and row names, skip the first column (row name header)
-	if format.HasHeaders && format.HasRowNames && len(records) > 0 {
-		return records[1:]
-	}
-
-	return records
-}
-
-// combineAllColumns combines numeric, categorical, and target columns for display
-func (a *App) combineAllColumns(csvData *types.CSVData, categoricalData map[string][]string, numericTargetData map[string][]float64, originalHeaders []string) *FileData {
-	// If no original headers provided, fall back to the old behavior
-	if len(originalHeaders) == 0 {
-		originalHeaders = make([]string, 0)
-		// Add numeric headers first
-		originalHeaders = append(originalHeaders, csvData.Headers...)
-		// Add categorical headers
-		for colName := range categoricalData {
-			originalHeaders = append(originalHeaders, colName)
-		}
-		// Add target headers
-		for colName := range numericTargetData {
-			originalHeaders = append(originalHeaders, colName)
-		}
-	}
-
-	// Create a map to quickly find numeric column indices
-	numericColIndex := make(map[string]int)
-	for idx, header := range csvData.Headers {
-		numericColIndex[header] = idx
-	}
-
-	// Initialize the result data structures
-	allHeaders := make([]string, 0, len(originalHeaders))
-	allData := make([][]string, csvData.Rows)
-	columnTypes := make(map[string]string)
-
-	// Initialize rows
-	for i := range allData {
-		allData[i] = make([]string, 0, len(originalHeaders))
-	}
-
-	// Process columns in their original order
-	for _, header := range originalHeaders {
-		allHeaders = append(allHeaders, header)
-
-		// Check if it's a numeric column
-		if colIdx, isNumeric := numericColIndex[header]; isNumeric {
-			columnTypes[header] = "numeric"
-			for rowIdx := 0; rowIdx < csvData.Rows; rowIdx++ {
-				if csvData.MissingMask != nil && csvData.MissingMask[rowIdx][colIdx] {
-					allData[rowIdx] = append(allData[rowIdx], "")
-				} else {
-					allData[rowIdx] = append(allData[rowIdx], strconv.FormatFloat(csvData.Matrix[rowIdx][colIdx], 'g', -1, 64))
-				}
-			}
-		} else if values, isCategorical := categoricalData[header]; isCategorical {
-			// It's a categorical column
-			columnTypes[header] = "categorical"
-			for rowIdx, value := range values {
-				if rowIdx < len(allData) {
-					allData[rowIdx] = append(allData[rowIdx], value)
-				}
-			}
-		} else if values, isTarget := numericTargetData[header]; isTarget {
-			// It's a target column
-			columnTypes[header] = "target"
-			for rowIdx, value := range values {
-				if rowIdx < len(allData) {
-					allData[rowIdx] = append(allData[rowIdx], strconv.FormatFloat(value, 'g', -1, 64))
-				}
-			}
-		}
-		// If header not found in any category, it will be skipped
-	}
-
-	return &FileData{
-		Headers:              allHeaders,
-		RowNames:             csvData.RowNames,
-		Data:                 allData,
-		Rows:                 csvData.Rows,
-		Columns:              len(allHeaders),
-		CategoricalColumns:   categoricalData,
-		NumericTargetColumns: ConvertFloat64MapToJSON(numericTargetData),
-		ColumnTypes:          columnTypes,
-	}
-}
-
-// ValidateForGoPCA validates that the CSV data is compatible with GoPCA
+// ValidateForGoPCA validates that the CSV data is compatible with GoPCA.
 func (a *App) ValidateForGoPCA(data *FileData) *ValidationResult {
-	var warnings []string
-	var numericColumns int
-	var categoricalColumns int
-	var targetColumns int
-	var totalMissing int
-
-	// Check minimum data requirements
-	if data.Rows < 2 {
-		warnings = append(warnings, "ERROR: Data must have at least 2 rows (found "+fmt.Sprintf("%d", data.Rows)+")")
+	in := integration.ValidationInput{
+		Headers:     data.Headers,
+		Data:        data.Data,
+		ColumnTypes: data.ColumnTypes,
+		RowNames:    data.RowNames,
+		Rows:        data.Rows,
+		Columns:     data.Columns,
 	}
-
-	// Count column types using our pre-detected types
-	for _, colType := range data.ColumnTypes {
-		switch colType {
-		case "numeric":
-			numericColumns++
-		case "categorical":
-			categoricalColumns++
-		case "target":
-			targetColumns++
-		}
-	}
-
-	// Check for missing values in the data
-	for colIdx, header := range data.Headers {
-		missingInCol := 0
-
-		for i := 0; i < data.Rows; i++ {
-			if i >= len(data.Data) {
-				break
-			}
-			value := data.Data[i][colIdx]
-
-			// Check for missing values
-			trimmed := strings.TrimSpace(value)
-			if trimmed == "" || trimmed == "NA" || trimmed == "N/A" ||
-				trimmed == "nan" || trimmed == "NaN" || trimmed == "null" || trimmed == "NULL" {
-				missingInCol++
-				totalMissing++
-			}
-		}
-
-		// Report high missing value percentage
-		if data.Rows > 0 {
-			missingPercent := float64(missingInCol) / float64(data.Rows) * 100
-			if missingPercent > 50 {
-				warnings = append(warnings, fmt.Sprintf("WARNING: Column '%s' has %.1f%% missing values", header, missingPercent))
-			}
-		}
-	}
-
-	// Report column type summary
-	if categoricalColumns > 0 {
-		warnings = append(warnings, fmt.Sprintf("INFO: %d categorical column(s) detected - these will be excluded from PCA but available for visualization", categoricalColumns))
-	}
-
-	if targetColumns > 0 {
-		warnings = append(warnings, fmt.Sprintf("INFO: %d target column(s) detected - these will be excluded from PCA but available for visualization", targetColumns))
-	}
-
-	// Check if we have enough numeric columns for PCA
-	if numericColumns < 2 {
-		warnings = append(warnings, fmt.Sprintf("ERROR: Need at least 2 numeric columns for PCA (found %d)", numericColumns))
-	} else if numericColumns < 3 {
-		warnings = append(warnings, fmt.Sprintf("WARNING: Only %d numeric columns found - PCA results may be limited", numericColumns))
-	} else {
-		warnings = append(warnings, fmt.Sprintf("INFO: %d numeric columns will be used for PCA analysis", numericColumns))
-	}
-
-	// Report overall missing data
-	totalCells := data.Rows * data.Columns
-	if totalCells > 0 {
-		missingPercent := float64(totalMissing) / float64(totalCells) * 100
-		if missingPercent > 0 {
-			warnings = append(warnings, fmt.Sprintf("INFO: Dataset contains %.1f%% missing values (%d cells)", missingPercent, totalMissing))
-		}
-	}
-
-	// Check for reasonable data size
-	if data.Rows > 10000 {
-		warnings = append(warnings, fmt.Sprintf("INFO: Large dataset detected (%d rows) - processing may take time", data.Rows))
-	}
-
-	// Check if row names were detected
-	if len(data.RowNames) > 0 {
-		warnings = append(warnings, "INFO: Row names detected in first column")
-	}
-
-	// Determine if data is valid (no ERRORs)
-	isValid := true
-	for _, warning := range warnings {
-		if strings.HasPrefix(warning, "ERROR:") {
-			isValid = false
-			break
-		}
-	}
-
-	return &ValidationResult{
-		IsValid:  isValid,
-		Messages: warnings,
-	}
+	res := integration.ValidateForGoPCA(in)
+	return &ValidationResult{IsValid: res.IsValid, Messages: res.Messages}
 }
 
 // SaveCSV saves the data to a CSV file
@@ -1287,7 +1107,7 @@ func (a *App) previewCSV(filePath string, options ImportOptions, preview *FilePr
 	// Detect column types
 	preview.ColumnTypes = make([]string, preview.TotalCols)
 	for i := 0; i < preview.TotalCols; i++ {
-		preview.ColumnTypes[i] = a.detectColumnType(allData, i)
+		preview.ColumnTypes[i] = pkgcsv.DetectColumnType(allData, i)
 	}
 
 	// Detect delimiter if not specified
@@ -1375,7 +1195,7 @@ func (a *App) previewExcel(filePath string, options ImportOptions, preview *File
 	// Detect column types
 	preview.ColumnTypes = make([]string, preview.TotalCols)
 	for i := 0; i < preview.TotalCols; i++ {
-		preview.ColumnTypes[i] = a.detectColumnType(rows, i)
+		preview.ColumnTypes[i] = pkgcsv.DetectColumnType(rows, i)
 	}
 
 	return preview, nil
@@ -1501,7 +1321,7 @@ func (a *App) importCSVWithOptions(filePath string, options ImportOptions) (*Fil
 
 	// Detect column types and process data
 	for i, header := range fileData.Headers {
-		colType := a.detectColumnType(allData, i)
+		colType := pkgcsv.DetectColumnType(allData, i)
 		fileData.ColumnTypes[header] = colType
 
 		if strings.HasSuffix(header, "#target") {
@@ -1641,7 +1461,7 @@ func (a *App) importExcelWithOptions(filePath string, options ImportOptions) (*F
 
 	// Detect column types
 	for i, header := range fileData.Headers {
-		colType := a.detectColumnType(rows, i)
+		colType := pkgcsv.DetectColumnType(rows, i)
 		fileData.ColumnTypes[header] = colType
 
 		if strings.HasSuffix(header, "#target") {
@@ -1713,53 +1533,6 @@ func (a *App) SelectFileForImport() (string, error) {
 	}
 
 	return filePath, nil
-}
-
-// detectColumnType detects the type of a column based on its values
-func (a *App) detectColumnType(data [][]string, colIndex int) string {
-	if len(data) == 0 || colIndex < 0 {
-		return "unknown"
-	}
-
-	// Count different types
-	numericCount := 0
-	totalCount := 0
-	uniqueValues := make(map[string]bool)
-
-	for _, row := range data {
-		if colIndex >= len(row) {
-			continue
-		}
-
-		value := strings.TrimSpace(row[colIndex])
-		if value == "" {
-			continue
-		}
-
-		totalCount++
-		uniqueValues[value] = true
-
-		// Try to parse as float
-		if _, err := strconv.ParseFloat(value, 64); err == nil {
-			numericCount++
-		}
-	}
-
-	if totalCount == 0 {
-		return "empty"
-	}
-
-	// If more than 90% of non-empty values are numeric, consider it numeric
-	if float64(numericCount)/float64(totalCount) > 0.9 {
-		return "numeric"
-	}
-
-	// If unique values are less than 20% of total values or less than 20, consider it categorical
-	if float64(len(uniqueValues))/float64(totalCount) < 0.2 || len(uniqueValues) < 20 {
-		return "categorical"
-	}
-
-	return "text"
 }
 
 // TransformationType represents the type of transformation
