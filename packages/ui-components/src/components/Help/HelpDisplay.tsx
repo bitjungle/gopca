@@ -15,8 +15,12 @@ interface HelpDisplayProps {
 export const HelpDisplay: React.FC<HelpDisplayProps> = ({ helpKey, title, text }) => {
   if (!helpKey) {
     return (
-      <div className="h-10 flex items-center justify-center text-gray-500 dark:text-gray-400">
+      <div
+        role="status"
+        className="h-10 flex items-center justify-center text-gray-500 dark:text-gray-400"
+      >
         <svg
+          aria-hidden="true"
           className="w-5 h-5 mr-2"
           fill="none"
           stroke="currentColor"
@@ -35,7 +39,7 @@ export const HelpDisplay: React.FC<HelpDisplayProps> = ({ helpKey, title, text }
   }
 
   return (
-    <div className="h-10 flex items-center justify-center max-w-2xl mx-auto animate-fadeIn">
+    <div role="status" className="h-10 flex items-center justify-center max-w-2xl mx-auto">
       <div className="flex items-center gap-2 text-center">
         <span className="text-sm font-semibold text-gray-900 dark:text-gray-100">
           {title}:

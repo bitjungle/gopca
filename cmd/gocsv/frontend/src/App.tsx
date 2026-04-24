@@ -756,15 +756,15 @@ return;
 function App() {
     return (
         <ThemeProvider>
-            <HelpProvider content={helpContent}>
-                <ErrorBoundary
-                    onError={(error, errorInfo) => {
-                        console.error('App Error Boundary:', error, errorInfo);
-                    }}
-                >
+            <ErrorBoundary
+                onError={(error, errorInfo) => {
+                    console.error('App Error Boundary:', error, errorInfo);
+                }}
+            >
+                <HelpProvider content={helpContent}>
                     <AppContent />
-                </ErrorBoundary>
-            </HelpProvider>
+                </HelpProvider>
+            </ErrorBoundary>
         </ThemeProvider>
     );
 }
