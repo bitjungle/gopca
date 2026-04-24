@@ -6,19 +6,17 @@
 
 import React, { useCallback, useEffect } from 'react';
 import './App.css';
-import { ThemeProvider, ConfirmDialog, ErrorBoundary } from '@gopca/ui-components';
+import { ThemeProvider, ConfirmDialog, ErrorBoundary, HelpProvider, useHelp } from '@gopca/ui-components';
 import { DocumentationViewer, AboutDialog } from './components';
-import { HelpProvider, useHelp } from './contexts/HelpContext';
 import { PaletteProvider } from './contexts/PaletteContext';
+import helpContent from './help/help-content.json';
 import { FileDataProvider } from './contexts/FileDataContext';
 import { PCAProvider, usePCAContext } from './contexts/PCAContext';
 import { VisualizationProvider, useVisualizationContext } from './contexts/VisualizationContext';
 import { UIProvider, useUIContext } from './contexts/UIContext';
 import { GoCSVProvider, useGoCSVContext } from './contexts/GoCSVContext';
-import { HelpDisplay } from './components/HelpDisplay';
-import { ThemeToggle } from '@gopca/ui-components';
+import { HelpDisplay, HelpWrapper, ThemeToggle } from '@gopca/ui-components';
 import logo from './assets/images/GoPCA-logo-1024-transp.png';
-import { HelpWrapper } from './components';
 import { useAppInit } from './hooks/useAppInit';
 import { DataLoadSection } from './components/sections/DataLoadSection';
 import { PCAConfigSection } from './components/sections/PCAConfigSection';
@@ -164,7 +162,7 @@ function App() {
     return (
         <ThemeProvider>
             <PaletteProvider>
-                <HelpProvider>
+                <HelpProvider content={helpContent}>
                     <FileDataProvider>
                         <PCAProvider>
                             <VisualizationProvider>

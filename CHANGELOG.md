@@ -5,6 +5,30 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.3.0] - 2026-04-24
+
+### Added
+- **GoCSV contextual help system** — hover over any toolbar control or button for an inline description (#412, #649)
+  - Help components (`HelpProvider`, `HelpWrapper`, `HelpDisplay`, `useHelpHover`) implemented once in `packages/ui-components` and shared by both GoPCA Desktop and GoCSV
+  - Each app supplies its own `help-content.json`; the shared components are content-agnostic
+  - All major GoCSV controls covered: file loading, import wizard, undo/redo, data quality, fill missing, transform, GoPCA integration, export
+
+### Fixed
+- Unsaved changes in GoCSV now trigger a confirmation dialog before the window closes, preventing accidental data loss (#477, #644)
+- GoCSV file load errors are now displayed as proper `ErrorAlert` notifications instead of silent `alert()` calls (#495, #643)
+
+### Changed
+- **GoCSV app.go refactored into shared packages** — domain logic extracted over three phases (#639–#641, #645–#647)
+  - Phase 1: `pkg/dataquality/` extracted — app.go reduced from 3,613 to 2,401 lines
+  - Phase 2: `pkg/transform/` extracted — app.go reduced from 2,401 to 1,927 lines
+  - Phase 3: CSV parse helpers and column-type detection extracted to `pkg/csv/` — app.go reduced to 1,700 lines
+  - app.go is now a thin Wails coordination layer; all domain logic lives in independently testable packages
+
+### Testing
+- Expanded test coverage for GoCSV extracted packages (#642, #648)
+  - `pkg/csv`: 86.6% coverage (parse, detect, output, convenience wrappers)
+  - `pkg/integration`: 64.2% coverage (validation, temp file management, JSON consistency)
+
 ## [1.2.0] - 2026-04-11
 
 ### Added
@@ -286,6 +310,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - JSON model export/import capability
 - Extensive documentation and help system
 
+[1.3.0]: https://github.com/bitjungle/gopca/compare/v1.2.0...v1.3.0
 [1.2.0]: https://github.com/bitjungle/gopca/compare/v1.1.8...v1.2.0
 [1.1.8]: https://github.com/bitjungle/gopca/releases/tag/v1.1.8
 [1.1.7]: https://github.com/bitjungle/gopca/releases/tag/v1.1.7

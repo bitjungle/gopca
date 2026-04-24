@@ -1353,7 +1353,7 @@ jobs:
         | Platform | Download | Contents |
         |----------|----------|----------|
         | **macOS** | [\`gopca-macos-universal.zip\`](../../releases/download/${VERSION}/gopca-macos-universal.zip) | • \`pca-intel\` and \`pca-arm64\` CLI tools<br>• \`GoPCA.app\` (signed & notarized)<br>• \`GoCSV.app\` (signed & notarized) |
-        | **Windows** | [\`gopca-windows-x64.zip\`](../../releases/download/${VERSION}/gopca-windows-x64.zip) | • \`pca.exe\` CLI tool${{ steps.check_signed.outputs.windows_signed == 'signed' && ' (digitally signed)' || '' }}<br>• \`GoPCA.exe\`${{ steps.check_signed.outputs.windows_signed == 'signed' && ' (digitally signed)' || '' }}<br>• \`GoCSV.exe\`${{ steps.check_signed.outputs.windows_signed == 'signed' && ' (digitally signed)' || '' }} |
+        | **Windows** | [\`gopca-windows-x64.zip\`](../../releases/download/${VERSION}/gopca-windows-x64.zip) | • \`pca.exe\` CLI tool<br>• \`GoPCA.exe\`<br>• \`GoCSV.exe\`<br>• ⚠️ Unsigned executables — SmartScreen warning expected<br>• 👉 [Install from Microsoft Store](https://apps.microsoft.com/detail/9n8hcxgrjzt5) to avoid warnings |
         | **Linux** | [\`gopca-linux-x64.tar.gz\`](../../releases/download/${VERSION}/gopca-linux-x64.tar.gz) | • \`pca-x64\` and \`pca-arm64\` CLI tools<br>• \`GoPCA\` app<br>• \`GoCSV\` editor |
 
         ### Linux AppImages (Recommended for Linux desktop users)
@@ -1365,19 +1365,25 @@ jobs:
         | **GoPCA Desktop** | [\`GoPCA-x86_64.AppImage\`](../../releases/download/${VERSION}/GoPCA-x86_64.AppImage) | PCA analysis GUI with full icon support<br>• Download and make executable: \`chmod +x\`<br>• Double-click to run |
         | **GoCSV Editor** | [\`GoCSV-x86_64.AppImage\`](../../releases/download/${VERSION}/GoCSV-x86_64.AppImage) | CSV data preparation tool with full icon support<br>• Download and make executable: \`chmod +x\`<br>• Double-click to run |
 
-        ### Windows Installer (Recommended for Windows users)
+        ### Windows Installation (Recommended: Microsoft Store)
 
-        | Installer | Download | Description |
-        |-----------|----------|-------------|
-        | **Windows Setup** | [\`GoPCA-Setup-${VERSION}.exe\`](../../releases/download/${VERSION}/GoPCA-Setup-${VERSION}.exe) | Complete installer with all GoPCA components${{ steps.check_signed.outputs.windows_signed == 'signed' && ' (digitally signed)' || '' }}<br>• Automated installation to Program Files<br>• Start Menu shortcuts<br>• Optional PATH configuration for CLI<br>• Uninstaller included |
+        > **Windows users:** The easiest and most secure way to install GoPCA on Windows is through the **Microsoft Store** — no security warnings, automatic updates, and clean uninstallation.
+        >
+        > 🛒 **[Get GoPCA on Microsoft Store](https://apps.microsoft.com/detail/9n8hcxgrjzt5)**
+        >
+        > _(The latest version will appear in the Store shortly after each release)_
 
-        ### Microsoft Store Package (For Windows 10/11)
+        **Alternative: Windows Installer** (for offline installs or users who prefer a traditional setup)
+
+        | Installer | Download | Notes |
+        |-----------|----------|-------|
+        | **Windows Setup** | [\`GoPCA-Setup-${VERSION}.exe\`](../../releases/download/${VERSION}/GoPCA-Setup-${VERSION}.exe) | Includes GoPCA Desktop, GoCSV, and pca CLI<br>• Start Menu shortcuts and optional PATH setup<br>• ⚠️ Not digitally signed — Windows may show a SmartScreen warning<br>• Click "More info" → "Run anyway" to proceed |
+
+        ### Microsoft Store Package (MSIX — for IT admins / sideloading)
 
         | Package | Download | Description |
         |---------|----------|-------------|
-        | **MSIX Package** | [\`GoPCA_${VERSION_NO_V}.0_x64.msix\`](../../releases/download/${VERSION}/GoPCA_${VERSION_NO_V}.0_x64.msix) | Microsoft Store package for sideloading or Store submission<br>• Modern Windows app package format<br>• Sandboxed installation<br>• Suitable for enterprise deployment<br>• **Coming to Microsoft Store soon!** |
-
-        **Note**: The MSIX package is primarily for sideloading in enterprise environments or for submission to Microsoft Store. Most users should use the traditional installer above.
+        | **MSIX Package** | [\`GoPCA_${VERSION_NO_V}.0_x64.msix\`](../../releases/download/${VERSION}/GoPCA_${VERSION_NO_V}.0_x64.msix) | For enterprise deployment (Intune/SCCM) or sideloading<br>• Self-signed during build; Microsoft Store re-signs on publish<br>• Most users should install from the Store link above |
 
         ### Installation
 
@@ -1389,7 +1395,7 @@ jobs:
 
         SHA-256 checksums: [\`checksums.txt\`](../../releases/download/${VERSION}/checksums.txt)
 
-        ${{ steps.check_signed.outputs.windows_signed == 'signed' && '✅ **Windows binaries are digitally signed** - No security warnings on Windows 10/11' || '⚠️ **Windows binaries are not digitally signed** - You may see security warnings when running' }}
+        ⚠️ **Windows executables are not digitally signed** — install from the [Microsoft Store](https://apps.microsoft.com/detail/9n8hcxgrjzt5) for a warning-free experience.
 
         ---
 

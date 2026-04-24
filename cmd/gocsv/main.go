@@ -7,6 +7,7 @@
 package main
 
 import (
+	"context"
 	"embed"
 
 	"github.com/wailsapp/wails/v2"
@@ -14,6 +15,7 @@ import (
 	"github.com/wailsapp/wails/v2/pkg/options/assetserver"
 	"github.com/wailsapp/wails/v2/pkg/options/linux"
 	"github.com/wailsapp/wails/v2/pkg/options/mac"
+	wailsruntime "github.com/wailsapp/wails/v2/pkg/runtime"
 )
 
 //go:embed all:frontend/dist
@@ -36,7 +38,25 @@ func main() {
 			Assets: assets,
 		},
 		BackgroundColour: &options.RGBA{R: 27, G: 38, B: 54, A: 1},
-		OnStartup:        app.startup,
+		OnStartup: app.startup,
+		OnBeforeClose: func(ctx context.Context) bool {
+			if !app.HasUnsavedChanges() {
+				return false // allow close
+			}
+			result, err := wailsruntime.MessageDialog(ctx, wailsruntime.MessageDialogOptions{
+				Type:          wailsruntime.QuestionDialog,
+				Title:         "Unsaved Changes",
+				Message:       "You have unsaved changes. Close anyway?",
+				Buttons:       []string{"Close anyway", "Cancel"},
+				DefaultButton: "Cancel",
+				CancelButton:  "Cancel",
+			})
+			if err != nil {
+				return false // if dialog fails, allow close
+			}
+			// Block close if user chose Cancel
+			return result == "Cancel"
+		},
 		Bind: []interface{}{
 			app,
 		},

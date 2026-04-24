@@ -5,7 +5,7 @@
 // military, warfare, or surveillance applications.
 
 import React from 'react';
-import { useHelpHover } from '../hooks/useHelpHover';
+import { useHelpHover } from '@gopca/ui-components';
 
 interface HelpWrapperProps {
   helpKey: string;

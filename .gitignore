@@ -82,3 +82,6 @@ cmd/gopca-desktop/AppxManifest.xml
 _tmp/
 testdata/wine/plotly/
 testdata/validation/reference_results
+
+# Internal milestone planning docs (not for public repo)
+docs/devel/milestone_*.md

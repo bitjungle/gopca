@@ -182,3 +182,28 @@ func TestProgressTracker_Complete(t *testing.T) {
 		t.Error("no events in history after complete")
 	}
 }
+
+// ─── WailsEventAdapter ────────────────────────────────────────────────────────
+
+func TestWailsEventAdapter_New(t *testing.T) {
+	bus := NewEventBus()
+	ctx := context.Background()
+	adapter := NewWailsEventAdapter(ctx, bus)
+	if adapter == nil {
+		t.Fatal("NewWailsEventAdapter returned nil")
+	}
+}
+
+func TestWailsEventAdapter_EmitToFrontend(t *testing.T) {
+	bus := NewEventBus()
+	ctx := context.Background()
+	adapter := NewWailsEventAdapter(ctx, bus)
+
+	event := Event{
+		Type: EventDataLoaded,
+		Data: map[string]interface{}{"rows": 100},
+	}
+	if err := adapter.EmitToFrontend(event); err != nil {
+		t.Errorf("EmitToFrontend returned unexpected error: %v", err)
+	}
+}

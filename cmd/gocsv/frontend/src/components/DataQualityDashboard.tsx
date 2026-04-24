@@ -5,13 +5,13 @@
 // military, warfare, or surveillance applications.
 
 import React, { useState } from 'react';
-import { main } from '../../wailsjs/go/models';
+import { dataquality } from '../../wailsjs/go/models';
 import { PlotlyDistributionChart } from './PlotlyDistributionChart';
 // import { CorrelationMatrix } from './CorrelationMatrix'; // Removed: unused import
 import { QualityScoreCard } from './QualityScoreCard';
 
 interface DataQualityDashboardProps {
-    report: main.DataQualityReport | null;
+    report: dataquality.DataQualityReport | null;
     isOpen: boolean;
     onClose: () => void;
 }
@@ -352,7 +352,7 @@ export const DataQualityDashboard: React.FC<DataQualityDashboardProps> = ({ repo
 
 // Column Details Modal Component
 interface ColumnDetailsModalProps {
-    column: main.ColumnAnalysis;
+    column: dataquality.ColumnAnalysis;
     onClose: () => void;
 }
 

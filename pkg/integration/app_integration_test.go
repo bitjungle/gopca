@@ -113,6 +113,36 @@ func TestCheckApp(t *testing.T) {
 	}
 }
 
+func TestIsAppRunning_NonexistentApp(t *testing.T) {
+	// An app with this name can't possibly be running.
+	if IsAppRunning("definitely-not-a-real-app-xyz-gopca-test") {
+		t.Error("expected false for a non-existent app name")
+	}
+}
+
+func TestGetCompanionAppPaths_ReturnsSlice(t *testing.T) {
+	// Use the current test binary's path as a stand-in for "current exe".
+	// The function just does path arithmetic — we verify it returns a non-nil slice
+	// without panicking, regardless of whether the paths exist.
+	fakeExePath := filepath.Join(t.TempDir(), "GoPCA.app", "Contents", "MacOS", "GoPCA")
+
+	for _, target := range []string{"gocsv", "gopca-desktop"} {
+		paths := getCompanionAppPaths(fakeExePath, target)
+		if paths == nil {
+			t.Errorf("getCompanionAppPaths(%q, %q) returned nil", fakeExePath, target)
+		}
+	}
+}
+
+func TestGetCompanionAppPaths_UnknownTarget(t *testing.T) {
+	fakeExePath := filepath.Join(t.TempDir(), "SomeApp")
+	paths := getCompanionAppPaths(fakeExePath, "unknown-app")
+	// Should return an empty (but non-nil) slice for an unknown target app.
+	if paths == nil {
+		t.Error("expected non-nil slice for unknown target app")
+	}
+}
+
 func TestLaunchWithFile(t *testing.T) {
 	// This test is limited because we can't easily test launching real applications
 	// We'll test error cases only
