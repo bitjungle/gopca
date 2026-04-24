@@ -5,6 +5,13 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.3.1] - 2026-04-24
+
+### Fixed
+- macOS binaries are now properly notarized in CI release builds (#651)
+  - `notarytool store-credentials` left the keychain profile inaccessible after the signing step modified the keychain search list, causing silent notarization failures
+  - Fixed by passing credentials inline to `notarytool submit` instead of relying on a stored keychain profile
+
 ## [1.3.0] - 2026-04-24
 
 ### Added
@@ -310,6 +317,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - JSON model export/import capability
 - Extensive documentation and help system
 
+[1.3.1]: https://github.com/bitjungle/gopca/compare/v1.3.0...v1.3.1
 [1.3.0]: https://github.com/bitjungle/gopca/compare/v1.2.0...v1.3.0
 [1.2.0]: https://github.com/bitjungle/gopca/compare/v1.1.8...v1.2.0
 [1.1.8]: https://github.com/bitjungle/gopca/releases/tag/v1.1.8
