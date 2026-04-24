@@ -46,6 +46,7 @@ func TestConvertToPCAOutputData_BasicSVD(t *testing.T) {
 
 	if out == nil {
 		t.Fatal("ConvertToPCAOutputData returned nil")
+		return
 	}
 	if out.Schema == "" {
 		t.Error("expected Schema to be set")
@@ -137,6 +138,7 @@ func TestConvertToPCAOutputData_WithPreservedColumns(t *testing.T) {
 
 	if out.PreservedColumns == nil {
 		t.Fatal("expected PreservedColumns to be set")
+		return
 	}
 	if _, ok := out.PreservedColumns.Categorical["label"]; !ok {
 		t.Error("expected 'label' in PreservedColumns.Categorical")
