@@ -25,6 +25,10 @@ export { ErrorPage } from './components/ErrorPage';
 export { ErrorToast } from './components/ErrorToast';
 export { ValidationError } from './components/ValidationError';
 
+// Help system
+export { HelpProvider, useHelp, HelpWrapper, HelpDisplay, useHelpHover } from './components/Help';
+export type { HelpItem } from './components/Help';
+
 // Dialogs
 export { AboutDialog } from './dialogs/AboutDialog';
 

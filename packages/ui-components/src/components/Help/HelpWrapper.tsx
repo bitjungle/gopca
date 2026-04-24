@@ -5,7 +5,7 @@
 // military, warfare, or surveillance applications.
 
 import React from 'react';
-import { useHelpHover } from '@gopca/ui-components';
+import { useHelpHover } from './useHelpHover';
 
 interface HelpWrapperProps {
   helpKey: string;
@@ -13,11 +13,7 @@ interface HelpWrapperProps {
   className?: string;
 }
 
-export const HelpWrapper: React.FC<HelpWrapperProps> = ({
-  helpKey,
-  children,
-  className
-}) => {
+export const HelpWrapper: React.FC<HelpWrapperProps> = ({ helpKey, children, className }) => {
   const helpRef = useHelpHover(helpKey);
 
   return (

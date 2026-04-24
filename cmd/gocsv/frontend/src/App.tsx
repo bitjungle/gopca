@@ -7,9 +7,9 @@
 import React, { useState, useRef, useEffect } from 'react';
 import './App.css';
 import { CSVGrid, ValidationResults, MissingValueSummary, MissingValueDialog, DataQualityDashboard, UndoRedoControls, ImportWizard, DataTransformDialog, DocumentationViewer, AboutDialog } from './components';
-import { ConfirmDialog, ErrorBoundary, ErrorAlert } from '@gopca/ui-components';
-import { ThemeProvider, ThemeToggle } from '@gopca/ui-components';
+import { ConfirmDialog, ErrorBoundary, ErrorAlert, ThemeProvider, ThemeToggle, HelpProvider, HelpDisplay, HelpWrapper, useHelp } from '@gopca/ui-components';
 import logo from './assets/images/GoCSV-logo-1024-transp.png';
+import helpContent from './help/help-content.json';
 import { LoadCSV, SaveCSV, SaveExcel, ValidateForGoPCA, AnalyzeMissingValues, FillMissingValues, AnalyzeDataQuality, CheckGoPCAStatus, OpenInGoPCA, DownloadGoPCA, ExecuteCellEdit, ExecuteHeaderEdit, ClearHistory, GetVersion } from '../wailsjs/go/main/App';
 import { EventsOn, OnFileDrop, OnFileDropOff } from '../wailsjs/runtime/runtime';
 import { main, dataquality } from '../wailsjs/go/models';
@@ -17,6 +17,7 @@ import { main, dataquality } from '../wailsjs/go/models';
 type FileData = main.FileData;
 
 function AppContent() {
+    const { currentHelp, currentHelpKey } = useHelp();
     const [fileLoaded, setFileLoaded] = useState(false);
     const [fileName, setFileName] = useState<string | null>(null);
     const [fileData, setFileData] = useState<FileData | null>(null);
@@ -291,7 +292,7 @@ return;
             {/* Header - matching GoPCA Desktop exactly */}
             <header className="sticky top-0 z-50 bg-white dark:bg-gray-800 shadow-lg backdrop-blur-sm bg-opacity-95 dark:bg-opacity-95">
                 <div className="flex items-center justify-between max-w-7xl mx-auto px-4 py-3 h-20">
-                    <div className="flex items-center gap-4">
+                    <HelpWrapper helpKey="gocsv-logo-about" className="flex items-center gap-4">
                         <img
                             src={logo}
                             alt="GoCSV - GoPCA CSV Editor"
@@ -310,30 +311,41 @@ return;
                                 </span>
                             )}
                         </div>
+                    </HelpWrapper>
+                    <div className="flex-1 px-6">
+                        <HelpDisplay
+                            helpKey={currentHelpKey}
+                            title={currentHelp?.title ?? ''}
+                            text={currentHelp?.text ?? ''}
+                        />
                     </div>
                     <div className="flex items-center gap-4">
-                        <button
-                            onClick={() => setShowDocumentation(true)}
-                            className="p-2 rounded-lg bg-gray-200 dark:bg-gray-700 hover:bg-gray-300 dark:hover:bg-gray-600 transition-colors duration-200"
-                            aria-label="Open documentation"
-                        >
-                            {/* Book icon */}
-                            <svg
-                                xmlns="http://www.w3.org/2000/svg"
-                                fill="none"
-                                viewBox="0 0 24 24"
-                                strokeWidth={1.5}
-                                stroke="currentColor"
-                                className="w-5 h-5 text-gray-700 dark:text-gray-300"
+                        <HelpWrapper helpKey="gocsv-documentation">
+                            <button
+                                onClick={() => setShowDocumentation(true)}
+                                className="p-2 rounded-lg bg-gray-200 dark:bg-gray-700 hover:bg-gray-300 dark:hover:bg-gray-600 transition-colors duration-200"
+                                aria-label="Open documentation"
                             >
-                                <path
-                                    strokeLinecap="round"
-                                    strokeLinejoin="round"
-                                    d="M12 6.042A8.967 8.967 0 006 3.75c-1.052 0-2.062.18-3 .512v14.25A8.987 8.987 0 016 18c2.305 0 4.408.867 6 2.292m0-14.25a8.966 8.966 0 016-2.292c1.052 0 2.062.18 3 .512v14.25A8.987 8.987 0 0018 18c-2.305 0-4.408.867-6 2.292m0-14.25v14.25"
-                                />
-                            </svg>
-                        </button>
-                        <ThemeToggle />
+                                {/* Book icon */}
+                                <svg
+                                    xmlns="http://www.w3.org/2000/svg"
+                                    fill="none"
+                                    viewBox="0 0 24 24"
+                                    strokeWidth={1.5}
+                                    stroke="currentColor"
+                                    className="w-5 h-5 text-gray-700 dark:text-gray-300"
+                                >
+                                    <path
+                                        strokeLinecap="round"
+                                        strokeLinejoin="round"
+                                        d="M12 6.042A8.967 8.967 0 006 3.75c-1.052 0-2.062.18-3 .512v14.25A8.987 8.987 0 016 18c2.305 0 4.408.867 6 2.292m0-14.25a8.966 8.966 0 016-2.292c1.052 0 2.062.18 3 .512v14.25A8.987 8.987 0 0018 18c-2.305 0-4.408.867-6 2.292m0-14.25v14.25"
+                                    />
+                                </svg>
+                            </button>
+                        </HelpWrapper>
+                        <HelpWrapper helpKey="theme-toggle">
+                            <ThemeToggle />
+                        </HelpWrapper>
                     </div>
                 </div>
             </header>
@@ -378,20 +390,24 @@ return;
 
                             <div className="space-y-3">
                                 <div className="grid grid-cols-2 gap-2">
-                                    <button
-                                        onClick={handleLoadFromDialog}
-                                        disabled={isLoading}
-                                        className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-                                    >
-                                        {isLoading ? 'Loading...' : 'Choose File'}
-                                    </button>
-                                    <button
-                                        onClick={() => setShowImportWizard(true)}
-                                        disabled={isLoading}
-                                        className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-                                    >
-                                        Import with Wizard
-                                    </button>
+                                    <HelpWrapper helpKey="browse-file">
+                                        <button
+                                            onClick={handleLoadFromDialog}
+                                            disabled={isLoading}
+                                            className="w-full px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                                        >
+                                            {isLoading ? 'Loading...' : 'Choose File'}
+                                        </button>
+                                    </HelpWrapper>
+                                    <HelpWrapper helpKey="import-wizard">
+                                        <button
+                                            onClick={() => setShowImportWizard(true)}
+                                            disabled={isLoading}
+                                            className="w-full px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                                        >
+                                            Import with Wizard
+                                        </button>
+                                    </HelpWrapper>
                                 </div>
                                 <div className="text-xs text-gray-500 dark:text-gray-400 space-y-1">
                                     <p><span className="font-medium">Choose File:</span> Quick file picker for standard CSV/TSV files with automatic format detection</p>
@@ -437,68 +453,78 @@ return;
                             {/* Data Quality Toolbar */}
                             <div className="flex items-center justify-between mb-4 p-3 bg-gray-50 dark:bg-gray-700 rounded-lg">
                                 <div className="flex items-center gap-4">
-                                    <UndoRedoControls fileData={fileData} onDataUpdate={setFileData} />
+                                    <HelpWrapper helpKey="undo-redo-controls">
+                                        <UndoRedoControls fileData={fileData} onDataUpdate={setFileData} />
+                                    </HelpWrapper>
                                     <div className="w-px h-6 bg-gray-300 dark:bg-gray-600" />
-                                    <button
-                                        onClick={async () => {
-                                            if (!fileData) {
+                                    <HelpWrapper helpKey="data-quality-report">
+                                        <button
+                                            onClick={async () => {
+                                                if (!fileData) {
 return;
 }
-                                            setIsAnalyzingQuality(true);
-                                            try {
-                                                const report = await AnalyzeDataQuality(fileData);
-                                                setDataQualityReport(report);
-                                                setShowDataQualityReport(true);
-                                            } catch (error) {
-                                                console.error('Error analyzing data quality:', error);
-                                                setErrorMessage('Could not analyze data quality — ' + (error instanceof Error ? error.message : String(error)));
-                                            } finally {
-                                                setIsAnalyzingQuality(false);
-                                            }
-                                        }}
-                                        disabled={isAnalyzingQuality}
-                                        className="px-3 py-1.5 text-sm bg-blue-600 text-white rounded hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-                                    >
-                                        <span className="flex items-center gap-2">
-                                            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 17v-2m3 2v-4m3 4v-6m2 10H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-                                            </svg>
-                                            {isAnalyzingQuality ? 'Analyzing...' : 'Data Quality Report'}
-                                        </span>
-                                    </button>
-                                    <button
-                                        onClick={handleAnalyzeMissingValues}
-                                        className="px-3 py-1.5 text-sm bg-white dark:bg-gray-600 text-gray-700 dark:text-gray-300 rounded hover:bg-gray-100 dark:hover:bg-gray-500 transition-colors border border-gray-300 dark:border-gray-500"
-                                    >
-                                        <span className="flex items-center gap-2">
-                                            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
-                                            </svg>
-                                            Analyze Missing Values
-                                        </span>
-                                    </button>
-                                    <button
-                                        onClick={() => setShowMissingValueDialog(true)}
-                                        className="px-3 py-1.5 text-sm bg-white dark:bg-gray-600 text-gray-700 dark:text-gray-300 rounded hover:bg-gray-100 dark:hover:bg-gray-500 transition-colors border border-gray-300 dark:border-gray-500"
-                                    >
-                                        <span className="flex items-center gap-2">
-                                            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12" />
-                                            </svg>
-                                            Fill Missing Values
-                                        </span>
-                                    </button>
-                                    <button
-                                        onClick={() => setShowTransformDialog(true)}
-                                        className="px-3 py-1.5 text-sm bg-purple-600 text-white rounded hover:bg-purple-700 transition-colors"
-                                    >
-                                        <span className="flex items-center gap-2">
-                                            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M7 21a4 4 0 01-4-4V5a2 2 0 012-2h4a2 2 0 012 2v12a4 4 0 01-4 4zm0 0h12a2 2 0 002-2v-4a2 2 0 00-2-2h-2.343M11 7.343l1.657-1.657a2 2 0 012.828 0l2.829 2.829a2 2 0 010 2.828l-8.486 8.485M7 17h.01" />
-                                            </svg>
-                                            Transform Data
-                                        </span>
-                                    </button>
+                                                setIsAnalyzingQuality(true);
+                                                try {
+                                                    const report = await AnalyzeDataQuality(fileData);
+                                                    setDataQualityReport(report);
+                                                    setShowDataQualityReport(true);
+                                                } catch (error) {
+                                                    console.error('Error analyzing data quality:', error);
+                                                    setErrorMessage('Could not analyze data quality — ' + (error instanceof Error ? error.message : String(error)));
+                                                } finally {
+                                                    setIsAnalyzingQuality(false);
+                                                }
+                                            }}
+                                            disabled={isAnalyzingQuality}
+                                            className="px-3 py-1.5 text-sm bg-blue-600 text-white rounded hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                                        >
+                                            <span className="flex items-center gap-2">
+                                                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 17v-2m3 2v-4m3 4v-6m2 10H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                                                </svg>
+                                                {isAnalyzingQuality ? 'Analyzing...' : 'Data Quality Report'}
+                                            </span>
+                                        </button>
+                                    </HelpWrapper>
+                                    <HelpWrapper helpKey="analyze-missing">
+                                        <button
+                                            onClick={handleAnalyzeMissingValues}
+                                            className="px-3 py-1.5 text-sm bg-white dark:bg-gray-600 text-gray-700 dark:text-gray-300 rounded hover:bg-gray-100 dark:hover:bg-gray-500 transition-colors border border-gray-300 dark:border-gray-500"
+                                        >
+                                            <span className="flex items-center gap-2">
+                                                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
+                                                </svg>
+                                                Analyze Missing Values
+                                            </span>
+                                        </button>
+                                    </HelpWrapper>
+                                    <HelpWrapper helpKey="fill-missing">
+                                        <button
+                                            onClick={() => setShowMissingValueDialog(true)}
+                                            className="px-3 py-1.5 text-sm bg-white dark:bg-gray-600 text-gray-700 dark:text-gray-300 rounded hover:bg-gray-100 dark:hover:bg-gray-500 transition-colors border border-gray-300 dark:border-gray-500"
+                                        >
+                                            <span className="flex items-center gap-2">
+                                                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12" />
+                                                </svg>
+                                                Fill Missing Values
+                                            </span>
+                                        </button>
+                                    </HelpWrapper>
+                                    <HelpWrapper helpKey="transform-data">
+                                        <button
+                                            onClick={() => setShowTransformDialog(true)}
+                                            className="px-3 py-1.5 text-sm bg-purple-600 text-white rounded hover:bg-purple-700 transition-colors"
+                                        >
+                                            <span className="flex items-center gap-2">
+                                                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M7 21a4 4 0 01-4-4V5a2 2 0 012-2h4a2 2 0 012 2v12a4 4 0 01-4 4zm0 0h12a2 2 0 002-2v-4a2 2 0 00-2-2h-2.343M11 7.343l1.657-1.657a2 2 0 012.828 0l2.829 2.829a2 2 0 010 2.828l-8.486 8.485M7 17h.01" />
+                                                </svg>
+                                                Transform Data
+                                            </span>
+                                        </button>
+                                    </HelpWrapper>
                                 </div>
                                 {missingValueStats && (
                                     <div className="text-sm text-gray-600 dark:text-gray-400">
@@ -559,39 +585,43 @@ return;
 
                             <div className="space-y-4">
                                 <div className="flex gap-4">
-                                    <button
-                                        onClick={handleValidate}
-                                        disabled={isValidating}
-                                        className="flex-1 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-                                    >
-                                        {isValidating ? 'Validating...' : 'Validate for GoPCA'}
-                                    </button>
-                                    <button
-                                        onClick={async () => {
-                                            if (!fileData) {
+                                    <HelpWrapper helpKey="validate-gopca" className="flex-1">
+                                        <button
+                                            onClick={handleValidate}
+                                            disabled={isValidating}
+                                            className="w-full px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                                        >
+                                            {isValidating ? 'Validating...' : 'Validate for GoPCA'}
+                                        </button>
+                                    </HelpWrapper>
+                                    <HelpWrapper helpKey="open-gopca" className="flex-1">
+                                        <button
+                                            onClick={async () => {
+                                                if (!fileData) {
 return;
 }
 
-                                            // Check if GoPCA is installed
-                                            if (!gopcaStatus?.installed) {
-                                                setShowDownloadConfirm(true);
-                                                return;
-                                            }
+                                                // Check if GoPCA is installed
+                                                if (!gopcaStatus?.installed) {
+                                                    setShowDownloadConfirm(true);
+                                                    return;
+                                                }
 
-                                            try {
-                                                await OpenInGoPCA(fileData);
-                                            } catch (error) {
-                                                console.error('Error opening in GoPCA:', error);
-                                                setErrorMessage('Could not open in GoPCA — ' + (error instanceof Error ? error.message : String(error)));
-                                            }
-                                        }}
-                                        disabled={!gopcaStatus || isCheckingGoPCA}
-                                        className="flex-1 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-                                    >
-                                        {isCheckingGoPCA ? 'Checking...' :
-                                         !gopcaStatus?.installed ? 'Install GoPCA' :
-                                         'Open in GoPCA'}
-                                    </button>
+                                                try {
+                                                    await OpenInGoPCA(fileData);
+                                                } catch (error) {
+                                                    console.error('Error opening in GoPCA:', error);
+                                                    setErrorMessage('Could not open in GoPCA — ' + (error instanceof Error ? error.message : String(error)));
+                                                }
+                                            }}
+                                            disabled={!gopcaStatus || isCheckingGoPCA}
+                                            className="w-full px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                                        >
+                                            {isCheckingGoPCA ? 'Checking...' :
+                                             !gopcaStatus?.installed ? 'Install GoPCA' :
+                                             'Open in GoPCA'}
+                                        </button>
+                                    </HelpWrapper>
                                 </div>
 
                                 {validationResult && (
@@ -607,36 +637,40 @@ return;
                                         Export Options
                                     </h3>
                                     <div className="grid grid-cols-2 gap-2">
-                                        <button
-                                            onClick={async () => {
-                                                if (fileData) {
-                                                    try {
-                                                        await SaveCSV(fileData);
-                                                    } catch (error) {
-                                                        console.error('Error saving file:', error);
-                                                        setErrorMessage('Could not save file — ' + (error instanceof Error ? error.message : String(error)));
+                                        <HelpWrapper helpKey="export-csv">
+                                            <button
+                                                onClick={async () => {
+                                                    if (fileData) {
+                                                        try {
+                                                            await SaveCSV(fileData);
+                                                        } catch (error) {
+                                                            console.error('Error saving file:', error);
+                                                            setErrorMessage('Could not save file — ' + (error instanceof Error ? error.message : String(error)));
+                                                        }
                                                     }
-                                                }
-                                            }}
-                                            className="px-3 py-1.5 text-sm bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 rounded hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors"
-                                        >
-                                            Export as CSV
-                                        </button>
-                                        <button
-                                            onClick={async () => {
-                                                if (fileData) {
-                                                    try {
-                                                        await SaveExcel(fileData);
-                                                    } catch (error) {
-                                                        console.error('Error saving Excel file:', error);
-                                                        setErrorMessage('Could not save Excel file — ' + (error instanceof Error ? error.message : String(error)));
+                                                }}
+                                                className="w-full px-3 py-1.5 text-sm bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 rounded hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors"
+                                            >
+                                                Export as CSV
+                                            </button>
+                                        </HelpWrapper>
+                                        <HelpWrapper helpKey="export-excel">
+                                            <button
+                                                onClick={async () => {
+                                                    if (fileData) {
+                                                        try {
+                                                            await SaveExcel(fileData);
+                                                        } catch (error) {
+                                                            console.error('Error saving Excel file:', error);
+                                                            setErrorMessage('Could not save Excel file — ' + (error instanceof Error ? error.message : String(error)));
+                                                        }
                                                     }
-                                                }
-                                            }}
-                                            className="px-3 py-1.5 text-sm bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 rounded hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors"
-                                        >
-                                            Export as Excel
-                                        </button>
+                                                }}
+                                                className="w-full px-3 py-1.5 text-sm bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 rounded hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors"
+                                            >
+                                                Export as Excel
+                                            </button>
+                                        </HelpWrapper>
                                     </div>
                                 </div>
                             </div>
@@ -727,7 +761,9 @@ function App() {
                     console.error('App Error Boundary:', error, errorInfo);
                 }}
             >
-                <AppContent />
+                <HelpProvider content={helpContent}>
+                    <AppContent />
+                </HelpProvider>
             </ErrorBoundary>
         </ThemeProvider>
     );

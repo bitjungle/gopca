@@ -5,7 +5,7 @@
 // military, warfare, or surveillance applications.
 
 import { useEffect, useRef } from 'react';
-import { useHelp } from '@gopca/ui-components';
+import { useHelp } from './HelpContext';
 
 export function useHelpHover(helpKey: string) {
   const ref = useRef<HTMLDivElement>(null);
