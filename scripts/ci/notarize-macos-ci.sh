@@ -78,19 +78,14 @@ echo "Archive created: $(du -h "$ZIP_PATH" | cut -f1)"
 echo "Submitting to Apple for notarization..."
 echo "This may take several minutes..."
 
-# Create a notarization profile to avoid passing credentials directly
-# This is more secure as it doesn't expose credentials in process lists
-xcrun notarytool store-credentials "ci-notarization" \
+# Submit and wait for notarization
+# Pass credentials inline to avoid keychain profile persistence issues in CI
+# (the signing step modifies the keychain list, which can make stored profiles inaccessible)
+SUBMISSION_ID=""
+if SUBMISSION_OUTPUT=$(xcrun notarytool submit "$ZIP_PATH" \
     --apple-id "$APPLE_ID" \
     --password "$APPLE_APP_SPECIFIC_PASSWORD" \
     --team-id "$APPLE_TEAM_ID" \
-    --validate \
-    2>&1 | grep -v "password" || true
-
-# Submit and wait for notarization
-SUBMISSION_ID=""
-if SUBMISSION_OUTPUT=$(xcrun notarytool submit "$ZIP_PATH" \
-    --keychain-profile "ci-notarization" \
     --wait \
     --timeout 30m \
     --verbose 2>&1); then
@@ -141,8 +136,5 @@ else
     echo "WARNING: Notarization failed, but continuing build"
     exit 0
 fi
-
-# Clean up stored credentials
-xcrun notarytool delete-credentials "ci-notarization" 2>/dev/null || true
 
 echo "=== Notarization completed successfully ==="
