@@ -50,7 +50,9 @@ func TestTempFileManager_RegisterAndCleanupOldFiles(t *testing.T) {
 	if err != nil {
 		t.Fatalf("failed to create temp file: %v", err)
 	}
-	tmpFile.Close()
+	if err := tmpFile.Close(); err != nil {
+		t.Fatalf("failed to close temp file: %v", err)
+	}
 	tmpPath := tmpFile.Name()
 
 	// Register it with a creation time far in the past to force cleanup
@@ -63,7 +65,7 @@ func TestTempFileManager_RegisterAndCleanupOldFiles(t *testing.T) {
 
 	// File should be removed
 	if _, err := os.Stat(tmpPath); !os.IsNotExist(err) {
-		os.Remove(tmpPath) // clean up if test failed
+		_ = os.Remove(tmpPath) // best-effort cleanup if test failed
 		t.Error("expected temp file to be removed after CleanupOldFiles")
 	}
 
@@ -85,9 +87,11 @@ func TestTempFileManager_CleanupSkipsNewFiles(t *testing.T) {
 	if err != nil {
 		t.Fatalf("failed to create temp file: %v", err)
 	}
-	tmpFile.Close()
+	if err := tmpFile.Close(); err != nil {
+		t.Fatalf("failed to close temp file: %v", err)
+	}
 	tmpPath := tmpFile.Name()
-	defer os.Remove(tmpPath)
+	defer func() { _ = os.Remove(tmpPath) }()
 
 	// Register it as just created (should NOT be cleaned up)
 	m.RegisterTempFile(tmpPath)
