@@ -338,113 +338,24 @@ func (a *App) parseCSVContent(content string, ext string) (*FileData, error) {
 	// If we have categorical or target columns, we need to combine them with numeric data
 	// for the full data display
 	if len(categoricalData) > 0 || len(numericTargetData) > 0 {
-		// Get all original headers to preserve column order
-		allOriginalHeaders := a.getAllOriginalHeaders(content, successfulFormat)
-		fileData = a.combineAllColumns(csvData, categoricalData, numericTargetData, allOriginalHeaders)
+		// Get all original headers to preserve column order, then merge all column types.
+		allOriginalHeaders := pkgcsv.GetOriginalHeaders(content, successfulFormat)
+		combined := pkgcsv.CombineColumns(csvData, categoricalData, numericTargetData, allOriginalHeaders)
+		fileData = &FileData{
+			Headers:              combined.Headers,
+			RowNames:             combined.RowNames,
+			Data:                 combined.Data,
+			Rows:                 combined.Rows,
+			Columns:              combined.Columns,
+			CategoricalColumns:   combined.CategoricalColumns,
+			NumericTargetColumns: ConvertFloat64MapToJSON(combined.NumericTargetData),
+			ColumnTypes:          combined.ColumnTypes,
+		}
 	}
 
 	return fileData, nil
 }
 
-// getAllOriginalHeaders extracts all headers from CSV content in their original order
-func (a *App) getAllOriginalHeaders(content string, format types.CSVFormat) []string {
-	csvReader := csv.NewReader(strings.NewReader(content))
-	csvReader.Comma = format.FieldDelimiter
-	csvReader.LazyQuotes = true
-	csvReader.TrimLeadingSpace = true
-
-	// Read first line to get headers
-	records, err := csvReader.Read()
-	if err != nil || len(records) == 0 {
-		return []string{}
-	}
-
-	// If the format has headers and row names, skip the first column (row name header)
-	if format.HasHeaders && format.HasRowNames && len(records) > 0 {
-		return records[1:]
-	}
-
-	return records
-}
-
-// combineAllColumns combines numeric, categorical, and target columns for display
-func (a *App) combineAllColumns(csvData *types.CSVData, categoricalData map[string][]string, numericTargetData map[string][]float64, originalHeaders []string) *FileData {
-	// If no original headers provided, fall back to the old behavior
-	if len(originalHeaders) == 0 {
-		originalHeaders = make([]string, 0)
-		// Add numeric headers first
-		originalHeaders = append(originalHeaders, csvData.Headers...)
-		// Add categorical headers
-		for colName := range categoricalData {
-			originalHeaders = append(originalHeaders, colName)
-		}
-		// Add target headers
-		for colName := range numericTargetData {
-			originalHeaders = append(originalHeaders, colName)
-		}
-	}
-
-	// Create a map to quickly find numeric column indices
-	numericColIndex := make(map[string]int)
-	for idx, header := range csvData.Headers {
-		numericColIndex[header] = idx
-	}
-
-	// Initialize the result data structures
-	allHeaders := make([]string, 0, len(originalHeaders))
-	allData := make([][]string, csvData.Rows)
-	columnTypes := make(map[string]string)
-
-	// Initialize rows
-	for i := range allData {
-		allData[i] = make([]string, 0, len(originalHeaders))
-	}
-
-	// Process columns in their original order
-	for _, header := range originalHeaders {
-		allHeaders = append(allHeaders, header)
-
-		// Check if it's a numeric column
-		if colIdx, isNumeric := numericColIndex[header]; isNumeric {
-			columnTypes[header] = "numeric"
-			for rowIdx := 0; rowIdx < csvData.Rows; rowIdx++ {
-				if csvData.MissingMask != nil && csvData.MissingMask[rowIdx][colIdx] {
-					allData[rowIdx] = append(allData[rowIdx], "")
-				} else {
-					allData[rowIdx] = append(allData[rowIdx], strconv.FormatFloat(csvData.Matrix[rowIdx][colIdx], 'g', -1, 64))
-				}
-			}
-		} else if values, isCategorical := categoricalData[header]; isCategorical {
-			// It's a categorical column
-			columnTypes[header] = "categorical"
-			for rowIdx, value := range values {
-				if rowIdx < len(allData) {
-					allData[rowIdx] = append(allData[rowIdx], value)
-				}
-			}
-		} else if values, isTarget := numericTargetData[header]; isTarget {
-			// It's a target column
-			columnTypes[header] = "target"
-			for rowIdx, value := range values {
-				if rowIdx < len(allData) {
-					allData[rowIdx] = append(allData[rowIdx], strconv.FormatFloat(value, 'g', -1, 64))
-				}
-			}
-		}
-		// If header not found in any category, it will be skipped
-	}
-
-	return &FileData{
-		Headers:              allHeaders,
-		RowNames:             csvData.RowNames,
-		Data:                 allData,
-		Rows:                 csvData.Rows,
-		Columns:              len(allHeaders),
-		CategoricalColumns:   categoricalData,
-		NumericTargetColumns: ConvertFloat64MapToJSON(numericTargetData),
-		ColumnTypes:          columnTypes,
-	}
-}
 
 // ValidateForGoPCA validates that the CSV data is compatible with GoPCA.
 func (a *App) ValidateForGoPCA(data *FileData) *ValidationResult {
