@@ -183,10 +183,10 @@ function App() {
             });
     }, []);
 
-    // Render nothing (matching background colour) until mode is determined.
-    // This prevents the tutorial window from briefly showing the main app UI.
+    // Render nothing (matching the Wails BackgroundColour from main.go: RGB 27,38,54)
+    // until mode is determined.  Prevents a flash of the wrong UI in tutorial windows.
     if (mode === null) {
-        return <div className="h-screen bg-gray-900" />;
+        return <div className="h-screen" style={{ backgroundColor: 'rgb(27,38,54)' }} />;
     }
 
     if (mode === 'tutorial') {

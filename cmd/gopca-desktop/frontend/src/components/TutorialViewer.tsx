@@ -10,15 +10,13 @@ import { MarkdownRenderer } from '@gopca/ui-components';
 /**
  * Maps a dataset name to the public path of its tutorial markdown file.
  * Tutorial files live under frontend/public/tutorials/<dataset>/.
- * Only datasets that have a tutorial file are listed here; the others
- * are planned but not yet written (issues #654–#657).
+ * Entries for datasets whose tutorial is not yet written (#654–#657) are
+ * intentionally omitted — a missing entry produces the "No tutorial available"
+ * message instead of a 404 fetch error.
  */
 const TUTORIAL_PATHS: Record<string, string> = {
-  iris:       '/tutorials/iris/iris_exploration.md',
-  wine:       '/tutorials/wine/wine_exploration.md',
-  corn:       '/tutorials/corn/corn_exploration.md',
-  swiss_roll: '/tutorials/swiss_roll/swiss_roll_exploration.md',
-  stocks:     '/tutorials/stocks/stocks_exploration.md',
+  iris: '/tutorials/iris/iris_exploration.md',
+  // wine, corn, swiss_roll, stocks: tutorials pending issues #654–#657
 };
 
 interface TutorialViewerProps {
@@ -45,33 +43,48 @@ export const TutorialViewer: React.FC<TutorialViewerProps> = ({ dataset }) => {
   const assetBase = `/tutorials/${dataset}/`;
 
   useEffect(() => {
+    // Reset state at the start of each effect run so that if dataset ever
+    // changes the component does not show stale content or a stale error.
+    setContent('');
+    setError(null);
+
     if (!tutorialPath) {
-      setError(`No tutorial available for dataset: ${dataset}`);
+      setError(`No tutorial available yet for dataset: ${dataset}`);
       return;
     }
 
     fetch(tutorialPath)
       .then(response => {
         if (!response.ok) {
-          throw new Error(`Failed to load tutorial (HTTP ${response.status})`);
+          // Treat 404 the same as a missing TUTORIAL_PATHS entry — the
+          // tutorial file simply hasn't been written yet.
+          if (response.status === 404) {
+            setError(`No tutorial available yet for dataset: ${dataset}`);
+          } else {
+            setError(`Could not load tutorial (HTTP ${response.status})`);
+          }
+          return null;
         }
         return response.text();
       })
       .then(text => {
+        if (text === null) return;
         // Rewrite relative image references like ./foo.png to absolute paths
         // so MarkdownRenderer can load them from the embedded asset server.
         const resolved = text.replace(/\(\.\/([^)]+)\)/g, `(${assetBase}$1)`);
+        setError(null);
         setContent(resolved);
       })
-      .catch(err => {
-        setError(`Could not load tutorial: ${err.message}`);
+      .catch((err: unknown) => {
+        const message = err instanceof Error ? err.message : String(err);
+        setError(`Could not load tutorial: ${message}`);
       });
-  }, [tutorialPath, assetBase]);
+  }, [tutorialPath, assetBase, dataset]);
 
   if (error) {
     return (
       <div className="min-h-screen bg-white dark:bg-gray-900 flex items-center justify-center">
-        <p className="text-red-600 dark:text-red-400">{error}</p>
+        <p className="text-gray-500 dark:text-gray-400">{error}</p>
       </div>
     );
   }
