@@ -11,6 +11,7 @@ export { PlotControls } from './PlotControls';
 export { MatrixIllustration } from './MatrixIllustration';
 export { HelpWrapper, HelpDisplay } from '@gopca/ui-components';
 export { DocumentationViewer } from './DocumentationViewer';
+export { TutorialViewer } from './TutorialViewer';
 export { ModelOverview } from './ModelOverview';
 export { AboutDialog } from './AboutDialog';
 export * from './visualizations';
