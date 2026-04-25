@@ -10,15 +10,16 @@ import { MarkdownRenderer } from '@gopca/ui-components';
 /**
  * Maps a dataset name to the public path of its tutorial markdown file.
  * Tutorial files live under frontend/public/tutorials/<dataset>/.
- * Entries for datasets whose tutorial is not yet written (#656–#657) are
+ * Entries for datasets whose tutorial is not yet written (#657) are
  * intentionally omitted — a missing entry produces the "No tutorial available"
  * message instead of a 404 fetch error.
  */
 const TUTORIAL_PATHS: Record<string, string> = {
-  iris:  '/tutorials/iris/iris_exploration.md',
-  wine:  '/tutorials/wine/wine_exploration.md',
-  corn:  '/tutorials/corn/corn_exploration.md',
-  // swiss_roll, stocks: tutorials pending issues #656–#657
+  iris:       '/tutorials/iris/iris_exploration.md',
+  wine:       '/tutorials/wine/wine_exploration.md',
+  corn:       '/tutorials/corn/corn_exploration.md',
+  swiss_roll: '/tutorials/swiss_roll/swiss_roll_exploration.md',
+  // stocks: tutorial pending issue #657
 };
 
 interface TutorialViewerProps {
