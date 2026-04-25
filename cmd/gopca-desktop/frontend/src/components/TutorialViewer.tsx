@@ -15,8 +15,9 @@ import { MarkdownRenderer } from '@gopca/ui-components';
  * message instead of a 404 fetch error.
  */
 const TUTORIAL_PATHS: Record<string, string> = {
-  iris: '/tutorials/iris/iris_exploration.md',
-  // wine, corn, swiss_roll, stocks: tutorials pending issues #654–#657
+  iris:  '/tutorials/iris/iris_exploration.md',
+  wine:  '/tutorials/wine/wine_exploration.md',
+  // corn, swiss_roll, stocks: tutorials pending issues #655–#657
 };
 
 interface TutorialViewerProps {
