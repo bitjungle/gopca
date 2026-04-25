@@ -34,8 +34,9 @@ import (
 
 // App struct
 type App struct {
-	ctx        context.Context
-	fileToOpen string
+	ctx             context.Context
+	fileToOpen      string
+	tutorialDataset string // non-empty when running as a tutorial window
 }
 
 // NewApp creates a new App application struct
@@ -46,6 +47,12 @@ func NewApp() *App {
 // SetFileToOpen sets the file path to open on startup
 func (a *App) SetFileToOpen(path string) {
 	a.fileToOpen = path
+}
+
+// SetTutorialDataset marks this instance as a tutorial window for the given dataset.
+// Must be called before Wails starts (i.e. before wails.Run).
+func (a *App) SetTutorialDataset(dataset string) {
+	a.tutorialDataset = dataset
 }
 
 // startup is called when the app starts. The context is saved
@@ -1611,5 +1618,51 @@ func (a *App) LaunchGoCSV() error {
 // DownloadGoCSV opens the GoCSV download page in the default browser
 func (a *App) DownloadGoCSV() error {
 	runtime.BrowserOpenURL(a.ctx, "https://github.com/bitjungle/gopca/releases")
+	return nil
+}
+
+// AppMode describes the operating mode of the current window.
+// The frontend uses this to decide whether to render the main app or a tutorial.
+type AppMode struct {
+	Mode    string `json:"mode"`    // "main" or "tutorial"
+	Dataset string `json:"dataset"` // dataset name when Mode == "tutorial"
+}
+
+// GetAppMode returns the operating mode for this window.
+// Returns mode "tutorial" with the dataset name when launched via OpenTutorial,
+// or mode "main" for the normal application window.
+// The frontend calls this once on startup to decide which UI to render.
+func (a *App) GetAppMode() AppMode {
+	if a.tutorialDataset != "" {
+		return AppMode{Mode: "tutorial", Dataset: a.tutorialDataset}
+	}
+	return AppMode{Mode: "main"}
+}
+
+// OpenTutorial launches a separate tutorial window for the named dataset.
+// Dataset must match the CSV filename stem: "iris", "wine", "corn", "swiss_roll", or "stocks".
+// The tutorial window is a new instance of this binary started with the --tutorial flag;
+// it is fully independent and can be closed without affecting the main app.
+func (a *App) OpenTutorial(dataset string) error {
+	self, err := os.Executable()
+	if err != nil {
+		return fmt.Errorf("could not determine executable path: %w", err)
+	}
+
+	// On macOS, os.Executable() may return the binary inside the .app bundle.
+	// exec.Command with the full path works correctly on all platforms.
+	cmd := exec.Command(self, "--tutorial", dataset) //nolint:gosec // self is our own executable
+	cmd.Stderr = os.Stderr
+
+	if err := cmd.Start(); err != nil {
+		return fmt.Errorf("failed to open tutorial window: %w", err)
+	}
+
+	// Detach: the tutorial window is independent of the main app.
+	if err := cmd.Process.Release(); err != nil {
+		runtime.LogInfo(a.ctx, fmt.Sprintf("tutorial process release warning: %v", err))
+	}
+
+	runtime.LogInfo(a.ctx, fmt.Sprintf("Opened tutorial window for dataset: %s", dataset))
 	return nil
 }

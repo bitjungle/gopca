@@ -4,10 +4,10 @@
 // The author respectfully requests that it not be used for
 // military, warfare, or surveillance applications.
 
-import React, { useCallback, useEffect } from 'react';
+import React, { useCallback, useEffect, useState } from 'react';
 import './App.css';
 import { ThemeProvider, ConfirmDialog, ErrorBoundary, HelpProvider, useHelp } from '@gopca/ui-components';
-import { DocumentationViewer, AboutDialog } from './components';
+import { DocumentationViewer, AboutDialog, TutorialViewer } from './components';
 import { PaletteProvider } from './contexts/PaletteContext';
 import helpContent from './help/help-content.json';
 import { FileDataProvider } from './contexts/FileDataContext';
@@ -23,6 +23,7 @@ import { PCAConfigSection } from './components/sections/PCAConfigSection';
 import { ResultsSection } from './components/sections/ResultsSection';
 import { logger } from './utils/logger';
 import { FileData } from './types';
+import { GetAppMode } from '../wailsjs/go/main/App';
 
 /**
  * AppContent is the layout shell. It:
@@ -154,11 +155,48 @@ function AppContent() {
 }
 
 /**
- * App is the provider shell. Provider order matters:
+ * App is the root component.
+ *
+ * On startup it calls GetAppMode() to determine whether this window is the
+ * main application (mode "main") or a tutorial window (mode "tutorial").
+ * The check is asynchronous; until it resolves we show only the background so
+ * the tutorial window never flashes the full main UI.
+ *
+ * Provider order for the main app matters:
  *   FileDataProvider must be above PCAProvider (PCA reads file data).
  *   PCAProvider must be above VisualizationProvider (Viz reads pcaResponse).
  */
 function App() {
+    // null = not yet determined; "main" | "tutorial" once resolved
+    const [mode, setMode] = useState<string | null>(null);
+    const [tutorialDataset, setTutorialDataset] = useState<string>('');
+
+    useEffect(() => {
+        GetAppMode()
+            .then((appMode: { mode: string; dataset: string }) => {
+                setMode(appMode.mode);
+                setTutorialDataset(appMode.dataset ?? '');
+            })
+            .catch((err: unknown) => {
+                logger.error('GetAppMode failed, defaulting to main mode:', err);
+                setMode('main');
+            });
+    }, []);
+
+    // Render nothing (matching background colour) until mode is determined.
+    // This prevents the tutorial window from briefly showing the main app UI.
+    if (mode === null) {
+        return <div className="h-screen bg-gray-900" />;
+    }
+
+    if (mode === 'tutorial') {
+        return (
+            <ThemeProvider>
+                <TutorialViewer dataset={tutorialDataset} />
+            </ThemeProvider>
+        );
+    }
+
     return (
         <ThemeProvider>
             <PaletteProvider>
