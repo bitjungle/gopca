@@ -18,8 +18,8 @@ const TUTORIAL_PATHS: Record<string, string> = {
   iris:       '/tutorials/iris/iris_exploration.md',
   wine:       '/tutorials/wine/wine_exploration.md',
   corn:       '/tutorials/corn/corn_exploration.md',
-  swiss_roll: '/tutorials/swiss_roll/swiss_roll_exploration.md',
-  // stocks: tutorial pending issue #657
+  swiss_roll:    '/tutorials/swiss_roll/swiss_roll_exploration.md',
+  eeg_eye_state: '/tutorials/eeg_eye_state/eeg_eye_state_exploration.md',
 };
 
 interface TutorialViewerProps {
