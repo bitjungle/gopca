@@ -112,7 +112,7 @@ where ‖x − y‖² is the squared Euclidean distance between x and y in the o
 
 All the information needed to perform PCA in **F** can be derived from this n × n matrix of pairwise kernel values — here a 1,000 × 1,000 matrix. The data is never explicitly mapped to the high-dimensional space.
 
-**What this means geometrically**: the RBF kernel assigns high similarity to nearby points and low similarity to distant ones. Points connected along the surface of the roll are close in terms of path length along the manifold, even if they are far in straight-line 3D distance. With the right choice of γ, the kernel can distinguish these cases — and PCA in the resulting feature space recovers the unrolled structure.
+**What this means geometrically**: the RBF kernel assigns high similarity to points that are close in ordinary Euclidean distance and low similarity to points that are farther apart in 3D space. It does **not** explicitly use path length or geodesic distance along the manifold surface. Instead, with a suitable choice of γ, the kernel emphasises local Euclidean neighbourhoods. For data arranged like the Swiss Roll, those local neighbourhoods reflect the local structure of the manifold — and PCA in the resulting feature space can recover a representation related to the unrolled surface.
 
 👉 Kernel PCA was introduced by Schölkopf, Smola & Müller (1998). Its properties and applications to de-noising are developed further in Mika et al. (1998). See the References section.
 
@@ -138,7 +138,7 @@ Look at the **Scores Plot**.
 
 **Preprocessing note**: when Kernel PCA is selected, GoPCA restricts the column-wise preprocessing options. Mean centering and standard scaling are unavailable — this is because Kernel PCA performs its own centering in kernel space. You may apply **Variance Scale** if your features have different units, or leave preprocessing as **None**.
 
-**Visualisation note**: several plots available for linear PCA are not available for Kernel PCA — specifically the **Loadings Plot**, **Biplot**, **Biplot3D**, **Correlations Plot**, and **Diagnostic Scatter Plot**. These require loadings in the original variable space, which Kernel PCA does not produce (its components live in the high-dimensional feature space **F**). The **Scores Plot**, **Scree Plot**, and **Kernel Matrix Heatmap** remain available.
+**Visualisation note**: several plots available for linear PCA are not available for Kernel PCA — specifically the **Loadings Plot**, **Biplot**, **3D Biplot**, **Circle of Correlations**, and **Diagnostic Plot**. These require loadings in the original variable space, which Kernel PCA does not produce (its components live in the high-dimensional feature space **F**). The **Scores Plot**, **Scree Plot**, and **Kernel Matrix Heatmap** remain available.
 
 ---
 
