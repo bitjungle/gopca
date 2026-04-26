@@ -10,6 +10,10 @@ This dataset contains a recording from **one subject** using the **Emotiv EEG Ne
 * Central/temporal: `FC5`, `T7`, `T8`, `FC6`
 * Parietal/occipital: `P7`, `O1`, `O2`, `P8`
 
+The figure below shows the scalp positions of all 14 electrodes, viewed from above (nose pointing up). The occipital electrodes `O1` and `O2` sit at the bottom — the region most sensitive to visual and alpha-band activity.
+
+![EEG electrode positions](./eeg_electrode_map.png)
+
 The recording lasted **117 seconds** at a sampling rate of **128 Hz** — giving one measurement every 7.8 ms and approximately **14,980 rows** in total. During the recording, the subject alternately opened and closed their eyes. Eye state was determined from a video camera and added manually as a label:
 
 * `eye_state = open` — eyes open
