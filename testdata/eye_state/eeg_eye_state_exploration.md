@@ -19,6 +19,10 @@ The recording lasted **117 seconds** at a sampling rate of **128 Hz** — giving
 * `eye_state = open` — eyes open
 * `eye_state = closed` — eyes closed
 
+In the original UCI dataset, eye state is encoded numerically: **0 = eyes open, 1 = eyes closed**. GoPCA displays these as `open` and `closed` text labels.
+
+> **Note on data quality**: the dataset contains four isolated time points with extreme values — at approximately t = 7 s, 81 s, 90 s, and 103 s — where one or more channels reach values 70–150× the normal signal range (almost certainly brief electrode or cable artifacts). These will appear as isolated extreme points far from the main cluster in the scores plot. They are part of the real dataset and do not need to be removed for this exploration, but keep them in mind when interpreting unexpected structure in the results.
+
 The original research motivation was classification: can the EEG signal alone predict whether the eyes are open or closed? Here, we approach the same data using **Principal Component Analysis (PCA)** — an *unsupervised* method that ignores the labels entirely. The question becomes: what structure does PCA find in the EEG channels on its own, and does that structure relate to eye state?
 
 👉 This dataset is fundamentally different from Iris, Wine, Corn, and Swiss Roll:

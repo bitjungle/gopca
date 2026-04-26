@@ -94,15 +94,6 @@ export function DataLoadSection() {
                             Or Try Sample Datasets
                         </label>
                         <div className="space-y-2">
-                            <HelpWrapper helpKey="sample-dataset-corn">
-                                <button
-                                    onClick={() => loadDatasetWithTutorial('corn.csv', undefined, 'corn')}
-                                    className="w-full px-4 py-2 text-sm bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors"
-                                    disabled={loading}
-                                >
-                                    Corn (NIR)
-                                </button>
-                            </HelpWrapper>
                             <HelpWrapper helpKey="sample-dataset-iris">
                                 <button
                                     onClick={() => loadDatasetWithTutorial('iris.csv', 'species', 'iris')}
@@ -119,6 +110,15 @@ export function DataLoadSection() {
                                     disabled={loading}
                                 >
                                     Wine
+                                </button>
+                            </HelpWrapper>
+                            <HelpWrapper helpKey="sample-dataset-corn">
+                                <button
+                                    onClick={() => loadDatasetWithTutorial('corn.csv', undefined, 'corn')}
+                                    className="w-full px-4 py-2 text-sm bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors"
+                                    disabled={loading}
+                                >
+                                    Corn (NIR)
                                 </button>
                             </HelpWrapper>
                             <HelpWrapper helpKey="sample-dataset-swiss-roll">
