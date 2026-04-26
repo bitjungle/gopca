@@ -149,12 +149,19 @@ The window length *L* determines what temporal scale the analysis can resolve.
 
 For this EEG dataset (128 Hz sampling rate):
 
-* *L* = 8 → 62.5 ms window — captures fast beta activity (~20 Hz)
-* *L* = 16 → 125 ms window — roughly one alpha cycle (~10 Hz, period ≈ 100 ms)
-* *L* = 32 → 250 ms window — covers theta rhythms (~4–8 Hz)
-* *L* = 64 → 500 ms window — slower dynamics, slow cortical potentials
+| Lags | Approx. duration | Notes |
+|-----:|-----------------:|-------|
+|    8 |          0.06 s  | very short memory — fast beta activity |
+|   16 |          0.13 s  | short temporal context |
+|   32 |          0.25 s  | **recommended default** — 2–3 alpha cycles |
+|   64 |          0.50 s  | stronger temporal context, larger matrix |
+|  128 |          1.00 s  | long window, may over-smooth |
 
-A general guideline (Golyandina, 2020): for oscillatory components, *L* should be at least as long as one full period of the oscillation of interest. For exploratory analysis, starting with *L* = 16 is reasonable for EEG at 128 Hz.
+A general guideline (Golyandina, 2020): for oscillatory components, *L* should be at least as long as one full period of the oscillation of interest. Eye closure is associated with alpha-band activity at roughly 8–12 Hz (period 80–125 ms). A window of 32 samples (250 ms) covers 2–3 alpha cycles — enough to make these rhythmic patterns visible without making the trajectory matrix unnecessarily large.
+
+The key trade-off to keep in mind:
+
+> Increasing the lag gives PCA memory. But too much memory can make the model harder to interpret.
 
 ---
 
@@ -162,7 +169,7 @@ A general guideline (Golyandina, 2020): for oscillatory components, *L* should b
 
 Change the **PCA Method** to **Temporal PCA**.
 
-A new option appears: **Number of Time Lags**. Set it to **16**.
+A new option appears: **Number of Time Lags**. Set it to **32**.
 
 Keep:
 
@@ -170,7 +177,7 @@ Keep:
 
 Click **Go PCA**.
 
-GoPCA builds the trajectory matrix internally from the 14 EEG channels: each row of the original data is expanded into a window of 16 consecutive time steps, producing a trajectory matrix with 14 × 16 = 224 columns. SVD is then applied to this matrix. The result has approximately *N* − *L* + 1 = 14,965 score rows — one per window position.
+GoPCA builds the trajectory matrix internally from the 14 EEG channels: each row of the original data is expanded into a window of 32 consecutive time steps, producing a trajectory matrix with 14 × 32 = 448 columns. SVD is then applied to this matrix. The result has approximately *N* − *L* + 1 = 14,949 score rows — one per window position.
 
 Open the **Scores Plot** and colour by `eye_state`.
 
@@ -229,22 +236,24 @@ This plot shows the aggregated contribution of each original EEG channel across 
 
 ## Step 8: Experiment with the Number of Time Lags
 
-Change the **Number of Time Lags** and observe how the results shift. Try:
+Change the **Number of Time Lags** and observe how the results shift. Try these values in order:
 
-* **8 lags** → 62.5 ms — a short window, sensitive to fast dynamics
-* **16 lags** → 125 ms — roughly one alpha cycle
-* **32 lags** → 250 ms — covers theta and slow alpha
+* **8 lags** → 0.06 s — very short memory, dominated by adjacent-sample correlations
+* **16 lags** → 0.13 s — short temporal context, less than one full alpha cycle
+* **32 lags** → 0.25 s — recommended default, 2–3 alpha cycles
+* **64 lags** → 0.50 s — stronger temporal context, trajectory matrix grows larger
 
 After each change, click **Go PCA** and examine the **Scores Plot**, **Temporal Loadings**, and **Scree Plot**.
 
 #### Questions:
 
 * Does the separation between `open` and `closed` change as *L* increases?
-* Do the Temporal Loading curves become smoother or more complex with longer windows?
+* Do the Temporal Loading curves become smoother or more oscillatory with longer windows?
 * Does the number of components needed to explain most variance increase or decrease?
 * Is there a window length where the eye-state separation appears clearest?
+* At what point does the trajectory matrix become so wide that interpretation becomes difficult?
 
-👉 Hint: too short a window (small *L*) means the analysis cannot see a full oscillation cycle — components will be dominated by adjacent-sample correlations rather than meaningful rhythms. Too long a window risks mixing patterns from different brain states within a single window, and creates a very wide trajectory matrix with many columns.
+👉 The key trade-off: a short window cannot see a full oscillation cycle, so components reflect adjacent-sample correlations rather than meaningful rhythms. A very long window adds more temporal context, but makes the trajectory matrix much wider and the components harder to interpret. Too much memory can obscure structure rather than reveal it.
 
 ---
 
