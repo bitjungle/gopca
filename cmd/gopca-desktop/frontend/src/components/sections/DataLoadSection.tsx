@@ -130,13 +130,13 @@ export function DataLoadSection() {
                                     Swiss Roll
                                 </button>
                             </HelpWrapper>
-                            <HelpWrapper helpKey="sample-dataset-stocks">
+                            <HelpWrapper helpKey="sample-dataset-eeg-eye-state">
                                 <button
-                                    onClick={() => loadDatasetWithTutorial('stocks.csv', undefined, 'stocks')}
+                                    onClick={() => loadDatasetWithTutorial('eeg_eye_state.csv', undefined, 'eeg_eye_state')}
                                     className="w-full px-4 py-2 text-sm bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors"
                                     disabled={loading}
                                 >
-                                    Stocks
+                                    EEG Eye State
                                 </button>
                             </HelpWrapper>
                         </div>

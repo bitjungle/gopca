@@ -35,9 +35,9 @@
       "text": "Dataset containing chemical analysis results of wines from three cultivars, widely used for classification and feature analysis tasks.",
       "category": "data-input"
     },
-    "sample-dataset-stocks": {
-      "title": "Stocks Dataset",
-      "text": "Ten years of daily trading time-series dataset for PayPal (PYPL) including open, high, low, close prices and trading volume.",
+    "sample-dataset-eeg-eye-state": {
+      "title": "EEG Eye State Dataset",
+      "text": "117-second EEG recording from one subject using a 14-channel Emotiv neuroheadset. Each row is one time point at 128 Hz. The eye_state label (open/closed) was added from video analysis. Use with Temporal PCA to explore oscillatory brain dynamics.",
       "category": "data-input"
     },
     "gocsv-integration": {
