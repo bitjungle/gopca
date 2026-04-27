@@ -36,11 +36,13 @@ This means each wine is described by **13 variables**, or equivalently, each sam
 
 ## First look at the data
 
-Below is a *pair plot* of the dataset, showing all pairwise relationships between variables.
+Below is a *pair plot* of the dataset, showing all pairwise relationships between variables. The diagonal shows the distribution of each individual variable, either as a density curve (KDE). These plots reveal how the values of a single feature are spread (e.g. center, variability, skewness).
 
 ![Wine pairplot](./wine_pairplot.png)
 
 Take a few minutes to look at it carefully.
+
+---
 
 ### Reflect:
 

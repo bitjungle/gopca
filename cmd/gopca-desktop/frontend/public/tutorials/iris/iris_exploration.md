@@ -25,11 +25,13 @@ This means each flower is described by **4 variables**, or equivalently, each sa
 
 ## First look at the data
 
-Below you see a *pair plot* of the dataset, showing all pairwise relationships between variables.
+Below you see a *pair plot* of the dataset, showing all pairwise relationships between variables. The diagonal shows the distribution of each individual variable, either as a density curve (KDE). These plots reveal how the values of a single feature are spread (e.g. center, variability, skewness).
 
 ![Iris pairplot](./iris_pairplot.png)
 
 Take a few minutes to look at it carefully.
+
+---
 
 ### Reflect:
 
