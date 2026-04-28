@@ -8,9 +8,13 @@ Here, we will approach the same dataset with **Principal Component Analysis (PCA
 
 The dataset contains measurements of 150 iris flowers belonging to three species:
 
-* *Iris setosa*
-* *Iris versicolor*
-* *Iris virginica*
+<table>
+  <tr>
+    <td align="center"><img src="./photo_Iris_setosa.jpeg" alt="Iris setosa" width="220"/><br/><em>Iris setosa</em><br/><small>Photo: Tia Monto</small></td>
+    <td align="center"><img src="./photo_Iris_versicolor.jpeg" alt="Iris versicolor" width="220"/><br/><em>Iris versicolor</em><br/><small>Photo: Charles de Mille-Isles</small></td>
+    <td align="center"><img src="./photo_Iris_virginica.jpeg" alt="Iris virginica" width="220"/><br/><em>Iris virginica</em><br/><small>Photo: Frank Mayfield</small></td>
+  </tr>
+</table>
 
 For each flower, four variables (features) were measured (in cm):
 
@@ -25,7 +29,7 @@ This means each flower is described by **4 variables**, or equivalently, each sa
 
 ## First look at the data
 
-Below you see a *pair plot* of the dataset, showing all pairwise relationships between variables. The diagonal shows the distribution of each individual variable, either as a density curve (KDE). These plots reveal how the values of a single feature are spread (e.g. center, variability, skewness).
+Below you see a *pair plot* of the dataset, showing all pairwise relationships between variables. The diagonal shows the distribution of each individual variable, either as a density curve (KDE), revealing how the values of a single feature are spread (e.g. center, variability, skewness).
 
 ![Iris pairplot](./iris_pairplot.png)
 
@@ -71,7 +75,7 @@ Instead, **experiment, observe, and reflect**.
 
 ## Step 1: Load the data and run PCA
 
-* Load the Iris dataset into GoPCA
+* Load the Iris dataset into GoPCA (if you pressed the "Iris" button to view this tutorial file, the data is already loaded)
 * Run PCA with default settings
 
 ### Look at the **Scores Plot (PC1 vs PC2)**
