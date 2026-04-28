@@ -15,13 +15,23 @@ The original purpose of such a dataset is **calibration**: build a model that pr
 
 Here, we will approach the same data with **Principal Component Analysis (PCA)** — an *unsupervised* method that ignores the laboratory values entirely. The question becomes: what structure does PCA find in the spectra on its own? And does that structure relate to chemistry?
 
-👉 This dataset is fundamentally different from Iris and Wine:
-
-* Each of the 700 variables is **not an independent measurement** — together they form a **continuous absorption spectrum**
-* Adjacent wavelength channels are extremely highly correlated
-* There are no predefined sample classes — variation is **continuous**, not categorical
-
 The data originates from Cargill and was made publicly available through Eigenvector Research (https://eigenvector.com/data/Corn/). It has been used in food chemistry research, including Engel et al. (2022).
+
+---
+
+## From Wine to Corn: a completely different kind of data
+
+The Iris and Wine datasets consist of **independent measurements** — sepal length, alcohol content, proline concentration. Each variable has its own physical meaning and could in principle be measured on its own.
+
+The Corn NIR dataset is built differently. The 700 variables are not independent measurements — they are **700 consecutive points on a single continuous spectrum**, recorded at wavelengths 2 nm apart. You cannot meaningfully interpret one wavelength in isolation; the information is in the *shape* of the entire curve.
+
+This has two immediate consequences that make Corn unlike anything you have seen before:
+
+**The pairplot is not just impractical — it is inconceivable.** Recall the scaling table from the Iris tutorial: 4 variables give 6 panels, 13 variables give 78. For 700 variables the number of pairplot panels is *700 × 699 / 2* = **244,650 panels**. PCA is not merely convenient here — it is the only realistic tool for exploring this data.
+
+**Adjacent variables are not independent.** In Iris, sepal length and petal length are correlated but measure genuinely different things. In a NIR spectrum, the absorbance at 1500 nm and at 1502 nm are almost identical — they are sampling the same physical absorption feature separated by one instrument step. This extreme collinearity means PCA can compress 700 variables into 2–3 components and lose almost nothing, because most of the 700 variables are carrying nearly the same information.
+
+> Corn NIR is the natural next step: more variables than you can count, all correlated, and no predefined classes. PCA is not one option among several — it is the standard first tool for this kind of data.
 
 ---
 
