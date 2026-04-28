@@ -8,13 +8,14 @@ Here, we will approach the same dataset with **Principal Component Analysis (PCA
 
 The dataset contains measurements of 150 iris flowers belonging to three species:
 
-<table>
-  <tr>
-    <td align="center"><img src="./photo_Iris_setosa.jpeg" alt="Iris setosa" width="220"/><br/><em>Iris setosa</em><br/><small>Photo: Tia Monto</small></td>
-    <td align="center"><img src="./photo_Iris_versicolor.jpeg" alt="Iris versicolor" width="220"/><br/><em>Iris versicolor</em><br/><small>Photo: Charles de Mille-Isles</small></td>
-    <td align="center"><img src="./photo_Iris_virginica.jpeg" alt="Iris virginica" width="220"/><br/><em>Iris virginica</em><br/><small>Photo: Frank Mayfield</small></td>
-  </tr>
-</table>
+![Iris setosa](./photo_Iris_setosa.jpeg)
+*Iris setosa — Photo: Tia Monto*
+
+![Iris versicolor](./photo_Iris_versicolor.jpeg)
+*Iris versicolor — Photo: Charles de Mille-Isles*
+
+![Iris virginica](./photo_Iris_virginica.jpeg)
+*Iris virginica — Photo: Frank Mayfield*
 
 For each flower, four variables (features) were measured (in cm):
 
