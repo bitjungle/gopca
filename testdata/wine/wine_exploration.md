@@ -32,6 +32,9 @@ For each wine, **13 continuous chemical variables** were measured:
 
 Each wine is described by **13 variables** — each sample lives in a **13-dimensional space**, far beyond anything we can directly visualise.
 
+![Vineyards in Piedmont, Italy](./Piedmont_Italy_pexels-lulo.jpg)
+*Vineyards in the Piedmont region of Italy — the origin of the wines in this dataset. Photo: Lulo*
+
 ---
 
 ## From Iris to Wine: why this dataset is harder
