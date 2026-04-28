@@ -80,56 +80,82 @@ Instead, **experiment, observe, and reflect**.
 
 ---
 
-## Step 1: Load the data and run PCA
+## Step 1: Run PCA with default settings — and diagnose the result
 
-* Load the Corn dataset into GoPCA
-* Do not set a target column yet — explore the raw spectral structure first
-* Run PCA with default settings
+Load the Corn dataset into GoPCA. Do not set a target column yet. Leave all settings at their defaults:
 
-### Look at the **Scores Plot (PC1 vs PC2)**
+* **Row Preprocessing** → None
+* **Column Preprocessing** → Mean Center
+* **PCA Method** → SVD
+
+Click **Go PCA**.
+
+First, open the **Scree Plot**.
 
 #### Questions:
 
-* How are the 80 samples distributed?
-* Do you see distinct clusters, or more of a continuous spread?
-* Are there any samples noticeably far from the main group?
+* How much variance does PC1 alone explain?
+* Does this number seem surprisingly high?
 
-👉 Hint: Unlike Iris and Wine, you are not looking for predefined cultivar groups. The variation you see reflects real differences in spectral shape between corn samples.
+Now open the **Loadings Plot** for PC1.
+
+#### Questions:
+
+* Is the loading curve always positive — does it ever cross zero?
+* Does it rise smoothly from left to right, or does it show peaks and valleys?
+* Does this curve look like it is describing the chemistry of corn?
+
+👉 You should see that PC1 explains an extremely large fraction of the total variance — above 99%. The loading curve is entirely positive and rises monotonically from short to long wavelengths, never crossing zero. **This is not chemistry — this is a baseline artefact.**
+
+NIR spectra are affected by **multiplicative scatter**: differences in particle size, sample packing density, and optical path length between samples cause the entire baseline to shift up or down and tilt from left to right — even when the chemistry is identical. Without correcting for this, PCA finds the direction of maximum variance, which turns out to be the direction in which the baseline slopes vary most. PC1 at 99% is telling you how tilted each sample's baseline is. It is doing exactly what it is designed to do — but the dominant variation is a physical artefact, not a chemical signal.
+
+> Compare this to the Wine tutorial: without standardisation, proline's large numerical range dominated PC1. Here, baseline slope dominates for the same reason — it is the largest source of variance in the raw data. The fix follows the same logic.
 
 ---
 
-## Step 2: Explore explained structure
+## Step 2: Apply SNV and compare
 
-Open the **Scree Plot**.
+NIR spectra need **row-wise scatter correction** before column-wise preprocessing. The standard method is **SNV (Standard Normal Variate)**.
+
+SNV operates on each spectrum individually:
+
+* Subtract the mean of that spectrum's 700 absorbance values
+* Divide by its standard deviation
+
+This centres and scales each spectrum *within itself*, removing baseline offset and tilt regardless of scatter differences between samples. It is a physical correction, not a statistical one.
+
+In GoPCA, apply:
+
+* **Row Preprocessing** → **SNV**
+* **Column Preprocessing** → **Mean Center**
+
+Click **Go PCA**.
 
 #### Questions:
 
-* How much variance is explained by PC1 alone?
-* How much by PC1 + PC2 together?
-* How many components seem "enough" to describe the spectral variation?
+* How does the explained variance for PC1 change compared to Step 1?
+* Open the Loadings Plot for PC1 — does the curve now cross zero and show peaks and valleys?
+* Does the shape of the loading curve look more like a spectral feature now?
 
-👉 In NIR spectral data, it is common for the first 2–3 components to capture the vast majority of the structure — even though there are 700 variables. This is a direct consequence of the high correlation between adjacent wavelength channels.
+👉 After SNV, PC1 will typically explain 70–80% of variance rather than 99%. The loading curve will show positive and negative regions corresponding to real absorption features in the NIR spectrum. This is the chemical structure that was hidden underneath the baseline artefact.
+
+> Keep **SNV + Mean Center** active for all remaining steps. This is the standard starting point for NIR PCA.
 
 ---
 
 ## Step 3: Understand what the loadings mean for spectral data
 
-Open the **Loadings Plot**.
+Open the **Loadings Plot** (with SNV applied).
 
-👉 Important: this plot will look very different from what you saw for Iris and Wine.
-
-For Iris and Wine, the loadings plot showed a small number of isolated arrows — one per variable. Here, there are **700 variables**. Each one is a point in the loadings plot, ordered by wavelength. Instead of isolated arrows, the 700 points form a **smooth curve** in loading space. The shape of this curve is itself a spectral signature — it tells you which parts of the spectrum contribute most to each principal component.
+👉 Important: this plot looks very different from Iris and Wine. For those datasets, the loadings plot showed a small number of isolated arrows — one per variable. Here there are **700 variables**. Each is a point in the loadings plot, ordered by wavelength. Instead of isolated arrows, the 700 points form a **smooth curve** in loading space. The shape of this curve is itself a spectral signature — it tells you which wavelength regions drive each principal component.
 
 #### Questions:
 
-* Does the PC1 loading curve look smooth, or jagged?
-* Which wavelength regions show the strongest contribution to PC1?
+* Which wavelength regions show the strongest positive and negative contributions to PC1?
 * How does the PC2 loading curve differ from PC1?
+* Do the loading curves show any sharp features, or are they all broad and smooth?
 
-👉 Hint:
-
-* Peaks and valleys in the loading curve correspond to wavelength regions of particular chemical importance
-* The smooth shape is expected — it reflects the high correlation between adjacent wavelengths
+👉 Peaks and valleys in the loading curve correspond to wavelength regions of particular chemical relevance. The smooth shape reflects the high correlation between adjacent wavelengths — the same physical absorption feature spans many consecutive channels.
 
 ---
 
@@ -146,10 +172,10 @@ In GoPCA, set the **target column** to `Moisture#target`. Look at the **Scores P
 
 👉 Try switching the target column to `Starch#target`, then `Protein#target`, then `Oil#target`:
 
-* Which compositional property is most strongly captured by the first principal component?
+* Which compositional property is most strongly captured by PC1?
 * Are all four properties captured equally well, or do some require higher components?
 
-👉 Key insight: PCA captures **continuous variation**, not just clusters. When scores correlate with a chemical property, it means the spectral variation along that component is driven by that chemistry.
+👉 Key insight: PCA captures **continuous variation**, not clusters. When scores correlate with a chemical property, it means the spectral variation along that component is driven by that chemistry. This is the foundation of NIR calibration.
 
 ---
 
@@ -172,49 +198,7 @@ Outlier detection is one of the most practical uses of PCA in spectroscopy. A sa
 
 ---
 
-## Step 6: Preprocessing — SNV and scatter correction
-
-This is the **critical preprocessing step for spectral data**, and it differs fundamentally from the column-wise standardisation used for Iris and Wine.
-
-### Why spectra need scatter correction
-
-NIR spectra are affected by **multiplicative scatter effects**: differences in particle size, sample packing density, and optical path length shift the baseline and overall slope of a spectrum — even when the chemistry is identical. This is a physical measurement artefact, not a chemical signal.
-
-Without correcting for scatter, PCA components may be dominated by physical measurement differences rather than chemistry.
-
-### Apply SNV in GoPCA
-
-In GoPCA, find the **Row Preprocessing** selector and choose **SNV (Standard Normal Variate)**.
-
-SNV operates **per spectrum** (per row):
-
-* Subtract the mean of that spectrum's 700 absorbance values
-* Divide by its standard deviation
-
-The result is that each individual spectrum is centred and scaled to unit variance *within itself*, making spectra physically comparable across samples regardless of scatter differences.
-
-#### Compare results
-
-Run PCA both without SNV and with SNV applied:
-
-#### Questions:
-
-* Do the spectra in the spectral plot align more tightly after SNV?
-* Does the Scores Plot change — do the components shift or the spread of samples change?
-* Does the relationship between scores and compositional targets become clearer?
-
-### Combining with column-wise preprocessing
-
-SNV (row-wise) and mean centering (column-wise) are complementary and are often applied together. In GoPCA, you can combine:
-
-* **SNV** in the Row Preprocessing selector
-* **Mean Center Only** in the column-wise preprocessing selector
-
-👉 This is the standard workflow in NIR spectroscopy: remove scatter variation first (SNV), then mean-center each wavelength channel across samples. Try this combination and observe how it affects the scores.
-
----
-
-## Step 7: Push your understanding further
+## Step 6: Push your understanding further
 
 Try these explorations:
 
