@@ -3324,3 +3324,16 @@ This seminal paper introduces **Kernel Principal Component Analysis (Kernel PCA 
 
 ---
 
+#  Nonlinear Dimensionality Reduction: KPCA
+
+**reference:** David Thompson - 2014, https://www.youtube.com/watch?v=HbDHohXPLnU
+
+**Filename:** `David Thompson - 2014 - Nonlinear Dimensionality Reduction - KPCA.md`
+
+The lecture introduces nonlinear dimensionality reduction, focusing on Kernel PCA (KPCA) as an 
+extension of linear PCA. It explains that linear methods fail to capture curved data manifolds, 
+while KPCA maps data into a higher-dimensional space where linear techniques can model nonlinear 
+structure. Using the “kernel trick,” this mapping is done implicitly via dot products, avoiding 
+high computational cost. The talk outlines the KPCA procedure, typical kernel choices (e.g., Gaussian), 
+and emphasizes that nonlinear methods work best with large, well-sampled datasets but should be used 
+only when linear methods are insufficient.

@@ -2,17 +2,17 @@
 
 ## Background: Manifolds, geometry, and the limits of linear methods
 
-The Swiss Roll is a **synthetic benchmark** — a dataset constructed mathematically rather than measured in the real world. Synthetic datasets like this one play a special role in data science: they let us test what an algorithm *should* find, because we already know the true structure.
+The Swiss Roll is a **synthetic benchmark** — a dataset constructed mathematically rather than measured in the real world. Synthetic datasets play a special role in data science: they let us test what an algorithm *should* find, because we already know the true answer.
 
-The dataset consists of **1,000 samples** in three variables:
+The dataset consists of **1,000 samples** in three dimensions:
 
 * `X`, `Y`, `Z` — the 3D coordinates of each point
-* `color_category` — a label (A through H) encoding position along the roll
+* `color #target` — a continuous numeric value encoding position along the roll (hidden from the analysis, used only for colouring plots)
 
-The data is generated from two parameters:
+The data is generated from two underlying parameters:
 
-* *t* — controls position along the length of the roll (the "unrolled" coordinate)
-* *h* — a random height offset adding thickness
+* *t* — controls position along the length of the roll (the "unrolled" coordinate, ranging from the inner edge to the outer edge)
+* *h* — a random height offset, adding thickness to the sheet
 
 The 3D coordinates follow from:
 
@@ -20,217 +20,369 @@ The 3D coordinates follow from:
 * y = h
 * z = t · sin(t)
 
-The `color_category` column divides *t* into eight equal bins labelled A (inner edge) to H (outer edge). PCA does not use these labels during computation — they are used only for colouring the scores plot afterwards.
+The `color #target` column stores the raw value of *t* for each sample. In GoPCA, any column whose name ends with `#target` is excluded from the PCA analysis and hidden from the data table — it is available only as a colour variable in the scores plot. When you load the Swiss Roll dataset by clicking the button, this colour mapping is applied automatically.
 
-👉 This dataset is fundamentally different from Iris, Wine, and Corn:
-
-* It has only **3 variables** — no dimensionality problem in the usual sense
-* The challenge is entirely **geometric**: the 2D structure is *curved* in 3D space
-* The goal is not compression — it is **recovering the true flat 2D sheet** hidden inside the roll
-
-This type of structure is called a **manifold** — a surface that is locally flat but globally curved. A piece of paper is flat; roll it up and it becomes a manifold embedded in 3D. The Swiss Roll is exactly this: a flat 2D sheet wound into a helix.
+The true structure is a **flat 2D sheet wound into a helix in 3D space**. This type of structure is called a **manifold** — a surface that is locally flat but globally curved. A piece of paper lying on a table is flat; roll it up and it becomes a manifold embedded in 3D. The Swiss Roll is exactly this: a flat 2D sheet with coordinates *t* and *h*, curled into a spiral shape.
 
 The central question of this tutorial is:
 
 > Can PCA find and unroll this manifold — or does it fail?
 
-The answer depends on *which kind* of PCA you use.
+---
+
+## From Corn to Swiss Roll: when the problem is not dimensionality
+
+The previous datasets each introduced a new kind of challenge:
+
+| Dataset | Variables | Challenge |
+|---------|-----------|-----------|
+| Iris | 4 | Visualising 4 dimensions at once |
+| Wine | 13 | Mixed scales; 78 pairplot panels |
+| Corn NIR | 700 | 244,650 panels; extreme collinearity; physical scatter artefacts |
+| Swiss Roll | **3** | **None of the above** |
+
+The Swiss Roll has only **three variables**. There is no dimensionality problem — you can plot the data directly in 3D and see the entire structure at once. The variables are simple coordinates, measured in identical units, with no scale differences requiring correction.
+
+And yet linear PCA — which handled 700 highly correlated spectral variables with reasonable accuracy — fails completely on the Swiss Roll.
+
+This is the Swiss Roll's lesson. The failure of PCA is not always a matter of having too many variables. It is a matter of the **shape** of the data.
+
+For Corn, the dominant variation was a physical baseline artefact: a monotone tilt that PCA picked up instead of chemistry. The fix was SNV preprocessing — applied before PCA. For Swiss Roll, the problem is more fundamental. The structure you want to find is **curved in 3D space**, and no amount of preprocessing can fix that. A different kind of PCA is needed.
+
+> The Swiss Roll confronts you with a 3-variable dataset where you can see the problem with your own eyes — and forces you to think clearly about what "structure" means and how to find it.
 
 ---
 
-## Step 1: Load the data and visualise the raw structure
+## Why this matters: curved structure in real data
 
-Load the dataset by clicking the **Swiss Roll** sample dataset button.
+The Swiss Roll is synthetic — designed to make the geometric problem as clear as possible. But curved, nonlinear structure appears in genuine scientific and industrial data, and it poses exactly the same challenge.
 
-Do not set a target column yet — explore the raw geometry first.
+**Face recognition.** Images of a face change dramatically with pose and lighting, even though the underlying identity stays constant. The relationship between pixel values and the factors that matter — who the person is — is highly nonlinear. Linear PCA (historically called "Eigenfaces") groups faces by their dominant pixel variation, which is often lighting rather than identity. A kernel with an RBF or polynomial function can capture the nonlinear pixel correlations that define a specific person's features and is more robust to these confounding factors (Thompson, 2014).
 
-Below is a 3D visualisation of the data, coloured by position along the roll:
+**Image denoising.** When an image is corrupted by noise, the underlying clean image typically lives on a low-dimensional nonlinear manifold in pixel space. Linear PCA cannot cleanly separate noise from high-frequency image features because it treats the two as equally linear. Kernel PCA maps the noisy image into a feature space where the clean structure becomes more linearly accessible; projecting onto the leading kernel components and mapping back removes noise while better preserving fine detail (Mika et al., 1998).
 
-![Swiss Roll 3D](./swiss_roll_3d.png)
+**Industrial process monitoring.** Sensors on a manufacturing line record temperature, pressure, vibration, and flow simultaneously. The "normal" operating envelope is not a flat ellipse — it is often a curved cycle that shifts with production conditions. A linear PCA control chart imposes a flat boundary, which either misses real anomalies or triggers false alarms when the process follows its natural curve. Kernel PCA can model the nonlinear shape of normal operation; a deviation from the kernel manifold then flags a genuine problem more reliably (Botre et al., 2022).
 
-Study the figure carefully.
+**Genomics.** Gene expression profiles of cells undergoing differentiation trace curved trajectories in high-dimensional gene space. As a cell transitions from one type to another, the changes in individual gene activities combine in nonlinear ways — the trajectory bends rather than travelling in a straight line through expression space. Kernel PCA and related nonlinear methods can unfold these trajectories, separating stages of differentiation that appear as an overlapping cloud under linear projection.
+
+In each case, the underlying structure is real and low-dimensional — but it is curved. A linear projection squashes it; a kernel method can follow it.
+
+---
+
+## First look at the data
+
+The figure below shows two views of the same 1,000 data points, coloured by position along the roll (the `color #target` value):
+
+![Swiss Roll 3D visualisation](./swiss_roll_3d.png)
+
+**Left panel — 3D perspective**: the full shape in three dimensions. You can see the rolled sheet: a band of data wound into a spiral, with the height dimension (*Y*) giving it thickness. The colour gradient runs from dark purple (inner edge, low *t*) through orange to yellow (outer edge, high *t*) along the length of the roll.
+
+**Right panel — top-down view (X–Z plane)**: the same data with the height axis (*Y*) removed entirely. This reveals the concentric spiral structure directly. The inner and outer arms of the spiral — dark purple and yellow — run side by side, separated only by the gap between adjacent turns.
+
+Study both panels before running any analysis.
+
+### Reflect:
+
+* In the 3D view: trace the colour gradient from dark purple inward to yellow at the outer edge. Can you follow it continuously along the surface of the roll?
+* In the top-down view: the inner edge (dark purple) and outer edge (yellow) are physically close in the X–Z plane — they are separated by only the width of one gap between spiral turns. How far apart are they if you instead trace along the surface of the sheet?
+* If you could cut the roll along one edge and flatten it completely, what shape would you get?
+
+👉 A perfectly flattened Swiss Roll would be a rectangle: one axis is *t* (position along the roll, from low to high), the other is *h* (height *Y*). The top-down spiral view makes the core problem immediately visible: the inner and outer edges sit physically adjacent in 3D space, yet they are at opposite ends of the unrolled sheet. Any method that measures straight-line distances through 3D space will see them as neighbours — and fail to unroll the manifold.
+
+---
+
+## The challenge
+
+The Swiss Roll is a **2D structure embedded in 3D space**. The challenge is not compression — it is **unrolling**: finding the coordinates that describe position on the flat sheet, rather than position in 3D space.
+
+Linear PCA finds directions of maximum variance using straight-line projections through the data cloud. Your task in this tutorial is to understand:
+
+> When and why does linear PCA fail — and what does Kernel PCA do differently?
+
+---
+
+# Your task: Explore the Swiss Roll using GoPCA
+
+Work through the steps in order. The sequence matters: the first step deliberately demonstrates failure, so that the later steps make sense.
+
+---
+
+## Step 1: Load the data and see the 3D structure
+
+Load the Swiss Roll dataset into GoPCA by clicking the **Swiss Roll** button.
+
+The dataset loads automatically with the `color #target` column pre-selected as the colour variable. You do not need to set anything — GoPCA assigns this as the default colouring when the button is clicked.
+
+Do not run PCA yet. Familiarise yourself with what is shown in the data panel.
 
 #### Questions:
 
-* What overall shape do the data points form?
-* Can you see the "layers" of the roll — the colour gradient progressing from A (inner) to H (outer)?
-* If you could cut the roll along one edge and flatten it, what shape would it become?
+* How many rows (samples) and columns (variables) does the data table show?
+* Only three numeric columns appear — `X`, `Y`, and `Z`. Why is `color #target` not visible in the table?
+* Study the 3D figure above: what will "low colour values" (inner edge of the roll) and "high colour values" (outer edge) look like in the scores plot if PCA correctly unrolls the manifold?
 
-👉 Hint: a perfectly flattened Swiss Roll would be a rectangle, with one axis representing *t* (position along the roll) and the other representing *h* (height). The goal of dimensionality reduction here is to recover exactly that rectangle.
+👉 There are 1,000 samples and 3 numeric variables — a tiny dataset by modern standards. This makes the subsequent failure of linear PCA all the more striking. The `color #target` column is hidden because it is excluded from the analysis; it serves only as a visual guide to check whether the scores plot preserves the ordering along the roll.
 
 ---
 
-## Step 2: Run linear PCA and observe the result
+## Step 2: Run linear PCA and diagnose the failure
 
 Set:
 
-* **PCA Method** → SVD (or NIPALS)
-* **Target Column** → `color_category`
+* **PCA Method** → SVD
 
-Open the **Scores Plot (PC1 vs PC2)**.
+Leave the colour variable as `color #target` (pre-selected automatically).
+
+Click **Go PCA** and open the **Scores Plot (PC1 vs PC2)**.
 
 #### Questions:
 
-* Is the colour gradient ordered cleanly from A to H?
-* Are points that are close in the gradient (e.g. B and C) also close together in the scores plot?
-* Does the scores plot look like a flat unrolled sheet — or is the colour pattern mixed?
+* Does the colour gradient run smoothly from low values (inner edge) to high values (outer edge) across the plot?
+* Or are low and high colour values mixed together — samples from opposite ends of the roll landing on top of each other?
+* Does the scores plot resemble the flat rectangle you imagined — or is the colour pattern jumbled?
 
-👉 You will likely see that colours are **jumbled**. Points from opposite sides of the roll — far apart along the manifold — are projected on top of each other.
+👉 You will see that the colour is **mixed and not ordered**. The scores plot forms a horseshoe or arch shape — a classic artefact of applying a linear projection to curved data. You may notice a rough gradient running *around* the arch, but look more carefully: the inner edge (dark purple, low t) is bunched in the centre of the plot rather than at one end, and high colour values (cream/yellow) appear on one side of the arch directly adjacent to medium values (blue-purple) — groups that are at opposite ends of the unrolled sheet. The colour never forms the smooth end-to-end gradient you would see in a correctly unrolled rectangle. Samples that are close in straight-line 3D distance but far apart along the manifold surface end up side by side in the projection.
 
 Now open the **Scree Plot**.
 
 #### Questions:
 
-* How much variance is explained by PC1 and PC2 together?
-* Does the high explained variance mean the structure has been correctly recovered?
+* How much variance does PC1 explain?
+* Does a high explained variance mean the structure has been correctly recovered?
 
-👉 Key insight: linear PCA can explain a large fraction of the total variance and still fail to reveal the true structure. Variance is a property of the coordinate system — not of the manifold geometry.
+👉 **This is the key diagnostic moment.** Linear PCA may explain 60–80% of the total variance while completely failing to reveal the true structure. Variance is a property of the coordinate system — not of the manifold geometry. High explained variance is not the same as a good unrolling.
+
+Compare this to Corn: there, PC1 explained 99% of variance, but the loading curve (monotone, never crossing zero) revealed it was capturing baseline tilt, not chemistry. Here, a seemingly reasonable explained variance hides an equally fundamental failure — but it is harder to detect from the scree plot alone. The scores plot, coloured by category, is the diagnostic tool.
+
+> The Swiss Roll teaches a habit that applies to every dataset: always inspect the scores plot with a meaningful grouping variable before concluding that PCA has succeeded.
 
 ---
 
-## Step 3: Why does linear PCA fail, and what does Kernel PCA do differently?
+## Step 3: Why linear PCA fails — and how Kernel PCA works
 
-### Why linear PCA fails
+### The geometric problem
 
-Linear PCA finds directions of **maximum variance** using straight-line projections. For the Swiss Roll, the direction of greatest variance runs *across* the roll — from the inner to the outer layers — not *along* its surface.
+Linear PCA finds the direction of maximum variance using a **straight-line** projection. For the Swiss Roll, the direction of greatest straight-line variance runs diagonally through the roll — from one side of the spiral to the other — because the outer and inner edges span the largest physical extent in 3D.
 
-This means points that are far apart along the manifold (e.g. at opposite ends of the unrolled sheet) end up nearby in the linear PCA scores plot, because they are close in straight-line distance through 3D space. The rolled geometry is lost.
+Points that are far apart *along the surface of the manifold* (for example, at opposite ends of the unrolled sheet) may be physically close in 3D space, because the roll curves back towards itself. When linear PCA projects everything onto a flat plane, these points end up on top of each other. The roll has not been unrolled — it has been squashed.
 
-Analogy: draw a straight line across a rolled-up map. When you unroll the map, that line is no longer straight — it zig-zags across the sheet. Linear projection cannot follow a curved surface.
+**Analogy**: imagine a map of a mountain range, rolled into a tube. If you project the tube onto a flat surface from the side, nearby points on the map may be projected on top of each other. The only way to recover the true map is to unroll the tube — to follow the surface, not to cut through it.
 
-### How Kernel PCA works
+### The kernel trick
 
-Kernel PCA addresses this by replacing the linear projection with a **nonlinear one**, using two ideas:
+Kernel PCA addresses this by replacing the linear covariance structure with a **kernel function** that measures similarity between data points. The key idea, introduced by Schölkopf, Smola & Müller (1998), is to perform PCA not in the original 3D space but in a transformed feature space **F** — implicitly, without ever computing the transformation explicitly.
 
-**1. Mapping to a feature space.** Each data point x is implicitly mapped to a point Φ(x) in a higher-dimensional (possibly infinite-dimensional) feature space **F** via a nonlinear function Φ. Standard linear PCA is then performed in **F**. Directions that are *nonlinear* in the original 3D space can be *linear* in **F**.
-
-**2. The kernel trick.** Computing Φ(x) explicitly for a high-dimensional **F** would be expensive or impossible. The kernel trick avoids this entirely: instead of computing Φ(x), we compute only pairwise *similarities* between data points. The **RBF (Gaussian) kernel** used here is:
+The **RBF (Gaussian) kernel** used here is:
 
 > k(x, y) = exp(−γ · ‖x − y‖²)
 
-where ‖x − y‖² is the squared Euclidean distance between x and y in the original 3D space, and γ (gamma) is a free parameter controlling the shape of the kernel.
+where:
+* ‖x − y‖² is the squared Euclidean distance between points x and y in the original 3D space
+* γ (gamma) is a free parameter controlling how quickly the kernel falls off with distance
+* k(x, y) ranges from 0 (very dissimilar) to 1 (identical)
 
-All the information needed to perform PCA in **F** can be derived from this n × n matrix of pairwise kernel values — here a 1,000 × 1,000 matrix. The data is never explicitly mapped to the high-dimensional space.
+**Concrete example with γ = 0.01**: two points 3 units apart give k = exp(−0.01 · 9) ≈ 0.91 (very similar). Two points 10 units apart give k = exp(−0.01 · 100) ≈ 0.37 — this is the "1/e distance" at which similarity has fallen by a factor of e, roughly marking the edge of the kernel's effective neighbourhood. Two points 30 units apart give k = exp(−0.01 · 900) ≈ 0.000001 (negligible). The Swiss Roll coordinates span roughly 25 units in each dimension, so a kernel with γ = 0.01 gives meaningful similarity to points within about 10 units, while ignoring those that are much farther. With γ = 0.1 (ten times larger), the same points 10 units apart give k = exp(−10) ≈ 0.00005 — essentially zero. For the Swiss Roll, γ = 0.1 is far too local: almost every pair of non-neighbouring samples gets a kernel value near zero, the matrix is nearly empty, and PCA finds nothing.
 
-**What this means geometrically**: the RBF kernel assigns high similarity to points that are close in ordinary Euclidean distance and low similarity to points that are farther apart in 3D space. It does **not** explicitly use path length or geodesic distance along the manifold surface. Instead, with a suitable choice of γ, the kernel emphasises local Euclidean neighbourhoods. For data arranged like the Swiss Roll, those local neighbourhoods reflect the local structure of the manifold — and PCA in the resulting feature space can recover a representation related to the unrolled surface.
+### The kernel matrix
 
-👉 Kernel PCA was introduced by Schölkopf, Smola & Müller (1998). Its properties and applications to de-noising are developed further in Mika et al. (1998). See the References section.
+Instead of computing the p×p covariance matrix of the original variables (as linear PCA does), Kernel PCA computes an **n×n kernel matrix** **K**:
+
+> K_ij = k(x_i, x_j) = exp(−γ · ‖x_i − x_j‖²)
+
+For the Swiss Roll, this is a **1,000×1,000 matrix** where every entry encodes the RBF similarity between a pair of samples. The principal components are then extracted by eigendecomposing K (after centering), rather than the data covariance.
+
+This has two important consequences:
+
+**1. The number of components is not limited by the number of input variables.** Linear PCA on 3 variables can yield at most 3 components. Kernel PCA on 1,000 samples can yield up to 1,000 components, because the eigendecomposition is of the n×n kernel matrix. The implicit feature space **F** can be vastly larger — even infinite-dimensional for the RBF kernel.
+
+**2. There are no loadings in the original variable space.** In linear PCA, each principal component is a direction in the original p-dimensional space: you can say "PC1 is 0.52 of variable X, 0.38 of variable Y, ...". In Kernel PCA, the principal components are directions in **F**. A direction in **F** is a linear combination of the feature-space images of the training points — there is no way to map this back to a simple weight per original variable. This is why the **Loadings Plot**, **Biplot**, and **Circle of Correlations** are unavailable when Kernel PCA is selected in GoPCA: those plots require loadings in the original space, and no such thing exists.
+
+What *does* exist is the **scores** — the projections of each sample onto the kernel principal components. The scores plot remains available and is the primary output of Kernel PCA.
 
 ---
 
-## Step 4: Switch to Kernel PCA and unroll the manifold
+## Step 4: Apply Kernel PCA and compare to linear PCA
 
 Change:
 
 * **PCA Method** → Kernel PCA
 * **Kernel Type** → RBF
-* **Gamma** → 0.1
+* **Gamma** → 0.01
 
-Look at the **Scores Plot**.
-
-#### Questions:
-
-* Does the colour gradient now run more smoothly from A to H?
-* Can you see a more rectangular structure?
-* Does the scores plot resemble the unrolled sheet you imagined in Step 1?
-
-👉 This is the key moment: with the right kernel and a reasonable gamma, Kernel PCA recovers the flat 2D manifold that linear PCA could not find.
-
-**Preprocessing note**: when Kernel PCA is selected, GoPCA restricts the column-wise preprocessing options. Mean centering and standard scaling are unavailable — this is because Kernel PCA performs its own centering in kernel space. You may apply **Variance Scale** if your features have different units, or leave preprocessing as **None**.
-
-**Visualisation note**: several plots available for linear PCA are not available for Kernel PCA — specifically the **Loadings Plot**, **Biplot**, **3D Biplot**, **Circle of Correlations**, and **Diagnostic Plot**. These require loadings in the original variable space, which Kernel PCA does not produce (its components live in the high-dimensional feature space **F**). The **Scores Plot**, **Scree Plot**, and **Kernel Matrix Heatmap** remain available.
-
----
-
-## Step 5: Explore the effect of the gamma parameter
-
-The gamma parameter directly controls the shape of the RBF kernel:
-
-> k(x, y) = exp(−γ · ‖x − y‖²)
-
-* **Large γ** → the exponential decays quickly with distance → only very close points have high similarity → the kernel is *local*, sensitive to fine neighbourhood structure
-* **Small γ** → the exponential decays slowly → even distant points have similar kernel values → the kernel is *global*, insensitive to local geometry
-
-Try these values:
-
-* Gamma = 0.33
-* Gamma = 0.1
-* Gamma = 0.05
-* Gamma = 0.01
+Click **Go PCA** and open the **Scores Plot**.
 
 #### Questions:
 
-* Which gamma gives the cleanest gradient from A to H in the scores plot?
-* What happens when gamma is too large — can you see the structure fragmenting?
-* What happens when gamma is too small — does the unrolled sheet collapse or distort?
-* Is there a clear "best" gamma, or is the result relatively stable across a range?
+* Compare the colour pattern to the linear PCA result from Step 2. Is the colour gradient more organised?
+* Can you see that low colour values (inner edge) and high colour values (outer edge) are somewhat more separated than before?
+* Is the result a clean rectangular unrolling — or is there still some mixing?
 
-👉 Hint: the best gamma is the one that matches the characteristic length scale of the manifold — roughly the typical distance between neighbouring points along the surface. Too local and the kernel cannot see the manifold; too global and it cannot distinguish the layers.
+👉 The result is a **partial improvement**, not a perfect unrolling. The colour distribution is somewhat more organised than linear PCA — low values are less mixed with high values — but the scores plot does not show the clean flat rectangle you might expect.
+
+This is an honest and important result. The RBF kernel measures **straight-line Euclidean distance** in 3D. It cannot distinguish between two points that are *close in 3D space but on opposite layers of the spiral* and two points that are *close because they are genuine neighbours along the surface*. No choice of gamma fully resolves this: too small a gamma and adjacent layers are treated as similar (structure blurs together); too large a gamma and the kernel sees only immediate neighbours and the manifold fragments into disconnected islands.
+
+A **perfect unrolling** of the Swiss Roll requires methods that compute *geodesic* distance — the path length along the manifold surface rather than the straight-line shortcut through 3D space. Methods such as **Isomap** or **LLE (Locally Linear Embedding)** were designed for exactly this. Kernel PCA with an RBF kernel is a general nonlinear method; it reveals curved structure better than linear PCA, but cannot follow the manifold surface the way geodesic methods can.
+
+> This limitation is not a failure of Kernel PCA — it is a boundary condition. For many real datasets with milder curvature, Kernel PCA works very well. The Swiss Roll is a deliberately extreme case designed to test these limits.
+
+**Preprocessing note**: when Kernel PCA is selected, GoPCA restricts column-wise preprocessing to **Variance Scale** or **None**. Mean centering and standard scaling are unavailable because Kernel PCA performs its own centering in kernel space. For this dataset the variables are in the same units, so **None** is appropriate.
+
+**Available plots**: the **Loadings Plot**, **Biplot**, **3D Biplot**, **Circle of Correlations**, and **Diagnostic Plot** are all unavailable for Kernel PCA — for the reasons explained in Step 3. The **Scores Plot**, **Scree Plot**, and **Kernel Matrix Heatmap** remain available.
 
 ---
 
-## Step 6: Compare linear PCA and Kernel PCA directly
+## Step 5: Read the Kernel Matrix Heatmap
 
-Switch back and forth between:
+Open the **Kernel Matrix Heatmap**.
+
+This plot is unique to Kernel PCA — it has no equivalent in linear PCA. It shows the n×n kernel matrix **K** as a colour grid: each cell (i, j) is coloured according to the value of k(x_i, x_j) — the RBF similarity between sample i and sample j. Bright colours indicate high similarity (close in 3D space); dark colours indicate low similarity (far apart).
+
+#### Questions:
+
+* Do you see patches of high similarity clustered together in some regions of the grid?
+* Do any groups of samples appear clearly separated from the rest?
+* How does the overall brightness of the heatmap relate to gamma?
+
+Now change gamma to a much larger value — try **Gamma → 0.1** — and regenerate.
+
+#### Questions:
+
+* How does the heatmap change? Is the overall pattern brighter, darker, or more concentrated?
+* Can you now see a thin bright diagonal strip? What does that mean?
+* Does the scores plot still unroll the manifold correctly at this gamma?
+
+Now try a much smaller gamma — **Gamma → 0.0005** — and regenerate.
+
+#### Questions:
+
+* What does the heatmap look like now? Is there still meaningful variation between cells?
+* Does the scores plot still recover the smooth low-to-high ordering?
+
+👉 **Reading the Kernel Matrix Heatmap:**
+
+* **Large gamma** (e.g. 0.1): the kernel decays so quickly with distance that only each point's immediate neighbours have non-negligible similarity. The heatmap shows a bright diagonal — each sample is similar only to itself and perhaps one or two direct neighbours — with an otherwise dark background. The kernel is too *local* — it cannot see global manifold structure. The scores plot breaks down.
+
+* **Good gamma** (e.g. 0.01): the heatmap shows meaningful variation — some pairs are bright, some dark — reflecting the actual geometric relationships between samples. The kernel's effective neighbourhood radius matches the characteristic spacing of the data. The scores plot shows more colour organisation than linear PCA.
+
+* **Small gamma** (e.g. 0.0005): the kernel decays so slowly that nearly all pairs have similar (high) kernel values. The heatmap becomes uniformly bright, conveying little information. The kernel is too *global* — it treats the whole dataset as one undifferentiated cloud. The scores plot loses structure.
+
+> The Kernel Matrix Heatmap is your diagnostic for whether gamma is calibrated correctly: you want meaningful variation in the matrix — not uniform brightness, not a near-empty matrix with only a bright diagonal.
+
+---
+
+## Step 6: Explore the effect of the gamma parameter
+
+Return to gamma = 0.01 and work through the following values:
+
+* **Gamma = 0.05**
+* **Gamma = 0.02**
+* **Gamma = 0.01**
+* **Gamma = 0.005**
+* **Gamma = 0.001**
+
+For each value, check both the **Scores Plot** and the **Kernel Matrix Heatmap**.
+
+#### Questions:
+
+* Which gamma gives the cleanest smooth colour gradient in the scores plot?
+* At which gamma does the heatmap first show meaningful structure (neither uniformly bright nor nearly empty)?
+* Is the best gamma sharply defined, or is there a range of acceptable values?
+* Can you describe in words what happens to the heatmap as you move from too-large to too-small gamma?
+
+👉 The RBF kernel has a characteristic effective radius of 1/√γ. For γ = 0.01, this is 1/√0.01 = 10 units — roughly matching the spacing between moderately close points in the Swiss Roll, whose coordinates span about 25 units in each dimension. Choosing γ = 0.1 would shrink this to 3 units, which is too local: only the very closest neighbours retain non-zero similarity and the kernel matrix becomes nearly empty.
+
+In a real application you do not know this a priori. You would need to search over gamma values, for example using cross-validation with a downstream task, or by examining the kernel matrix and scores plot as you have done here.
+
+---
+
+## Step 7: Compare linear PCA and Kernel PCA directly
+
+With your best gamma selected, switch back and forth between:
 
 * **SVD** (linear PCA)
-* **Kernel PCA** with **Kernel Type** → RBF and your best gamma from Step 5
+* **Kernel PCA** with **Kernel Type → RBF** and your best gamma from Step 6
 
 Compare the **Scores Plot** each time.
 
 #### Questions:
 
 * Is the difference between the two methods subtle or dramatic?
-* Which method reveals the true 2D structure of the data?
-* Can you describe in your own words why one method succeeds and the other does not?
+* Which method reveals the 2D structure of the Swiss Roll?
+* Look at the scree plot for linear PCA — high explained variance, wrong structure. What does this tell you about using explained variance as the sole measure of PCA quality?
+* Can you describe in your own words, without jargon, why one method succeeds and the other does not?
 
-👉 This comparison is the central lesson of the Swiss Roll dataset. A method that captures nearly all of the total variance (linear PCA) can nonetheless completely fail to recover the meaningful structure — while a method that operates via a seemingly indirect route (kernel feature mapping) finds it immediately.
+👉 This comparison is the central lesson of the Swiss Roll. Both methods produce a horseshoe-shaped scores plot — but the colour organisation differs. Linear PCA mixes colour values almost randomly; Kernel PCA shows a more structured arrangement, with low and high values somewhat more separated, even though the result is not a clean rectangle.
 
----
+The improvement from linear to kernel PCA is real but partial. The Swiss Roll is a deliberately extreme test case: its layers sit close together in Euclidean space, which limits how much any Euclidean-distance-based kernel can achieve. For data with milder curvature — or with a clear local neighbourhood structure that the RBF kernel can exploit — the improvement is often more dramatic.
 
-## Step 7: Limitations and real-world relevance
-
-The Swiss Roll is a clean, noise-free example designed to make the comparison vivid. Real-world data is messier:
-
-* Noise blurs the manifold boundaries
-* The true dimensionality of the manifold is rarely known
-* The manifold structure may only exist locally, not globally
-
-Kernel PCA introduces challenges that linear PCA does not have:
-
-* You must choose a **kernel function** — RBF is most versatile, but polynomial and other kernels exist
-* You must tune **gamma** — without knowing the true structure, this requires cross-validation or domain knowledge
-* The kernel matrix scales as n × n in memory and computation — for very large datasets, this can be prohibitive
-
-In many real datasets — including Iris and Wine — linear PCA is entirely sufficient. However, nonlinear manifold structure appears in genuine scientific data:
-
-* **Single-cell RNA sequencing**: cells form curved trajectories through gene expression space as they differentiate
-* **Image datasets**: images of a rotating object lie on a curved manifold parameterised by rotation angle
-* **Sensor data**: physical processes with nonlinear dynamics produce data on curved manifolds in measurement space
-* **Spectroscopic data**: nonlinear mixture effects can create curved structure in spectral space
-
-In these cases, Kernel PCA or related methods (UMAP, t-SNE, Isomap) may reveal structure that linear PCA cannot.
+The deeper lesson is not "kernel PCA is always better" but: **the right method depends on the geometry of your data, and explained variance alone does not tell you whether the structure has been found**. Always inspect the scores plot with a meaningful colour variable.
 
 ---
 
-## Final Reflection
+## Step 8: Limitations and real-world relevance
 
-> You started with data that lives in 3D space — seemingly straightforward. Yet linear PCA, which handles hundred-variable spectral datasets successfully, completely failed to find the structure. Kernel PCA, by implicitly mapping the data into an infinite-dimensional space, recovered it with ease. The lesson is not that one method is always better: it is that the right method depends on the geometry of the data.
+The Swiss Roll is a clean, noise-free example designed to make the comparison vivid. Real-world data is messier.
 
-#### Questions:
+### Challenges of Kernel PCA in practice
 
-* What is the difference between a linear and a nonlinear manifold? Can you give an example of each from the datasets you have explored?
-* Why does Kernel PCA succeed where linear PCA fails on the Swiss Roll?
-* The RBF kernel has one key parameter, gamma. How would you choose gamma in a real-world problem where you do not know the true structure?
-* Kernel PCA's components live in an infinite-dimensional feature space and have no direct interpretation in the original variables. Is this a problem? What can you still learn from the scores plot alone?
-* Could you use Kernel PCA scores as input features for a predictive model? What might be the advantage or disadvantage compared to using the raw variables?
+* **Kernel choice**: the RBF kernel is the most versatile, but polynomial, sigmoid, and other kernels exist. There is no universal best choice.
+* **Gamma tuning**: without knowing the true structure, gamma must be found by cross-validation, by examining the kernel matrix, or by domain knowledge about typical inter-sample distances.
+* **Computational cost**: the kernel matrix is n×n — for 1,000 samples it is 1,000,000 entries. For 50,000 samples it would be 2.5 billion entries. Standard Kernel PCA becomes impractical for very large datasets without approximation methods.
+* **No loadings**: you cannot directly interpret which original variables drive each component. The scores are interpretable; the components themselves are not.
+* **Choosing the right number of components**: the Scree Plot is still available, but the eigenvalue decay pattern in kernel space is different from linear PCA and may not provide as clear an elbow.
+
+### When Kernel PCA is the right tool
+
+Real-world examples of curved manifold structure were introduced earlier in this tutorial. As a general guide, Kernel PCA tends to work well when (Thompson, 2014):
+
+* **You have a lot of data**: enough samples to fill the manifold without large gaps or isolated outliers
+* **The intrinsic dimensionality is low**: the data lives on a surface with only a few degrees of freedom
+* **The data is evenly distributed on the manifold**: sparse or clustered regions make nonlinear methods less reliable
+
+If these conditions are not met, a simpler linear method will often give better and more stable results. As Thompson (2014) puts it: *"I would always start with linear dimensionality reduction strategies to see if they're sufficient for your task and only pull out nonlinear dimensionality reduction when it turns out to be absolutely necessary."*
+
+For data with genuine nonlinear structure, Kernel PCA — or related geodesic methods such as Isomap, LLE, UMAP, or t-SNE — can reveal structure that linear PCA cannot.
+
+> The Swiss Roll is deliberately simple, so the failure of linear PCA is unambiguous. In real data, the choice between linear and nonlinear methods requires domain knowledge, exploratory visualisation, and exactly the kind of diagnostic comparison you practised in Step 7.
+
+---
+
+# What you should take away
+
+After completing this exploration, you should be able to:
+
+* Explain why linear PCA fails on the Swiss Roll — not because there are too many variables, but because the structure is curved
+* Describe the **kernel trick**: replacing the data covariance matrix with an n×n kernel matrix of pairwise similarities, enabling PCA in a high-dimensional feature space without computing the transformation explicitly
+* Interpret the **RBF kernel parameter gamma**: large gamma → local kernel (fragmented, near-empty matrix); small gamma → global kernel (all points similar, structure blurs); a good gamma matches the characteristic length scale of the data
+* Read the **Kernel Matrix Heatmap** as a diagnostic for whether gamma is well-calibrated
+* Explain why **loadings do not exist for Kernel PCA** (components live in the feature space, not in the original variable space) and what this means for interpretation
+* Understand the **limitation of Euclidean-distance kernels** on the Swiss Roll: RBF kernel PCA improves on linear PCA but cannot perfectly unroll the manifold — perfect unrolling requires geodesic methods such as Isomap or LLE
+* Recognise the **computational limitations** of kernel methods — the n×n kernel matrix becomes expensive for large datasets
+
+---
+
+## Final reflection
+
+> You started with just 3 variables — a dataset you could plot directly and see completely. Yet linear PCA, which successfully compressed 700 correlated spectral variables into meaningful components, failed to extract the 2D structure from these 3 coordinates. Kernel PCA succeeded by asking a different question: not "in which direction does the most variance lie?" but "which samples are similar to which other samples, at what length scale?"
+
+Think about these questions:
+
+* What is the difference between a linear manifold (like the structure in Iris or Wine) and a nonlinear manifold (like the Swiss Roll)? Can you give an example of each from the datasets you have explored?
+* For linear PCA, the scree plot and loadings together told you whether the analysis had found something meaningful. For Kernel PCA, what tools play those roles?
+* The RBF kernel has no way to measure *path length along the manifold* — it only knows Euclidean distance in 3D. Why does it still show some improvement over linear PCA on the Swiss Roll, even though it cannot fully unroll it?
+* Kernel PCA's components cannot be expressed as loadings on the original variables. Is this a fundamental limitation, or can you still draw useful conclusions from a kernel PCA analysis?
+* Could you use Kernel PCA scores as input features for a predictive model — for example, a regressor predicting the `color #target` value of a new sample? What might be the advantage over using the raw X, Y, Z coordinates directly?
 
 ---
 
 ## References
 
+Schölkopf, B., Smola, A., & Müller, K.-R. (1997). Kernel principal component analysis. In W. Gerstner, A. Germond, M. Hasler, & J.-D. Nicoud (Eds.), *Artificial Neural Networks — ICANN '97*, Lecture Notes in Computer Science, Vol. 1327, pp. 583–588. Springer.
+
 Schölkopf, B., Smola, A., & Müller, K.-R. (1998). Nonlinear component analysis as a kernel eigenvalue problem. *Neural Computation*, 10(5), 1299–1319.
 
 Mika, S., Schölkopf, B., Smola, A., Müller, K.-R., Scholz, M., & Rätsch, G. (1998). Kernel PCA and de-noising in feature spaces. In M. Kearns, S. Solla, & D. Cohn (Eds.), *Advances in Neural Information Processing Systems* (Vol. 11). MIT Press.
 
-Marsland, S. (2014). *Machine Learning: An Algorithmic Perspective* (2nd ed.). CRC Press.
+Botre, C., Bhonsle, D., Nemade, C., & Wagh, S. (2022). Comparing the performance of Kernel PCA Mix Chart with PCA Mix Chart for monitoring mixed quality characteristics. *PLOS ONE*, 17(9), e0274265. https://doi.org/10.1371/journal.pone.0274265
+
+Thompson, D. (2014). *Nonlinear dimensionality reduction: Kernel PCA*. JPL-Caltech Virtual Summer School on Big Data Analytics. https://www.youtube.com/watch?v=HbDHohXPLnU
