@@ -143,21 +143,51 @@ This is different from the scale problem we fixed with standardisation:
 | Problem | What it is | Fix |
 |---|---|---|
 | **Scale imbalance** | Different *variables* have very different variance | Standard scaling (column-wise) |
-| **Outlier domination** | A few extreme *observations* dominate the components | Zoom in, or robust preprocessing |
+| **Outlier domination** | A few extreme *observations* dominate the components | Identify with Diagnostic Plot, then remove with lasso |
 
-Standard scaling fixed the first problem. The second problem — the four artifact rows — remains. To see the structure in the normal data, **zoom in to the main cluster** near the origin.
+### Identify outliers with the Diagnostic Plot
 
-### Zoom in to the main cluster
+Open the **Diagnostic Plot**. This plot has two axes:
 
-Use the Plotly zoom tool (click and drag a selection box around the tight cluster near the origin) to focus on the normal time points.
+* **Horizontal axis — Hotelling's T²**: how far an observation is from the centroid *within* the PCA model space. High T² means an unusual combination of scores — the observation is far from the typical pattern, but the model does project it somewhere.
+* **Vertical axis — Q-statistic (Residual Sum of Squares)**: how well the PCA model *fits* the observation. High Q means the observation has large residuals — it does not sit close to the subspace spanned by the retained components.
+
+The two dashed red lines divide the plot into four regions:
+
+| Region | T² | Q | Interpretation |
+|---|---|---|---|
+| Bottom-left | Low | Low | Regular observations — well-fitted and not extreme |
+| Top-left | Low | High | **Orthogonal outliers** — unusual structure the model cannot represent |
+| Bottom-right | High | Low | **Good leverage** — extreme but on-model; influential on the components |
+| Top-right | High | High | **Bad outliers** — both extreme and poorly fitted; most problematic |
 
 #### Questions:
 
-* After zooming in, do `open` and `closed` samples now show any separation?
-* Is the separation clear, or do the two states overlap considerably?
-* Which direction (PC1 or PC2) gives the better separation, if any?
+* Where does the main cluster of EEG time points appear — which quadrant?
+* Can you identify one or more points in the top-right (Bad Outliers) region? What time labels do they carry?
+* Are any extreme points in the bottom-right (Good Leverage) region? What does that tell you about those particular artifact rows?
 
-👉 Standard PCA may show some partial separation between eye states — there is a well-known alpha-wave suppression effect when the eyes open. But the separation is typically incomplete at this stage, because PCA is working only with the spatial correlations between channels at each instant, not with the temporal dynamics. The main lesson from this step is that even "cleaned up" PCA on EEG data is limited — and the artifact rows reveal exactly how sensitive PCA is to a handful of extreme observations.
+👉 The artifact time points should appear as extreme outliers — either Bad Outliers (high T² and high Q) or high-leverage points — while the normal ~14,976 time points form a dense cluster inside both limits in the bottom-left. The Diagnostic Plot makes this structure immediately visible, whereas in the Scores Plot it required zooming.
+
+### Remove outliers with the lasso tool
+
+GoPCA lets you select and exclude observations directly from any plot using the **lasso selection tool** in the Plotly toolbar (the lasso icon at the top-right of the plot).
+
+1. Click the **lasso icon** in the plot toolbar
+2. Draw a freehand selection around the extreme outlier points — either in the Scores Plot or in the Diagnostic Plot
+3. The selected points will be highlighted; GoPCA will offer to **exclude** them from the analysis
+4. Click **Go PCA** again to re-run without the selected observations
+
+Repeat until all artifact time points are excluded. You should be left with the ~14,976 normal time points.
+
+#### Questions (after removing outliers and re-running PCA):
+
+* How does the Scores Plot change when the artifact points are removed?
+* Do `open` and `closed` samples now show any visible separation?
+* Is the separation clear, or do the two states still overlap considerably?
+* How does the Diagnostic Plot look now — are all remaining points inside the control limits?
+
+👉 Standard PCA may show some partial separation between eye states even on clean data — there is a well-known alpha-wave suppression effect when the eyes open. But the separation is typically incomplete, because PCA is working only with the spatial correlations between channels at each instant, not with the temporal dynamics. The main lesson from this step is that outlier detection and removal is a standard part of exploratory data analysis — and the Diagnostic Plot is the right tool for the job.
 
 ---
 
