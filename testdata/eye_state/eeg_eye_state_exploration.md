@@ -25,7 +25,23 @@ In the original UCI dataset, eye state is encoded numerically: **0 = eyes open, 
 
 The original research motivation was classification: can the EEG signal alone predict whether the eyes are open or closed? Here, we approach the same data using **Principal Component Analysis (PCA)** — an *unsupervised* method that ignores the labels entirely. The question becomes: what structure does PCA find in the EEG channels on its own, and does that structure relate to eye state?
 
-👉 This dataset is fundamentally different from Iris, Wine, Corn, and Swiss Roll:
+---
+
+## From Swiss Roll to EEG Eye State: when the problem is time
+
+In the previous tutorial, the Swiss Roll showed us that the shape of the data matters — a linearly inseparable structure required a different PCA method. Here, the challenge is different: the structure is not about geometry, it is about **time**.
+
+| | Swiss Roll | EEG Eye State |
+|---|---|---|
+| **What each row is** | One independent data point | One snapshot of an ongoing signal |
+| **What PCA sees first** | Geometric shape of the data cloud | Spatial correlations between 14 channels |
+| **What PCA misses** | Curved manifold structure | Temporal dynamics and oscillations |
+| **The solution** | Kernel PCA — work in a higher-dimensional feature space | Temporal PCA — give PCA a memory by embedding time |
+| **Why standard PCA fails** | Data lies on a curved surface, not a flat subspace | Shuffling the rows gives *identical* PCA results |
+
+> **The key analogy**: Kernel PCA transforms *space*. Temporal PCA transforms *time*. Both use the same SVD algorithm on a larger, restructured matrix — but the restructuring reveals very different kinds of hidden structure.
+
+This dataset is fundamentally different from Iris, Wine, Corn, and Swiss Roll:
 
 * Each row is **one time point**, not one independent sample — neighbouring rows are consecutive observations separated by 7.8 ms
 * The 14 EEG channels are measured **simultaneously** and are correlated in space and in time
@@ -57,12 +73,13 @@ This tutorial therefore has two parts:
 
 Click the **EEG Eye State** sample dataset button to load the data.
 
-GoPCA will load the dataset automatically. The `time` column is used as row identifiers and is excluded from the PCA variables. The 14 EEG channel columns are the input variables. The `eye_state` column contains text labels (`open`/`closed`) and is automatically recognised as a categorical column.
+GoPCA will load the dataset automatically. The `time` column is used as row identifiers and is excluded from the PCA variables. The 14 EEG channel columns are the input variables. The `eye_state` column contains text labels (`open`/`closed`) and is automatically recognised as a categorical column — no manual configuration is needed for this.
 
-In the PCA configuration panel:
+In the PCA configuration panel, set:
 
-* **Target Column** → `eye_state`
 * **PCA Method** → SVD
+
+The `eye_state` column will be available for colouring your plots. It is not used in the analysis itself — that is the whole point of unsupervised PCA.
 
 #### Questions:
 
@@ -133,16 +150,20 @@ x(t), x(t+1), x(t+2), x(t+3)
 
 For all 14 channels simultaneously (MSSA), the window captures all channels over *L* consecutive time steps. Each window is represented as a row in the **trajectory matrix** — a Hankel-block-Hankel structure where each channel contributes a Hankel block (Golyandina et al., 2015). The trajectory matrix has:
 
-* One row per window position (approximately *N − L + 1* rows, where *N* is the total number of time points)
+* One row per window position (approximately *T* − *L* + 1 rows, where *T* is the total number of time points)
 * One column per channel per lag: 14 channels × *L* lags = 14*L* columns
+
+With *L* = 32 lags and *T* = 14,980 time points, the trajectory matrix has approximately 14,949 rows and 448 columns. SVD is then applied to this larger matrix — the same algorithm as standard PCA, but on a matrix that encodes temporal context in its structure.
 
 ### The decomposition step
 
-SVD is then applied to this trajectory matrix. The resulting components are no longer simple spatial patterns — they are **spatiotemporal patterns**, capturing which channels co-vary and *how that co-variation evolves over the window*.
+SVD applied to the trajectory matrix produces components that are no longer simple spatial patterns — they are **spatiotemporal patterns**, capturing which channels co-vary and *how that co-variation evolves over the window*.
+
+GoPCA uses the same preprocessing logic here as for standard PCA, but applies it to the **original time series** before building the trajectory matrix. Applying preprocessing column-wise to the trajectory matrix would destroy the temporal structure by treating each lag as an independent variable.
 
 ### The four SSA steps
 
-The full SSA algorithm consists of four steps (Golyandina et al., 2015):
+The full SSA algorithm consists of four steps (Golyandina, 2020):
 
 1. **Embedding** — construct the trajectory (Hankel) matrix using sliding windows
 2. **Decomposition** — apply SVD to decompose the trajectory matrix
@@ -157,15 +178,15 @@ The window length *L* determines what temporal scale the analysis can resolve.
 
 For this EEG dataset (128 Hz sampling rate):
 
-| Lags | Approx. duration | Notes |
-|-----:|-----------------:|-------|
-|    8 |          0.06 s  | very short memory — fast beta activity |
-|   16 |          0.13 s  | short temporal context |
-|   32 |          0.25 s  | **recommended default** — 2–3 alpha cycles |
-|   64 |          0.50 s  | stronger temporal context, larger matrix |
-|  128 |          1.00 s  | long window, may over-smooth |
+| Lags | Duration | Notes |
+|-----:|--------:|-------|
+|    8 |    63 ms | Very short memory — mainly adjacent-sample correlations |
+|   16 |   125 ms | Short context — less than one full alpha cycle |
+|   32 |   250 ms | **Recommended default** — covers 2–3 alpha cycles (8–12 Hz) |
+|   64 |   500 ms | Stronger temporal context, larger trajectory matrix |
+|  128 |  1000 ms | Long window — picks up slower rhythms, hard to interpret |
 
-A general guideline (Golyandina, 2020): for oscillatory components, *L* should be at least as long as one full period of the oscillation of interest. Eye closure is associated with alpha-band activity at roughly 8–12 Hz (period 80–125 ms). A window of 32 samples (250 ms) covers 2–3 alpha cycles — enough to make these rhythmic patterns visible without making the trajectory matrix unnecessarily large.
+A general guideline (Golyandina, 2020): for oscillatory components, *L* should cover at least one to two full periods of the oscillation of interest. Eye closure is associated with alpha-band activity at roughly 8–12 Hz (period 83–125 ms). A window of 32 samples (250 ms) covers 2–3 alpha cycles — enough to make these rhythmic patterns visible without making the trajectory matrix unnecessarily large.
 
 The key trade-off to keep in mind:
 
@@ -179,13 +200,11 @@ Change the **PCA Method** to **Temporal PCA**.
 
 A new option appears: **Number of Time Lags**. Set it to **32**.
 
-Keep:
-
-* **Target Column** → `eye_state`
+Keep the target column as `eye_state` for colouring.
 
 Click **Go PCA**.
 
-GoPCA builds the trajectory matrix internally from the 14 EEG channels: each row of the original data is expanded into a window of 32 consecutive time steps, producing a trajectory matrix with 14 × 32 = 448 columns. SVD is then applied to this matrix. The result has approximately *N* − *L* + 1 = 14,949 score rows — one per window position.
+GoPCA builds the trajectory matrix internally from the 14 EEG channels: each row of the original data is expanded into a window of 32 consecutive time steps, producing a trajectory matrix with 14 × 32 = 448 columns. SVD is then applied to this matrix. The result has approximately *T* − *L* + 1 = 14,949 score rows — one per window position.
 
 Open the **Scores Plot** and colour by `eye_state`.
 
@@ -195,7 +214,7 @@ Open the **Scores Plot** and colour by `eye_state`.
 * Do you see tighter clusters or a clearer gradient?
 * Are there time regions where the label switches — can you see transitions in the scores?
 
-👉 Temporal PCA gives each observation access to a 16-step context window (125 ms). The components can now represent oscillatory and dynamic patterns, not just instantaneous spatial correlations.
+👉 Temporal PCA gives each observation a 32-step context window (250 ms). The components can now represent oscillatory and dynamic patterns, not just instantaneous spatial correlations.
 
 **Note on available plots**: some plots available for SVD PCA are not available for Temporal PCA — specifically the **Loadings Plot**, **Biplot**, **3D Biplot**, **Circle of Correlations**, and **Diagnostic Plot**. These require loadings in the original variable space, which Temporal PCA does not produce directly (loadings live in the higher-dimensional trajectory space). Instead, two dedicated plots are available: **Temporal Loadings** and **Variable Importance**.
 
@@ -205,51 +224,81 @@ Open the **Scores Plot** and colour by `eye_state`.
 
 Open the **Temporal Loadings** plot.
 
-This plot is unique to Temporal PCA. Unlike the standard Loadings Plot — which shows one point per variable — the Temporal Loadings Plot shows how each component's loading evolves **across time lags** for each channel.
+This plot is unique to Temporal PCA. It shows the **temporal eigenvectors** — the characteristic temporal shape of each principal component across the 32 lag positions.
 
-For each principal component, you will see curves for each of the 14 EEG channels, plotted across lag positions 0 to *L*−1.
+Each curve in the plot corresponds to one principal component (PC1, PC2, PC3, ...). The horizontal axis is the lag index from 0 to *L*−1, and the vertical axis is the eigenvector value at that lag position.
+
+> **Important**: these curves are *not* one line per EEG channel. They are one line per component, showing how the temporal pattern of that component unfolds across the window.
+
+Where do these curves come from? When SVD is applied to the trajectory matrix, it produces a U matrix (left singular vectors) of shape [(*T*−*L*+1) × rank]. GoPCA extracts the first *L* rows of U — one entry for each lag position — and displays them as curves. A curve that oscillates smoothly across the lag axis indicates a periodic component; a flat or monotone curve indicates a slow trend or DC shift (Broomhead & King, 1986).
 
 #### Questions:
 
-* Does the loading curve for any channel show a smooth oscillatory shape — rising and falling as the lag increases?
-* Do different channels show similar loading curves, or very different ones?
-* Which channels have the largest amplitude loadings across all lags?
+* Does the loading curve for PC1 show a flat, monotone shape — or does it oscillate?
+* Do any of the first few components show clearly sinusoidal curves?
+* Do two adjacent components (e.g., PC2 and PC3) show similar oscillatory shapes that appear to be shifted by roughly a quarter cycle (90°)?
 
-👉 Key insight: a sinusoidal shape in the temporal loading curve means that component captures an oscillation at a particular frequency. A smooth, flat loading means the component captures a slow drift or mean level. The Temporal Loadings plot is the SSA equivalent of a spectral decomposition — each component corresponds to a structured temporal pattern rather than a static spatial direction.
+👉 Key insight: when two adjacent components both show sinusoidal Temporal Loadings curves that are approximately 90° out of phase with each other, they form a **paired oscillatory mode** — the subject of the next step.
 
 ---
 
-## Step 7: Examine the Scree Plot and Variable Importance
+## Step 7: Paired components and the Scree Plot
 
-Open the **Scree Plot**.
+Open the **Scree Plot** alongside the Temporal Loadings plot.
+
+### Oscillatory modes come in pairs
+
+A fundamental property of SSA is that **oscillatory signals produce pairs of components** (Vautard & Ghil, 1989). When a periodic signal is present in the data, SSA extracts two components that together represent it: one resembling a sine wave and one resembling a cosine wave. They are in quadrature — offset by exactly one quarter of the oscillation period.
+
+You can identify these pairs in two ways:
+
+1. **In the Scree Plot**: a pair of components will have nearly identical explained variance — two bars of the same height sitting side by side
+2. **In the Temporal Loadings Plot**: the two components' curves will be similar sinusoids shifted by approximately 90° (a quarter-cycle phase offset)
+
+Neither component alone gives the full picture. Together, they encode one complete oscillation at a specific frequency.
+
+For EEG, you might expect to find:
+* A dominant slow component (PC1) capturing the eye-state related shift — a slow modulation rather than a fast oscillation
+* One or more oscillatory pairs (e.g., PC2 + PC3) corresponding to alpha-band activity (~10 Hz)
 
 #### Questions:
 
 * How many components are needed to explain the bulk of the variance?
-* Does the Temporal PCA scree plot look different from the SVD scree plot for the same data?
+* Do you see any adjacent pairs of components with nearly equal explained variance in the Scree Plot?
+* In the Temporal Loadings Plot, do those same paired components show 90°-shifted sinusoidal curves?
+* How many complete oscillation periods fit within the 32-lag window for a 10 Hz signal at 128 Hz?
 
-Now open the **Variable Importance** plot.
+👉 Quick calculation: a 10 Hz alpha wave has a period of about 12.8 samples at 128 Hz. Over 32 lags you would see approximately 2.5 complete cycles — enough for the sinusoidal pattern to be clearly visible in the Temporal Loadings curve.
 
-This plot shows the aggregated contribution of each original EEG channel across all time lags, for each temporal principal component. Contributions are computed using root mean square (RMS) aggregation across lags.
+---
+
+## Step 8: Examine the Variable Importance plot
+
+Open the **Variable Importance** plot.
+
+This plot shows the aggregated contribution of each original EEG channel across all time lags, for each temporal principal component. Contributions are computed using root mean square (RMS) aggregation across lags: for each (channel, component) pair, GoPCA computes the square root of the mean squared loading across all *L* lag positions. This collapses the lag dimension and tells you which *channels* drive each component, regardless of when within the window.
+
+The result is a heatmap: rows are principal components, columns are the 14 EEG channels. Brighter cells mean the channel contributes strongly to that component.
 
 #### Questions:
 
 * Which EEG channels contribute most strongly to the first temporal component?
 * Do occipital electrodes (`O1`, `O2`) appear more or less important here than in standard PCA?
 * Is the pattern of variable importance similar across components, or does each component emphasise different channels?
+* Does the spatial pattern of important channels make physiological sense — for example, are occipital channels highlighted for alpha-wave related components?
 
-👉 Variable Importance removes the lag dimension and gives a compact answer to: which *channels* (regardless of timing within the window) drive each component? Compare this to the raw loadings from standard SVD PCA — you may find the ranking changes significantly.
+👉 Variable Importance answers the question standard Temporal Loadings cannot directly answer: *which channels* drive each component. The Temporal Loadings plot tells you *what temporal shape* the component has; Variable Importance tells you *where on the scalp* it originates.
 
 ---
 
-## Step 8: Experiment with the Number of Time Lags
+## Step 9: Experiment with the Number of Time Lags
 
 Change the **Number of Time Lags** and observe how the results shift. Try these values in order:
 
-* **8 lags** → 0.06 s — very short memory, dominated by adjacent-sample correlations
-* **16 lags** → 0.13 s — short temporal context, less than one full alpha cycle
-* **32 lags** → 0.25 s — recommended default, 2–3 alpha cycles
-* **64 lags** → 0.50 s — stronger temporal context, trajectory matrix grows larger
+* **8 lags** → 63 ms — very short memory, dominated by adjacent-sample correlations
+* **16 lags** → 125 ms — short temporal context, less than one full alpha cycle
+* **32 lags** → 250 ms — recommended default, 2–3 alpha cycles
+* **64 lags** → 500 ms — stronger temporal context, trajectory matrix grows larger
 
 After each change, click **Go PCA** and examine the **Scores Plot**, **Temporal Loadings**, and **Scree Plot**.
 
@@ -259,6 +308,7 @@ After each change, click **Go PCA** and examine the **Scores Plot**, **Temporal 
 * Do the Temporal Loading curves become smoother or more oscillatory with longer windows?
 * Does the number of components needed to explain most variance increase or decrease?
 * Is there a window length where the eye-state separation appears clearest?
+* At 16 lags (125 ms), is one full alpha cycle visible in the Temporal Loadings plot — or is the window too short?
 * At what point does the trajectory matrix become so wide that interpretation becomes difficult?
 
 👉 The key trade-off: a short window cannot see a full oscillation cycle, so components reflect adjacent-sample correlations rather than meaningful rhythms. A very long window adds more temporal context, but makes the trajectory matrix much wider and the components harder to interpret. Too much memory can obscure structure rather than reveal it.
@@ -272,32 +322,41 @@ After this exploration, you should be able to:
 * Explain why EEG data is a multivariate time series and why rows are not independent
 * Understand why standard PCA ignores temporal order — and what this means in practice
 * Describe the SSA embedding step: sliding windows, trajectory matrix, window length *L*
-* Interpret **Temporal Loadings** as spatiotemporal patterns across channels and lags
+* Interpret the **Temporal Loadings** plot: one curve per component, showing the temporal eigenvector shape across lag positions — not one curve per channel
+* Recognise **paired oscillatory components** in the Scree Plot (equal variance) and Temporal Loadings Plot (90°-phase-shifted sinusoids)
 * Use **Variable Importance** to identify which channels drive each temporal component
 * Make an informed choice of window length based on the sampling rate and the dynamics of interest
 
 You should also recognise the trade-off:
 
 * Standard SVD PCA is simple, fast, and easy to interpret — each loading is one channel
-* Temporal PCA reveals rhythmic and dynamic structure invisible to standard PCA, but the trajectory matrix is much larger and the components require the Temporal Loadings plot to interpret
+* Temporal PCA reveals rhythmic and dynamic structure invisible to standard PCA, but the trajectory matrix is much larger and the components require the Temporal Loadings plot and Variable Importance to interpret together
 
 ---
 
 ## Final Reflection
 
 > Standard PCA treats the EEG table as a collection of independent snapshots. Temporal PCA, by embedding the data into sliding windows, gives PCA access to *sequences* — and the resulting components can represent oscillations and temporal dynamics rather than just spatial correlations. The same SVD algorithm is used in both cases; the embedding step is what makes the difference.
+>
+> In SSA, oscillatory signals leave a characteristic fingerprint: a pair of components with equal singular values, 90°-phase-shifted temporal eigenvectors, and the same spatial pattern of channel importance. Learning to recognise this fingerprint is the core skill of temporal dimensionality reduction.
 
 #### Questions:
 
 * Why does shuffling the rows of an EEG table leave standard PCA unchanged, but break Temporal PCA?
 * The SSA algorithm has four steps: embedding, decomposition, grouping, and reconstruction. GoPCA implements the first two. What would you gain from the grouping and reconstruction steps — and what tasks would those enable?
-* A window length of 16 at 128 Hz covers 125 ms. Alpha oscillations have a period of roughly 100 ms. What window length would you choose if you were primarily interested in theta band activity (4–8 Hz, period 125–250 ms)?
+* A window length of 32 at 128 Hz covers 250 ms. Alpha oscillations have a period of roughly 100 ms. What window length would you choose if you were primarily interested in theta band activity (4–8 Hz, period 125–250 ms)?
 * Could the Temporal PCA scores be used as input features to a classifier predicting `eye_state`? What might be the advantage compared to using the raw EEG values?
-* How does the trajectory matrix interpretation differ between a single-channel SSA and a 14-channel MSSA?
+* If you found a paired component (PC2 + PC3) corresponding to alpha oscillations, and PC1 captured the eye-state shift, which components would you group together before reconstruction in a full SSA analysis?
 
 ---
 
 ## References
+
+Broomhead, D. S., & King, G. P. (1986). Extracting qualitative dynamics from experimental data. *Physica D: Nonlinear Phenomena*, 20(2–3), 217–236. https://doi.org/10.1016/0167-2789(86)90031-X
+
+Vautard, R., & Ghil, M. (1989). Singular spectrum analysis in nonlinear dynamics, with applications to paleoclimatic time series. *Physica D: Nonlinear Phenomena*, 35(3), 395–424. https://doi.org/10.1016/0167-2789(89)90077-8
+
+Ghil, M., Allen, M. R., Dettinger, M. D., Ide, K., Kondrashov, D., Mann, M. E., Robertson, A. W., Saunders, A., Tian, Y., Varadi, F., & Yiou, P. (2002). Advanced spectral methods for climatic time series. *Reviews of Geophysics*, 40(1), 1003. https://doi.org/10.1029/2000RG000092
 
 Golyandina, N., Korobeynikov, A., Shlemov, A., & Usevich, K. (2015). Multivariate and 2D extensions of singular spectrum analysis with the Rssa package. *Journal of Statistical Software*, 67(2), 1–78. https://doi.org/10.18637/jss.v067.i02
 
