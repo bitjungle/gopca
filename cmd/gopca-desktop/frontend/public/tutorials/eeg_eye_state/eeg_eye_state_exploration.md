@@ -187,7 +187,12 @@ Repeat until all artifact time points are excluded. You should be left with the 
 * Is the separation clear, or do the two states still overlap considerably?
 * How does the Diagnostic Plot look now — are all remaining points inside the control limits?
 
-👉 Standard PCA may show some partial separation between eye states even on clean data — there is a well-known alpha-wave suppression effect when the eyes open. But the separation is typically incomplete, because PCA is working only with the spatial correlations between channels at each instant, not with the temporal dynamics. The main lesson from this step is that outlier detection and removal is a standard part of exploratory data analysis — and the Diagnostic Plot is the right tool for the job.
+👉 After removing the artifacts, the scores plot should reveal real structure in the data. You may find:
+
+* **PC1** loads all 14 channels with similar magnitude and the same sign — a "global" or "common mode" component capturing the overall correlation between channels. This is the dominant pattern in highly correlated data like EEG, and it does not tell you much about which brain regions are specifically involved.
+* **PC2** often shows a more informative spatial contrast — for example, frontal channels (AF3, AF4, F7, F8) on one side, and posterior/occipital channels (P7, O1, O2, P8) on the other. Occipital channels are particularly relevant because they are most sensitive to alpha-band activity associated with eye state.
+
+The scores plot after outlier removal typically shows some separation between `open` and `closed`, but with considerable overlap. This is expected — standard PCA is working only with the spatial correlations between channels at each instant, not with the temporal dynamics. The main lessons from this step are: (1) outlier detection and removal is a standard part of exploratory data analysis; (2) even clean, well-scaled data may not yield clean class separation with standard PCA when the relevant structure is temporal rather than spatial.
 
 ---
 
