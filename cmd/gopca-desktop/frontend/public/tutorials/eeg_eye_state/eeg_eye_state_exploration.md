@@ -78,6 +78,7 @@ GoPCA will load the dataset automatically. The `time` column is used as row iden
 In the PCA configuration panel, set:
 
 * **PCA Method** → SVD
+* **Preprocessing** → leave at the default for now (no scaling)
 
 The `eye_state` column will be available for colouring your plots. It is not used in the analysis itself — that is the whole point of unsupervised PCA.
 
@@ -91,11 +92,43 @@ The `eye_state` column will be available for colouring your plots. It is not use
 
 ---
 
-## Step 2: Run standard PCA and examine the scores
+## Step 2: Run standard PCA — diagnose the scale problem first
 
 Click **Go PCA** to run the analysis.
 
-Open the **Scores Plot (PC1 vs PC2)** and colour by `eye_state`.
+Before looking at any plots, read the GoPCA warning banner. You will see something like:
+
+> *"Variables have very different scales (40000× difference). Consider standardisation unless this is intentional."*
+
+This is an important diagnostic signal. All 14 channels are EEG voltages measured in microvolts by the same amplifier — they should in principle be comparable. But this particular dataset contains brief electrode artifacts (see the Background note above) and channels with slightly different impedance conditions, leading to large variance differences between channels.
+
+Now open the **Loadings Plot (PC1)**.
+
+#### Questions:
+
+* Which channels have large loadings (positive or negative)?
+* Which channels are near zero?
+* Does the pattern of important channels match your expectation from neuroscience — or does it look like a few channels are dominating simply because they have higher variance?
+
+👉 Without scaling, PCA measures *covariance* — it finds the directions of maximum variance. Channels with higher variance automatically dominate, regardless of whether that variance is signal or noise. If two or three channels have far higher variance than the others (perhaps due to artifacts), they will monopolise PC1 and push all genuine signal into later components. This is the scale problem in action.
+
+### Re-run with standardisation
+
+Change the **Preprocessing** setting to **Standard Scaling** (zero mean, unit variance). Click **Go PCA** again.
+
+Open the **Loadings Plot (PC1)** again.
+
+#### Questions:
+
+* How does the distribution of loadings change compared to the unscaled result?
+* Do more channels now contribute meaningfully to PC1?
+* Do occipital electrodes (`O1`, `O2`) stand out more than before?
+
+👉 With standard scaling, PCA measures *correlation* — all channels are treated as equally important regardless of their raw amplitude. The result reflects which channels *co-vary together*, not which channels happen to have the highest variance. For EEG data with known scale imbalances, this is generally the more informative starting point.
+
+> **A note on when to scale**: EEG channels are all in the same physical units (µV), so standardisation discards amplitude information. If you specifically want to study which brain region generates the strongest signal, unscaled PCA is informative. If you want to understand the *pattern* of co-variation across channels — which is usually the goal in exploratory EEG analysis — standardisation is appropriate. The GoPCA warning is your cue to make this choice deliberately rather than by accident.
+
+Now open the **Scores Plot (PC1 vs PC2)** and colour by `eye_state`.
 
 #### Questions:
 
@@ -104,16 +137,6 @@ Open the **Scores Plot (PC1 vs PC2)** and colour by `eye_state`.
 * Do you see distinct clusters, or a continuous mixture?
 
 👉 Standard PCA may show some separation between eye states — there is a well-known alpha-wave suppression effect when the eyes open. But the separation may be incomplete or noisy, because PCA is working only with the spatial correlations between channels at each instant, not with the temporal dynamics.
-
-Now open the **Loadings Plot**.
-
-#### Questions:
-
-* Which EEG channels contribute most to PC1?
-* Which channels contribute most to PC2?
-* Do occipital electrodes (`O1`, `O2`) stand out?
-
-👉 Hint: eye closure often triggers a strong increase in alpha-band power (~8–13 Hz) at occipital sites. If occipital electrodes load heavily on a component that separates the eye states, this is consistent with that physiology.
 
 ---
 
@@ -199,6 +222,8 @@ The key trade-off to keep in mind:
 Change the **PCA Method** to **Temporal PCA**.
 
 A new option appears: **Number of Time Lags**. Set it to **32**.
+
+Keep **Preprocessing** set to **Standard Scaling** — the same choice we made for standard PCA. The same scale imbalance affects Temporal PCA, because preprocessing is applied to the original time series before the trajectory matrix is built.
 
 Keep the target column as `eye_state` for colouring.
 
@@ -321,6 +346,7 @@ After this exploration, you should be able to:
 
 * Explain why EEG data is a multivariate time series and why rows are not independent
 * Understand why standard PCA ignores temporal order — and what this means in practice
+* Diagnose a scale problem from the GoPCA warning and the Loadings Plot, and make a deliberate choice between covariance PCA (unscaled) and correlation PCA (standardised)
 * Describe the SSA embedding step: sliding windows, trajectory matrix, window length *L*
 * Interpret the **Temporal Loadings** plot: one curve per component, showing the temporal eigenvector shape across lag positions — not one curve per channel
 * Recognise **paired oscillatory components** in the Scree Plot (equal variance) and Temporal Loadings Plot (90°-phase-shifted sinusoids)
