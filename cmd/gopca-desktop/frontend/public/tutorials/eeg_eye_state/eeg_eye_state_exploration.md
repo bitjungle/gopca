@@ -132,11 +132,32 @@ Now open the **Scores Plot (PC1 vs PC2)** and colour by `eye_state`.
 
 #### Questions:
 
-* Do `open` and `closed` samples separate in the scores plot?
-* Is the separation clear, partial, or weak?
-* Do you see distinct clusters, or a continuous mixture?
+* Do you see most samples clustered tightly near the origin, with only a handful of extreme outliers far away?
+* Hover over the extreme outliers — what time labels do they carry?
+* Do those time values match the artifact time points mentioned in the Background (approximately 7 s, 81 s, 90 s, 103 s)?
 
-👉 Standard PCA may show some separation between eye states — there is a well-known alpha-wave suppression effect when the eyes open. But the separation may be incomplete or noisy, because PCA is working only with the spatial correlations between channels at each instant, not with the temporal dynamics.
+👉 If you see this pattern, you are observing a second important effect: **outlier domination**. Standard scaling equalises the variance of each *variable* (column), but it does not protect against extreme *observations* (rows). The four artifact time points have values 70–150× the normal EEG range. Even after standardisation, those four rows have score values far larger than all other observations, so PCA points both PC1 and PC2 towards them — and the remaining ~14,976 normal time points collapse into a tiny cluster near the origin.
+
+This is different from the scale problem we fixed with standardisation:
+
+| Problem | What it is | Fix |
+|---|---|---|
+| **Scale imbalance** | Different *variables* have very different variance | Standard scaling (column-wise) |
+| **Outlier domination** | A few extreme *observations* dominate the components | Zoom in, or robust preprocessing |
+
+Standard scaling fixed the first problem. The second problem — the four artifact rows — remains. To see the structure in the normal data, **zoom in to the main cluster** near the origin.
+
+### Zoom in to the main cluster
+
+Use the Plotly zoom tool (click and drag a selection box around the tight cluster near the origin) to focus on the normal time points.
+
+#### Questions:
+
+* After zooming in, do `open` and `closed` samples now show any separation?
+* Is the separation clear, or do the two states overlap considerably?
+* Which direction (PC1 or PC2) gives the better separation, if any?
+
+👉 Standard PCA may show some partial separation between eye states — there is a well-known alpha-wave suppression effect when the eyes open. But the separation is typically incomplete at this stage, because PCA is working only with the spatial correlations between channels at each instant, not with the temporal dynamics. The main lesson from this step is that even "cleaned up" PCA on EEG data is limited — and the artifact rows reveal exactly how sensitive PCA is to a handful of extreme observations.
 
 ---
 
