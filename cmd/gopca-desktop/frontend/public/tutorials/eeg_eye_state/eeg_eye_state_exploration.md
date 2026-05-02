@@ -303,13 +303,36 @@ GoPCA builds the trajectory matrix internally from the 14 EEG channels: each row
 
 Open the **Scores Plot** and colour by `eye_state`.
 
+### Reading the scores plot as a trajectory — not a sample cloud
+
+This is the most important conceptual shift from standard PCA to Temporal PCA, and it is especially challenging if your background is analytical chemistry or spectroscopy.
+
+In standard PCA on spectra or concentrations, each point in the scores plot is an **independent sample**. You look for clusters, outliers, and class separation. The positions of the points relative to each other is the story.
+
+In Temporal PCA, each point is a **moment in time**. Consecutive points are 7.8 ms apart and connected by the plotted line. You are not looking at a cloud of independent samples — you are watching the brain's state move through a 2D projection of a high-dimensional state space. The **path** is the story.
+
+> **Analogy from chemistry**: imagine plotting the NIR spectrum of a reaction mixture every second as the reaction proceeds. Each spectrum is a point in PC space, and the sequence of points traces the reaction pathway. Temporal PCA scores work exactly the same way — but on millisecond timescales.
+
+**How to read a phase-space trajectory:**
+
+1. **Identify distinct regions** — are there areas where the trajectory spends most of its time (attractors), and areas it passes through briefly (transitions)?
+2. **Colour tells you eye state** — which region is predominantly blue (open) and which is predominantly orange (closed)?
+3. **Tight loops = oscillations** — if the trajectory traces small, repeated circular or elliptical loops in one region, those loops are oscillations. The brain is oscillating at a fixed frequency and that oscillation traces a circle in the PC scores space.
+4. **Long sweeping arms = state transitions** — when the trajectory sweeps far from the central cluster, the brain is transitioning between states. The arm shape shows how the brain moves from one state to another.
+
+**Reading your specific scores plot:**
+
+* The **dense central cluster** (both colors, right half of the plot) is where the brain spends most of its time. This is the "resting" state — mostly closed-eye periods.
+* The **long sweeping blue arms** extending to the left (very negative PC1) and upward (positive PC2) are the eyes-open periods. The trajectory sweeps far from center when eyes are open, reflecting a major change in the overall EEG amplitude pattern.
+* The arm shape — gradually moving out and then returning — shows that the brain takes several hundred milliseconds to transition fully into the eyes-open state and back.
+* **The key finding**: eyes-open → very negative PC1 scores. Since PC1's temporal loading is nearly flat (equal contribution at all lags), a large negative PC1 score means the overall EEG amplitude is suppressed in the direction captured by PC1. This is **alpha suppression**: when eyes open, alpha-band activity (8–12 Hz) drops sharply across the scalp, reducing the correlated EEG amplitude that PC1 captures.
+
 #### Questions:
 
-* Does the separation between `open` and `closed` improve compared to standard SVD PCA?
-* The scores are plotted in time order — do you see a connected trajectory drifting through PC1–PC2 space? Can you identify stretches where the trajectory is predominantly blue (open) or orange (closed)?
-* During open-eye periods, does the trajectory move to more negative or more positive PC1 values?
-
-👉 Temporal PCA gives each observation a 32-step context window (250 ms), so consecutive score points represent overlapping windows — they are connected in time. The connected-dot appearance is not noise; it reveals the temporal dynamics of the EEG. Open-eye periods typically produce scores that drift in a specific direction in PC space, reflecting the suppression of certain oscillatory patterns when eyes are open (alpha suppression). Closed-eye periods tend to cluster more densely near a different region of PC space.
+* Can you identify the dense central cluster (eyes-closed resting state) and the sweeping blue arms (eyes-open state)?
+* Hover over the tips of the leftmost blue arms — what time labels do they carry? Do they correspond to prolonged eyes-open periods in the recording?
+* Inside the dense cluster, can you find small repeated loops? Those loops are oscillations — the brain oscillating at a fixed rhythm while the eyes are closed.
+* Compare PC1 scores for open vs closed: which eye state is more negative?
 
 **Note on available plots**: some plots available for SVD PCA are not available for Temporal PCA — specifically the **Loadings Plot**, **Biplot**, **3D Biplot**, **Circle of Correlations**, and **Diagnostic Plot**. These require loadings in the original variable space, which Temporal PCA does not produce directly (loadings live in the higher-dimensional trajectory space). Instead, two dedicated plots are available: **Temporal Loadings** and **Variable Importance**.
 
@@ -325,25 +348,71 @@ Each curve in the plot corresponds to one principal component (PC1, PC2, PC3, ..
 
 > **Important**: these curves are *not* one line per EEG channel. They are one line per component, showing how the temporal pattern of that component unfolds across the window.
 
-Where do these curves come from? When SVD is applied to the trajectory matrix it produces a V matrix (right singular vectors) of shape [*p*·*L* × rank]. The V matrix encodes, for every component, how much each (channel, lag) combination contributes. For each component, GoPCA identifies the **single most influential channel** — the one with the highest RMS loading across all lag positions — and displays the signed loadings of that channel across lags 0 to *L*−1 (Broomhead & King, 1986; Vautard & Ghil, 1989).
+### Connecting loadings to scores — the same logic as standard PCA
+
+If you are used to spectroscopic PCA, you know the drill: a high score on PC1 means the sample looks like the PC1 loading pattern, scaled up. Temporal PCA uses exactly the same algebra — the difference is only what the loading *means*.
+
+In standard PCA, the PC1 loading shows **which variables (channels) contribute**. In Temporal PCA, the PC1 temporal loading shows **which time lag positions contribute**, for the most influential channel. The score still tells you how strongly the current window matches that pattern — just that the pattern now has a shape in time, not only in space.
+
+**Concrete example from this dataset:**
+
+PC1's temporal loading is nearly flat at about −0.05 across all 32 lags. That means PC1 fires equally regardless of *when* within the 250 ms window the signal is strong — it is sensitive only to the *overall average level* of the dominant channel. The very negative PC1 scores during eyes-open (the long blue arms in the scores plot) therefore mean: the overall EEG amplitude of the dominant channel is suppressed relative to the eyes-closed baseline. That is alpha suppression — the brain's dominant idle rhythm dropping when the eyes open.
+
+PC2's temporal loading is also nearly flat but slightly arched — it captures a slightly different amplitude pattern, explaining why the open-eye arms tilt upward in PC2 as well as leftward in PC1.
+
+> **Practical tip**: when a 20-component plot looks overwhelming, use the Plotly legend to isolate individual components. **Click a component name in the legend to hide it; double-click to show only that one.** Use double-click to isolate a single curve, then single-click to add others back one by one.
+
+### Where do these curves come from?
+
+When SVD is applied to the trajectory matrix it produces a V matrix (right singular vectors) of shape [*p*·*L* × rank]. The V matrix encodes, for every component, how much each (channel, lag) combination contributes. For each component, GoPCA identifies the **single most influential channel** — the one with the highest RMS loading across all lag positions — and displays the signed loadings of that channel across lags 0 to *L*−1 (Broomhead & King, 1986; Vautard & Ghil, 1989).
 
 This approach preserves the sign of the loadings, which is essential for reading temporal structure:
 
-* A curve that oscillates as a sinusoid — crossing zero, rising and falling — indicates a periodic component. The number of zero-crossings tells you the frequency: two zero-crossings per window = one full cycle per window length.
-* A curve that is monotone (gradually rising or falling across the full window) indicates a slow trend component.
-* A curve that is nearly flat across all lags indicates a global mean shift — the component has equal loading strength at every lag position.
+* A curve that **oscillates as a sinusoid** — crossing zero, rising and falling — indicates a periodic component. The number of zero-crossings tells you the frequency: each full cycle produces two zero-crossings, so *k* zero-crossings over the window ≈ *k*/2 cycles ≈ (*k*/2) / (L/128) Hz.
+* A curve that is **monotone** (gradually rising or falling across the full window) indicates a slow trend component.
+* A curve that is **nearly flat** across all lags indicates a global mean shift — the component has equal loading strength at every lag position.
 
 > **Why show only the dominant channel?** In EEG, different brain regions often load with opposite signs on the same component (for example, frontal channels positive and occipital channels negative). If we averaged all channels, the positive and negative contributions would cancel and the result would appear flat — hiding the true temporal structure. Showing the single channel that contributes most avoids this cancellation and gives the clearest picture of the component's temporal shape.
 
+### What to expect in the top 5 components
+
+When you first open the Temporal Loadings plot with only 5 components displayed, **do not expect to see any oscillations**. The top 5 components for this dataset are dominated by slow, eye-state related modulation — not fast rhythms:
+
+* **PC1** (~53% variance): nearly flat — a global mean-shift component. The eye-state transition lasts seconds; 250 ms is far too short to see it changing, so the temporal loading is essentially horizontal.
+* **PC2–PC4**: gently sloped or arched curves — slow trend components capturing the gradual drift between open and closed eye states.
+* **PC5**: may show an S-shape (monotone crossing zero once) — this is a first-order trend, period ≈ 2×32/128 Hz ≈ 8 Hz... but with only one zero-crossing, it is more likely a slow modulation than a true oscillation.
+
+> **Why does slow structure dominate?** PCA ranks components by explained variance. The eye-state shift lasts several seconds and affects all 14 channels simultaneously — this generates a large amount of variance and dominates the top components. Alpha oscillations at 10 Hz are faster, more spatially localised, and contribute less total variance. They are real and present, but outweighed by the slow modulation in terms of explained variance.
+
+### Increasing the component count to find oscillations
+
+To find the oscillatory components, increase the number of **Components** computed in the GoPCA configuration panel to **15 or 20**, then click **Go PCA** again and re-open the Temporal Loadings plot.
+
+With 15–20 components visible, you will see three qualitatively different types of curve:
+
+| Curve shape | Example | Interpretation |
+|---|---|---|
+| Nearly flat | PC1 | Global mean, DC component |
+| Monotone (S-shape, no oscillation) | PC2–PC10 | Slow eye-state modulation |
+| Rapid sinusoid (multiple zero-crossings) | PC11+ | Oscillatory rhythm — alpha or beta band |
+
+#### Frequency from zero-crossings
+
+Count the number of times a curve crosses zero. Each pair of zero-crossings represents one complete oscillation cycle:
+
+* 2 zero-crossings over 32 lags → 1 cycle → 1 / (32/128) = **4 Hz** (theta)
+* 4 zero-crossings → 2 cycles → **8 Hz** (alpha lower bound)
+* 5–6 zero-crossings → ~2.5 cycles → **~10 Hz** (alpha)
+* 10 zero-crossings → 5 cycles → **~20 Hz** (beta)
+
+Curves with many zero-crossings (8–10+) will look angular or triangular rather than smooth — this is normal at high frequencies where only a few samples exist per cycle. Smooth sinusoids indicate lower frequencies (alpha and below) where many samples span each cycle.
+
 #### Questions:
 
-* Does PC1 appear flat — consistent with a global component with equal contribution at every lag?
-* Does any component show a smooth S-shape (positive at lag 0, crossing zero in the middle, negative at lag 31)? What oscillation period does that imply? (Hint: one zero-crossing over 32 lags = half a period, so period ≈ 64 samples = 500 ms → ~2 Hz)
-* Do any of the top 5 components show rapid sinusoidal oscillations crossing zero multiple times?
-
-👉 You may find that **none of the top 5 components show fast oscillations**. This is expected for this dataset — the dominant variance is captured by slow, eye-state related modulations (flat or gently sloped curves), not by fast oscillations like alpha. A slow component that captures the shift between open and closed eyes will look nearly flat across the 32-lag window (250 ms) because the eye-state itself changes over seconds, not milliseconds. Fast oscillatory components (alpha ~10 Hz, beta ~20 Hz) carry less total variance and will appear further down the ranked list.
-
-> **Tip**: try increasing the number of components displayed from 5 to 10 or 15. Somewhere in the lower-ranked components you may find a pair of components whose curves oscillate rapidly — multiple zero-crossings across the 32 lags. Those are the oscillatory modes. The number of zero-crossings tells you the approximate frequency: each full cycle produces two zero-crossings, so *k* zero-crossings ≈ *k*/2 cycles over 32 lags ≈ (*k*/2) / (32/128) Hz.
+* Does PC1 appear nearly flat — consistent with a global component?
+* Looking at components 11–15, can you identify any that cross zero multiple times?
+* Count the zero-crossings on the most rapidly oscillating curve — what frequency does this imply?
+* Are there any smooth, sinusoidal curves (as opposed to angular/jagged ones)? What frequency band would those represent?
 
 ---
 
@@ -357,26 +426,42 @@ A fundamental property of SSA is that **oscillatory signals produce pairs of com
 
 You can identify these pairs in two ways:
 
-1. **In the Scree Plot**: a pair of components will have nearly identical explained variance — two bars of the same height sitting side by side
-2. **In the Temporal Loadings Plot**: the two components' curves will be similar sinusoids shifted by approximately 90° (a quarter-cycle phase offset)
+1. **In the Scree Plot**: a pair of components will have nearly identical explained variance — two bars of the same height sitting side by side. Look for adjacent bars where both percentages are nearly equal (e.g., both showing 0.8%).
+2. **In the Temporal Loadings Plot**: the two components' curves will be similar sinusoids shifted by approximately 90° (a quarter-cycle phase offset). If one curve starts at a peak near lag 0, its paired partner will cross zero near lag 0 and reach its peak approximately one-quarter cycle later.
 
 Neither component alone gives the full picture. Together, they encode one complete oscillation at a specific frequency.
 
-For this EEG dataset you should expect:
-* A dominant slow component (PC1) — nearly flat temporal loading, capturing the global broadband correlation across all channels
-* Several components with gently sloped or trend-like temporal loadings — these capture the slow eye-state modulation
-* Deeper in the component list: paired oscillatory components with rapidly oscillating temporal loading curves
+### What to look for in the 15–20 component plot
 
-> **Why does slow structure dominate?** PCA ranks components by explained variance. The eye-state shift (open vs closed) lasts for several seconds and affects all 14 channels simultaneously — this generates a large amount of variance and dominates the top components. Alpha oscillations at 10 Hz are faster, more localised spatially, and contribute less total variance. They are real and present, but outweighed by the slow modulation in terms of explained variance.
+With 20 components displayed, you should see a clear hierarchy of structure:
+
+* **PC1** (53%): flat — global mean component
+* **PC2–PC10** (declining, irregular): slow trend and modulation components
+* **PC11–PC14** (~0.8% each, nearly equal): the first oscillatory pairs. Look at these carefully in the Temporal Loadings plot — you should find two adjacent components where one curve looks like a sine and the other looks like a cosine of the same frequency.
+* **PC15–PC20** (~0.4–0.5% each): higher-frequency pairs or noise components
+
+The near-equal explained variance in the 0.8% group (visible as a plateau in the Scree Plot) is the primary signal that oscillatory structure is present — this is the paired-eigenvalue signature described by Vautard & Ghil (1989).
+
+#### Identifying a specific pair
+
+When inspecting components in the oscillatory region:
+
+1. Find two adjacent components (e.g., PC12 and PC13) with nearly identical % values in the legend
+2. Compare their Temporal Loadings curves
+3. If one curve peaks near lag 0 and the other crosses zero near lag 0 — and they look like shifted versions of the same sinusoid — these form an oscillatory pair
+4. Count zero-crossings on either curve to estimate the frequency
+
+> **Example**: if PC12 and PC13 each explain 0.8% variance, and PC12 shows a curve that peaks at lag ~4 and troughs at lag ~20 (approximately 2.5 cycles over 32 lags), while PC13 shows the same frequency but shifted ~3–4 lags — these are an alpha-band (~10 Hz) oscillatory pair. GoPCA's scores for these two components together capture the full alpha oscillation in the data.
 
 #### Questions:
 
 * How many components are needed to explain the bulk of the variance?
 * Do you see any adjacent pairs of components with nearly equal explained variance in the Scree Plot?
-* If you increase the number of components shown to 10 or 15, do any of the lower-ranked components show paired sinusoidal Temporal Loadings curves?
+* Identify the first oscillatory pair: which component numbers are they, what is their shared % variance, and how large is the phase shift between their Temporal Loadings curves?
+* What frequency does this pair correspond to?
 * How many complete oscillation periods fit within the 32-lag window for a 10 Hz signal at 128 Hz?
 
-👉 Quick calculation: a 10 Hz alpha wave has a period of about 12.8 samples at 128 Hz. Over 32 lags you would see approximately 2.5 complete cycles — enough for the sinusoidal pattern to be clearly visible if you look at the right components.
+👉 Quick calculation: a 10 Hz alpha wave has a period of about 12.8 samples at 128 Hz. Over 32 lags you would see approximately 2.5 complete cycles — enough for the sinusoidal pattern to be clearly visible in the Temporal Loadings plot.
 
 ---
 
@@ -393,9 +478,10 @@ The result is a heatmap: rows are principal components, columns are the 14 EEG c
 * Which EEG channels contribute most strongly to the first temporal component?
 * Do occipital electrodes (`O1`, `O2`) appear more or less important here than in standard PCA?
 * Is the pattern of variable importance similar across components, or does each component emphasise different channels?
+* For the oscillatory pair you identified in Step 7, do the two paired components show the same spatial pattern of channel importance? (They should — the two components represent the same oscillation, just phase-shifted in time, so the same channels should dominate both.)
 * Does the spatial pattern of important channels make physiological sense — for example, are occipital channels highlighted for alpha-wave related components?
 
-👉 Variable Importance answers the question standard Temporal Loadings cannot directly answer: *which channels* drive each component. The Temporal Loadings plot tells you *what temporal shape* the component has; Variable Importance tells you *where on the scalp* it originates.
+👉 Variable Importance answers the question standard Temporal Loadings cannot directly answer: *which channels* drive each component. The Temporal Loadings plot tells you *what temporal shape* the component has; Variable Importance tells you *where on the scalp* it originates. Together, they give the full spatiotemporal picture of each mode.
 
 ---
 
@@ -431,9 +517,12 @@ After this exploration, you should be able to:
 * Understand why standard PCA ignores temporal order — and what this means in practice
 * Diagnose a scale problem from the GoPCA warning and the Loadings Plot, and make a deliberate choice between covariance PCA (unscaled) and correlation PCA (standardised)
 * Describe the SSA embedding step: sliding windows, trajectory matrix, window length *L*
-* Interpret the **Temporal Loadings** plot: one curve per component, showing the temporal eigenvector shape across lag positions — not one curve per channel
+* Interpret the **Temporal Loadings** plot: one curve per component, showing the dominant channel's signed temporal eigenvector across lag positions — not one curve per channel
+* Recognise the three curve types: flat (global component), monotone (slow trend), sinusoidal (oscillatory mode)
+* Estimate oscillation frequency from the number of zero-crossings in a Temporal Loadings curve
 * Recognise **paired oscillatory components** in the Scree Plot (equal variance) and Temporal Loadings Plot (90°-phase-shifted sinusoids)
-* Use **Variable Importance** to identify which channels drive each temporal component
+* Understand that the top components are dominated by slow eye-state modulation, and that fast rhythms (alpha, beta) appear in lower-ranked components
+* Use **Variable Importance** to identify which channels drive each temporal component, and verify that paired components share the same spatial pattern
 * Make an informed choice of window length based on the sampling rate and the dynamics of interest
 
 You should also recognise the trade-off:
@@ -455,7 +544,7 @@ You should also recognise the trade-off:
 * The SSA algorithm has four steps: embedding, decomposition, grouping, and reconstruction. GoPCA implements the first two. What would you gain from the grouping and reconstruction steps — and what tasks would those enable?
 * A window length of 32 at 128 Hz covers 250 ms. Alpha oscillations have a period of roughly 100 ms. What window length would you choose if you were primarily interested in theta band activity (4–8 Hz, period 125–250 ms)?
 * Could the Temporal PCA scores be used as input features to a classifier predicting `eye_state`? What might be the advantage compared to using the raw EEG values?
-* If you found a paired component (PC2 + PC3) corresponding to alpha oscillations, and PC1 captured the eye-state shift, which components would you group together before reconstruction in a full SSA analysis?
+* If you found a paired component (PC12 + PC13) corresponding to alpha oscillations, and PC1 captured the eye-state shift, which components would you group together before reconstruction in a full SSA analysis?
 
 ---
 
