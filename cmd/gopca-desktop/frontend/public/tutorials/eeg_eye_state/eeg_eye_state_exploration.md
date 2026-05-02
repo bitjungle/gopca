@@ -325,15 +325,19 @@ Each curve in the plot corresponds to one principal component (PC1, PC2, PC3, ..
 
 > **Important**: these curves are *not* one line per EEG channel. They are one line per component, showing how the temporal pattern of that component unfolds across the window.
 
-Where do these curves come from? When SVD is applied to the trajectory matrix, it produces a U matrix (left singular vectors) of shape [(*T*−*L*+1) × rank]. GoPCA extracts the first *L* rows of U — one entry for each lag position — and displays them as curves. A curve that oscillates smoothly across the lag axis indicates a periodic component; a flat or monotone curve indicates a slow trend or DC shift (Broomhead & King, 1986).
+Where do these curves come from? When SVD is applied to the trajectory matrix it produces a V matrix (right singular vectors) of shape [*p*·*L* × rank]. The V matrix encodes, for every component, how much each (channel, lag) combination contributes. GoPCA aggregates the V matrix across the *p* channel dimensions at each lag position using RMS, producing one value per lag per component. The result is a curve of length *L* per component — always non-negative — that captures the **intrinsic temporal shape** of each component across the window.
+
+* A curve that oscillates up and down across the lag axis indicates a periodic component (Broomhead & King, 1986)
+* A curve that peaks strongly at one lag and falls toward zero on either side indicates a localised event or spike
+* A curve that is nearly flat across all lags indicates a slow trend or global-mean shift
 
 #### Questions:
 
-* Does the loading curve for PC1 show a flat, monotone shape — or does it oscillate?
-* Do any of the first few components show clearly sinusoidal curves?
-* Do two adjacent components (e.g., PC2 and PC3) show similar oscillatory shapes that appear to be shifted by roughly a quarter cycle (90°)?
+* Does the curve for PC1 show a flat, broad shape — or does it have clear peaks and troughs?
+* Do any of the first few components show clearly oscillatory curves with multiple peaks?
+* Do two adjacent components (e.g., PC2 and PC3) show similar oscillatory shapes?
 
-👉 Key insight: when two adjacent components both show sinusoidal Temporal Loadings curves that are approximately 90° out of phase with each other, they form a **paired oscillatory mode** — the subject of the next step.
+👉 Key insight: when two adjacent components both show oscillatory Temporal Loadings curves that appear to be offset by roughly a quarter cycle (90°), they form a **paired oscillatory mode** — the subject of the next step.
 
 ---
 
