@@ -303,13 +303,36 @@ GoPCA builds the trajectory matrix internally from the 14 EEG channels: each row
 
 Open the **Scores Plot** and colour by `eye_state`.
 
+### Reading the scores plot as a trajectory — not a sample cloud
+
+This is the most important conceptual shift from standard PCA to Temporal PCA, and it is especially challenging if your background is analytical chemistry or spectroscopy.
+
+In standard PCA on spectra or concentrations, each point in the scores plot is an **independent sample**. You look for clusters, outliers, and class separation. The positions of the points relative to each other is the story.
+
+In Temporal PCA, each point is a **moment in time**. Consecutive points are 7.8 ms apart and connected by the plotted line. You are not looking at a cloud of independent samples — you are watching the brain's state move through a 2D projection of a high-dimensional state space. The **path** is the story.
+
+> **Analogy from chemistry**: imagine plotting the NIR spectrum of a reaction mixture every second as the reaction proceeds. Each spectrum is a point in PC space, and the sequence of points traces the reaction pathway. Temporal PCA scores work exactly the same way — but on millisecond timescales.
+
+**How to read a phase-space trajectory:**
+
+1. **Identify distinct regions** — are there areas where the trajectory spends most of its time (attractors), and areas it passes through briefly (transitions)?
+2. **Colour tells you eye state** — which region is predominantly blue (open) and which is predominantly orange (closed)?
+3. **Tight loops = oscillations** — if the trajectory traces small, repeated circular or elliptical loops in one region, those loops are oscillations. The brain is oscillating at a fixed frequency and that oscillation traces a circle in the PC scores space.
+4. **Long sweeping arms = state transitions** — when the trajectory sweeps far from the central cluster, the brain is transitioning between states. The arm shape shows how the brain moves from one state to another.
+
+**Reading your specific scores plot:**
+
+* The **dense central cluster** (both colors, right half of the plot) is where the brain spends most of its time. This is the "resting" state — mostly closed-eye periods.
+* The **long sweeping blue arms** extending to the left (very negative PC1) and upward (positive PC2) are the eyes-open periods. The trajectory sweeps far from center when eyes are open, reflecting a major change in the overall EEG amplitude pattern.
+* The arm shape — gradually moving out and then returning — shows that the brain takes several hundred milliseconds to transition fully into the eyes-open state and back.
+* **The key finding**: eyes-open → very negative PC1 scores. Since PC1's temporal loading is nearly flat (equal contribution at all lags), a large negative PC1 score means the overall EEG amplitude is suppressed in the direction captured by PC1. This is **alpha suppression**: when eyes open, alpha-band activity (8–12 Hz) drops sharply across the scalp, reducing the correlated EEG amplitude that PC1 captures.
+
 #### Questions:
 
-* Does the separation between `open` and `closed` improve compared to standard SVD PCA?
-* The scores are plotted in time order — do you see a connected trajectory drifting through PC1–PC2 space? Can you identify stretches where the trajectory is predominantly blue (open) or orange (closed)?
-* During open-eye periods, does the trajectory move to more negative or more positive PC1 values?
-
-👉 Temporal PCA gives each observation a 32-step context window (250 ms), so consecutive score points represent overlapping windows — they are connected in time. The connected-dot appearance is not noise; it reveals the temporal dynamics of the EEG. Open-eye periods typically produce scores that drift in a specific direction in PC space, reflecting the suppression of certain oscillatory patterns when eyes are open (alpha suppression). Closed-eye periods tend to cluster more densely near a different region of PC space.
+* Can you identify the dense central cluster (eyes-closed resting state) and the sweeping blue arms (eyes-open state)?
+* Hover over the tips of the leftmost blue arms — what time labels do they carry? Do they correspond to prolonged eyes-open periods in the recording?
+* Inside the dense cluster, can you find small repeated loops? Those loops are oscillations — the brain oscillating at a fixed rhythm while the eyes are closed.
+* Compare PC1 scores for open vs closed: which eye state is more negative?
 
 **Note on available plots**: some plots available for SVD PCA are not available for Temporal PCA — specifically the **Loadings Plot**, **Biplot**, **3D Biplot**, **Circle of Correlations**, and **Diagnostic Plot**. These require loadings in the original variable space, which Temporal PCA does not produce directly (loadings live in the higher-dimensional trajectory space). Instead, two dedicated plots are available: **Temporal Loadings** and **Variable Importance**.
 
@@ -324,6 +347,20 @@ This plot is unique to Temporal PCA. It shows the **temporal eigenvectors** — 
 Each curve in the plot corresponds to one principal component (PC1, PC2, PC3, ...). The horizontal axis is the lag index from 0 to *L*−1, and the vertical axis is the eigenvector value at that lag position.
 
 > **Important**: these curves are *not* one line per EEG channel. They are one line per component, showing how the temporal pattern of that component unfolds across the window.
+
+### Connecting loadings to scores — the same logic as standard PCA
+
+If you are used to spectroscopic PCA, you know the drill: a high score on PC1 means the sample looks like the PC1 loading pattern, scaled up. Temporal PCA uses exactly the same algebra — the difference is only what the loading *means*.
+
+In standard PCA, the PC1 loading shows **which variables (channels) contribute**. In Temporal PCA, the PC1 temporal loading shows **which time lag positions contribute**, for the most influential channel. The score still tells you how strongly the current window matches that pattern — just that the pattern now has a shape in time, not only in space.
+
+**Concrete example from this dataset:**
+
+PC1's temporal loading is nearly flat at about −0.05 across all 32 lags. That means PC1 fires equally regardless of *when* within the 250 ms window the signal is strong — it is sensitive only to the *overall average level* of the dominant channel. The very negative PC1 scores during eyes-open (the long blue arms in the scores plot) therefore mean: the overall EEG amplitude of the dominant channel is suppressed relative to the eyes-closed baseline. That is alpha suppression — the brain's dominant idle rhythm dropping when the eyes open.
+
+PC2's temporal loading is also nearly flat but slightly arched — it captures a slightly different amplitude pattern, explaining why the open-eye arms tilt upward in PC2 as well as leftward in PC1.
+
+> **Practical tip**: when a 20-component plot looks overwhelming, use the Plotly legend to isolate individual components. **Click a component name in the legend to hide it; double-click to show only that one.** Use double-click to isolate a single curve, then single-click to add others back one by one.
 
 ### Where do these curves come from?
 
