@@ -459,28 +459,31 @@ func (t *TemporalPCAImpl) Fit(data types.Matrix, config types.PCAConfig) (*types
 	// Build temporal eigenvectors matrix [numLags × nComponents] for visualization.
 	//
 	// Each column represents one principal component; each row is one lag position.
-	// For each (component, lag) cell we aggregate the right singular vectors (V matrix,
-	// stored as rows of t.loadings) across the origVars channel dimensions at that lag,
-	// using RMS aggregation. This gives the characteristic temporal shape of each
-	// component: oscillatory components produce sinusoidal curves, trend components
-	// produce monotone curves.
+	// For each (component, lag) cell we compute the signed mean of the right singular
+	// vector (V matrix, stored as rows of t.loadings) across the origVars channel
+	// dimensions at that lag:
+	//
+	//   temporalEigenvectors[lag, comp] = mean_v( loadings[comp, lag*origVars + v] )
+	//
+	// Preserving the sign is essential: an oscillatory component has loadings that
+	// follow sin(2π·f·lag) across lag positions. The mean across channels retains this
+	// signed pattern, so oscillatory components produce sinusoidal curves and trend
+	// components produce monotone or flat curves (Broomhead & King, 1986;
+	// Vautard & Ghil, 1989).
 	//
 	// Layout of t.loadings: row c, column lag*origVars+v  →  loading of component c
 	// for channel v at lag offset l.
 	//
-	// Note: using U[0:L] (first L window scores) here would be incorrect — those are
-	// just the PC scores of the first L windows of the recording, not the intrinsic
-	// temporal shape of the component.
+	// Note: using U[0:L] (first L window scores) here is incorrect — those are
+	// the PC scores of the first L windows of the recording, not the component shape.
 	temporalEigenvectors := mat.NewDense(t.numLags, t.nComponents, nil)
 	for lag := 0; lag < t.numLags; lag++ {
 		for comp := 0; comp < t.nComponents; comp++ {
-			sumSq := 0.0
+			sum := 0.0
 			for v := 0; v < t.origVars; v++ {
-				val := t.loadings.At(comp, lag*t.origVars+v)
-				sumSq += val * val
+				sum += t.loadings.At(comp, lag*t.origVars+v)
 			}
-			rms := math.Sqrt(sumSq / float64(t.origVars))
-			temporalEigenvectors.Set(lag, comp, rms)
+			temporalEigenvectors.Set(lag, comp, sum/float64(t.origVars))
 		}
 	}
 

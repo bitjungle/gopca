@@ -306,10 +306,10 @@ Open the **Scores Plot** and colour by `eye_state`.
 #### Questions:
 
 * Does the separation between `open` and `closed` improve compared to standard SVD PCA?
-* Do you see tighter clusters or a clearer gradient?
-* Are there time regions where the label switches — can you see transitions in the scores?
+* The scores are plotted in time order — do you see a connected trajectory drifting through PC1–PC2 space? Can you identify stretches where the trajectory is predominantly blue (open) or orange (closed)?
+* During open-eye periods, does the trajectory move to more negative or more positive PC1 values?
 
-👉 Temporal PCA gives each observation a 32-step context window (250 ms). The components can now represent oscillatory and dynamic patterns, not just instantaneous spatial correlations.
+👉 Temporal PCA gives each observation a 32-step context window (250 ms), so consecutive score points represent overlapping windows — they are connected in time. The connected-dot appearance is not noise; it reveals the temporal dynamics of the EEG. Open-eye periods typically produce scores that drift in a specific direction in PC space, reflecting the suppression of certain oscillatory patterns when eyes are open (alpha suppression). Closed-eye periods tend to cluster more densely near a different region of PC space.
 
 **Note on available plots**: some plots available for SVD PCA are not available for Temporal PCA — specifically the **Loadings Plot**, **Biplot**, **3D Biplot**, **Circle of Correlations**, and **Diagnostic Plot**. These require loadings in the original variable space, which Temporal PCA does not produce directly (loadings live in the higher-dimensional trajectory space). Instead, two dedicated plots are available: **Temporal Loadings** and **Variable Importance**.
 
@@ -325,19 +325,19 @@ Each curve in the plot corresponds to one principal component (PC1, PC2, PC3, ..
 
 > **Important**: these curves are *not* one line per EEG channel. They are one line per component, showing how the temporal pattern of that component unfolds across the window.
 
-Where do these curves come from? When SVD is applied to the trajectory matrix it produces a V matrix (right singular vectors) of shape [*p*·*L* × rank]. The V matrix encodes, for every component, how much each (channel, lag) combination contributes. GoPCA aggregates the V matrix across the *p* channel dimensions at each lag position using RMS, producing one value per lag per component. The result is a curve of length *L* per component — always non-negative — that captures the **intrinsic temporal shape** of each component across the window.
+Where do these curves come from? When SVD is applied to the trajectory matrix it produces a V matrix (right singular vectors) of shape [*p*·*L* × rank]. The V matrix encodes, for every component, how much each (channel, lag) combination contributes. GoPCA computes the **signed mean** of these loadings across the *p* channel dimensions at each lag, producing one signed value per lag per component. The result is a curve of length *L* per component that captures the **intrinsic temporal shape** of each component across the window (Broomhead & King, 1986; Vautard & Ghil, 1989).
 
-* A curve that oscillates up and down across the lag axis indicates a periodic component (Broomhead & King, 1986)
-* A curve that peaks strongly at one lag and falls toward zero on either side indicates a localised event or spike
-* A curve that is nearly flat across all lags indicates a slow trend or global-mean shift
+* A curve that oscillates as a sinusoid — crossing zero, rising and falling — indicates a periodic component. The number of zero-crossings tells you the frequency: two zero-crossings per window = one full cycle per window length.
+* A curve that is monotone (gradually rising or falling) indicates a slow trend — the component captures structure that evolves directionally across the window.
+* A curve that is nearly flat across all lags indicates a global mean shift — equal contribution at every lag position, no temporal directionality.
 
 #### Questions:
 
-* Does the curve for PC1 show a flat, broad shape — or does it have clear peaks and troughs?
-* Do any of the first few components show clearly oscillatory curves with multiple peaks?
-* Do two adjacent components (e.g., PC2 and PC3) show similar oscillatory shapes?
+* Does the curve for PC1 cross zero — or is it flat or monotone?
+* Do any components show sinusoidal curves that oscillate across the 32 lag positions?
+* Do two adjacent components (e.g., PC2 and PC3) show similar sinusoidal shapes?
 
-👉 Key insight: when two adjacent components both show oscillatory Temporal Loadings curves that appear to be offset by roughly a quarter cycle (90°), they form a **paired oscillatory mode** — the subject of the next step.
+👉 Key insight: when two adjacent components both show sinusoidal Temporal Loadings curves that are approximately 90° out of phase with each other, they form a **paired oscillatory mode** — the subject of the next step.
 
 ---
 

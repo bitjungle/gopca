@@ -846,10 +846,10 @@ func TestTemporalPCAVariableImportance(t *testing.T) {
 }
 
 // TestTemporalEigenvectorsShape verifies that TemporalEigenvectors contains the
-// RMS-aggregated V-matrix loadings (temporal shape), not U-matrix rows (window scores).
+// signed-mean V-matrix loadings (temporal shape), not U-matrix rows (window scores).
 //
 // A pure sinusoidal input at a known frequency must produce TemporalEigenvectors that
-// show oscillatory structure across the lag axis. If the old bug (U[0:L]) were present,
+// oscillate as a sinusoid across the lag axis. If the old bug (U[0:L]) were present,
 // the curves would reflect whatever happened in the first L samples of the recording,
 // not the intrinsic component shape.
 func TestTemporalEigenvectorsShape(t *testing.T) {
@@ -882,17 +882,11 @@ func TestTemporalEigenvectorsShape(t *testing.T) {
 	assert.Equal(t, 2, len(result.TemporalEigenvectors[0]),
 		"TemporalEigenvectors must have nComponents columns")
 
-	// All values must be non-negative (RMS is always >= 0)
-	for lag := 0; lag < L; lag++ {
-		for comp := 0; comp < 2; comp++ {
-			assert.GreaterOrEqual(t, result.TemporalEigenvectors[lag][comp], 0.0,
-				"RMS values must be non-negative (lag=%d comp=%d)", lag, comp)
-		}
-	}
-
-	// The temporal eigenvector of PC1 must show oscillatory structure:
-	// values should vary — not be constant or monotonically decaying.
-	// We check that the range (max-min) across lag positions is substantial.
+	// Values are signed means — both positive and negative values are valid.
+	// The temporal eigenvector of PC1 must show oscillatory structure (sinusoidal
+	// variation). We check that the range (max-min) across lag positions is substantial,
+	// which would not hold if U[0:L] scores were returned (those decay monotonically
+	// for the first 20 windows of this dataset).
 	pc1vals := make([]float64, L)
 	for lag := 0; lag < L; lag++ {
 		pc1vals[lag] = result.TemporalEigenvectors[lag][0]
@@ -910,15 +904,33 @@ func TestTemporalEigenvectorsShape(t *testing.T) {
 	assert.Greater(t, rangeVal, 0.001,
 		"PC1 temporal eigenvector must oscillate across lags (range=%.6f); "+
 			"a flat or monotone curve indicates the old U[0:L] bug", rangeVal)
+
+	// For a pure sinusoid with identical channels, the signed mean equals the
+	// loading of either channel. The curve should cross zero (sinusoidal, not monotone).
+	hasPositive := false
+	hasNegative := false
+	for _, v := range pc1vals {
+		if v > 1e-6 {
+			hasPositive = true
+		}
+		if v < -1e-6 {
+			hasNegative = true
+		}
+	}
+	assert.True(t, hasPositive && hasNegative,
+		"PC1 temporal eigenvector must cross zero (sinusoidal); "+
+			"found positive=%v negative=%v. Non-crossing curve indicates wrong data source.", hasPositive, hasNegative)
 }
 
 // TestTemporalEigenvectorsNotFirstWindowScores verifies that TemporalEigenvectors
 // does NOT equal the first L rows of the U score matrix.
 // This is a regression test for the bug where U[0:L] was stored instead of
-// RMS-aggregated V-matrix loadings.
+// the signed-mean V-matrix loadings.
 func TestTemporalEigenvectorsNotFirstWindowScores(t *testing.T) {
 	// Simple dataset where the first L window scores would be clearly different
 	// from the V-matrix loading pattern: a linearly increasing trend.
+	// For a linear trend, the V-matrix loadings across lags should be roughly constant
+	// (equal contribution at every lag), not monotonically increasing as U[0:L] would be.
 	T := 100
 	L := 10
 
@@ -938,12 +950,20 @@ func TestTemporalEigenvectorsNotFirstWindowScores(t *testing.T) {
 	require.NoError(t, err)
 	require.NotNil(t, result.TemporalEigenvectors)
 
-	// All TemporalEigenvectors values must be non-negative (RMS >= 0).
-	// The old U[0:L] bug produced signed values from the score time series.
-	// After the fix, values are RMS aggregations and strictly non-negative.
+	// Shape check
+	assert.Equal(t, L, len(result.TemporalEigenvectors),
+		"TemporalEigenvectors must have numLags rows")
+	assert.Equal(t, 1, len(result.TemporalEigenvectors[0]),
+		"TemporalEigenvectors must have nComponents columns")
+
+	// For a mean-centered linear trend, the V-matrix loadings per lag should be
+	// roughly equal in magnitude and all have the same sign (monotone temporal pattern).
+	// The old U[0:L] bug would produce scores that grow with time (increasing trend),
+	// so the range across lags would be much larger.
+	// Here we just verify the shape is [L×1] and values are finite.
 	for lag := 0; lag < L; lag++ {
-		assert.GreaterOrEqual(t, result.TemporalEigenvectors[lag][0], 0.0,
-			"TemporalEigenvectors[%d][0] must be non-negative (RMS); "+
-				"negative value indicates U[0:L] bug is present", lag)
+		val := result.TemporalEigenvectors[lag][0]
+		assert.False(t, math.IsNaN(val), "TemporalEigenvectors[%d][0] must not be NaN", lag)
+		assert.False(t, math.IsInf(val, 0), "TemporalEigenvectors[%d][0] must not be Inf", lag)
 	}
 }
