@@ -325,17 +325,21 @@ Each curve in the plot corresponds to one principal component (PC1, PC2, PC3, ..
 
 > **Important**: these curves are *not* one line per EEG channel. They are one line per component, showing how the temporal pattern of that component unfolds across the window.
 
-Where do these curves come from? When SVD is applied to the trajectory matrix it produces a V matrix (right singular vectors) of shape [*p*·*L* × rank]. The V matrix encodes, for every component, how much each (channel, lag) combination contributes. GoPCA computes the **signed mean** of these loadings across the *p* channel dimensions at each lag, producing one signed value per lag per component. The result is a curve of length *L* per component that captures the **intrinsic temporal shape** of each component across the window (Broomhead & King, 1986; Vautard & Ghil, 1989).
+Where do these curves come from? When SVD is applied to the trajectory matrix it produces a V matrix (right singular vectors) of shape [*p*·*L* × rank]. The V matrix encodes, for every component, how much each (channel, lag) combination contributes. For each component, GoPCA identifies the **single most influential channel** — the one with the highest RMS loading across all lag positions — and displays the signed loadings of that channel across lags 0 to *L*−1 (Broomhead & King, 1986; Vautard & Ghil, 1989).
+
+This approach preserves the sign of the loadings, which is essential for reading temporal structure:
 
 * A curve that oscillates as a sinusoid — crossing zero, rising and falling — indicates a periodic component. The number of zero-crossings tells you the frequency: two zero-crossings per window = one full cycle per window length.
-* A curve that is monotone (gradually rising or falling) indicates a slow trend — the component captures structure that evolves directionally across the window.
-* A curve that is nearly flat across all lags indicates a global mean shift — equal contribution at every lag position, no temporal directionality.
+* A curve that is monotone (gradually rising or falling across the full window) indicates a slow trend component.
+* A curve that is nearly flat across all lags indicates a global mean shift — the component has equal loading strength at every lag position.
+
+> **Why show only the dominant channel?** In EEG, different brain regions often load with opposite signs on the same component (for example, frontal channels positive and occipital channels negative). If we averaged all channels, the positive and negative contributions would cancel and the result would appear flat — hiding the true temporal structure. Showing the single channel that contributes most avoids this cancellation and gives the clearest picture of the component's temporal shape.
 
 #### Questions:
 
-* Does the curve for PC1 cross zero — or is it flat or monotone?
-* Do any components show sinusoidal curves that oscillate across the 32 lag positions?
-* Do two adjacent components (e.g., PC2 and PC3) show similar sinusoidal shapes?
+* Does the curve for PC1 appear flat — consistent with a global, equally-weighted component?
+* Do any components show sinusoidal curves crossing zero multiple times across the 32 lag positions?
+* Do two adjacent components (e.g., PC2 and PC3) show similar sinusoidal shapes that look offset from each other?
 
 👉 Key insight: when two adjacent components both show sinusoidal Temporal Loadings curves that are approximately 90° out of phase with each other, they form a **paired oscillatory mode** — the subject of the next step.
 

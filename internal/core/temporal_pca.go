@@ -458,32 +458,41 @@ func (t *TemporalPCAImpl) Fit(data types.Matrix, config types.PCAConfig) (*types
 
 	// Build temporal eigenvectors matrix [numLags × nComponents] for visualization.
 	//
-	// Each column represents one principal component; each row is one lag position.
-	// For each (component, lag) cell we compute the signed mean of the right singular
-	// vector (V matrix, stored as rows of t.loadings) across the origVars channel
-	// dimensions at that lag:
+	// For each component we show the signed loadings of its single most influential
+	// channel across all lag positions. The dominant channel for component c is
+	// defined as the variable v* with the largest RMS loading across lags:
 	//
-	//   temporalEigenvectors[lag, comp] = mean_v( loadings[comp, lag*origVars + v] )
+	//   v*(c) = argmax_v sqrt( mean_l loadings[c, l*p + v]^2 )
+	//   temporalEigenvectors[lag, c] = loadings[c, lag*p + v*(c)]
 	//
-	// Preserving the sign is essential: an oscillatory component has loadings that
-	// follow sin(2π·f·lag) across lag positions. The mean across channels retains this
-	// signed pattern, so oscillatory components produce sinusoidal curves and trend
-	// components produce monotone or flat curves (Broomhead & King, 1986;
-	// Vautard & Ghil, 1989).
+	// This approach preserves sign (so oscillatory components appear as sinusoids
+	// and trend components as monotone curves) without the cancellation problem of
+	// averaging channels with opposite-sign spatial loadings — which is the common
+	// case in EEG where different brain regions load with opposite signs on the same
+	// component (Broomhead & King, 1986; Vautard & Ghil, 1989).
 	//
 	// Layout of t.loadings: row c, column lag*origVars+v  →  loading of component c
 	// for channel v at lag offset l.
-	//
-	// Note: using U[0:L] (first L window scores) here is incorrect — those are
-	// the PC scores of the first L windows of the recording, not the component shape.
 	temporalEigenvectors := mat.NewDense(t.numLags, t.nComponents, nil)
-	for lag := 0; lag < t.numLags; lag++ {
-		for comp := 0; comp < t.nComponents; comp++ {
-			sum := 0.0
-			for v := 0; v < t.origVars; v++ {
-				sum += t.loadings.At(comp, lag*t.origVars+v)
+	for comp := 0; comp < t.nComponents; comp++ {
+		// Find the dominant channel for this component (highest RMS across lags)
+		dominantVar := 0
+		maxRMS := -1.0
+		for v := 0; v < t.origVars; v++ {
+			sumSq := 0.0
+			for lag := 0; lag < t.numLags; lag++ {
+				val := t.loadings.At(comp, lag*t.origVars+v)
+				sumSq += val * val
 			}
-			temporalEigenvectors.Set(lag, comp, sum/float64(t.origVars))
+			rms := math.Sqrt(sumSq / float64(t.numLags))
+			if rms > maxRMS {
+				maxRMS = rms
+				dominantVar = v
+			}
+		}
+		// Store the signed loadings for the dominant channel across all lags
+		for lag := 0; lag < t.numLags; lag++ {
+			temporalEigenvectors.Set(lag, comp, t.loadings.At(comp, lag*t.origVars+dominantVar))
 		}
 	}
 

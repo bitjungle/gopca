@@ -845,8 +845,9 @@ func TestTemporalPCAVariableImportance(t *testing.T) {
 	})
 }
 
-// TestTemporalEigenvectorsShape verifies that TemporalEigenvectors contains the
-// signed-mean V-matrix loadings (temporal shape), not U-matrix rows (window scores).
+// TestTemporalEigenvectorsShape verifies that TemporalEigenvectors shows the signed
+// loadings of the dominant channel across lag positions (temporal shape), not U-matrix
+// rows (window scores).
 //
 // A pure sinusoidal input at a known frequency must produce TemporalEigenvectors that
 // oscillate as a sinusoid across the lag axis. If the old bug (U[0:L]) were present,
@@ -925,12 +926,10 @@ func TestTemporalEigenvectorsShape(t *testing.T) {
 // TestTemporalEigenvectorsNotFirstWindowScores verifies that TemporalEigenvectors
 // does NOT equal the first L rows of the U score matrix.
 // This is a regression test for the bug where U[0:L] was stored instead of
-// the signed-mean V-matrix loadings.
+// the dominant-channel V-matrix loadings.
 func TestTemporalEigenvectorsNotFirstWindowScores(t *testing.T) {
 	// Simple dataset where the first L window scores would be clearly different
 	// from the V-matrix loading pattern: a linearly increasing trend.
-	// For a linear trend, the V-matrix loadings across lags should be roughly constant
-	// (equal contribution at every lag), not monotonically increasing as U[0:L] would be.
 	T := 100
 	L := 10
 
@@ -956,14 +955,27 @@ func TestTemporalEigenvectorsNotFirstWindowScores(t *testing.T) {
 	assert.Equal(t, 1, len(result.TemporalEigenvectors[0]),
 		"TemporalEigenvectors must have nComponents columns")
 
-	// For a mean-centered linear trend, the V-matrix loadings per lag should be
-	// roughly equal in magnitude and all have the same sign (monotone temporal pattern).
-	// The old U[0:L] bug would produce scores that grow with time (increasing trend),
-	// so the range across lags would be much larger.
-	// Here we just verify the shape is [L×1] and values are finite.
+	// All values must be finite
 	for lag := 0; lag < L; lag++ {
 		val := result.TemporalEigenvectors[lag][0]
 		assert.False(t, math.IsNaN(val), "TemporalEigenvectors[%d][0] must not be NaN", lag)
 		assert.False(t, math.IsInf(val, 0), "TemporalEigenvectors[%d][0] must not be Inf", lag)
 	}
+
+	// The dominant-channel approach picks the channel with highest RMS loading.
+	// For a 2-channel linear trend where channel 1 has 2x the amplitude of channel 0,
+	// channel 1 should be dominant and all its loadings should have the same sign.
+	// (A linear trend within a mean-centered window produces monotone-signed loadings.)
+	firstSign := math.Signbit(result.TemporalEigenvectors[0][0])
+	allSameSign := true
+	for lag := 1; lag < L; lag++ {
+		if math.Abs(result.TemporalEigenvectors[lag][0]) > 1e-10 {
+			if math.Signbit(result.TemporalEigenvectors[lag][0]) != firstSign {
+				allSameSign = false
+				break
+			}
+		}
+	}
+	assert.True(t, allSameSign,
+		"For a linear trend, dominant-channel temporal loadings should all have the same sign")
 }
