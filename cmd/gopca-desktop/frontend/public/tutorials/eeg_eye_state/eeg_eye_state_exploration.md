@@ -253,19 +253,33 @@ GoPCA's **Temporal PCA** method implements steps 1 and 2. This is the core of SS
 
 ### Choosing the window length
 
-The window length *L* determines what temporal scale the analysis can resolve.
+The window length *L* determines what temporal scale the analysis can resolve. There is no universal correct value — it depends on what structure you are trying to find. Three practical criteria are useful, and ideally all three should agree:
 
-For this EEG dataset (128 Hz sampling rate):
+**Criterion 1 — match the oscillation period (most important for EEG)**
 
-| Lags | Duration | Notes |
-|-----:|--------:|-------|
-|    8 |    63 ms | Very short memory — mainly adjacent-sample correlations |
-|   16 |   125 ms | Short context — less than one full alpha cycle |
-|   32 |   250 ms | **Recommended default** — covers 2–3 alpha cycles (8–12 Hz) |
-|   64 |   500 ms | Stronger temporal context, larger trajectory matrix |
-|  128 |  1000 ms | Long window — picks up slower rhythms, hard to interpret |
+For oscillatory signals, *L* should cover at least one to two full periods of the frequency you want to detect (Golyandina, 2020). If the period is shorter than *L*, the sinusoidal pattern will be visible in the Temporal Loadings plot. If the period is longer than *L*, the window is too short to see the oscillation.
 
-A general guideline (Golyandina, 2020): for oscillatory components, *L* should cover at least one to two full periods of the oscillation of interest. Eye closure is associated with alpha-band activity at roughly 8–12 Hz (period 83–125 ms). A window of 32 samples (250 ms) covers 2–3 alpha cycles — enough to make these rhythmic patterns visible without making the trajectory matrix unnecessarily large.
+For this dataset: eye closure triggers alpha activity at ~8–12 Hz (period 83–125 ms). At 128 Hz, one alpha period is about 11–16 samples. A window of **32 samples (250 ms)** covers 2–3 full alpha cycles — enough to make the oscillation clearly visible.
+
+**Criterion 2 — fraction of the series length**
+
+SSA theory (Broomhead & King, 1986; Golyandina et al., 2015) recommends *L* ≤ *T*/2, where *T* is the total number of time points — so that each window position has at least *L* "partner" positions. Beyond that, a common practical choice is *L* ≈ *T*/4 to *T*/5 for exploratory analysis. For 14,980 time points, this gives *L* ≈ 3,000–4,000 — far larger than needed for EEG, so for this dataset the oscillation-period criterion is the binding constraint.
+
+**Criterion 3 — computational and interpretability budget**
+
+The trajectory matrix has *T* − *L* + 1 rows and *p* × *L* columns, where *p* is the number of channels. Larger *L* gives more temporal context but increases memory use and makes the Temporal Loadings plot harder to read. For this dataset with *p* = 14:
+
+| Lags | Trajectory matrix columns | Duration | Notes |
+|-----:|--------:|--------:|-------|
+|    8 |   112 |    63 ms | Too short — less than one alpha cycle |
+|   16 |   224 |   125 ms | Borderline — one short alpha cycle |
+|   32 |   448 |   250 ms | **Recommended** — 2–3 alpha cycles, readable loadings |
+|   64 |   896 |   500 ms | Fine, but loadings plot becomes crowded |
+|  128 | 1,792 | 1,000 ms | Long window, slow rhythms, harder to interpret |
+
+> **Why not use *L* = *p* = 14 (same as the number of channels)?** That is sometimes suggested as a minimum for MSSA — it ensures the trajectory matrix has at least as many columns per lag block as the original data. But 14 samples at 128 Hz is only 110 ms, which covers less than one full alpha cycle. It is a floor, not a recommended value. For EEG alpha-band analysis, the oscillation-period criterion gives a much more informative result.
+
+> **General rule for other datasets**: start from the dynamics of interest. Convert the period of the slowest oscillation you want to detect into samples (period in seconds × sampling rate). Set *L* to 2–4 times that value. Then check that *L* ≪ *T*/2. If you have no prior knowledge of the oscillation frequency, try *L* = *T*/4 as a starting point and use the Scree Plot to check whether paired components appear.
 
 The key trade-off to keep in mind:
 
