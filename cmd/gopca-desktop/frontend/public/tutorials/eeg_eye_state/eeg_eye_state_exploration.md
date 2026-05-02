@@ -337,11 +337,13 @@ This approach preserves the sign of the loadings, which is essential for reading
 
 #### Questions:
 
-* Does the curve for PC1 appear flat — consistent with a global, equally-weighted component?
-* Do any components show sinusoidal curves crossing zero multiple times across the 32 lag positions?
-* Do two adjacent components (e.g., PC2 and PC3) show similar sinusoidal shapes that look offset from each other?
+* Does PC1 appear flat — consistent with a global component with equal contribution at every lag?
+* Does any component show a smooth S-shape (positive at lag 0, crossing zero in the middle, negative at lag 31)? What oscillation period does that imply? (Hint: one zero-crossing over 32 lags = half a period, so period ≈ 64 samples = 500 ms → ~2 Hz)
+* Do any of the top 5 components show rapid sinusoidal oscillations crossing zero multiple times?
 
-👉 Key insight: when two adjacent components both show sinusoidal Temporal Loadings curves that are approximately 90° out of phase with each other, they form a **paired oscillatory mode** — the subject of the next step.
+👉 You may find that **none of the top 5 components show fast oscillations**. This is expected for this dataset — the dominant variance is captured by slow, eye-state related modulations (flat or gently sloped curves), not by fast oscillations like alpha. A slow component that captures the shift between open and closed eyes will look nearly flat across the 32-lag window (250 ms) because the eye-state itself changes over seconds, not milliseconds. Fast oscillatory components (alpha ~10 Hz, beta ~20 Hz) carry less total variance and will appear further down the ranked list.
+
+> **Tip**: try increasing the number of components displayed from 5 to 10 or 15. Somewhere in the lower-ranked components you may find a pair of components whose curves oscillate rapidly — multiple zero-crossings across the 32 lags. Those are the oscillatory modes. The number of zero-crossings tells you the approximate frequency: each full cycle produces two zero-crossings, so *k* zero-crossings ≈ *k*/2 cycles over 32 lags ≈ (*k*/2) / (32/128) Hz.
 
 ---
 
@@ -360,18 +362,21 @@ You can identify these pairs in two ways:
 
 Neither component alone gives the full picture. Together, they encode one complete oscillation at a specific frequency.
 
-For EEG, you might expect to find:
-* A dominant slow component (PC1) capturing the eye-state related shift — a slow modulation rather than a fast oscillation
-* One or more oscillatory pairs (e.g., PC2 + PC3) corresponding to alpha-band activity (~10 Hz)
+For this EEG dataset you should expect:
+* A dominant slow component (PC1) — nearly flat temporal loading, capturing the global broadband correlation across all channels
+* Several components with gently sloped or trend-like temporal loadings — these capture the slow eye-state modulation
+* Deeper in the component list: paired oscillatory components with rapidly oscillating temporal loading curves
+
+> **Why does slow structure dominate?** PCA ranks components by explained variance. The eye-state shift (open vs closed) lasts for several seconds and affects all 14 channels simultaneously — this generates a large amount of variance and dominates the top components. Alpha oscillations at 10 Hz are faster, more localised spatially, and contribute less total variance. They are real and present, but outweighed by the slow modulation in terms of explained variance.
 
 #### Questions:
 
 * How many components are needed to explain the bulk of the variance?
 * Do you see any adjacent pairs of components with nearly equal explained variance in the Scree Plot?
-* In the Temporal Loadings Plot, do those same paired components show 90°-shifted sinusoidal curves?
+* If you increase the number of components shown to 10 or 15, do any of the lower-ranked components show paired sinusoidal Temporal Loadings curves?
 * How many complete oscillation periods fit within the 32-lag window for a 10 Hz signal at 128 Hz?
 
-👉 Quick calculation: a 10 Hz alpha wave has a period of about 12.8 samples at 128 Hz. Over 32 lags you would see approximately 2.5 complete cycles — enough for the sinusoidal pattern to be clearly visible in the Temporal Loadings curve.
+👉 Quick calculation: a 10 Hz alpha wave has a period of about 12.8 samples at 128 Hz. Over 32 lags you would see approximately 2.5 complete cycles — enough for the sinusoidal pattern to be clearly visible if you look at the right components.
 
 ---
 
