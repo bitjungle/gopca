@@ -14,6 +14,12 @@ PCA has stood the test of time. **Developed over a century ago by Karl Pearson (
 
 The **GoPCA Suite** brings this powerful technique to your fingertips with a focused, professional-grade implementation. Whether you prefer the efficiency of command-line tools (pca CLI) for automation and reproducible research, or the intuitive visual exploration of GoPCA Desktop, our tools make PCA both accessible and practical.
 
+GoPCA is designed to serve two roles simultaneously — and it does not compromise on either:
+
+* **A learning tool:** GoPCA ships with five carefully chosen sample datasets spanning biology, chemistry, spectroscopy, and neuroscience. Each dataset comes with a step-by-step interactive tutorial that teaches both PCA concepts and how to use the software. You can go from zero to a complete multivariate analysis — including data diagnostics, outlier removal, and interpretation — without leaving the application. The tutorials are not toy examples; they are real datasets with real challenges, selected precisely because they expose the situations you will encounter in your own work.
+
+* **A professional analysis tool:** The same application you use to learn is the one you use on your own data. Load your CSV, configure your preprocessing, choose your method (standard SVD, NIPALS, Kernel PCA, or Temporal PCA), and export your model. There are no artificial limits, no watermarks, and no features locked behind a tutorial mode. When you are ready to analyse your own datasets, GoPCA is ready too.
+
 > **Interactive Tutorials:**  
 > GoPCA Desktop includes guided interactive tutorials for five carefully chosen sample datasets. Each tutorial walks you through a complete analysis, explains what to look for, and teaches you a specific aspect of PCA or data analysis. This introduction gives you the conceptual foundation; the tutorials give you the hands-on experience. Look for the **Open Tutorial** button next to each sample dataset in GoPCA Desktop.
 
