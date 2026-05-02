@@ -78,7 +78,7 @@ GoPCA will load the dataset automatically. The `time` column is used as row iden
 In the PCA configuration panel, set:
 
 * **PCA Method** → SVD
-* **Preprocessing** → leave at the default for now (no scaling)
+* **Preprocessing** → leave at the default for now (no scaling except for mean centering)
 
 The `eye_state` column will be available for colouring your plots. It is not used in the analysis itself — that is the whole point of unsupervised PCA.
 
@@ -238,7 +238,7 @@ With *L* = 32 lags and *T* = 14,980 time points, the trajectory matrix has appro
 
 SVD applied to the trajectory matrix produces components that are no longer simple spatial patterns — they are **spatiotemporal patterns**, capturing which channels co-vary and *how that co-variation evolves over the window*.
 
-GoPCA uses the same preprocessing logic here as for standard PCA, but applies it to the **original time series** before building the trajectory matrix. Applying preprocessing column-wise to the trajectory matrix would destroy the temporal structure by treating each lag as an independent variable.
+**You should use the same preprocessing here as you did for standard PCA — Standard Scaling is appropriate.** GoPCA applies it to the original 14-channel time series first, then builds the trajectory matrix from the scaled data. The 448 columns of the trajectory matrix are never standardised independently — doing so would treat each lag as a separate, unrelated variable and destroy the temporal structure the embedding was designed to reveal.
 
 ### The four SSA steps
 
