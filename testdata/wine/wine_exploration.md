@@ -67,15 +67,15 @@ You will use **GoPCA** to explore the dataset. Work through the steps in order �
 
 Load the Wine dataset. Set:
 
-* **Target column** → `classes`
-* **Preprocessing** → **Mean Center** (default)
-* **PCA Method** → SVD
+* **Number of Components** → **5**  (default)
+* **Preprocessing** → **Mean Center Only** (default)
+* **PCA Method** → SVD (default)
 
-Click **Go PCA** and open the **Scores Plot**.
+Click **Go PCA**.
 
 #### Questions:
 
-* Do the three cultivar classes form clear clusters?
+* Open the **Scores Plot**. Set **Color by** to "classes"Do the three cultivar classes form clear clusters? 
 * Now open the **Loadings Plot** — which variable dominates, and by how much compared to the others?
 * Open the **Scree Plot** — how much variance does PC1 alone explain?
 
@@ -108,7 +108,7 @@ Open the **Scree Plot**.
 #### Questions:
 
 * How much variance do PC1 and PC2 explain together?
-* How many components would you need to capture 80% of the variance?
+* How many components would you need to capture 85% of the variance?
 * Compare this to the Iris dataset — what does the difference tell you?
 
 👉 For Wine, the first two components explain roughly 55% of the variance. This is much less than Iris. It means the 2D scores plot is showing you *most of the cultivar separation*, but not the complete story — some structure is spread across components 3, 4, and beyond.
@@ -117,21 +117,35 @@ This is normal for real chemical data with 13 correlated variables. The 2D plot 
 
 ---
 
-## Step 4: Understand why the separation happens — the Loadings Plot
+## Step 4: Understand why the separation happens — Loadings and Circle of Correlations
 
-Open the **Loadings Plot**.
+GoPCA offers two complementary views of the variable structure. Open both and compare them.
 
-This plot shows how each of the 13 original variables contributes to PC1 and PC2. Each variable is a point; its position tells you the direction it points in the PC space.
+### The Loadings Plot
+
+The Loadings Plot shows the loading of each variable on **one component at a time** as a bar chart. Switch between PC1 and PC2 using the component selector. The dashed threshold lines (±0.3) help you identify which variables contribute meaningfully.
 
 #### Questions:
 
-* Which variables are close together — pointing in similar directions?
-* Which variables point in opposite directions?
-* Can you identify a group of chemically related variables that cluster together?
+* On PC1: which variables have large negative loadings? Which have large positive loadings?
+* Do the same variables dominate PC2, or does a different group take over?
+* Which variables have small loadings on both components — meaning they contribute little to either?
 
-👉 Look for the **phenolic group**: `flavanoids`, `total_phenols`, `proanthocyanins`, `od280/od315_of_diluted_wines`, and `hue`. In a correctly standardised PCA these variables tend to cluster together in the loadings, because they reflect the same underlying aspect of wine chemistry — the concentration and type of phenolic compounds. Their clustering is a chemical discovery, not a statistical artefact.
+### The Circle of Correlations
 
-Now look at `color_intensity`, `malic_acid`, and `alcalinity_of_ash` — do they point in a similar or opposite direction to the phenolic group?
+Now open the **Circle of Correlations**. This plot shows all 13 variables simultaneously as arrows (vectors) in the PC1–PC2 plane. Two things to read:
+
+* **Direction**: variables pointing in the same direction are positively correlated with each other; variables pointing in opposite directions are negatively correlated. Arrows pointing at 90° are uncorrelated.
+* **Length**: an arrow reaching the outer dashed circle means that variable is *perfectly* explained by PC1 and PC2 alone — nothing of it is hidden in the remaining components. A short arrow means most of that variable's variance lives in PC3 or beyond.
+
+#### Questions:
+
+* Can you identify the **phenolic group** — `flavanoids`, `total_phenols`, `proanthocyanins`, `od280/od315_of_diluted_wines`, and `hue` — pointing in the same direction? What does this tell you about their mutual correlation?
+* Where do `color_intensity`, `malic_acid`, and `alcalinity_of_ash` point relative to the phenolic group?
+* Notice that **all arrows are short** — none reach the outer circle. Why? Recall the Scree Plot from Step 3: PC1 and PC2 together explain only ~55% of the total variance. That means no variable is fully captured in this 2D view — all 13 variables have variance hidden in PC3 and beyond. The short arrows are not a problem; they are an honest representation of how much the 2D projection is leaving out.
+
+> **Loadings Plot vs Circle of Correlations — when to use which:**
+> Use the Loadings Plot when you want to read precise loading values for a specific component. Use the Circle of Correlations when you want to see the full pattern of variable relationships and understand which variables are driving the same direction of variation simultaneously across two components.
 
 ---
 
