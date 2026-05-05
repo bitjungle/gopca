@@ -135,6 +135,10 @@ Two things to look for:
 * Does the 3D plot reveal additional structure that the 2D plot misses?
 * Does PC3's contribution in the Scree Plot justify the added complexity?
 
+> **Something to think about:** Set the number of components to 4 and re-run. What is the cumulative explained variance now? Why does a 4-component model explain *exactly* 100% of the variance — and how does the number of variables in this dataset relate to that?
+>
+> 👉 PCA cannot create more independent directions than there are variables. With 4 variables, the data lives in at most 4-dimensional space, so 4 components account for all of it. There is nothing left to explain. This is why the Scree Plot always has at most as many bars as your dataset has variables — and why adding a fifth component here would be meaningless.
+
 ---
 
 ## Step 3: Understand *why* the separation happens
