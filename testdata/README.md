@@ -2,7 +2,7 @@
 
 This folder contains various datasets used for testing and demonstrating the capabilities of GoPCA and GoCSV.
 
-# Interesing places to look for data:
+## Interesting places to look for data:
 
 * UCI Machine Learning Repository: https://archive.ics.uci.edu
 * Our World in Data: https://ourworldindata.org

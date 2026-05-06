@@ -75,7 +75,7 @@ Click **Go PCA**.
 
 #### Questions:
 
-* Open the **Scores Plot**. Set **Color by** to "classes"Do the three cultivar classes form clear clusters? 
+* Open the **Scores Plot**. Set **Color by** to `classes`. Do the three cultivar classes form clear clusters?
 * Now open the **Loadings Plot** — which variable dominates, and by how much compared to the others?
 * Open the **Scree Plot** — how much variance does PC1 alone explain?
 
