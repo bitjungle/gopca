@@ -20,20 +20,20 @@ This controller introduces **closed-loop dynamics** into the data — disturbanc
 
 The simulation runs for **800 minutes** at 1-minute sampling, producing **801 observations** across **12 process variables**:
 
-| Variable | Units | Description |
-|---|---|---|
-| `reactor_temperature_K` | K | Reactor temperature (controlled) |
-| `coolant_temperature_K` | K | Coolant temperature (manipulated) |
-| `feed_temperature_K` | K | Incoming feed temperature |
-| `reactant_concentration_mol_L` | mol/L | Reactant A in reactor |
-| `product_concentration_mol_L` | mol/L | Product B in reactor |
-| `feed_concentration_mol_L` | mol/L | Reactant A in feed |
-| `feed_flow_rate_L_min` | L/min | Volumetric feed flow rate |
-| `cooling_duty_kJ_min` | kJ/min | Heat removed by coolant system |
-| `reaction_rate_mol_L_min` | mol/L/min | Rate of reaction A→B |
-| `conversion_fraction` | — | Fraction of A converted to B |
-| `heat_transfer_UA_kJ_min_K` | kJ/(min·K) | Overall heat-transfer coefficient |
-| `residence_time_min` | min | Volume / flow rate (V/F) |
+| Column | Symbol | Units | Description |
+|---|---|---|---|
+| `T_K` | *T* | K | Reactor temperature (controlled variable) |
+| `Tc_out_K` | *T*_c,out | K | Coolant outlet temperature (manipulated via PI) |
+| `Tf_K` | *T*_f | K | Feed temperature |
+| `CA_mol_L` | *C*_A | mol/L | Reactant A concentration in reactor |
+| `CB_mol_L` | *C*_B | mol/L | Product B concentration in reactor |
+| `CAf_mol_L` | *C*_A,f | mol/L | Reactant A concentration in feed |
+| `F_L_min` | *F* | L/min | Volumetric feed flow rate |
+| `cooling_duty_kJ_min` | *Q* | kJ/min | Heat removed by coolant system |
+| `reaction_rate_mol_L_min` | *r*_A | mol/L/min | Rate of reaction A→B |
+| `conversion_fraction` | *X*_A | — | Fraction of A converted to B |
+| `heat_transfer_UA_kJ_min_K` | *UA* | kJ/(min·K) | Overall heat-transfer coefficient |
+| `residence_time_min` | *τ* | min | Hydraulic residence time (V/F) |
 
 The dataset also includes string columns (`event`, `regime`) and a binary flag (`fault_active`) for coloring and interpretation. **Do not include these as PCA variables** — use `regime` as the color target.
 
@@ -182,7 +182,7 @@ Return to the Scores Plot.
 
 * Is the cooling fault period clearly separated from the normal operation cluster in PC1–PC2 space?
 * If not, try PC1 vs PC3, or PC2 vs PC3 — the fault may project most strongly onto a higher component
-* Open the Loadings Plot for the component(s) that best separate the fault period. Which variables have the largest loadings? Do they include `cooling_duty_kJ_min`, `heat_transfer_UA_kJ_min_K`, or `reactor_temperature_K`?
+* Open the Loadings Plot for the component(s) that best separate the fault period. Which variables have the largest loadings? Do they include `cooling_duty_kJ_min`, `heat_transfer_UA_kJ_min_K`, or `T_K`?
 
 👉 A 28 % drop in UA is a significant fault. In a real plant, this would appear gradually over hours or days. The key question is: which combination of variables carries the fault signature, and how early in the fault period does it become visible in the scores plot?
 

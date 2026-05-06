@@ -51,9 +51,23 @@ Process time constants (for lag selection):
     PI integral time τ_I = 8 min    → L = 8–16 captures one controller action
     Flow oscillation period = 40 min → L = 40–80 to resolve fully
 
-CSV format:
-    First column : time_min  (use as observation identifier, not a PCA variable)
-    Numeric columns (PCA variables): process measurements with realistic noise
+CSV format and column names (matching P&ID diagram — cstr_diagram_v2.png):
+    time_min     — observation identifier / time axis (not a PCA variable)
+
+    PCA variables (12 sensor / derived measurements):
+        T_K           T       Reactor temperature                  [K]
+        Tc_out_K      T_c,out Coolant outlet temperature           [K]
+        Tf_K          T_f     Feed temperature                     [K]
+        CA_mol_L      C_A     Reactant concentration in reactor    [mol/L]
+        CB_mol_L      C_B     Product concentration in reactor     [mol/L]
+        CAf_mol_L     C_A,f   Feed reactant concentration          [mol/L]
+        F_L_min       F       Feed flow rate                       [L/min]
+        cooling_duty_kJ_min   Q   Cooling duty                     [kJ/min]
+        reaction_rate_mol_L_min   r_A  Reaction rate               [mol/L/min]
+        conversion_fraction   X_A  Fractional conversion of A      [—]
+        heat_transfer_UA_kJ_min_K UA  Heat-transfer coefficient    [kJ/(min·K)]
+        residence_time_min    tau  Hydraulic residence time        [min]
+
     String columns (auto-detected by GoPCA, use for coloring): event, regime
     Binary column : fault_active (0 = normal, 1 = fault or disturbance)
 
@@ -287,13 +301,13 @@ def simulate(
         n = noise_level
         rows.append({
             "time_min":                      round(float(t), 4),
-            "reactor_temperature_K":         T[i]    + rng.normal(0, 0.08  * n),
-            "coolant_temperature_K":         Tc      + rng.normal(0, 0.05  * n),
-            "feed_temperature_K":            Tf      + rng.normal(0, 0.05  * n),
-            "reactant_concentration_mol_L":  CA[i]   + rng.normal(0, 0.0015 * n),
-            "product_concentration_mol_L":   CB[i]   + rng.normal(0, 0.0015 * n),
-            "feed_concentration_mol_L":      CAf     + rng.normal(0, 0.0010 * n),
-            "feed_flow_rate_L_min":          F       + rng.normal(0, 0.15   * n),
+            "T_K":                           T[i]    + rng.normal(0, 0.08   * n),
+            "Tc_out_K":                      Tc      + rng.normal(0, 0.05   * n),
+            "Tf_K":                          Tf      + rng.normal(0, 0.05   * n),
+            "CA_mol_L":                      CA[i]   + rng.normal(0, 0.0015 * n),
+            "CB_mol_L":                      CB[i]   + rng.normal(0, 0.0015 * n),
+            "CAf_mol_L":                     CAf     + rng.normal(0, 0.0010 * n),
+            "F_L_min":                       F       + rng.normal(0, 0.15   * n),
             "cooling_duty_kJ_min":           cooling_duty + rng.normal(0, 0.25 * n),
             "reaction_rate_mol_L_min":       rA      + rng.normal(0, 0.0004 * n),
             "conversion_fraction":           conversion + rng.normal(0, 0.001 * n),
