@@ -19,6 +19,7 @@ const TUTORIAL_PATHS: Record<string, string> = {
   wine:       '/tutorials/wine/wine_exploration.md',
   corn:       '/tutorials/corn/corn_exploration.md',
   swiss_roll:    '/tutorials/swiss_roll/swiss_roll_exploration.md',
+  cstr:          '/tutorials/cstr/cstr_exploration.md',
   eeg_eye_state: '/tutorials/eeg_eye_state/eeg_eye_state_exploration.md',
 };
 
