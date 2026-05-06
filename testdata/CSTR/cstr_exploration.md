@@ -16,6 +16,8 @@ A proportional-integral (PI) controller manipulates the coolant temperature T_c 
 
 This controller introduces **closed-loop dynamics** into the data — disturbances cause transients, the controller responds, and variables return to steady state. Temporal PCA can capture all of this.
 
+> A temporal PCA analysis of this dataset teaches something deeper than ordinary PCA: not just *which variables are correlated*, but *how process dynamics evolve through time*. That is exactly why dynamic PCA became central to chemical process monitoring.
+
 ![CSTR P&ID — process variables and instrumentation](./cstr_diagram.png)
 *Simplified P&ID showing the measured variables, instrumentation, and PI temperature control loop for the simulated CSTR process.*
 
@@ -76,24 +78,49 @@ Work through the steps in order. Each step builds on the previous one.
 
 ---
 
-## Step 1: Load the data and configure GoPCA
+## Step 1: Start with ordinary PCA — establish a baseline
+
+Before introducing time lags, run ordinary PCA (L = 0) first. This lets you see exactly what temporal PCA adds.
 
 Load `cstr_temporal_pca.csv` into GoPCA. Set:
 
-* **Time column** → `time_min`
 * **Target column** → `regime` (for coloring)
 * **Preprocessing** → **Standard Scale**
-* **Lags (L)** → **10**
-* **Number of Components** → **8**
+* **Lags (L)** → **0**
+* **Number of Components** → **5**
 * **PCA Method** → SVD (default)
 
-Click **Go Temporal PCA**.
+Click **Go PCA**.
 
 > **Why Standard Scale?** The 12 variables have completely different units and magnitudes — temperatures in the hundreds of Kelvin, flow rates in hundreds of L/min, concentrations below 1 mol/L, heat duty in thousands of kJ/min. Without scaling, PCA would be dominated by whichever variable has the largest numerical variance, not the most process-relevant variation.
 
+Open the **Scores Plot** (color by `regime`) and the **Loadings Plot**.
+
+#### Questions:
+
+* Can you identify clusters corresponding to normal operation, feed disturbances, the cooling fault, and the oscillation regime?
+* PC1 typically captures **overall reaction intensity** — which variables have the largest loadings? You would expect `T_K`, `reaction_rate_mol_L_min`, and `conversion_fraction` to dominate, since they are all tightly coupled through the energy and mass balances at steady state.
+* PC2 often separates **feed and composition effects** from **thermal and cooling effects** — do the loadings support this?
+* Now look at the flow oscillation period in the scores plot. Does ordinary PCA cleanly separate it from normal operation, or does it overlap?
+
+👉 Ordinary PCA sees the process at a **single instant in time**. It can detect that operating regimes are different, but it cannot understand *how* a disturbance propagates through the process, *how quickly* the controller responds, or *whether* a periodic signal is present. That is the key limitation ordinary PCA cannot overcome.
+
 ---
 
-## Step 2: Read the Scree Plot — how many components carry information?
+## Step 2: Switch to Temporal PCA
+
+Now change the configuration to:
+
+* **Lags (L)** → **10**
+* **Number of Components** → **8**
+
+Click **Go Temporal PCA**.
+
+Each observation now carries a short process history — the current values plus the 10 preceding minutes. PCA is now finding directions of maximum variance in this extended state space, which includes time.
+
+---
+
+## Step 3: Read the Scree Plot — how many components carry information?
 
 Open the **Scree Plot**.
 
@@ -107,7 +134,7 @@ Open the **Scree Plot**.
 
 ---
 
-## Step 3: The scores plot — reading a process trajectory
+## Step 4: The scores plot — reading a process trajectory
 
 Open the **Scores Plot (PC1 vs PC2)** and color by `regime`.
 
@@ -132,7 +159,7 @@ For time-series data, the scores form a **time-ordered trajectory** through PC s
 
 ---
 
-## Step 4: The Temporal Loadings — what dynamics are in each component?
+## Step 5: The Temporal Loadings — what dynamics are in each component?
 
 Open the **Temporal Loadings Plot**. Display at least 8 components.
 
@@ -151,12 +178,13 @@ Each panel shows how one component's loading evolves across lags 0 to L. The x-a
 * Which components show a monotone decaying shape? What time constant does the decay suggest (how many lags before it flattens)?
 * Can you find any components with a sinusoidal shape? These represent the 40-minute flow oscillation.
 * Compare the decay time constant to the PI integral time τ_I = 8 minutes. Do they match?
+* Look carefully at components dominated by `Tc_out_K` (coolant temperature) versus `T_K` (reactor temperature). Do their loading curves peak at different lags? This is **delayed thermal coupling**: the reactor has thermal inertia, so a change in coolant temperature takes several minutes to propagate into a change in reactor temperature. The lag axis makes this sequence visible — something ordinary PCA cannot show.
 
 > **Hint:** A sinusoidal temporal loading pattern means that component is tracking a variable that oscillates in time. The period of the oscillation can be estimated from the zero-crossings: if you count k zero-crossings over L lags, the oscillation period ≈ 2L/k minutes. For a 40-minute oscillation with L = 10 lags, you will see only about half a cycle — try L = 40 to resolve the full period.
 
 ---
 
-## Step 5: Identify the oscillatory pair
+## Step 6: Identify the oscillatory pair
 
 Temporal PCA (SSA) represents a single oscillation as a **pair of components** with:
 
@@ -175,7 +203,7 @@ This pairing occurs because a sine wave requires both a sine and a cosine compon
 
 ---
 
-## Step 6: Fault detection — does Temporal PCA see the cooling fault?
+## Step 7: Fault detection — does Temporal PCA see the cooling fault?
 
 The cooling fault (minutes 520–680) reduces the heat-transfer coefficient by 28 %. The controller tries to compensate by lowering T_c, but eventually saturates at its minimum value.
 
@@ -195,16 +223,18 @@ Return to the Scores Plot.
 
 ---
 
-## Step 7: Compare lag settings — L = 5, L = 10, L = 20
+## Step 8: Compare lag settings — L = 0, L = 5, L = 10, L = 20
 
-Run Temporal PCA three times with different lag values: **L = 5**, **L = 10**, **L = 20** (keep 8 components, Standard Scale). Compare the Scree Plots and Temporal Loadings.
+Run Temporal PCA four times: **L = 0** (ordinary PCA), **L = 5**, **L = 10**, **L = 20** (keep 8 components, Standard Scale). Compare the Scree Plots, Temporal Loadings, and Scores Plots across all four.
 
 #### Questions:
 
+* At L = 0, how does the scores plot compare to what you saw in Step 1? (It should be identical — L = 0 is exactly ordinary PCA.)
 * Does increasing L reveal more temporal structure (more sinusoidal components)?
 * At L = 5, does the Scree Plot still show a clear elbow?
 * At L = 20, how many components do you need to explain 80% of the variance? Why does the number increase with L?
 * Which lag setting gives you the most useful separation between normal operation and the cooling fault in the scores plot?
+* Look at which variables dominate the early PCs across all four settings. At L = 0, fast variables (feed flow, coolant temperature) and slow variables (reactor temperature, concentrations) appear mixed together. As L increases, do you notice any separation of **fast dynamic modes** from **slow process modes** in the component structure? Fast variables (feed flow, coolant control) evolve on the timescale of the residence time (≈1 min); slow variables (reactor temperature, concentrations) evolve on the timescale of the PI integral time (8 min) and thermal inertia. Temporal PCA can separate these time scales into different components.
 
 > **Rule of thumb:** L should be at least as large as the longest process time constant you want to capture. For controller dynamics (τ_I = 8 min), L ≥ 10 is sensible. For the full flow oscillation (40 min), you need L ≥ 40. Larger L improves frequency resolution but increases the size of the trajectory matrix — for 801 observations and L = 40, each "augmented observation" spans 41 time steps, leaving 761 usable rows.
 
@@ -226,6 +256,17 @@ After completing this exploration, you should be able to:
 ## Final reflection
 
 > You started with 12 process variables measured every minute for 800 minutes. A conventional pairwise analysis would give you 66 panels and no information about how the variables evolve together over time.
+
+If you have worked through the other GoPCA tutorials, you have now seen PCA applied across four fundamentally different data structures:
+
+| Dataset | What PCA discovers |
+|---|---|
+| **Iris / Wine** | Geometric and chemical structure — clusters and correlations among static samples |
+| **Corn (NIR)** | Correlated wavelength structure — hundreds of channels carrying the same compositional signal |
+| **Swiss Roll** | Nonlinear manifold geometry — Kernel PCA unrolling a curved surface that linear PCA cannot separate |
+| **CSTR (Temporal)** | Dynamic process modes — time-dependent structure, delayed coupling, oscillations, fault propagation |
+
+Each dataset required a different analytical lens. The CSTR dataset shows that by embedding lagged process history into the data matrix, PCA gains the ability to *see time* — revealing not just which variables are related, but how they influence each other across minutes and hours. That conceptual bridge connects standard PCA to the full toolkit of dynamic process monitoring used in industrial practice.
 
 Think about these questions:
 
