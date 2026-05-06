@@ -130,6 +130,15 @@ export function DataLoadSection() {
                                     Swiss Roll
                                 </button>
                             </HelpWrapper>
+                            <HelpWrapper helpKey="sample-dataset-cstr">
+                                <button
+                                    onClick={() => loadDatasetWithTutorial('cstr.csv', 'regime', 'cstr')}
+                                    className="w-full px-4 py-2 text-sm bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors"
+                                    disabled={loading}
+                                >
+                                    CSTR (Temporal)
+                                </button>
+                            </HelpWrapper>
                             <HelpWrapper helpKey="sample-dataset-eeg-eye-state">
                                 <button
                                     onClick={() => loadDatasetWithTutorial('eeg_eye_state.csv', undefined, 'eeg_eye_state')}

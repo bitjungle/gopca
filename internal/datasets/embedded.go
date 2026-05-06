@@ -29,6 +29,9 @@ var (
 
 	//go:embed eeg_eye_state.csv.gz
 	EEGEyeStateCSVGZ []byte
+
+	//go:embed cstr.csv.gz
+	CSTRCSVGZ []byte
 )
 
 // GetDataset returns the embedded dataset content by filename
@@ -47,6 +50,8 @@ func GetDataset(filename string) (string, bool) {
 		compressedData = SwissRollCSVGZ
 	case "eeg_eye_state.csv":
 		compressedData = EEGEyeStateCSVGZ
+	case "cstr.csv":
+		compressedData = CSTRCSVGZ
 	default:
 		return "", false
 	}
