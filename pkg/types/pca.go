@@ -81,7 +81,7 @@ type PCAResult struct {
 	// Additional fields for temporal PCA and other methods
 	SingularValues []float64 `json:"singular_values,omitempty"` // Singular values from SVD
 	// Temporal PCA specific fields
-	TemporalEigenvectors       Matrix `json:"temporal_eigenvectors,omitempty"`        // U matrix from SVD (lags × components) for temporal PCA
+	TemporalEigenvectors       Matrix `json:"temporal_eigenvectors,omitempty"`        // Dominant-channel V-matrix loadings (lags × components): signed temporal shape of each component's most influential channel
 	TemporalVariableImportance Matrix `json:"temporal_variable_importance,omitempty"` // Aggregated variable importance (components × variables)
 	// Kernel PCA specific fields
 	KernelType         string             `json:"kernel_type,omitempty"`         // Type of kernel used (rbf, linear, poly)

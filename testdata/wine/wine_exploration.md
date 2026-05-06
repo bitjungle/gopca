@@ -30,193 +30,175 @@ For each wine, **13 continuous chemical variables** were measured:
 * OD280/OD315 of diluted wines
 * Proline
 
-This means each wine is described by **13 variables**, or equivalently, each sample lives in a **13-dimensional space** — far beyond anything we can directly visualise.
+Each wine is described by **13 variables** — each sample lives in a **13-dimensional space**, far beyond anything we can directly visualise.
+
+![Vineyards in Piedmont, Italy](./Piedmont_Italy_pexels-lulo.jpg)
+*Vineyards in the Piedmont region of Italy — the origin of the wines in this dataset. Photo: Lulo*
 
 ---
 
-## First look at the data
+## From Iris to Wine: why this dataset is harder
 
-Below is a *pair plot* of the dataset, showing all pairwise relationships between variables.
+In the Iris tutorial, PCA reduced 4 variables to 2 components and captured **95.8% of the total variance**. The result was nearly complete — almost nothing was lost in the reduction.
+
+Wine is a more realistic challenge. With 13 variables, several things change:
+
+**The pairplot is no longer practical.** Recall from the Iris tutorial that a pairplot has *N(N−1)/2* panels. For 13 variables that is **78 panels** — exactly what was predicted in that table. The pairplot below is included so you can see this problem directly.
 
 ![Wine pairplot](./wine_pairplot.png)
 
-Take a few minutes to look at it carefully.
+Take a moment to look at it. Notice the scale differences across the axis ranges — some variables range from 0 to 2, others from 0 to 1700.
 
-### Reflect:
+> With 13 variables you can look at individual panels, but you cannot hold the full 13-dimensional picture in your head. PCA can.
 
-* Can you already see clusters corresponding to the three cultivars?
-* Are some variables strongly correlated?
-* Look at the axis ranges — do all variables operate on the same scale?
+**Less variance falls in the first two components.** For Wine, two components explain around 55% of the total variance rather than 96%. The 2D scores plot is still informative, but it is an incomplete summary — more of the story lives in components 3, 4, and beyond.
 
-👉 You are currently looking at **many 2D projections of a 13-dimensional dataset**.
-Even with 13 variables, you can only ever see two at a time. And the scale differences are immediately striking.
-
----
-
-## The challenge
-
-Working directly in 13 dimensions is impossible to visualise. Even pair plots become crowded and hard to interpret.
-
-Your task is to use **Principal Component Analysis (PCA)** to:
-
-> Reduce the dimensionality of the dataset while preserving as much structure as possible.
-
-Think of PCA as:
-
-* A way to **compress** the data
-* A way to **rotate the coordinate system**
-* A way to find **new axes that reveal patterns more clearly**
-
-This dataset has an additional challenge compared to Iris: the 13 variables are measured on **very different scales**. Proline ranges from roughly 300 to 1700; nonflavanoid phenols range from 0.1 to 0.7. PCA is sensitive to scale — and this will matter.
+**Preprocessing becomes essential, not optional.** The 13 variables are measured on completely different scales. Proline ranges from roughly 300 to 1700; nonflavanoid phenols range from 0.1 to 0.7. PCA finds directions of maximum variance — so without rescaling, it will simply find the direction in which Proline varies most, regardless of whether that is chemically interesting. This is not a subtle effect. You will see it clearly in Step 1.
 
 ---
 
 # Your task: Discover the structure using PCA
 
-You will use the application **GoPCA** to explore the dataset.
-
-Do not try to "get the right answer" immediately.
-Instead, **experiment, observe, and reflect**.
+You will use **GoPCA** to explore the dataset. Work through the steps in order — the sequence is deliberate.
 
 ---
 
-## Step 1: Load the data and run PCA
+## Step 1: Run PCA *without* standardisation first
 
-* Load the Wine dataset into GoPCA
-* Run PCA with default settings
+Load the Wine dataset. Set:
 
-### Look at the **Scores Plot (PC1 vs PC2)**
+* **Number of Components** → **5**  (default)
+* **Preprocessing** → **Mean Center Only** (default)
+* **PCA Method** → SVD (default)
+
+Click **Go PCA**.
 
 #### Questions:
 
-* Do the three cultivars form clusters?
-* Are they well separated in 2D?
-* Did PCA recover the cultivar grouping *without using the class labels*?
+* Open the **Scores Plot**. Set **Color by** to `classes`. Do the three cultivar classes form clear clusters?
+* Now open the **Loadings Plot** — which variable dominates, and by how much compared to the others?
+* Open the **Scree Plot** — how much variance does PC1 alone explain?
 
-👉 Hint: Set the **target column** to `classes` in GoPCA to colour the samples by cultivar — this reveals the grouping that PCA found on its own.
+👉 You should see that one variable — `proline` — has a much larger loading than all the others. Because proline ranges from 300 to 1700 while most other variables range from 0 to 10, it has a far larger numerical variance and pulls the first component almost entirely on its own. PCA is doing exactly what it is designed to do: it is finding the direction of maximum variance. The problem is that numerical scale is not the same as chemical importance.
 
 ---
 
-## Step 2: Explore explained structure
+## Step 2: Apply Standard Scale and compare
 
-Look at how much variation is captured by the first components.
+Now switch preprocessing to **Standard Scale** and click **Go PCA** again.
+
+Standard Scale divides each variable by its standard deviation after centering, giving every variable unit variance. This puts all 13 variables on equal footing before PCA begins.
 
 #### Questions:
 
-* How much variance is explained by PC1 alone?
-* How much by PC1 + PC2 together?
-* How many principal components seem "enough"?
+* How does the scores plot change compared to Step 1?
+* Do the three cultivar classes separate more clearly or less clearly?
+* Open the Loadings Plot — are all 13 variables now contributing, rather than just one?
 
-👉 Try switching to a **3D Scores Plot**:
+👉 With Standard Scale, the three cultivar classes separate clearly in the scores plot. Without it, proline was drowning out the other 12 variables. This is why standardisation is described as *essential* for datasets with mixed units — not a preference, but a requirement for meaningful results.
 
-* Does the separation between cultivars improve?
-* Is the third dimension adding meaningful information?
+> Keep **Standard Scale** active for all remaining steps.
 
 ---
 
-## Step 3: Understand *why* the separation happens
+## Step 3: How complete is the 2D picture?
 
-Now open the **Loadings Plot**.
-
-This plot tells you how the original variables contribute to the principal components.
+Open the **Scree Plot**.
 
 #### Questions:
 
-* Which variables influence PC1 the most?
-* Which variables influence PC2?
-* Are some variables pointing in similar directions?
+* How much variance do PC1 and PC2 explain together?
+* How many components would you need to capture 85% of the variance?
+* Compare this to the Iris dataset — what does the difference tell you?
 
-👉 Hint:
+👉 For Wine, the first two components explain roughly 55% of the variance. This is much less than Iris. It means the 2D scores plot is showing you *most of the cultivar separation*, but not the complete story — some structure is spread across components 3, 4, and beyond.
 
-* Variables pointing in the same direction → positively correlated
-* Opposite directions → negatively correlated
-* Long arrows → strong influence on that component
-
-👉 Pay particular attention to the **phenolic group**:
-
-* `total_phenols`, `flavanoids`, `proanthocyanins`, `hue`, `od280/od315_of_diluted_wines`
-
-These variables often cluster together in the loadings — because they measure related aspects of the same underlying chemistry.
+This is normal for real chemical data with 13 correlated variables. The 2D plot is still useful and informative — but you should be aware of what it is not showing.
 
 ---
 
-## Step 4: Combine both views (Biplot)
+## Step 4: Understand why the separation happens — Loadings and Circle of Correlations
 
-Open the **Biplot**, which shows:
+GoPCA offers two complementary views of the variable structure. Open both and compare them.
 
-* Samples (scores)
-* Variables (loadings)
+### The Loadings Plot
 
-in the same plot.
+The Loadings Plot shows the loading of each variable on **one component at a time** as a bar chart. Switch between PC1 and PC2 using the component selector. The dashed threshold lines (±0.3) help you identify which variables contribute meaningfully.
 
 #### Questions:
 
-* Which variables "pull" the cultivar clusters apart?
-* Why are the classes separated the way they are?
-* Which chemical measurements seem most important for distinguishing cultivars?
+* On PC1: which variables have large negative loadings? Which have large positive loadings?
+* Do the same variables dominate PC2, or does a different group take over?
+* Which variables have small loadings on both components — meaning they contribute little to either?
 
-👉 Hint:
+### The Circle of Correlations
 
-* Look at which loading arrows point toward each cultivar cluster
-* Compare the direction of `proline` with the direction of the phenolic variables — are they telling the same story, or different stories?
+Now open the **Circle of Correlations**. This plot shows all 13 variables simultaneously as arrows (vectors) in the PC1–PC2 plane. Two things to read:
 
----
-
-## Step 5: Use color and grouping
-
-In GoPCA, make sure the **target column** is set to `classes` to colour samples by cultivar. Then enable **Confidence Ellipses**.
+* **Direction**: variables pointing in the same direction are positively correlated with each other; variables pointing in opposite directions are negatively correlated. Arrows pointing at 90° are uncorrelated.
+* **Length**: an arrow reaching the outer dashed circle means that variable is *perfectly* explained by PC1 and PC2 alone — nothing of it is hidden in the remaining components. A short arrow means most of that variable's variance lives in PC3 or beyond.
 
 #### Questions:
 
-* How distinct are the three cultivar clusters?
-* Do the ellipses overlap?
-* Which two cultivars are hardest to distinguish?
+* Can you identify the **phenolic group** — `flavanoids`, `total_phenols`, `proanthocyanins`, `od280/od315_of_diluted_wines`, and `hue` — pointing in the same direction? What does this tell you about their mutual correlation?
+* Where do `color_intensity`, `malic_acid`, and `alcalinity_of_ash` point relative to the phenolic group?
+* Notice that **all arrows are short** — none reach the outer circle. Why? Recall the Scree Plot from Step 3: PC1 and PC2 together explain only ~55% of the total variance. That means no variable is fully captured in this 2D view — all 13 variables have variance hidden in PC3 and beyond. The short arrows are not a problem; they are an honest representation of how much the 2D projection is leaving out.
 
-👉 Try adjusting the confidence level (90%, 95%, 99%):
-
-* What happens to the overlap as you increase the confidence level?
+> **Loadings Plot vs Circle of Correlations — when to use which:**
+> Use the Loadings Plot when you want to read precise loading values for a specific component. Use the Circle of Correlations when you want to see the full pattern of variable relationships and understand which variables are driving the same direction of variation simultaneously across two components.
 
 ---
 
-## Step 6: Investigate preprocessing (very important!)
+## Step 5: Combine both views — the Biplot
 
-Now repeat the analysis with different preprocessing settings.
+Open the **Biplot**.
 
-In GoPCA, try switching between:
-
-* **Mean Center Only** — subtracts the mean of each variable, but does not rescale
-* **Standard Scale** — subtracts the mean *and* divides by the standard deviation, giving each variable unit variance
+The biplot places samples (scores) and variables (loadings) in the same plot. Loading arrows point in the direction of increasing variable value; longer arrows indicate stronger influence on those components.
 
 #### Questions:
 
-* Does the PCA result change between the two settings?
-* Which variables dominate when you use **Mean Center Only**?
-* Why is **Standard Scale** particularly important for this dataset?
+* Which loading arrows point toward the class_1 cluster?
+* Which arrows point toward the class_2 cluster?
+* Do any variables separate class_0 from the other two?
+* Where do `proline` and `alcohol` point relative to the cultivar clusters?
 
-👉 Hint:
+👉 You should be able to read a chemical story directly from the biplot:
+- The phenolic group pulls toward one cultivar cluster — wines in that class are richer in phenolic compounds
+- `color_intensity` and `malic_acid` pull toward another cluster
+- `proline` and `alcohol` pull toward the third
 
-* Variables like `proline` (range ~300–1700) have much larger numerical values than `nonflavanoid_phenols` (range ~0.1–0.7). Without standardisation, variables with larger variance will dominate the principal components — regardless of whether that variance is chemically meaningful.
-* Unlike Iris, where all four variables were measured in cm and had broadly similar scales, the Wine variables are on completely different measurement scales. This makes standardisation not just recommended, but essential.
+The biplot makes the *why* visible. The scores plot shows *that* the classes separate; the biplot shows *what drives the separation*.
 
 ---
 
-## Step 7: Push your understanding further
+## Step 6: How well separated are the classes?
 
-Try these explorations:
+Enable **Confidence Ellipses** (95%) on the Scores Plot.
 
-* **Focus on two cultivars at a time** by filtering the dataset in GoCSV before loading into GoPCA
+#### Questions:
 
-  * Are two cultivars easier to separate than three?
-  * Which pair is hardest to distinguish?
+* Which two cultivar classes overlap most?
+* Which class is best separated from the other two?
+* What does overlapping ellipses tell you about the difficulty of classification?
 
-* **Exclude one variable at a time** using GoCSV's column selection
+Try adjusting the confidence level to 90% and 99%:
 
-  * What happens to the scores plot when you remove `proline`?
-  * What about removing all phenolic variables at once?
+* At 99%, do the ellipses for the overlapping classes merge completely?
+* What does this mean for a classifier trying to distinguish those two cultivars?
 
-* **Rotate the 3D plot interactively**
+---
 
-  * Do you see structure not visible in the 2D plot?
+## Step 7: The 3D scores plot
+
+Switch to the **3D Scores Plot** (PC1 vs PC2 vs PC3).
+
+#### Questions:
+
+* Does the separation between the overlapping cultivar classes improve in 3D?
+* Recall that PC1 + PC2 explained ~55% of the variance. How much does PC3 add?
+* Does rotating the 3D plot reveal structure that was hidden in the 2D view?
+
+👉 Because only 55% of the variance is in the first two components for Wine, the third component often contains meaningful additional structure. This contrasts with Iris, where a third component added almost nothing.
 
 ---
 
@@ -224,34 +206,24 @@ Try these explorations:
 
 After completing this exploration, you should be able to:
 
-* Understand PCA as a **tool for dimensionality reduction**
-* Interpret:
-
-  * Scores plots
-  * Loadings plots
-  * Biplots
-* Explain how PCA can:
-
-  * Reveal hidden structure in unlabelled data
-  * Compress high-dimensional data into fewer dimensions
-* Recognise the critical importance of:
-
-  * Preprocessing — especially standardisation when variables have different scales
-  * Variable correlation — how related variables cluster in the loadings
+* Explain why standardisation is essential for datasets with mixed measurement units — and demonstrate the difference it makes
+* Interpret a scree plot and understand what it means when explained variance is spread across many components
+* Read a loadings plot to identify groups of correlated variables
+* Use a biplot to connect the separation of groups to specific chemical variables
+* Recognise the limits of a 2D PCA summary when explained variance is substantially below 100%
 
 ---
 
 ## Final reflection
 
-Think about this:
+> You started with 13 variables. A pairplot gave you 78 panels — informative but unmanageable. PCA gave you a single optimal 2D projection, with a quantified measure of how much was preserved.
 
-> You started with 13 variables and a nearly unreadable pair plot.
-> With PCA, you reduced the dataset to 2–3 dimensions and *revealed the cultivar structure clearly*.
+Think about these questions:
 
-* Did PCA make the dataset easier to understand?
-* What information was preserved — and what might have been lost?
-* Why is standardisation essential here, but less critical for the Iris dataset?
-* The original purpose of this dataset was supervised classification. Could you use PCA as a preprocessing step before classification? What might be the advantage?
+* The Iris scores plot captured 95.8% of variance in 2D. The Wine scores plot captures around 55%. Is the Wine PCA result less useful — or is it doing something more impressive given the complexity of the data?
+* Without standardisation, proline dominated everything. Yet proline may not be the most chemically interesting variable for distinguishing cultivars. What does this tell you about the relationship between numerical variance and scientific importance?
+* The phenolic variables cluster together in the loadings. What does it mean, chemically, that these variables point in the same direction?
+* Could you use PCA scores as input features for a supervised classifier? What might be the advantage over using the raw 13 variables directly?
 
 ---
 

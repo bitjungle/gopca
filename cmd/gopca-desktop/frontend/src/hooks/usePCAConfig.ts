@@ -71,14 +71,22 @@ export function usePCAConfig(): PCAConfigResult {
     const [excludedRows, setExcludedRows] = useState<number[]>([]);
     const [excludedColumns, setExcludedColumns] = useState<number[]>([]);
 
-    /** Auto-set gamma and cap component count to data dimensions. */
+    /** Auto-set gamma and cap component count to data dimensions.
+     *
+     * The default component count is min(5, p-1) where p is the number of
+     * features. Using p-1 rather than p avoids the degenerate case where PCA
+     * explains exactly 100% of the variance by construction — a p-component
+     * model on p variables always explains everything, which is mathematically
+     * trivial and not useful for exploration. The floor of 1 ensures the
+     * default is valid even for very narrow datasets.
+     */
     const updateGammaForData = useCallback((data: FileData) => {
         if (data?.data?.[0]) {
             const numFeatures = data.data[0].length;
             setConfig(prev => ({
                 ...prev,
                 kernelGamma: 1.0 / numFeatures,
-                components: Math.min(5, numFeatures),
+                components: Math.min(5, Math.max(1, numFeatures - 1)),
             }));
         }
     }, []);

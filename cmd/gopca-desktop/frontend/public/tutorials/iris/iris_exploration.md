@@ -8,9 +8,14 @@ Here, we will approach the same dataset with **Principal Component Analysis (PCA
 
 The dataset contains measurements of 150 iris flowers belonging to three species:
 
-* *Iris setosa*
-* *Iris versicolor*
-* *Iris virginica*
+![Iris setosa](./photo_Iris_setosa.jpeg)
+*Iris setosa — Photo: Tia Monto*
+
+![Iris versicolor](./photo_Iris_versicolor.jpeg)
+*Iris versicolor — Photo: Charles de Mille-Isles*
+
+![Iris virginica](./photo_Iris_virginica.jpeg)
+*Iris virginica — Photo: Frank Mayfield*
 
 For each flower, four variables (features) were measured (in cm):
 
@@ -25,11 +30,13 @@ This means each flower is described by **4 variables**, or equivalently, each sa
 
 ## First look at the data
 
-Below you see a *pair plot* of the dataset, showing all pairwise relationships between variables.
+Below you see a *pair plot* of the dataset, showing all pairwise relationships between variables. The diagonal shows the distribution of each individual variable, either as a density curve (KDE), revealing how the values of a single feature are spread (e.g. center, variability, skewness).
 
 ![Iris pairplot](./iris_pairplot.png)
 
 Take a few minutes to look at it carefully.
+
+---
 
 ### Reflect:
 
@@ -39,6 +46,29 @@ Take a few minutes to look at it carefully.
 
 👉 You are currently looking at **many 2D projections of a 4D dataset**.
 This is useful — but also limited.
+
+---
+
+## Could you just use the pairplot?
+
+For the Iris dataset, with only 4 variables, the pairplot is manageable — and the species separation is already visible. So why bother with PCA?
+
+The answer becomes clearer when you scale up. The number of panels in a pairplot grows as *N(N−1)/2*:
+
+| Variables | Pairplot panels |
+|----------:|----------------:|
+|         4 |               6 |
+|        13 |              78 |
+|       100 |           4,950 |
+|      1000 |         499,500 |
+
+The Wine dataset in this application has 13 variables — that is already 78 panels to inspect. In spectroscopy or genomics, datasets routinely have hundreds or thousands of variables. A pairplot becomes impossible.
+
+PCA solves this by finding the **single 2D projection that retains the most variance** — provably the best linear summary available. The scores plot is not just *a* 2D view of the data; it is the *optimal* one. And the explained variance percentage shown on the axis labels tells you exactly how much information was kept in that projection.
+
+The **biplot** adds a second layer the pairplot cannot provide: the loading vectors show *why* the samples are arranged as they are — which original variables pull in which directions. This connects the compressed view back to the measurements you actually took.
+
+> The pairplot shows you what you measured. The PCA scores plot shows you the structure hidden across all measurements simultaneously.
 
 ---
 
@@ -69,7 +99,7 @@ Instead, **experiment, observe, and reflect**.
 
 ## Step 1: Load the data and run PCA
 
-* Load the Iris dataset into GoPCA
+* Load the Iris dataset into GoPCA (if you pressed the "Iris" button to view this tutorial file, the data is already loaded)
 * Run PCA with default settings
 
 ### Look at the **Scores Plot (PC1 vs PC2)**
@@ -86,17 +116,28 @@ Instead, **experiment, observe, and reflect**.
 
 ## Step 2: Explore explained structure
 
-Look at how much variation is captured by the first components.
+Open the **Scree Plot**. This is the standard tool for deciding how many principal components to keep. Each bar shows how much of the total variance in the dataset is explained by one component. The bars are ranked — PC1 always explains the most, PC2 the second most, and so on.
+
+Two things to look for:
+
+* **The elbow** — the point where the bars stop dropping steeply and start flattening out. Components before the elbow carry real structure; components after it mostly capture noise.
+* **The cumulative percentage** — the running total shown above the bars. Once this reaches 80–90%, you have likely captured the main patterns in the data.
 
 #### Questions:
 
-* How many principal components seem "enough"?
-* Does 2D capture most of the structure, or do you need 3D?
+* How much variance does PC1 explain on its own?
+* How much do PC1 and PC2 together explain?
+* Where is the elbow — after the first component, the second, or later?
+* How many components would you keep based on the Scree Plot?
 
-👉 Try switching to a **3D Scores Plot**:
+👉 Try switching to a **3D Scores Plot** and compare with your Scree Plot reading:
 
-* Does separation improve?
-* Is the added dimension useful?
+* Does the 3D plot reveal additional structure that the 2D plot misses?
+* Does PC3's contribution in the Scree Plot justify the added complexity?
+
+> **Something to think about:** Set the number of components to 4 and re-run. What is the cumulative explained variance now? Why does a 4-component model explain *exactly* 100% of the variance — and how does the number of variables in this dataset relate to that?
+>
+> 👉 PCA cannot create more independent directions than there are variables. With 4 variables, the data lives in at most 4-dimensional space, so 4 components account for all of it. There is nothing left to explain. This is why the Scree Plot always has at most as many bars as your dataset has variables — and why adding a fifth component here would be meaningless.
 
 ---
 

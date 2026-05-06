@@ -19,7 +19,7 @@ interface TemporalLoadingsPlotProps {
 
 export const TemporalLoadingsPlot: React.FC<TemporalLoadingsPlotProps> = ({
   pcaResult,
-  maxComponents = 5,
+  maxComponents,
   fontScale = 1.0
 }) => {
   const { theme } = useTheme();
@@ -40,9 +40,12 @@ export const TemporalLoadingsPlot: React.FC<TemporalLoadingsPlotProps> = ({
     );
   }
 
+  // Show all computed components unless caller explicitly limits the count
+  const componentCount = maxComponents ?? (pcaResult.component_labels?.length ?? 5);
+
   // Create config for Plotly component
   const plotlyConfig = createTemporalLoadingsPlotConfig(
-    maxComponents,
+    componentCount,
     theme,
     colorScheme,
     fontScale

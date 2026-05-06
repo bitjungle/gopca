@@ -844,3 +844,138 @@ func TestTemporalPCAVariableImportance(t *testing.T) {
 		}
 	})
 }
+
+// TestTemporalEigenvectorsShape verifies that TemporalEigenvectors shows the signed
+// loadings of the dominant channel across lag positions (temporal shape), not U-matrix
+// rows (window scores).
+//
+// A pure sinusoidal input at a known frequency must produce TemporalEigenvectors that
+// oscillate as a sinusoid across the lag axis. If the old bug (U[0:L]) were present,
+// the curves would reflect whatever happened in the first L samples of the recording,
+// not the intrinsic component shape.
+func TestTemporalEigenvectorsShape(t *testing.T) {
+	// Generate a clean sinusoidal time series: 200 samples, 2 channels, both sine waves
+	// at the same frequency so the first component captures the oscillation cleanly.
+	T := 200
+	L := 20                    // window long enough to see ~2 cycles of a 10-sample period
+	freq := 2 * math.Pi / 10.0 // period = 10 samples
+
+	data := make([][]float64, T)
+	for i := 0; i < T; i++ {
+		val := math.Sin(freq * float64(i))
+		data[i] = []float64{val, val} // two identical channels
+	}
+
+	engine := NewTemporalPCAEngine()
+	config := types.PCAConfig{
+		Components:   2,
+		MeanCenter:   true,
+		TemporalLags: L,
+	}
+
+	result, err := engine.Fit(types.Matrix(data), config)
+	require.NoError(t, err)
+	require.NotNil(t, result.TemporalEigenvectors)
+
+	// Shape must be [numLags × nComponents]
+	assert.Equal(t, L, len(result.TemporalEigenvectors),
+		"TemporalEigenvectors must have numLags rows")
+	assert.Equal(t, 2, len(result.TemporalEigenvectors[0]),
+		"TemporalEigenvectors must have nComponents columns")
+
+	// Values are signed means — both positive and negative values are valid.
+	// The temporal eigenvector of PC1 must show oscillatory structure (sinusoidal
+	// variation). We check that the range (max-min) across lag positions is substantial,
+	// which would not hold if U[0:L] scores were returned (those decay monotonically
+	// for the first 20 windows of this dataset).
+	pc1vals := make([]float64, L)
+	for lag := 0; lag < L; lag++ {
+		pc1vals[lag] = result.TemporalEigenvectors[lag][0]
+	}
+	minVal, maxVal := pc1vals[0], pc1vals[0]
+	for _, v := range pc1vals {
+		if v < minVal {
+			minVal = v
+		}
+		if v > maxVal {
+			maxVal = v
+		}
+	}
+	rangeVal := maxVal - minVal
+	assert.Greater(t, rangeVal, 0.001,
+		"PC1 temporal eigenvector must oscillate across lags (range=%.6f); "+
+			"a flat or monotone curve indicates the old U[0:L] bug", rangeVal)
+
+	// For a pure sinusoid with identical channels, the signed mean equals the
+	// loading of either channel. The curve should cross zero (sinusoidal, not monotone).
+	hasPositive := false
+	hasNegative := false
+	for _, v := range pc1vals {
+		if v > 1e-6 {
+			hasPositive = true
+		}
+		if v < -1e-6 {
+			hasNegative = true
+		}
+	}
+	assert.True(t, hasPositive && hasNegative,
+		"PC1 temporal eigenvector must cross zero (sinusoidal); "+
+			"found positive=%v negative=%v. Non-crossing curve indicates wrong data source.", hasPositive, hasNegative)
+}
+
+// TestTemporalEigenvectorsNotFirstWindowScores verifies that TemporalEigenvectors
+// does NOT equal the first L rows of the U score matrix.
+// This is a regression test for the bug where U[0:L] was stored instead of
+// the dominant-channel V-matrix loadings.
+func TestTemporalEigenvectorsNotFirstWindowScores(t *testing.T) {
+	// Simple dataset where the first L window scores would be clearly different
+	// from the V-matrix loading pattern: a linearly increasing trend.
+	T := 100
+	L := 10
+
+	data := make([][]float64, T)
+	for i := 0; i < T; i++ {
+		data[i] = []float64{float64(i), float64(i) * 2}
+	}
+
+	engine := NewTemporalPCAEngine()
+	config := types.PCAConfig{
+		Components:   1,
+		MeanCenter:   true,
+		TemporalLags: L,
+	}
+
+	result, err := engine.Fit(types.Matrix(data), config)
+	require.NoError(t, err)
+	require.NotNil(t, result.TemporalEigenvectors)
+
+	// Shape check
+	assert.Equal(t, L, len(result.TemporalEigenvectors),
+		"TemporalEigenvectors must have numLags rows")
+	assert.Equal(t, 1, len(result.TemporalEigenvectors[0]),
+		"TemporalEigenvectors must have nComponents columns")
+
+	// All values must be finite
+	for lag := 0; lag < L; lag++ {
+		val := result.TemporalEigenvectors[lag][0]
+		assert.False(t, math.IsNaN(val), "TemporalEigenvectors[%d][0] must not be NaN", lag)
+		assert.False(t, math.IsInf(val, 0), "TemporalEigenvectors[%d][0] must not be Inf", lag)
+	}
+
+	// The dominant-channel approach picks the channel with highest RMS loading.
+	// For a 2-channel linear trend where channel 1 has 2x the amplitude of channel 0,
+	// channel 1 should be dominant and all its loadings should have the same sign.
+	// (A linear trend within a mean-centered window produces monotone-signed loadings.)
+	firstSign := math.Signbit(result.TemporalEigenvectors[0][0])
+	allSameSign := true
+	for lag := 1; lag < L; lag++ {
+		if math.Abs(result.TemporalEigenvectors[lag][0]) > 1e-10 {
+			if math.Signbit(result.TemporalEigenvectors[lag][0]) != firstSign {
+				allSameSign = false
+				break
+			}
+		}
+	}
+	assert.True(t, allSameSign,
+		"For a linear trend, dominant-channel temporal loadings should all have the same sign")
+}

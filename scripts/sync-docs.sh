@@ -78,6 +78,53 @@ sync_doc() {
     fi
 }
 
+# Function to sync a tutorial directory (markdown + images) to frontend public.
+# Accepts an optional second argument to override the target directory name,
+# for cases where the testdata folder name differs from the frontend path
+# (e.g. testdata/eye_state → public/tutorials/eeg_eye_state).
+sync_tutorial() {
+    local dataset=$1
+    local target_name="${2:-$1}"
+    local source_dir="testdata/$dataset"
+    local target_dir="cmd/gopca-desktop/frontend/public/tutorials/$target_name"
+
+    if [ ! -d "$source_dir" ]; then
+        echo -e "${RED}✗${NC} Tutorial source directory not found: $source_dir"
+        return 1
+    fi
+
+    mkdir -p "$target_dir"
+
+    local updated=0
+    local count=0
+
+    # Sync .md files and image files (.png, .jpg, .jpeg, .svg)
+    for source_file in "$source_dir"/*.md "$source_dir"/*.png "$source_dir"/*.jpg "$source_dir"/*.jpeg "$source_dir"/*.svg; do
+        [ -f "$source_file" ] || continue
+        count=$((count + 1))
+        filename=$(basename "$source_file")
+        target_file="$target_dir/$filename"
+
+        if [ -f "$target_file" ]; then
+            if ! diff -q "$source_file" "$target_file" >/dev/null 2>&1; then
+                cp -p "$source_file" "$target_file"
+                updated=$((updated + 1))
+            fi
+        else
+            cp -p "$source_file" "$target_file"
+            updated=$((updated + 1))
+        fi
+    done
+
+    if [ $count -eq 0 ]; then
+        echo -e "${YELLOW}⚠${NC}  Tutorial '$dataset': no files found in $source_dir"
+    elif [ $updated -eq 0 ]; then
+        echo -e "${GREEN}✓${NC} Tutorial '$dataset' already up to date ($count files)"
+    else
+        echo -e "${GREEN}✓${NC} Tutorial '$dataset': updated $updated of $count files"
+    fi
+}
+
 # Function to sync image files
 sync_images() {
     local pattern=$1
@@ -145,6 +192,13 @@ gocsv_result=$?
 # Sync GoCSV images (if any exist for data prep guide)
 sync_images "intro_to_data_prep_fig_*.jpg" "$GOCSV_IMAGES_TARGET" "GoCSV Desktop"
 gocsv_images_result=$?
+
+# Sync sample dataset tutorials
+sync_tutorial "iris"
+sync_tutorial "wine"
+sync_tutorial "corn"
+sync_tutorial "swiss_roll"
+sync_tutorial "eye_state" "eeg_eye_state"
 
 echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
 
