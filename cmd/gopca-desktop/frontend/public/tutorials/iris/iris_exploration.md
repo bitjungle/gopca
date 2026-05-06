@@ -116,17 +116,28 @@ Instead, **experiment, observe, and reflect**.
 
 ## Step 2: Explore explained structure
 
-Look at how much variation is captured by the first components.
+Open the **Scree Plot**. This is the standard tool for deciding how many principal components to keep. Each bar shows how much of the total variance in the dataset is explained by one component. The bars are ranked — PC1 always explains the most, PC2 the second most, and so on.
+
+Two things to look for:
+
+* **The elbow** — the point where the bars stop dropping steeply and start flattening out. Components before the elbow carry real structure; components after it mostly capture noise.
+* **The cumulative percentage** — the running total shown above the bars. Once this reaches 80–90%, you have likely captured the main patterns in the data.
 
 #### Questions:
 
-* How many principal components seem "enough"?
-* Does 2D capture most of the structure, or do you need 3D?
+* How much variance does PC1 explain on its own?
+* How much do PC1 and PC2 together explain?
+* Where is the elbow — after the first component, the second, or later?
+* How many components would you keep based on the Scree Plot?
 
-👉 Try switching to a **3D Scores Plot**:
+👉 Try switching to a **3D Scores Plot** and compare with your Scree Plot reading:
 
-* Does separation improve?
-* Is the added dimension useful?
+* Does the 3D plot reveal additional structure that the 2D plot misses?
+* Does PC3's contribution in the Scree Plot justify the added complexity?
+
+> **Something to think about:** Set the number of components to 4 and re-run. What is the cumulative explained variance now? Why does a 4-component model explain *exactly* 100% of the variance — and how does the number of variables in this dataset relate to that?
+>
+> 👉 PCA cannot create more independent directions than there are variables. With 4 variables, the data lives in at most 4-dimensional space, so 4 components account for all of it. There is nothing left to explain. This is why the Scree Plot always has at most as many bars as your dataset has variables — and why adding a fifth component here would be meaningless.
 
 ---
 
