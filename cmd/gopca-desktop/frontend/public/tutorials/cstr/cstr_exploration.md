@@ -16,6 +16,9 @@ A proportional-integral (PI) controller manipulates the coolant temperature T_c 
 
 This controller introduces **closed-loop dynamics** into the data — disturbances cause transients, the controller responds, and variables return to steady state. Temporal PCA can capture all of this.
 
+![CSTR P&ID — process variables and instrumentation](./cstr_diagram.png)
+*Simplified P&ID showing the measured variables, instrumentation, and PI temperature control loop for the simulated CSTR process.*
+
 ### The dataset
 
 The simulation runs for **800 minutes** at 1-minute sampling, producing **801 observations** across **12 process variables**:
