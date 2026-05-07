@@ -440,15 +440,15 @@ With 20 components displayed, you should see a clear hierarchy of structure:
 * **PC11–PC14** (~0.8% each, nearly equal): the first oscillatory pairs. Look at these carefully in the Temporal Loadings plot — you should find two adjacent components where one curve looks like a sine and the other looks like a cosine of the same frequency.
 * **PC15–PC20** (~0.4–0.5% each): higher-frequency pairs or noise components
 
-The near-equal explained variance in the 0.8% group (visible as a plateau in the Scree Plot) is the primary signal that oscillatory structure is present — this is the paired-eigenvalue signature described by Vautard & Ghil (1989).
+A plateau of similarly-valued bars in the Scree Plot (like the 0.8% group) is a hint that oscillatory structure may be present — for a pure sinusoidal signal, SSA theory guarantees exactly equal eigenvalues for the pair. In practice, however, equal variance can also arise from coincidence between unrelated dynamics. **The definitive test is always the shape of the temporal loading curves.**
 
 #### Identifying a specific pair
 
 When inspecting components in the oscillatory region:
 
-1. Find two adjacent components (e.g., PC12 and PC13) with nearly identical % values in the legend
-2. Compare their Temporal Loadings curves
-3. If one curve peaks near lag 0 and the other crosses zero near lag 0 — and they look like shifted versions of the same sinusoid — these form an oscillatory pair
+1. Look at the Temporal Loadings curves for candidate components
+2. A true oscillatory pair has two curves that are sinusoidal at the **same frequency** and approximately **90° phase-shifted** from each other (one peaks where the other crosses zero)
+3. Similar % variance in the legend supports the identification, but is not sufficient on its own — two unrelated components can share the same variance by coincidence
 4. Count zero-crossings on either curve to estimate the frequency
 
 > **Example**: if PC12 and PC13 each explain 0.8% variance, and PC12 shows a curve that peaks at lag ~4 and troughs at lag ~20 (approximately 2.5 cycles over 32 lags), while PC13 shows the same frequency but shifted ~3–4 lags — these are an alpha-band (~10 Hz) oscillatory pair. GoPCA's scores for these two components together capture the full alpha oscillation in the data.

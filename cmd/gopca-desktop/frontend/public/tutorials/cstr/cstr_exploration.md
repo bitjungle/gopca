@@ -186,14 +186,16 @@ Each panel shows how one component's loading evolves across lags 0 to L. The x-a
 
 ## Step 6: Identify the oscillatory pair
 
-Temporal PCA (SSA) represents a single oscillation as a **pair of components** with:
+Temporal PCA (SSA) represents a single oscillation as a **pair of components**. The correct way to identify such a pair is by the **shape of the temporal loading curves**:
 
-1. Nearly equal % variance (within a few percent of each other)
-2. Sinusoidal temporal loadings — shifted by approximately 90° relative to each other
+1. Both curves are sinusoidal at the same frequency
+2. One is approximately 90° phase-shifted relative to the other (a sine and a cosine)
 
 This pairing occurs because a sine wave requires both a sine and a cosine component to be fully represented.
 
-> **Important — you will not see a clean pair at L = 10.** The flow oscillation has a 40-minute period. With L = 10, the lag window covers only 10/40 = 25% of one cycle. SSA cannot decompose an oscillation into a sine/cosine pair when the window is too short to contain even a half cycle. At L = 10, the oscillation appears as slow-varying trend components rather than recognisable sinusoids, and the two components with equal variance may simply be two correlated trend modes — not an oscillatory pair. Equal variance alone is a necessary but not sufficient condition.
+> **On equal explained variance:** For a pure, noise-free sinusoidal signal, SSA theory guarantees that an oscillatory pair will have exactly equal eigenvalues. In practice, however, two completely unrelated dynamics can explain the same percentage of variance by coincidence — so equal variance is a *supporting indicator*, not a reliable primary criterion. Always start from the shape of the temporal loading curves, and treat similar variance as confirmation, not identification.
+
+> **Important — you will not see a clean pair at L = 10.** The flow oscillation has a 40-minute period. With L = 10, the lag window covers only 10/40 = 25% of one cycle. SSA cannot decompose an oscillation into a sine/cosine pair when the window is too short to contain even a half cycle. At L = 10, the oscillation appears as slow-varying trend components rather than recognisable sinusoids.
 
 **What you will actually see at L = 10:**
 

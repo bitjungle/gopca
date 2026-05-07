@@ -608,7 +608,7 @@ Standard SVD is then applied to this expanded matrix. The result is components t
 - **Monotone (trend-like):** A slow drift or state transition
 - **Oscillatory (sinusoidal):** A repeating rhythm at a specific frequency
 
-**Paired components:** A fundamental property of SSA is that oscillatory signals produce *pairs* of components (Vautard & Ghil, 1989). Two adjacent components with nearly equal explained variance and 90°-phase-shifted temporal loading curves together represent one oscillation. This paired-eigenvalue signature is the key diagnostic for finding rhythms in data.
+**Paired components:** A fundamental property of SSA is that oscillatory signals produce *pairs* of components (Vautard & Ghil, 1989). The definitive signature of such a pair is **two temporal loading curves at the same frequency, approximately 90° phase-shifted from each other** — one resembling a sine, the other a cosine. For a pure sinusoidal signal, the pair will also have nearly equal explained variance; in practice, similar variance is a useful supporting indicator but not a reliable primary criterion, since two unrelated dynamics can explain the same percentage of variance by coincidence.
 
 ### Choosing the Window Length
 
