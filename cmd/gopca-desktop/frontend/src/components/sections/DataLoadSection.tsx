@@ -136,7 +136,7 @@ export function DataLoadSection() {
                                     className="w-full px-4 py-2 text-sm bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors"
                                     disabled={loading}
                                 >
-                                    CSTR (Temporal)
+                                    CSTR (time series)
                                 </button>
                             </HelpWrapper>
                             <HelpWrapper helpKey="sample-dataset-eeg-eye-state">

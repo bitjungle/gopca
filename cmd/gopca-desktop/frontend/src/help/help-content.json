@@ -36,7 +36,7 @@
       "category": "data-input"
     },
     "sample-dataset-cstr": {
-      "title": "CSTR Dataset (Temporal PCA)",
+      "title": "CSTR Dataset (time series)",
       "text": "Simulated non-isothermal CSTR with A→B exothermic reaction and PI coolant control. 801 time points (1 min sampling) across 12 process variables. Six operating phases: steady state, feed disturbances, flow oscillation (40-min period), cooling fault, and recovery. Designed for Temporal PCA teaching in chemical engineering.",
       "category": "data-input"
     },

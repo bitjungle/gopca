@@ -264,7 +264,7 @@ If you have worked through the other GoPCA tutorials, you have now seen PCA appl
 | **Iris / Wine** | Geometric and chemical structure — clusters and correlations among static samples |
 | **Corn (NIR)** | Correlated wavelength structure — hundreds of channels carrying the same compositional signal |
 | **Swiss Roll** | Nonlinear manifold geometry — Kernel PCA unrolling a curved surface that linear PCA cannot separate |
-| **CSTR (Temporal)** | Dynamic process modes — time-dependent structure, delayed coupling, oscillations, fault propagation |
+| **CSTR (time series)** | Dynamic process modes — time-dependent structure, delayed coupling, oscillations, fault propagation |
 
 Each dataset required a different analytical lens. The CSTR dataset shows that by embedding lagged process history into the data matrix, PCA gains the ability to *see time* — revealing not just which variables are related, but how they influence each other across minutes and hours. That conceptual bridge connects standard PCA to the full toolkit of dynamic process monitoring used in industrial practice.
 
