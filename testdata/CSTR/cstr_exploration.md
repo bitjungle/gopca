@@ -8,6 +8,8 @@ This dataset was simulated from a **non-isothermal Continuous Stirred-Tank React
 
 $$\text{A} \rightarrow \text{B} \quad (\text{exothermic})$$
 
+> **A chemistry note:** This is a *unimolecular* first-order reaction — A spontaneously converts into B without requiring a second reactant. Real examples include thermal decomposition, isomerisation, and cracking reactions. The key physics is the **Arrhenius temperature dependence** of the rate constant, $k(T) = k_0\, e^{-E/RT}$: higher temperature accelerates the reaction, releasing more heat, which drives the temperature higher still. That thermal feedback is what makes the CSTR a classic system for studying nonlinear process dynamics. No catalyst is modelled explicitly — the effect of any catalyst is absorbed into the kinetic pre-factor $k_0$.
+
 A CSTR is one of the most studied systems in chemical engineering. Reactant A flows in continuously, the reaction occurs inside the tank, and product B flows out. Because the reaction releases heat, a coolant circuit controls the reactor temperature.
 
 ### The PI temperature controller
