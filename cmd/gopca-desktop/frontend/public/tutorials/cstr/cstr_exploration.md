@@ -44,7 +44,7 @@ The simulation runs for **800 minutes** at 1-minute sampling, producing **801 ob
 | `heat_transfer_UA_kJ_min_K` | *UA* | kJ/(min·K) | Overall heat-transfer coefficient |
 | `residence_time_min` | *τ* | min | Hydraulic residence time (V/F) |
 
-The dataset also includes string columns (`event`, `regime`) and a binary flag (`fault_active`) for coloring and interpretation. **Do not include these as PCA variables** — use `regime` as the color target.
+The dataset also includes string columns (`event`, `regime`) and a binary flag (`fault_active #target`) for coloring and interpretation. All three are automatically excluded from PCA by GoPCA — use `regime` as the color target.
 
 ### Operating scenarios
 

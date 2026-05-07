@@ -69,7 +69,9 @@ CSV format and column names (matching P&ID diagram — cstr_diagram_v2.png):
         residence_time_min    tau  Hydraulic residence time        [min]
 
     String columns (auto-detected by GoPCA, use for coloring): event, regime
-    Binary column : fault_active (0 = normal, 1 = fault or disturbance)
+    Binary column : fault_active #target (0 = normal, 1 = fault or disturbance)
+                   The #target suffix tells GoPCA to exclude it from PCA and
+                   make it available for score-plot coloring only.
 
 Physical correctness notes:
     - C_B is integrated as an ODE state, NOT derived from C_Af − C_A.
@@ -237,7 +239,7 @@ def simulate(
         <numeric vars>   — process measurements with realistic sensor noise
         event            — fine-grained operating scenario label (string)
         regime           — coarse regime for GoPCA coloring (string)
-        fault_active     — 1 during disturbance/fault periods, 0 during normal/recovery
+        fault_active #target  — 1 during disturbance/fault periods, 0 during normal/recovery
     """
     rng = np.random.default_rng(seed)
     p   = CSTRParameters()
@@ -315,13 +317,13 @@ def simulate(
             "residence_time_min":            residence_time + rng.normal(0, 0.001 * n),
             "event":                         event,
             "regime":                        regime,
-            "fault_active":                  int(regime != "normal"),
+            "fault_active #target":          int(regime != "normal"),
         })
 
     df = pd.DataFrame(rows)
 
     # Place string/categorical columns last so GoPCA numeric detection works cleanly
-    target_cols  = ["event", "regime", "fault_active"]
+    target_cols  = ["event", "regime", "fault_active #target"]
     feature_cols = [c for c in df.columns if c not in target_cols]
     return df[feature_cols + target_cols]
 
