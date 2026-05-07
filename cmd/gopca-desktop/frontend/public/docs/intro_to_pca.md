@@ -72,9 +72,9 @@ The benefits are immediate and tangible. A simple plot of the first two principa
 
 ---
 
-## 4. Five Datasets, Five Lessons
+## 4. Six Datasets, Six Lessons
 
-GoPCA Desktop ships with five carefully selected sample datasets. Together they cover the most important situations you will encounter in practice — from a clean textbook case to spectroscopic data to a time series. Each dataset teaches a specific lesson about data, preprocessing, and the choice of PCA method. This section introduces all five. The interactive tutorials in GoPCA Desktop go deeper into each one.
+GoPCA Desktop ships with six carefully selected sample datasets. Together they cover the most important situations you will encounter in practice — from a clean textbook case to spectroscopic data to a nonlinear manifold to a time series from a chemical reactor. Each dataset teaches a specific lesson about data, preprocessing, and the choice of PCA method. This section introduces all six. The interactive tutorials in GoPCA Desktop go deeper into each one.
 
 ![Wine Analysis Walkthrough](images/intro_to_pca_fig_04-01.jpg)
 
@@ -163,7 +163,29 @@ GoPCA Desktop ships with five carefully selected sample datasets. Together they 
 
 ---
 
-### Dataset 5: EEG Eye State — PCA for Time Series
+### Dataset 5: CSTR — Time Series from a Chemical Process
+
+**The data:** 801 simulated sensor readings from a non-isothermal Continuous Stirred-Tank Reactor (CSTR) running an exothermic first-order reaction A→B, sampled every minute over 800 minutes. Twelve process variables are recorded: reactor temperature, coolant outlet temperature, feed temperature, reactant and product concentrations, feed flow rate, feed concentration, cooling duty, reaction rate, conversion fraction, heat-transfer coefficient, and residence time. The simulation passes through six distinct operating phases — normal operation, two feed disturbances, a periodic flow oscillation (40-minute period), a cooling fault, and recovery.
+
+**Why it is special:** Process data from a reactor is fundamentally different from independent samples like Iris or Wine — every measurement is connected to the previous one through the physics of the reactor. The energy and mass balances couple the variables to each other with time delays (thermal inertia, residence time, controller response), and the dataset contains both slow trends and a periodic oscillation designed to be identified by Temporal PCA. The cooling fault scenario makes the dataset directly relevant to industrial process monitoring and fault detection.
+
+**What you will learn:**
+- How to compare ordinary PCA (L = 0) to Temporal PCA, and what the lag parameter adds
+- How to read PCA scores as a **process trajectory**: stable clusters, step jumps, loops from oscillations, and drift from faults
+- How temporal loading curves reveal **delayed coupling** between variables (e.g. coolant temperature changes before reactor temperature responds)
+- How to identify an SSA **oscillatory pair** from the shape of temporal loading curves — sinusoidal and ~90° phase-shifted — and why similar explained variance alone is not a reliable criterion
+- How to select the lag parameter L based on process time constants
+- How Temporal PCA can detect process faults by showing the reactor leaving its normal operating region
+
+**Preprocessing:** Standard scaling is essential — temperatures, concentrations, and flow rates have completely different units and magnitudes. The tutorial starts with unscaled results so you can see the distortion directly.
+
+**PCA method:** Temporal PCA. The tutorial compares L = 0, 5, 10, and 40 to show how the lag window controls which dynamics become visible. L = 40 is needed to resolve the 40-minute flow oscillation as a recognisable sine/cosine pair.
+
+> **→ Open the CSTR tutorial in GoPCA Desktop** to explore process dynamics and fault detection with Temporal PCA.
+
+---
+
+### Dataset 6: EEG Eye State — PCA for Brain Signals
 
 **The data:** 14,980 EEG measurements from a single subject wearing a 14-electrode headset, recorded at 128 Hz over 117 seconds. During the recording, the subject alternately opened and closed their eyes. Each row is one time point; each column is one EEG channel. The eye-state label (open/closed) is included.
 
@@ -173,19 +195,20 @@ GoPCA Desktop ships with five carefully selected sample datasets. Together they 
 - Why time series data requires a different approach than independent samples
 - How **Temporal PCA** (based on Singular Spectrum Analysis) gives PCA a memory by building a trajectory matrix from sliding windows
 - How to read PCA scores as a **phase-space trajectory** rather than a sample cloud
-- How to recognize oscillatory components in the **Temporal Loadings** plot
-- The SSA paired-component signature: two adjacent components with equal explained variance and 90°-shifted temporal loading curves
+- How to recognize oscillatory components in the **Temporal Loadings** plot from their sinusoidal shape — and why similar explained variance alone is not sufficient to identify a pair
 - What alpha suppression looks like in PCA space (eyes-open brain state)
 
 **Preprocessing:** Standard scaling, applied to the original 14 channels *before* building the trajectory matrix. The tutorial explains exactly why and what happens if you skip it.
 
 **PCA method:** Temporal PCA with 32 time lags (250 ms window). The tutorial explains how to choose the window length based on the signal frequencies you want to detect.
 
+> **Note for students without an EEG background:** EEG signals and brain rhythms (alpha, beta, theta waves) are a specialist topic. If the neuroscience context is unfamiliar, the tutorial is still valuable for learning Temporal PCA — but you may want to read a brief introduction to EEG before working through Steps 6 and 7. The CSTR dataset (Dataset 5) covers the same Temporal PCA concepts in a chemical engineering context that may be more accessible if you come from a natural science or engineering background.
+
 > **→ Open the EEG Eye State tutorial in GoPCA Desktop** to explore brain dynamics with Temporal PCA.
 
 ---
 
-### The Five Datasets at a Glance
+### The Six Datasets at a Glance
 
 | Dataset | Domain | Variables | Key lesson | Preprocessing | Method |
 |---|---|---|---|---|---|
@@ -193,7 +216,8 @@ GoPCA Desktop ships with five carefully selected sample datasets. Together they 
 | **Wine** | Chemistry | 13 | Variable importance, biplot | Standard scaling | SVD |
 | **Corn NIR** | Spectroscopy | 700 | Preprocessing for spectra (SNV) | SNV + centering | SVD |
 | **Swiss Roll** | Synthetic | 3 | Nonlinear structure | None | Kernel PCA |
-| **EEG Eye State** | Neuroscience | 14 (×time) | Time series, trajectories | Standard scaling | Temporal PCA |
+| **CSTR** | Chemical engineering | 12 (×time) | Process dynamics, fault detection | Standard scaling | Temporal PCA |
+| **EEG Eye State** | Neuroscience | 14 (×time) | Brain rhythms, phase-space trajectories | Standard scaling | Temporal PCA |
 
 ---
 
@@ -715,7 +739,7 @@ You've traveled from the basic intuition of PCA through its mathematical foundat
 
 ### Your Next Steps with GoPCA Suite
 
-**Start with the interactive tutorials:** Each of the five sample datasets has a guided tutorial in GoPCA Desktop. Work through them in order — Iris first to build your foundations, then Wine, Corn, Swiss Roll, and EEG. By the end of the EEG tutorial, you will have used every major feature of GoPCA and encountered every major challenge that real datasets present.
+**Start with the interactive tutorials:** Each of the six sample datasets has a guided tutorial in GoPCA Desktop. Work through them in order — Iris first to build your foundations, then Wine, Corn, Swiss Roll, CSTR, and EEG. By the end of the EEG tutorial, you will have used every major feature of GoPCA and encountered every major challenge that real datasets present.
 
 **Then bring your own data:**
 1. Prepare your data with GoCSV Desktop (handle missing values, check quality)
