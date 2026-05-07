@@ -180,7 +180,7 @@ Each panel shows how one component's loading evolves across lags 0 to L. The x-a
 * Compare the decay time constant to the PI integral time τ_I = 8 minutes. Do they match?
 * Look carefully at components dominated by `Tc_out_K` (coolant temperature) versus `T_K` (reactor temperature). Do their loading curves peak at different lags? This is **delayed thermal coupling**: the reactor has thermal inertia, so a change in coolant temperature takes several minutes to propagate into a change in reactor temperature. The lag axis makes this sequence visible — something ordinary PCA cannot show.
 
-> **Hint:** A sinusoidal temporal loading pattern means that component is tracking a variable that oscillates in time. The period of the oscillation can be estimated from the zero-crossings: if you count k zero-crossings over L lags, the oscillation period ≈ 2L/k minutes. For a 40-minute oscillation with L = 10 lags, you will see only about half a cycle — try L = 40 to resolve the full period.
+> **Hint:** A sinusoidal temporal loading pattern means that component is tracking a variable that oscillates in time. The period of the oscillation can be estimated from the zero-crossings: if you count k zero-crossings over L lags, the oscillation period ≈ 2L/k minutes. For a 40-minute oscillation with L = 10 lags, you will see only about **one quarter of a cycle** (10/40 = 0.25) — far too little to recognise a clean sinusoid. Try L = 40 to resolve the full period.
 
 ---
 
@@ -193,13 +193,28 @@ Temporal PCA (SSA) represents a single oscillation as a **pair of components** w
 
 This pairing occurs because a sine wave requires both a sine and a cosine component to be fully represented.
 
-#### Questions:
+> **Important — you will not see a clean pair at L = 10.** The flow oscillation has a 40-minute period. With L = 10, the lag window covers only 10/40 = 25% of one cycle. SSA cannot decompose an oscillation into a sine/cosine pair when the window is too short to contain even a half cycle. At L = 10, the oscillation appears as slow-varying trend components rather than recognisable sinusoids, and the two components with equal variance may simply be two correlated trend modes — not an oscillatory pair. Equal variance alone is a necessary but not sufficient condition.
 
-* Looking at the Scree Plot, can you find two adjacent components with similar % variance? Which components are they?
-* Open the Temporal Loadings Plot for those two components. Are their curves sinusoidal and approximately 90° shifted from each other?
-* Now look at which variable has the highest loading for this pair — which process variable is driving the oscillation? Does this make physical sense given that the flow rate oscillates?
+**What you will actually see at L = 10:**
 
-> **Try L = 40:** With L = 10, the 40-minute oscillation completes only one quarter of a cycle across the lag window. With L = 40, you will see a complete sine and cosine pair. Run Temporal PCA again with L = 40 and 10 components, then re-examine the oscillatory pair.
+- Two components with equal explained variance (e.g. both 3.1%) — but with temporal loading curves that are not sinusoidal. One may be a linear ramp, the other nearly flat. These are slow trend components capturing the step disturbances and controller response, not the flow oscillation.
+- One or two higher-numbered components (low variance, <1%) with slightly curved or V-shaped loading curves — partial traces of the oscillation, but too compressed to identify clearly.
+
+**To actually find the oscillatory pair, switch to L = 40:**
+
+Run Temporal PCA with **L = 40** and **10 components**. Now the lag window spans one full oscillation period. The pair should become clearly visible:
+
+* Two adjacent components with nearly equal variance
+* One with a cosine-shaped temporal loading (starts high, passes through zero, goes negative)
+* One with a sine-shaped temporal loading (starts near zero, rises or falls monotonically across the window)
+* Both dominated by the same process variable — `F_L_min` (feed flow rate)
+
+#### Questions (at L = 40):
+
+* Can you now identify the oscillatory pair? Which component numbers are they, and what are their explained variances?
+* Are the temporal loading curves of the two components approximately 90° shifted from each other?
+* Which variable dominates the loading of this pair? Does it match your expectation from the simulation?
+* Compare the Scree Plot at L = 40 to L = 10. Why does the explained variance of the top components drop when L increases?
 
 ---
 
