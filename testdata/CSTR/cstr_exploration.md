@@ -44,7 +44,15 @@ The simulation runs for **800 minutes** at 1-minute sampling, producing **801 ob
 | `heat_transfer_UA_kJ_min_K` | *UA* | kJ/(min·K) | Overall heat-transfer coefficient |
 | `residence_time_min` | *τ* | min | Hydraulic residence time (V/F) |
 
-The dataset also includes three string columns (`event`, `regime`, `fault_active`) for coloring and interpretation. All three are automatically excluded from PCA by GoPCA — use `regime` as the color target.
+The dataset also includes three string columns that label the operating state at each time point. All three are automatically excluded from PCA by GoPCA and are available for score-plot coloring.
+
+| Column | Distinct values | Description |
+|---|---|---|
+| `event` | 6 values | Fine-grained scenario label: `normal`, `feed_conc_high`, `feed_temp_high`, `flow_oscillation`, `cooling_fault`, `recovery` |
+| `regime` | 4 values | Coarser grouping: `normal` (baseline + recovery), `feed_disturbance` (both feed steps combined), `oscillation`, `cooling_fault` |
+| `fault_active` | `yes` / `no` | Binary flag: `no` during normal operation and recovery, `yes` during all disturbance and fault periods |
+
+All three describe the same 800-minute timeline at different levels of detail — `event` is the most specific, `fault_active` the broadest. **Use `regime` as your color target**: four clearly named categories give the most useful visual separation in the scores plot, and the two feed disturbances are grouped together because they produce similar multivariate signatures.
 
 ### Operating scenarios
 
