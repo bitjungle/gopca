@@ -110,7 +110,7 @@ Open the **Scores Plot** (color by `regime`) and the **Loadings Plot**.
 
 * Can you identify clusters corresponding to normal operation, feed disturbances, the cooling fault, and the oscillation regime?
 * PC1 typically captures **overall reaction intensity** — which variables have the largest loadings? You would expect `T_K`, `reaction_rate_mol_L_min`, and `conversion_fraction` to dominate, since they are all tightly coupled through the energy and mass balances at steady state.
-* PC2 often separates **feed and composition effects** from **thermal and cooling effects** — do the loadings support this?
+* Look at PC2. It is dominated by `F_L_min` (strongly negative) and `residence_time_min` (strongly positive). These two are mathematically coupled — τ = V/F, so they are exact inverses of each other. PC2 is essentially a **flow rate axis**. Does this explain why the oscillation period scatters along PC2 rather than PC1?
 * The **cooling fault** should appear far from the normal cluster along PC1. If it does, check the loadings — which variables drive this separation? Does the large offset compress the rest of the score plot into a small region on the left side?
 * Now look at the **flow oscillation** period. Rather than forming a compact cluster, it scatters broadly across the full vertical range of the plot. Why? SVD PCA has no sense of time — each measurement at minute 362 is treated as an independent sample, not as part of a repeating cycle. The oscillation appears as diffuse scatter rather than a recognisable structure.
 
