@@ -127,7 +127,20 @@ Now change the configuration to:
 
 Click **Go Temporal PCA**.
 
-Each observation now carries a short process history — the current values plus the 10 preceding minutes. PCA is now finding directions of maximum variance in this extended state space, which includes time.
+### What GoPCA is doing under the hood
+
+Instead of describing each minute as a single vector of 12 sensor values, Temporal PCA describes it as a short **sequence** of L+1 consecutive time points — a sliding window of length L+1. Each window is represented as one row in a larger **trajectory matrix**, to which SVD is then applied.
+
+For this dataset with L = 10:
+
+| | SVD PCA (Step 1) | Temporal PCA (Step 2) |
+|---|---|---|
+| Rows | 801 (one per minute) | 791 (one per window position) |
+| Columns | 12 (sensor variables) | 132 (12 variables × 11 time steps) |
+
+Each column in the trajectory matrix represents a specific variable at a specific lag — for example, column 13 is `T_K` at lag 1 (one minute ago), column 25 is `T_K` at lag 2, and so on. SVD on this wider matrix finds directions of variance that capture not just *which variables correlate at any instant*, but *how those correlations evolve across the 10-minute window*.
+
+**Why L = 10?** Looking at the process time constants table at the top of this tutorial: the PI integral time τ_I = 8 minutes is the dominant controller dynamics. L = 10 covers slightly more than one full controller action — enough to see the transient response shape, but compact enough to keep the trajectory matrix manageable. At L = 10 the 40-minute flow oscillation covers only 25% of one period, so it will not appear as a clean oscillatory pair (we address that in Step 6).
 
 ---
 
