@@ -113,9 +113,10 @@ Open the **Scores Plot** (color by `regime`) and the **Loadings Plot**.
 * Can you identify clusters corresponding to normal operation, feed disturbances, the cooling fault, and the oscillation regime?
 * PC1 typically captures **overall reaction intensity** — which variables have the largest loadings? You would expect `T_K`, `reaction_rate_mol_L_min`, and `conversion_fraction` to dominate, since they are all tightly coupled through the energy and mass balances at steady state.
 * PC2 often separates **feed and composition effects** from **thermal and cooling effects** — do the loadings support this?
-* Now look at the flow oscillation period in the scores plot. Does ordinary PCA cleanly separate it from normal operation, or does it overlap?
+* The **cooling fault** should appear far from the normal cluster along PC1. If it does, check the loadings — which variables drive this separation? Does the large offset compress the rest of the score plot into a small region on the left side?
+* Now look at the **flow oscillation** period. Rather than forming a compact cluster, it scatters broadly across the full vertical range of the plot. Why? Ordinary PCA has no sense of time — each measurement at minute 362 is treated as an independent sample, not as part of a repeating cycle. The oscillation appears as diffuse scatter rather than a recognisable structure.
 
-👉 Ordinary PCA sees the process at a **single instant in time**. It can detect that operating regimes are different, but it cannot understand *how* a disturbance propagates through the process, *how quickly* the controller responds, or *whether* a periodic signal is present. That is the key limitation ordinary PCA cannot overcome.
+👉 Ordinary PCA sees the process at a **single instant in time**. It can detect large regime shifts (the cooling fault stands out clearly), but it cannot understand *how* a disturbance propagates through the process, *how quickly* the controller responds, or *whether* a periodic signal is present. The oscillation period looks like noise. That is the key limitation ordinary PCA cannot overcome — and what Temporal PCA is designed to fix.
 
 ---
 
