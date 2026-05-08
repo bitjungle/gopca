@@ -20,7 +20,7 @@ A proportional-integral (PI) controller manipulates the coolant temperature T_c 
 
 This controller introduces **closed-loop dynamics** into the data — disturbances cause transients, the controller responds, and variables return to steady state. Temporal PCA can capture all of this.
 
-> A temporal PCA analysis of this dataset teaches something deeper than ordinary PCA: not just *which variables are correlated*, but *how process dynamics evolve through time*. That is exactly why dynamic PCA became central to chemical process monitoring.
+> A temporal PCA analysis of this dataset teaches something deeper than a single-snapshot PCA: not just *which variables are correlated*, but *how process dynamics evolve through time*. That is exactly why dynamic PCA became central to chemical process monitoring.
 
 ![CSTR P&ID — process variables and instrumentation](./cstr_diagram.png)
 *Simplified P&ID showing the measured variables, instrumentation, and PI temperature control loop for the simulated CSTR process.*
@@ -90,17 +90,15 @@ Work through the steps in order. Each step builds on the previous one.
 
 ---
 
-## Step 1: Start with ordinary PCA — establish a baseline
+## Step 1: Establish a baseline with SVD PCA
 
-Before introducing time lags, run ordinary PCA (L = 0) first. This lets you see exactly what temporal PCA adds.
+Before introducing time lags, run a standard SVD PCA first. This lets you see exactly what Temporal PCA adds.
 
 Load `cstr_temporal_pca.csv` into GoPCA. Set:
 
-* **Target column** → `regime` (for coloring)
 * **Preprocessing** → **Standard Scale**
-* **Lags (L)** → **0**
 * **Number of Components** → **5**
-* **PCA Method** → SVD (default)
+* **PCA Method** → **SVD**
 
 Click **Go PCA**.
 
@@ -114,9 +112,9 @@ Open the **Scores Plot** (color by `regime`) and the **Loadings Plot**.
 * PC1 typically captures **overall reaction intensity** — which variables have the largest loadings? You would expect `T_K`, `reaction_rate_mol_L_min`, and `conversion_fraction` to dominate, since they are all tightly coupled through the energy and mass balances at steady state.
 * PC2 often separates **feed and composition effects** from **thermal and cooling effects** — do the loadings support this?
 * The **cooling fault** should appear far from the normal cluster along PC1. If it does, check the loadings — which variables drive this separation? Does the large offset compress the rest of the score plot into a small region on the left side?
-* Now look at the **flow oscillation** period. Rather than forming a compact cluster, it scatters broadly across the full vertical range of the plot. Why? Ordinary PCA has no sense of time — each measurement at minute 362 is treated as an independent sample, not as part of a repeating cycle. The oscillation appears as diffuse scatter rather than a recognisable structure.
+* Now look at the **flow oscillation** period. Rather than forming a compact cluster, it scatters broadly across the full vertical range of the plot. Why? SVD PCA has no sense of time — each measurement at minute 362 is treated as an independent sample, not as part of a repeating cycle. The oscillation appears as diffuse scatter rather than a recognisable structure.
 
-👉 Ordinary PCA sees the process at a **single instant in time**. It can detect large regime shifts (the cooling fault stands out clearly), but it cannot understand *how* a disturbance propagates through the process, *how quickly* the controller responds, or *whether* a periodic signal is present. The oscillation period looks like noise. That is the key limitation ordinary PCA cannot overcome — and what Temporal PCA is designed to fix.
+👉 SVD PCA sees the process at a **single instant in time**. It can detect large regime shifts (the cooling fault stands out clearly), but it cannot understand *how* a disturbance propagates through the process, *how quickly* the controller responds, or *whether* a periodic signal is present. The oscillation period looks like noise. That is the key limitation — and what Temporal PCA is designed to fix.
 
 ---
 
@@ -191,7 +189,7 @@ Each panel shows how one component's loading evolves across lags 0 to L. The x-a
 * Which components show a monotone decaying shape? What time constant does the decay suggest (how many lags before it flattens)?
 * Can you find any components with a sinusoidal shape? These represent the 40-minute flow oscillation.
 * Compare the decay time constant to the PI integral time τ_I = 8 minutes. Do they match?
-* Look carefully at components dominated by `Tc_out_K` (coolant temperature) versus `T_K` (reactor temperature). Do their loading curves peak at different lags? This is **delayed thermal coupling**: the reactor has thermal inertia, so a change in coolant temperature takes several minutes to propagate into a change in reactor temperature. The lag axis makes this sequence visible — something ordinary PCA cannot show.
+* Look carefully at components dominated by `Tc_out_K` (coolant temperature) versus `T_K` (reactor temperature). Do their loading curves peak at different lags? This is **delayed thermal coupling**: the reactor has thermal inertia, so a change in coolant temperature takes several minutes to propagate into a change in reactor temperature. The lag axis makes this sequence visible — something a single-snapshot PCA cannot show.
 
 > **Hint:** A sinusoidal temporal loading pattern means that component is tracking a variable that oscillates in time. The period of the oscillation can be estimated from the zero-crossings: if you count k zero-crossings over L lags, the oscillation period ≈ 2L/k minutes. For a 40-minute oscillation with L = 10 lags, you will see only about **one quarter of a cycle** (10/40 = 0.25) — far too little to recognise a clean sinusoid. Try L = 40 to resolve the full period.
 
