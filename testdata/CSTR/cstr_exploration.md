@@ -141,7 +141,7 @@ Open the **Scree Plot**.
 * How many components are needed to reach 80% cumulative variance?
 * How does the Scree Plot for this dataset compare to Iris (4 variables, clean separation) or Wine (13 variables, ~55% in 2D)?
 
-👉 A CSTR at steady state has only a few degrees of freedom (temperature, concentration, flow are tightly coupled through the energy and mass balances). During disturbances and faults, additional variation enters from different directions. The Scree Plot reflects this: a few large components capturing steady-state variation, then smaller components capturing the specific disturbance signatures.
+👉 A CSTR at steady state has only a few degrees of freedom (temperature, concentration, flow are tightly coupled through the energy and mass balances). During disturbances and faults, additional variation enters from different directions. The Scree Plot reflects this: a few large components capturing steady-state variation, then smaller components capturing the specific disturbance signatures. You should find that just **3 components exceed 80%** cumulative variance — efficient for a 12-variable process dataset with 10 lags.
 
 ---
 
@@ -154,15 +154,16 @@ For time-series data, the scores form a **time-ordered trajectory** through PC s
 **How to read a process trajectory:**
 
 * **Tight cluster** → reactor operating in a stable, repeating condition
-* **Slow drift away from cluster** → gradual process change (e.g., fouling, catalyst deactivation)
-* **Sharp jump** → step disturbance (e.g., feed change)
-* **Closed loop or ellipse** → periodic oscillation (the 40-minute flow cycle will appear this way)
+* **Smooth diagonal path away from cluster** → step disturbance followed by a transient response. The input changes instantaneously, but the reactor takes many minutes to settle — the trajectory traces this transient. Look for the feed disturbance (orange) doing exactly this.
+* **Slow drift** → gradual process change (e.g., fouling, catalyst deactivation)
+* **Closed loop or ellipse** → periodic oscillation (the 40-minute flow cycle would appear this way at L ≥ 40; at L = 10 the loop is too compressed to close)
 * **Failure to return** → fault that the controller cannot correct
 
 #### Questions:
 
 * Can you identify which region of the plot corresponds to normal operation?
-* Where does the cooling fault period appear — close to normal operation or far from it?
+* The feed disturbance period (orange) should form a clear trajectory away from the normal cluster and then return. How long does the transient last — how many minutes before the points begin returning toward the normal cluster?
+* Where does the cooling fault period appear — close to normal operation or far from it? Is it more spread out along PC1 than it was in the SVD scores plot?
 * Does the flow oscillation period trace a recognisable loop? How large is it compared to the steady-state cluster?
 * Does the reactor return to the normal region during the recovery period?
 
