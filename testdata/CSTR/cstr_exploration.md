@@ -172,6 +172,19 @@ For time-series data, the scores form a **time-ordered trajectory** through PC s
 * **Closed loop or ellipse** → periodic oscillation (the 40-minute flow cycle would appear this way at L ≥ 40; at L = 10 the loop is too compressed to close)
 * **Failure to return** → fault that the controller cannot correct
 
+### Tip: use Row Index coloring to see time flow directly
+
+The **Color by** dropdown above the scores plot offers a **Row Index** option. Because the rows are sorted in time, the row index is a proxy for time — and coloring by it maps the continuous progression of the experiment onto a color gradient from dark (early) to light (late).
+
+Try this: switch **Color by** → **Row Index**, then switch back to **regime**. The two colorings complement each other:
+
+| Color by | What it shows |
+|---|---|
+| `regime` | Which operating state each point belongs to — categorical, easy to identify clusters |
+| **Row Index** | When each point occurred — the color gradient makes the direction of time flow through the plot immediately readable |
+
+With Row Index coloring you can immediately see, for example, that the diagonal trajectory of the feed disturbance runs from an intermediate color (the transition into the disturbance) back toward the early-time cluster (the controller correcting), and that the cooling fault points in the far-right region carry the latest colors (high row numbers = late in the experiment). This makes the temporal sequence of process events readable in a single glance — no regime labels needed.
+
 #### Questions:
 
 * Can you identify which region of the plot corresponds to normal operation?
@@ -179,6 +192,7 @@ For time-series data, the scores form a **time-ordered trajectory** through PC s
 * Where does the cooling fault period appear — close to normal operation or far from it? Is it more spread out along PC1 than it was in the SVD scores plot?
 * Does the flow oscillation period trace a recognisable loop? How large is it compared to the steady-state cluster?
 * Does the reactor return to the normal region during the recovery period?
+* Switch to **Row Index** coloring. Does the color gradient confirm the temporal sequence you expected — early dark colors in the normal cluster, transitioning through the disturbance periods, and the latest colors in the cooling fault and recovery region?
 
 > **Chemical engineering connection:** This is the same logic as a yield–selectivity map in a reaction engineering course. When you plot yield vs. selectivity over time during a runaway, the trajectory moves away from the optimal operating point. The scores plot is a multivariate generalisation of that idea — it shows where the process is in a compressed, multi-dimensional operating space.
 
