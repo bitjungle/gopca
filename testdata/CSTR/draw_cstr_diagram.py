@@ -372,9 +372,59 @@ ax.text(12, 19.5, r"$T_{c,nom}\!=\!300\,$K",
 ax.text(12, 16.5, r"$285\!\leq\!T_c\!\leq\!330\,$K",
         ha="center", fontsize=6.8, color=GRAY)
 
-# Horizontal supply pipe: tank right → COOL_IN_X
-pipe(ax, 22, COOL_PIPE_Y, COOL_IN_X, COOL_PIPE_Y, color=COOL, lw=LWC)
-# Turn up into jacket bottom
+# ── Coolant temperature manipulation: 3-way mixing valve ─────────────────────
+# The simulator manipulates Tc (coolant inlet temperature, K) directly.
+# The standard engineering implementation is a 3-way mixing valve that blends:
+#   • cold fresh coolant from TK-201 (supply)
+#   • warm coolant bypassed from the jacket return
+# The mixing ratio — set by TCV-201 — determines Tc.
+#
+# MIX_X is the mixing point on the supply pipe.
+MIX_X = 57   # x-coordinate of the 3-way mixing valve
+
+# Cold supply pipe: tank right → MIX_X
+pipe(ax, 22, COOL_PIPE_Y, MIX_X, COOL_PIPE_Y, color=COOL, lw=LWC)
+
+# 3-way mixing valve symbol at MIX_X:
+#   left triangle (cold supply from left) + right triangle (warm bypass from above)
+#   + right-hand triangle (mixed outlet to right) — drawn as two bow-ties
+MV_H = 1.6 * 0.55   # half-height of valve triangle
+# horizontal pass-through bow-tie (cold in → mixed out)
+ax.add_patch(plt.Polygon(
+    [[MIX_X - MV_H, COOL_PIPE_Y + MV_H * 0.85],
+     [MIX_X - MV_H, COOL_PIPE_Y - MV_H * 0.85],
+     [MIX_X,        COOL_PIPE_Y]],
+    fc=COOL, ec=COOL, zorder=5))
+ax.add_patch(plt.Polygon(
+    [[MIX_X + MV_H, COOL_PIPE_Y + MV_H * 0.85],
+     [MIX_X + MV_H, COOL_PIPE_Y - MV_H * 0.85],
+     [MIX_X,        COOL_PIPE_Y]],
+    fc=COOL, ec=COOL, zorder=5))
+# vertical bypass inlet triangle (warm bypass comes down from above)
+ax.add_patch(plt.Polygon(
+    [[MIX_X - MV_H * 0.85, COOL_PIPE_Y + MV_H],
+     [MIX_X + MV_H * 0.85, COOL_PIPE_Y + MV_H],
+     [MIX_X,                COOL_PIPE_Y]],
+    fc=COOL, ec=COOL, zorder=5))
+
+# Actuator stem and circle above the vertical inlet
+MV_STEM_TOP = COOL_PIPE_Y + MV_H + 2.5
+MV_ACT_R    = RB * 0.65
+MV_ACT_CY   = MV_STEM_TOP + MV_ACT_R
+ax.plot([MIX_X, MIX_X], [COOL_PIPE_Y + MV_H, MV_STEM_TOP], color=COOL, lw=2.0, zorder=5)
+ax.add_patch(plt.Circle((MIX_X, MV_ACT_CY), MV_ACT_R,
+                         fc="white", ec=COOL, lw=1.4, zorder=5))
+ax.text(MIX_X, MV_ACT_CY, "A", ha="center", va="center",
+        fontsize=4.8, color=COOL, zorder=6)
+ax.text(MIX_X, COOL_PIPE_Y - MV_H * 0.85 - 1.3, "TCV-201",
+        ha="center", va="top", fontsize=7.0, color=COOL)
+
+tcv_top = MV_ACT_CY + MV_ACT_R   # top of actuator (signal connection point)
+
+# (Warm bypass circuit not drawn to avoid clutter — see MV annotation below.)
+
+# Mixed outlet pipe: MIX_X → COOL_IN_X (horizontal), then up into jacket bottom
+pipe(ax, MIX_X + MV_H, COOL_PIPE_Y, COOL_IN_X, COOL_PIPE_Y, color=COOL, lw=LWC)
 pipe(ax, COOL_IN_X, COOL_PIPE_Y, COOL_IN_X, JBot, color=COOL, lw=LWC)
 ax.annotate("", xy=(COOL_IN_X, JBot + 0.5), xytext=(COOL_IN_X, JBot - 7),
             arrowprops=dict(arrowstyle="->", color=COOL,
@@ -382,9 +432,10 @@ ax.annotate("", xy=(COOL_IN_X, JBot + 0.5), xytext=(COOL_IN_X, JBot - 7),
 ax.text(COOL_IN_X - 1, JBot - 2.5, r"$T_c$ in",
         ha="right", fontsize=8.5, color=COOL, va="top", fontweight="bold")
 
-# TCV-201 on supply pipe
-TCV_X    = 57
-tcv_top  = valve(ax, TCV_X, COOL_PIPE_Y, label="TCV-201", color=COOL, size=1.6)
+# MV = manipulated variable annotation (above the pipe, right of valve)
+ax.text(MIX_X + MV_H + 2, COOL_PIPE_Y + 2.5,
+        r"MV: $T_c$ [K]  (3-way mixing valve)",
+        ha="left", fontsize=7.5, color=COOL, style="italic")
 
 # Coolant return: exits jacket top → up → right
 pipe(ax, COOL_OUT_X, JTop, COOL_OUT_X, COOL_RETURN_Y, color=COOL, lw=LWC)
@@ -425,8 +476,8 @@ sig(ax, TIC_X, TT201_Y, TIC_X, TIC_Y - RB)
 SIG_LOW = COOL_PIPE_Y + 6    # between coolant supply pipe and bottom info box
 
 sig(ax, TIC_X, TIC_Y - RB, TIC_X, SIG_LOW)      # down from TIC
-sig(ax, TIC_X, SIG_LOW, TCV_X, SIG_LOW)          # west at SIG_LOW elevation
-sig(ax, TCV_X, SIG_LOW, TCV_X, tcv_top)          # down to TCV actuator
+sig(ax, TIC_X, SIG_LOW, MIX_X, SIG_LOW)          # west at SIG_LOW elevation
+sig(ax, MIX_X, SIG_LOW, MIX_X, tcv_top)          # down to TCV actuator
 
 # ─────────────────────────────────────────────────────────────────────────────
 # Disturbances box (bottom-left area — below feed tank)
