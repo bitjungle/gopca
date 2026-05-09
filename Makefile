@@ -127,8 +127,12 @@ build-all-parallel:
 sync-docs:
 	@bash scripts/sync-docs.sh
 
+## sync-datasets: Compress source CSVs into internal/datasets/*.csv.gz (embedded at build time)
+sync-datasets:
+	@bash scripts/sync-datasets.sh
+
 ## pca-dev: Run GoPCA Desktop in development mode with hot reload
-pca-dev: sync-docs
+pca-dev: sync-docs sync-datasets
 	@if [ -x "$(WAILS)" ]; then \
 		echo "Starting GoPCA Desktop in development mode..."; \
 		cd $(DESKTOP_PATH) && $(WAILS) dev; \
@@ -139,7 +143,7 @@ pca-dev: sync-docs
 	fi
 
 ## pca-build: Build GoPCA Desktop for production
-pca-build: sync-docs
+pca-build: sync-docs sync-datasets
 	@if [ -x "$(WAILS)" ]; then \
 		echo "Building GoPCA Desktop..."; \
 		cd $(DESKTOP_PATH) && $(WAILS) build $(DESKTOP_LDFLAGS); \

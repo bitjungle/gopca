@@ -171,7 +171,13 @@ def scenario_inputs(t: float, p: CSTRParameters) -> dict[str, float | str]:
     elif 520.0 <= t < 680.0:
         UA_factor = 0.72
         event = "cooling_fault"
-    elif t >= 680.0:
+    elif 680.0 <= t < 700.0:
+        # Ramp UA back to nominal over 20 min — avoids the one-sample outlier
+        # that an instantaneous step would create (reactor still at fault
+        # temperature when UA jumps, producing an extreme cooling_duty spike).
+        UA_factor = 0.72 + 0.28 * (t - 680.0) / 20.0
+        event = "recovery"
+    elif t >= 700.0:
         event = "recovery"
 
     return {"F": F, "CAf": CAf, "Tf": Tf, "UA_factor": UA_factor, "event": event}

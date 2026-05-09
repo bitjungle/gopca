@@ -199,6 +199,7 @@ sync_tutorial "wine"
 sync_tutorial "corn"
 sync_tutorial "swiss_roll"
 sync_tutorial "eye_state" "eeg_eye_state"
+sync_tutorial "CSTR" "cstr"
 
 echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
 

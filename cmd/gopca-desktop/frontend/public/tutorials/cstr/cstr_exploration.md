@@ -25,7 +25,7 @@ This controller introduces **closed-loop dynamics** into the data — disturbanc
 > A temporal PCA analysis of this dataset teaches something deeper than a single-snapshot PCA: not just *which variables are correlated*, but *how process dynamics evolve through time*. That is exactly why dynamic PCA became central to chemical process monitoring.
 
 ![CSTR P&ID — process variables and instrumentation](./cstr_diagram.png)
-*Simplified P&ID showing the measured variables, instrumentation, and PI temperature control loop for the simulated CSTR process.*
+*P&ID for the simulated CSTR process. TCV-201 is a three-way mixing valve: it blends cold coolant supply (from TK-201) with warm bypass tapped from the coolant return header to produce the coolant inlet temperature T_c — the manipulated variable of the PI controller. The mixed stream enters the cooling jacket at the bottom-left; spent coolant exits at the top-right. The signal line (dashed) shows TIC-201 driving the valve actuator.*
 
 ### The dataset
 
@@ -34,7 +34,7 @@ The simulation runs for **800 minutes** at 1-minute sampling, producing **801 ob
 | Column | Symbol | Units | Description |
 |---|---|---|---|
 | `T_K` | *T* | K | Reactor temperature (controlled variable) |
-| `Tc_out_K` | *T*_c,out | K | Coolant outlet temperature (manipulated via PI) |
+| `Tc_out_K` | *T*_c,out | K | Coolant outlet temperature (measured) |
 | `Tf_K` | *T*_f | K | Feed temperature |
 | `CA_mol_L` | *C*_A | mol/L | Reactant A concentration in reactor |
 | `CB_mol_L` | *C*_B | mol/L | Product B concentration in reactor |

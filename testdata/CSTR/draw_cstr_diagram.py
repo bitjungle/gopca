@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-draw_cstr_diagram.py  —  v4
+draw_cstr_diagram.py  —  v5
 Accurate, visually clear P&ID for the CSTR Temporal PCA tutorial.
 
 Usage:  python draw_cstr_diagram.py
@@ -14,6 +14,9 @@ Layout philosophy
 * Coolant enters jacket bottom-left, exits jacket top-right.
 * TIC-201 (PI controller) reads TT-201 and drives TCV-201 on the coolant supply.
 * Signal routing is kept away from process streams.
+* TCV-201 is a 3-way mixing valve: cold supply (TK-201) + warm bypass (return
+  header) → mixed stream at controlled temperature Tc [K] → jacket inlet.
+  This is physically consistent with the simulator, which sets Tc directly.
 """
 
 from __future__ import annotations
@@ -108,6 +111,50 @@ def valve(ax, cx, cy, label="", color=PROC, size=1.6):
         ax.text(cx, cy - h * 0.85 - 1.3, label, ha="center", va="top",
                 fontsize=7.0, color=color)
     return act_cy + act_r
+
+
+def three_way_valve(ax, cx, cy, color=PROC, size=1.8):
+    """3-way mixing valve symbol — actuator on BOTTOM, bypass enters from TOP.
+
+    This ensures the bypass pipe (top) and the actuator (bottom) are on
+    opposite sides, so they cannot be visually confused with each other.
+    The instrument signal line connects to the actuator from below.
+
+    Stream connections:
+      Left  inlet : (cx - h, cy)         — cold supply
+      Top   inlet : (cx, cy + h*0.85)   — warm bypass (enters from above)
+      Right outlet: (cx + h, cy)         — mixed stream to jacket
+
+    Returns: (actuator_bottom_y, h)
+    """
+    h = size * 0.55
+
+    # Left inlet triangle (cold supply → centre)
+    ax.add_patch(plt.Polygon(
+        [[cx - h, cy + h * 0.85], [cx - h, cy - h * 0.85], [cx, cy]],
+        fc=color, ec=color, zorder=5))
+
+    # Right outlet triangle (centre → mixed stream)
+    ax.add_patch(plt.Polygon(
+        [[cx, cy], [cx + h, cy + h * 0.85], [cx + h, cy - h * 0.85]],
+        fc=color, ec=color, zorder=5))
+
+    # Top bypass triangle (warm bypass → centre, points DOWN into body)
+    ax.add_patch(plt.Polygon(
+        [[cx - h * 0.85, cy + h], [cx + h * 0.85, cy + h], [cx, cy]],
+        fc=color, ec=color, zorder=5))
+
+    # Actuator on BOTTOM — stem exits bottom of valve body, circle below
+    act_r = RB * 0.65
+    stem_bot = cy - h * 0.85 - 1.4
+    act_cy   = stem_bot - act_r
+    ax.plot([cx, cx], [cy - h * 0.85, stem_bot], color=color, lw=2.0, zorder=5)
+    ax.add_patch(plt.Circle((cx, act_cy), act_r,
+                             fc="white", ec=color, lw=1.4, zorder=5))
+    ax.text(cx, act_cy, "A", ha="center", va="center",
+            fontsize=4.8, color=color, zorder=6)
+
+    return act_cy - act_r, h  # (actuator_bottom_y, half_size_h)
 
 
 def vessel_path(cx, cy_bot, cy_top, hw, ht=0.22, hb=0.32):
@@ -354,8 +401,7 @@ ax.text(AT203_X, PROD_Y - RB - 3, r"$C_A,\ C_B$",
 #   Supply: enters jacket BOTTOM at COOL_IN_X (left side)
 #   Return: exits jacket TOP at COOL_OUT_X (right side) — shows upward annular flow
 # ─────────────────────────────────────────────────────────────────────────────
-COOL_PIPE_Y   = 22    # horizontal coolant supply pipe elevation
-COOL_RETURN_Y = JTop + 9   # coolant return header elevation
+COOL_RETURN_Y = JTop + 13  # return header elevation — above jacket dome apex (~133)
 
 # Coolant source TK-201
 ctank = mpatches.FancyBboxPatch(
@@ -372,42 +418,91 @@ ax.text(12, 19.5, r"$T_{c,nom}\!=\!300\,$K",
 ax.text(12, 16.5, r"$285\!\leq\!T_c\!\leq\!330\,$K",
         ha="center", fontsize=6.8, color=GRAY)
 
-# ── Coolant temperature control valve TCV-201 ────────────────────────────────
+# ── Coolant system layout ────────────────────────────────────────────────────
 # The simulator manipulates Tc (coolant inlet temperature in K) directly.
-# The model is abstract about the physical actuator — it simply sets Tc.
-# TCV-201 represents this control action. The manipulated variable is Tc [K],
-# not coolant flow rate. Label makes this explicit.
-TCV_X = 57
+# Physically this is achieved by a 3-way mixing valve TCV-201 that blends:
+#   • Cold supply  from TK-201          — enters valve from the LEFT
+#   • Warm bypass  from return header   — enters valve from ABOVE
+# The mixed stream at controlled temperature Tc exits RIGHT to the jacket.
+#
+# Actuator sits on the BOTTOM of the valve body so that:
+#   (a) the bypass pipe entering from the TOP is visually unambiguous, and
+#   (b) the instrument signal line connects to the actuator from below
+#       without crossing or merging with the bypass pipe.
+#
+# The bypass is shown with a line-break stub (standard P&ID off-page symbol)
+# rather than routing a pipe across the full diagram height.
+MIX_X = 57
+MIX_Y = 30   # elevation of main horizontal axis through TCV-201
 
-# Coolant supply pipe: tank right → TCV-201 → COOL_IN_X
-pipe(ax, 22, COOL_PIPE_Y, COOL_IN_X, COOL_PIPE_Y, color=COOL, lw=LWC)
+# ── 3-way mixing valve TCV-201 ───────────────────────────────────────────────
+tcv_act_bottom, valve_h = three_way_valve(ax, MIX_X, MIX_Y, color=COOL, size=1.8)
 
-# Standard globe valve symbol for TCV-201
-tcv_top = valve(ax, TCV_X, COOL_PIPE_Y, color=COOL, size=1.6)
-
-# Valve tag and MV annotation below pipe
-ax.text(TCV_X, COOL_PIPE_Y - 1.6 * 0.55 * 0.85 - 1.3,
-        "TCV-201", ha="center", va="top", fontsize=7.0, color=COOL)
-ax.text(TCV_X, COOL_PIPE_Y - 1.6 * 0.55 * 0.85 - 5.5,
+# Valve tag (to the left, since bottom is occupied by actuator and top by bypass)
+ax.text(MIX_X - valve_h - 2, MIX_Y + 1.5,
+        "TCV-201", ha="right", va="bottom", fontsize=7.0, color=COOL,
+        fontweight="bold")
+ax.text(MIX_X - valve_h - 2, MIX_Y - 1.5,
         r"MV: $T_c$ [K]",
-        ha="center", va="top", fontsize=7.0, color=COOL, style="italic")
+        ha="right", va="top", fontsize=7.0, color=COOL, style="italic")
 
-# Coolant inlet: pipe turns up into jacket bottom
-pipe(ax, COOL_IN_X, COOL_PIPE_Y, COOL_IN_X, JBot, color=COOL, lw=LWC)
+# ── Cold supply pipe: TK-201 right wall → valve left inlet ──────────────────
+pipe(ax, 22, MIX_Y, MIX_X, MIX_Y, color=COOL, lw=LWC)
+ax.text(36, MIX_Y + 2.5, "Cold supply", ha="center",
+        fontsize=7.0, color=COOL, style="italic")
+
+# ── Coolant return header and warm bypass routing ────────────────────────────
+# The return header runs at COOL_RETURN_Y above the reactor.  At the left end
+# of the header (x = MIX_X) a tee taps a warm bypass branch that drops
+# straight down to the top port of TCV-201.  The bypass crosses the feed
+# pipe at y = FEED_Y; a "hop" crossing arc (standard P&ID convention) shows
+# the bypass travels over the feed pipe without connecting to it.
+#
+# Jacket outlet → tee (at COOL_OUT_X) → RIGHT to "COOLANT RETURN" label
+#                                      → LEFT  to MIX_X (bypass branch)
+#                                              ↓ down to TCV-201 top port
+
+# Jacket outlet vertical
+pipe(ax, COOL_OUT_X, JTop, COOL_OUT_X, COOL_RETURN_Y, color=COOL, lw=LWC)
+ax.text(COOL_OUT_X, COOL_RETURN_Y + 2.5, r"$T_{c,out}$ out",
+        ha="center", fontsize=8.5, color=COOL, fontweight="bold")
+
+# Tee junction dot
+ax.plot(COOL_OUT_X, COOL_RETURN_Y, "o", color=COOL, ms=6.0, zorder=6)
+
+# Right branch: main return header
+arrow_end(ax, COOL_OUT_X, COOL_RETURN_Y, PROD_END_X, COOL_RETURN_Y,
+          color=COOL, lw=LWC)
+ax.text(PROD_END_X + 2, COOL_RETURN_Y, "COOLANT\nRETURN",
+        ha="left", va="center", fontsize=10, fontweight="bold", color=COOL)
+
+# Left branch: bypass pipe from tee → MIX_X (runs above reactor jacket)
+pipe(ax, COOL_OUT_X, COOL_RETURN_Y, MIX_X, COOL_RETURN_Y, color=COOL, lw=LWC)
+ax.text((COOL_OUT_X + MIX_X) / 2, COOL_RETURN_Y + 2.5,
+        "Warm bypass", ha="center", fontsize=7.5, color=COOL, style="italic")
+
+# Bypass descends from header level to valve top port, crossing feed pipe
+# Upper segment: COOL_RETURN_Y → just above feed pipe
+_CR = 2.2   # crossing arc radius
+pipe(ax, MIX_X, COOL_RETURN_Y, MIX_X, FEED_Y + _CR, color=COOL, lw=LWC)
+# Crossing arc: right-bulging semicircle (bypass passes over feed pipe)
+_th = np.linspace(np.pi / 2, -np.pi / 2, 40)
+ax.add_patch(PathPatch(
+    MPath(np.column_stack([MIX_X + _CR * np.cos(_th),
+                           FEED_Y + _CR * np.sin(_th)]),
+          [MPath.MOVETO] + [MPath.LINETO] * 38 + [MPath.LINETO]),
+    fc="none", ec=COOL, lw=LWC, zorder=6))
+# Lower segment: just below feed pipe → valve top port
+pipe(ax, MIX_X, FEED_Y - _CR, MIX_X, MIX_Y + valve_h, color=COOL, lw=LWC)
+
+# ── Mixed stream: valve right outlet → COOL_IN_X → jacket bottom ─────────────
+pipe(ax, MIX_X + valve_h, MIX_Y, COOL_IN_X, MIX_Y, color=COOL, lw=LWC)
+pipe(ax, COOL_IN_X, MIX_Y, COOL_IN_X, JBot, color=COOL, lw=LWC)
 ax.annotate("", xy=(COOL_IN_X, JBot + 0.5), xytext=(COOL_IN_X, JBot - 7),
             arrowprops=dict(arrowstyle="->", color=COOL,
                             lw=LWC * 0.65, mutation_scale=13))
 ax.text(COOL_IN_X - 1, JBot - 2.5, r"$T_c$ in",
         ha="right", fontsize=8.5, color=COOL, va="top", fontweight="bold")
-
-# Coolant return: exits jacket top → up → right
-pipe(ax, COOL_OUT_X, JTop, COOL_OUT_X, COOL_RETURN_Y, color=COOL, lw=LWC)
-arrow_end(ax, COOL_OUT_X, COOL_RETURN_Y, PROD_END_X, COOL_RETURN_Y,
-          color=COOL, lw=LWC)
-ax.text(PROD_END_X + 2, COOL_RETURN_Y, "COOLANT\nRETURN",
-        ha="left", va="center", fontsize=10, fontweight="bold", color=COOL)
-ax.text(COOL_OUT_X, COOL_RETURN_Y + 2.5, r"$T_{c,out}$ out",
-        ha="center", fontsize=8.5, color=COOL, fontweight="bold")
 
 # TT-202 on coolant return line
 TT202_X = 208
@@ -432,38 +527,19 @@ ax.text(TIC_X, TIC_Y - RB - 2.5,
 sig(ax, TT201_X + RB, TT201_Y, TIC_X, TT201_Y)
 sig(ax, TIC_X, TT201_Y, TIC_X, TIC_Y - RB)
 
-# ── Signal: TIC-201 → TCV-201 ────────────────────────────────────────────────
-# Route: TIC bottom → south to SIG_LOW (between coolant return and feed pipe)
-#        → west to TCV_X → down to TCV actuator top
-# Route signal below the coolant return pipe to avoid crossing it
-SIG_LOW = COOL_PIPE_Y + 6    # between coolant supply pipe and bottom info box
+# ── Signal: TIC-201 → TCV-201 actuator (bottom) ──────────────────────────────
+# Route: TIC bottom → south to SIG_LOW (below actuator, above info bar)
+#        → west to MIX_X → north up to actuator bottom
+# Actuator is on the BOTTOM of TCV-201, so the signal arrives from below —
+# clearly separated from the bypass pipe which enters the valve from the TOP.
+SIG_LOW = tcv_act_bottom - 2.5   # just below actuator bottom
 
-sig(ax, TIC_X, TIC_Y - RB, TIC_X, SIG_LOW)      # down from TIC
-sig(ax, TIC_X, SIG_LOW, TCV_X, SIG_LOW)           # west at SIG_LOW elevation
-sig(ax, TCV_X, SIG_LOW, TCV_X, tcv_top)           # down to TCV actuator
+sig(ax, TIC_X, TIC_Y - RB, TIC_X, SIG_LOW)        # down from TIC
+sig(ax, TIC_X, SIG_LOW, MIX_X, SIG_LOW)            # west at SIG_LOW elevation
+sig(ax, MIX_X, SIG_LOW, MIX_X, tcv_act_bottom)     # north up to actuator
 
-# ─────────────────────────────────────────────────────────────────────────────
-# Disturbances box (bottom-left area — below feed tank)
-# ─────────────────────────────────────────────────────────────────────────────
-dbox = mpatches.FancyBboxPatch(
-    (2, 38), 80, 52,
-    boxstyle="round,pad=0.6", fc="#fffbeb", ec="#d97706", lw=1.8, zorder=0)
-ax.add_patch(dbox)
-ax.text(42, 90, "DISTURBANCE SCENARIOS", ha="center", fontsize=10,
-        fontweight="bold", color="#92400e")
-DIST = [
-    ("  0 – 120 min", "Normal steady state (baseline)"),
-    ("120 – 240 min", r"Feed conc. step: $C_{A,f}$ +10 %"),
-    ("240 – 360 min", r"Feed temp. step: $T_f$ +7 K"),
-    ("360 – 520 min", "Feed flow osc. ±8 %,  period 40 min"),
-    ("520 – 680 min", "Cooling fault: UA drops 28 %"),
-    ("680 – 800 min", "Recovery to nominal conditions"),
-]
-for i, (t_, d_) in enumerate(DIST):
-    yy = 87 - i * 7.6
-    ax.text(4,  yy, f"• {t_}:", fontsize=8, color="#92400e",
-            fontweight="bold", va="top")
-    ax.text(51, yy, d_,        fontsize=8, color="#78350f", va="top")
+# Disturbance scenarios removed from diagram — documented in the simulator
+# script (simulate_cstr_temporal_pca_dataset.py) and in the tutorial text.
 
 # ─────────────────────────────────────────────────────────────────────────────
 # Legend (top right)
@@ -505,7 +581,7 @@ ax.add_patch(plt.Polygon(
 ax.add_patch(plt.Polygon(
     [[LX + 3.7, LY - 47 + _h], [LX + 3.7, LY - 47 - _h], [LX + 2.3, LY - 47]],
     fc=PROC, ec=PROC))
-ax.text(LX + 6, LY - 47, "Control valve (actuated)", va="center", fontsize=8.5)
+ax.text(LX + 6, LY - 47, "3-way mixing valve (actuated)", va="center", fontsize=8.5)
 
 # ─────────────────────────────────────────────────────────────────────────────
 # Measured variables — bottom info bar
