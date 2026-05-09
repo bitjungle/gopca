@@ -3337,3 +3337,18 @@ structure. Using the “kernel trick,” this mapping is done implicitly via dot
 high computational cost. The talk outlines the KPCA procedure, typical kernel choices (e.g., Gaussian), 
 and emphasizes that nonlinear methods work best with large, well-sampled datasets but should be used 
 only when linear methods are insufficient.
+
+---
+
+# ON THE DYNAMIC BEHAVIOR OF CONTINUOUS STIRRED TANK REACTORS
+
+**reference**: Uppal, A., Ray, W. H., & Poore, A. B. (1974). On the dynamic behavior of continuous stirred tank reactors. Chemical Engineering Science, 29(4), 967-985.
+
+**Filename:** `Uppal, Ray, and Poore (1974) - CSTR.pdf` 
+
+Uppal, Ray, and Poore (1974) analyse the nonlinear dynamics of exothermic continuous stirred tank reactors (CSTRs) carrying out a first-order reaction. 
+The paper shows that even a simple reactor can exhibit highly complex behaviour, including multiple steady states, self-sustained oscillations (limit cycles), 
+sudden jumps between operating regimes, and instability. Using bifurcation theory and phase-plane analysis, the authors classify the different dynamic regimes that 
+can occur as reactor parameters change, such as heat removal and reaction intensity. A key contribution is the demonstration that oscillatory reactor behaviour arises 
+naturally from nonlinear feedback between reaction heat generation and cooling, and that stable and unstable limit cycles can appear or disappear through bifurcations. 
+The paper became a foundational reference for nonlinear chemical reactor dynamics, process stability analysis, and later work on oscillatory chemical processes.
