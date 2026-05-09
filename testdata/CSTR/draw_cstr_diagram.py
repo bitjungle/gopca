@@ -178,10 +178,10 @@ FEED_Y = VBot + int((VTop - VBot) * 0.83)   # ≈ 105
 # Product outlet y (lower-right wall, ~18 % height from bottom)
 PROD_Y = VBot + int((VTop - VBot) * 0.18)   # ≈ 57
 
-# Coolant inlet x (left side of jacket bottom)
-COOL_IN_X  = CX - 14
-# Coolant outlet x (right side of jacket top)
-COOL_OUT_X = CX + 14
+# Coolant inlet x — must be in LEFT jacket annulus (JL=89 to VL=98)
+COOL_IN_X  = JL + 5    # = 94  (inside the annular jacket gap, left side)
+# Coolant outlet x — must be in RIGHT jacket annulus (VR=158 to JR=167)
+COOL_OUT_X = JR - 5    # = 162 (inside the annular jacket gap, right side)
 
 # ── Draw jacket fill ─────────────────────────────────────────────────────────
 ax.add_patch(PathPatch(
@@ -298,9 +298,10 @@ ax.text(FTANK_X + 10, 116.5, r"$C_{A,f},\ T_f$", ha="center",
 
 # Feed pipe: horizontal at FEED_Y from x=24 to x=JL, then stub through jacket to VL
 pipe(ax, FEED_PIPE_X_START, FEED_Y, FEED_PIPE_X_END, FEED_Y)
-# Short stub through jacket annulus into vessel left wall
+# Short stub through jacket annulus into vessel left wall;
+# arrowhead at VL pointing RIGHT (into vessel), tail to the left of it
 pipe(ax, JL, FEED_Y, VL, FEED_Y)
-ax.annotate("", xy=(VL + 0.5, FEED_Y), xytext=(VL + 7, FEED_Y),
+ax.annotate("", xy=(VL - 0.5, FEED_Y), xytext=(VL - 8, FEED_Y),
             arrowprops=dict(arrowstyle="->", color=PROC,
                             lw=LWP * 0.65, mutation_scale=13))
 
