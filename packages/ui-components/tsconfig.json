@@ -10,7 +10,8 @@
     "emitDeclarationOnly": true,
 
     /* Bundler mode */
-    "moduleResolution": "node",
+    "moduleResolution": "bundler",
+    "rootDir": "./src",
     "resolveJsonModule": true,
     "isolatedModules": true,
     "jsx": "react-jsx",
