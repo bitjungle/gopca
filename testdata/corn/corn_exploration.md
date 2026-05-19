@@ -11,6 +11,8 @@ This dataset consists of **80 corn samples**, each measured by an NIR instrument
 * `Protein#target` — protein content (%)
 * `Starch#target` — starch content (%)
 
+These four columns are excluded from the PCA automatically and are available for colouring the scores plot — you will use them in Step 4.
+
 The original purpose of such a dataset is **calibration**: build a model that predicts chemical composition from the spectrum alone, so future samples can be analysed in seconds rather than hours. This is a supervised problem — it uses the known laboratory values to train a model.
 
 Here, we will approach the same data with **Principal Component Analysis (PCA)** — an *unsupervised* method that ignores the laboratory values entirely. The question becomes: what structure does PCA find in the spectra on its own? And does that structure relate to chemistry?
