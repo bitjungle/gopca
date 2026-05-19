@@ -11,6 +11,8 @@ This dataset consists of **80 corn samples**, each measured by an NIR instrument
 * `Protein#target` — protein content (%)
 * `Starch#target` — starch content (%)
 
+These four columns are excluded from the PCA automatically and are available for colouring the scores plot — you will use them in Step 4.
+
 The original purpose of such a dataset is **calibration**: build a model that predicts chemical composition from the spectrum alone, so future samples can be analysed in seconds rather than hours. This is a supervised problem — it uses the known laboratory values to train a model.
 
 Here, we will approach the same data with **Principal Component Analysis (PCA)** — an *unsupervised* method that ignores the laboratory values entirely. The question becomes: what structure does PCA find in the spectra on its own? And does that structure relate to chemistry?
@@ -31,7 +33,7 @@ This has two immediate consequences that make Corn unlike anything you have seen
 
 **Adjacent variables are not independent.** In Iris, sepal length and petal length are correlated but measure genuinely different things. In a NIR spectrum, the absorbance at 1500 nm and at 1502 nm are almost identical — they are sampling the same physical absorption feature separated by one instrument step. This extreme collinearity means PCA can compress 700 variables into 2–3 components and lose almost nothing, because most of the 700 variables are carrying nearly the same information.
 
-> Corn NIR is the natural next step: more variables than you can count, all correlated, and no predefined classes. PCA is not one option among several — it is the standard first tool for this kind of data.
+> Corn NIR is the natural next step: more variables than you can count, all highly correlated. PCA is not one option among several — it is the standard first tool for this kind of data.
 
 ---
 
@@ -82,10 +84,10 @@ Instead, **experiment, observe, and reflect**.
 
 ## Step 1: Run PCA with default settings — and diagnose the result
 
-Load the Corn dataset into GoPCA. Do not set a target column yet. Leave all settings at their defaults:
+Load the Corn dataset into GoPCA. Leave all settings at their defaults:
 
 * **Row Preprocessing** → None
-* **Column Preprocessing** → Mean Center
+* **Column Preprocessing** → Mean Center Only
 * **PCA Method** → SVD
 
 Click **Go PCA**.
@@ -115,7 +117,7 @@ NIR spectra are affected by **multiplicative scatter**: differences in particle 
 
 ## Step 2: Apply SNV and compare
 
-NIR spectra need **row-wise scatter correction** before column-wise preprocessing. The standard method is **SNV (Standard Normal Variate)**.
+NIR spectra need **row-wise scatter correction** before column-wise preprocessing. The standard method in GoPCA is **SNV (Standard Normal Variate)**.
 
 SNV operates on each spectrum individually:
 
@@ -161,16 +163,16 @@ Open the **Loadings Plot** (with SNV applied).
 
 ## Step 4: Connect PCA to chemistry
 
-Now set a target column to colour the samples by composition.
+Now lets try to colour the samples by composition.
 
-In GoPCA, set the **target column** to `Moisture#target`. Look at the **Scores Plot**.
+Look at the **Scores Plot**. Set the **Color by** to `Moisture#target`.
 
 #### Questions:
 
 * Do you see a gradient in the scores — samples ordered by moisture content?
 * Does the gradient run along PC1, PC2, or diagonally?
 
-👉 Try switching the target column to `Starch#target`, then `Protein#target`, then `Oil#target`:
+👉 Try switching the **Color by** to `Starch#target`, then `Protein#target`, then `Oil#target`:
 
 * Which compositional property is most strongly captured by PC1?
 * Are all four properties captured equally well, or do some require higher components?
@@ -181,7 +183,7 @@ In GoPCA, set the **target column** to `Moisture#target`. Look at the **Scores P
 
 ## Step 5: Look for outliers
 
-Return to the Scores Plot with no target column selected.
+Return to the Scores Plot with no **Color by** selected.
 
 #### Questions:
 
@@ -249,7 +251,7 @@ Think about this:
 * How is PCA on spectral data different from PCA on independent measurements like Iris or Wine?
 * Why do the loadings appear as smooth curves rather than isolated vectors?
 * Why is SNV more appropriate here than column-wise standard scaling?
-* The original purpose of this dataset was to build a calibration model predicting composition from spectra. Could you use the PCA scores as input to such a model? What might be the advantage of using scores instead of raw spectra?
+* The original purpose of this dataset was to build a calibration model predicting composition from spectra. Could you use the PCA scores as input to such a model? What might be the advantage of using scores instead of raw spectra? Hint: search for **principal component regression** on the internet.
 
 ---
 
