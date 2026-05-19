@@ -184,7 +184,7 @@ in the same plot.
 
 ## Step 5: Use color and grouping
 
-In GoPCA, set the **target column** to the species column to color samples by species. Then enable **Confidence Ellipses**.
+In GoPCA, set the **Color By** menu to the species column to color samples by species. Then enable **Confidence Ellipses**.
 
 #### Questions:
 
