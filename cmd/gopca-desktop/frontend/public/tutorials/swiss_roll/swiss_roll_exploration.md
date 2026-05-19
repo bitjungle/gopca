@@ -7,7 +7,7 @@ The Swiss Roll is a **synthetic benchmark** — a dataset constructed mathematic
 The dataset consists of **1,000 samples** in three dimensions:
 
 * `X`, `Y`, `Z` — the 3D coordinates of each point
-* `color #target` — a continuous numeric value encoding position along the roll (hidden from the analysis, used only for colouring plots)
+* `color #target` — position along the roll, used only for colouring plots (not included in the analysis)
 
 The data is generated from two underlying parameters:
 
@@ -20,7 +20,7 @@ The 3D coordinates follow from:
 * y = h
 * z = t · sin(t)
 
-The `color #target` column stores the raw value of *t* for each sample. In GoPCA, any column whose name ends with `#target` is excluded from the PCA analysis and hidden from the data table — it is available only as a colour variable in the scores plot. When you load the Swiss Roll dataset by clicking the button, this colour mapping is applied automatically.
+The `color #target` column stores the raw value of *t* and is used only for colouring the scores plot — it plays no part in the analysis. When you load the dataset, this colouring is applied automatically.
 
 The true structure is a **flat 2D sheet wound into a helix in 3D space**. This type of structure is called a **manifold** — a surface that is locally flat but globally curved. A piece of paper lying on a table is flat; roll it up and it becomes a manifold embedded in 3D. The Swiss Roll is exactly this: a flat 2D sheet with coordinates *t* and *h*, curled into a spiral shape.
 
@@ -83,9 +83,9 @@ Study both panels before running any analysis.
 
 ### Reflect:
 
-* In the 3D view: trace the colour gradient from dark purple inward to yellow at the outer edge. Can you follow it continuously along the surface of the roll?
-* In the top-down view: the inner edge (dark purple) and outer edge (yellow) are physically close in the X–Z plane — they are separated by only the width of one gap between spiral turns. How far apart are they if you instead trace along the surface of the sheet?
-* If you could cut the roll along one edge and flatten it completely, what shape would you get?
+* In the 3D view: trace the colour gradient from dark purple inward to yellow at the outer edge. Can you follow it continuously along the surface of the roll? *(Hint: run your finger along the surface — never lift it, never cut through the interior.)*
+* In the top-down view: the inner edge (dark purple) and outer edge (yellow) are physically close in the X–Z plane — they are separated by only the width of one gap between spiral turns. How far apart are they if you instead trace along the surface of the sheet? *(Hint: think of a roll of paper. The first centimetre of paper and the last centimetre are neighbours when the roll is wound — but how far apart are they when you unroll it?)*
+* If you could cut the roll along one edge and flatten it completely, what shape would you get? *(Hint: what is the shape of a single sheet of A4 paper before you roll it?)*
 
 👉 A perfectly flattened Swiss Roll would be a rectangle: one axis is *t* (position along the roll, from low to high), the other is *h* (height *Y*). The top-down spiral view makes the core problem immediately visible: the inner and outer edges sit physically adjacent in 3D space, yet they are at opposite ends of the unrolled sheet. Any method that measures straight-line distances through 3D space will see them as neighbours — and fail to unroll the manifold.
 
@@ -121,7 +121,7 @@ Do not run PCA yet. Familiarise yourself with what is shown in the data panel.
 * Only three numeric columns appear — `X`, `Y`, and `Z`. Why is `color #target` not visible in the table?
 * Study the 3D figure above: what will "low colour values" (inner edge of the roll) and "high colour values" (outer edge) look like in the scores plot if PCA correctly unrolls the manifold?
 
-👉 There are 1,000 samples and 3 numeric variables — a tiny dataset by modern standards. This makes the subsequent failure of linear PCA all the more striking. The `color #target` column is hidden because it is excluded from the analysis; it serves only as a visual guide to check whether the scores plot preserves the ordering along the roll.
+👉 There are 1,000 samples and 3 numeric variables — a tiny dataset by modern standards. This makes the subsequent failure of linear PCA all the more striking.
 
 ---
 
@@ -131,9 +131,10 @@ Set:
 
 * **PCA Method** → SVD
 
+Click **Go PCA** and open the **Scores Plot (PC1 vs PC2)**.
+
 Leave the colour variable as `color #target` (pre-selected automatically).
 
-Click **Go PCA** and open the **Scores Plot (PC1 vs PC2)**.
 
 #### Questions:
 
@@ -141,7 +142,7 @@ Click **Go PCA** and open the **Scores Plot (PC1 vs PC2)**.
 * Or are low and high colour values mixed together — samples from opposite ends of the roll landing on top of each other?
 * Does the scores plot resemble the flat rectangle you imagined — or is the colour pattern jumbled?
 
-👉 You will see that the colour is **mixed and not ordered**. The scores plot forms a horseshoe or arch shape — a classic artefact of applying a linear projection to curved data. You may notice a rough gradient running *around* the arch, but look more carefully: the inner edge (dark purple, low t) is bunched in the centre of the plot rather than at one end, and high colour values (cream/yellow) appear on one side of the arch directly adjacent to medium values (blue-purple) — groups that are at opposite ends of the unrolled sheet. The colour never forms the smooth end-to-end gradient you would see in a correctly unrolled rectangle. Samples that are close in straight-line 3D distance but far apart along the manifold surface end up side by side in the projection.
+👉 The scores plot forms a **tilted oval or elliptical ring** — a classic artefact of applying a linear projection to curved data. The colour appears to flow continuously around the ring: dark navy (low *t*) sits at the left, sweeping through purple and pink along the top arc, while a separate branch of peach and salmon sweeps around the bottom arc, with cream/yellow (high *t*) appearing at both the upper-right and lower-right tips (assuming that you use the "Rocket" color palette). At first glance this looks like an ordered gradient — but it is deceptive. The colour is running in a **closed loop around the ring**, not in a straight line from one end of a rectangle to the other. A correctly unrolled Swiss Roll would place all the dark navy samples at one side and all the cream/yellow samples at the opposite side, with a clean gradient between them. Here, the high-*t* samples (cream/yellow, outer edge) have been **split into two separate clusters** — one in the upper-right and one in the lower-right of the plot — while the low-*t* samples (dark navy, inner edge) are bunched together on the left. A correctly unrolled roll would place all the cream/yellow samples together at one end of a rectangle and all the navy samples at the other. Instead, the outer edge of the roll has been torn apart and wrapped around both sides of the ring. The roll has been **squashed and folded**, not unrolled.
 
 Now open the **Scree Plot**.
 
@@ -150,9 +151,11 @@ Now open the **Scree Plot**.
 * How much variance does PC1 explain?
 * Does a high explained variance mean the structure has been correctly recovered?
 
-👉 **This is the key diagnostic moment.** Linear PCA may explain 60–80% of the total variance while completely failing to reveal the true structure. Variance is a property of the coordinate system — not of the manifold geometry. High explained variance is not the same as a good unrolling.
+👉 **This is the key diagnostic moment.** You should see PC1 explaining around 41% of the variance and PC2 around 30% — a total of roughly 71% for the first two components together. Notice also that there is **no clear elbow**: the variance does not drop sharply after PC1. This is itself a warning sign — it means PCA has not found one dominant direction that captures most of the structure. The variance is spread out because the spiral has roughly equal extent in every direction through 3D space.
 
-Compare this to Corn: there, PC1 explained 99% of variance, but the loading curve (monotone, never crossing zero) revealed it was capturing baseline tilt, not chemistry. Here, a seemingly reasonable explained variance hides an equally fundamental failure — but it is harder to detect from the scree plot alone. The scores plot, coloured by category, is the diagnostic tool.
+But the deeper point is this: even 71% combined explained variance tells you nothing about whether the *manifold* has been correctly recovered. Variance is a property of the coordinate system — not of the geometry of the roll. The scores plot, coloured by *t*, is the only diagnostic that reveals the failure.
+
+Compare this to Corn: there, PC1 explained 99% of variance, and the loading curve (monotone, never crossing zero) immediately revealed it was capturing a physical baseline artefact. Here, the scree plot looks unremarkable — no single dramatic number, no obvious red flag. The failure is entirely invisible until you look at the scores plot with a meaningful colour variable.
 
 > The Swiss Roll teaches a habit that applies to every dataset: always inspect the scores plot with a meaningful grouping variable before concluding that PCA has succeeded.
 
@@ -170,7 +173,7 @@ Points that are far apart *along the surface of the manifold* (for example, at o
 
 ### The kernel trick
 
-Kernel PCA addresses this by replacing the linear covariance structure with a **kernel function** that measures similarity between data points. The key idea, introduced by Schölkopf, Smola & Müller (1998), is to perform PCA not in the original 3D space but in a transformed feature space **F** — implicitly, without ever computing the transformation explicitly.
+Kernel PCA addresses this by replacing the linear covariance structure with a **kernel function** that measures similarity between data points. The key idea, introduced by Schölkopf, Smola & Müller (1997, 1998), is to perform PCA not in the original 3D space but in a transformed feature space **F** — implicitly, without ever computing the transformation explicitly.
 
 The **RBF (Gaussian) kernel** used here is:
 
@@ -225,7 +228,7 @@ A **perfect unrolling** of the Swiss Roll requires methods that compute *geodesi
 
 > This limitation is not a failure of Kernel PCA — it is a boundary condition. For many real datasets with milder curvature, Kernel PCA works very well. The Swiss Roll is a deliberately extreme case designed to test these limits.
 
-**Preprocessing note**: when Kernel PCA is selected, GoPCA restricts column-wise preprocessing to **Variance Scale** or **None**. Mean centering and standard scaling are unavailable because Kernel PCA performs its own centering in kernel space. For this dataset the variables are in the same units, so **None** is appropriate.
+**Preprocessing note**: when Kernel PCA is selected, GoPCA restricts column-wise preprocessing to **Variance Scale** or **None**. Mean centering and standard scaling are unavailable because Kernel PCA handles centering through modified kernel matrix algebra — subtracting the feature-space mean implicitly without ever computing it explicitly (Schölkopf et al., 1998). For this dataset the variables are in the same units, so **None** is appropriate.
 
 **Available plots**: the **Loadings Plot**, **Biplot**, **3D Biplot**, **Circle of Correlations**, and **Diagnostic Plot** are all unavailable for Kernel PCA — for the reasons explained in Step 3. The **Scores Plot**, **Scree Plot**, and **Kernel Matrix Heatmap** remain available.
 

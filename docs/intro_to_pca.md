@@ -145,7 +145,7 @@ GoPCA Desktop ships with five carefully selected sample datasets. Together they 
 
 ### Dataset 4: Swiss Roll — When Standard PCA Is Not Enough
 
-**The data:** 1,000 synthetic data points in three dimensions, arranged on a two-dimensional surface that has been rolled up like a Swiss roll pastry. Each point has three coordinates (x, y, z) and a color value indicating its position along the roll.
+**The data:** 1,000 synthetic data points in three dimensions, arranged on a two-dimensional surface that has been rolled up like a Swiss roll pastry. Each point has three coordinates (x, y, z) and a special column `color #target` indicating position along the roll. Columns ending in `#target` are excluded from the PCA calculation and used only for colouring plots — a GoPCA convention for attaching external information to a dataset without influencing the analysis. See the [GoPCA Data Format Guide](data-format.md) for details.
 
 **Why it is special:** This dataset has no noise problem, no scale problem, and no outlier problem — and yet standard PCA completely fails to reveal its structure. The reason is geometric: the data lives on a curved surface, and PCA can only find flat (linear) projections. When you project a Swiss roll onto a flat plane, the two ends of the roll overlap. The underlying two-dimensional structure — which is completely real — is invisible to standard PCA. This is the clearest possible demonstration of PCA's fundamental limitation.
 
