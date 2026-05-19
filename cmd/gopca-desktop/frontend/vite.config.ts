@@ -12,6 +12,13 @@ import path from 'path';
 // https://vitejs.dev/config/
 export default defineConfig({
   plugins: [react()],
+  optimizeDeps: {
+    // Pre-bundle plotly so Vite doesn't re-optimize it mid-session when the
+    // first lazy-loaded plot component is mounted. Without this, Vite discovers
+    // plotly.js-dist-min at runtime, forces a reload, and the Wails dev-server
+    // proxy panics on the cancelled request.
+    include: ['plotly.js-dist-min'],
+  },
   test: {
     environment: 'jsdom',
     globals: true,
