@@ -241,40 +241,46 @@ Try the analysis both ways: first with **None**, then switch to **Variance Scale
 
 ## Step 5: Read the Kernel Matrix Heatmap
 
-Open the **Kernel Matrix Heatmap**.
+Open the **Kernel Matrix Heatmap** (with the current settings: Variance Scale, γ = 0.01).
 
-This plot is unique to Kernel PCA — it has no equivalent in linear PCA. It shows the n×n kernel matrix **K** as a colour grid: each cell (i, j) is coloured according to the value of k(x_i, x_j) — the RBF similarity between sample i and sample j. Bright colours indicate high similarity (close in 3D space); dark colours indicate low similarity (far apart).
+This plot is unique to Kernel PCA. It shows the **centered** kernel matrix **K** as a colour grid: each cell (i, j) reflects the RBF similarity between sample i and sample j after subtracting row and column means. Positive values (warm colours) indicate pairs that are more similar than average; negative values (cool colours) indicate pairs that are less similar than average.
 
 #### Questions:
 
-* Do you see patches of high similarity clustered together in some regions of the grid?
-* Do any groups of samples appear clearly separated from the rest?
-* How does the overall brightness of the heatmap relate to gamma?
+* Does the heatmap show obvious structure — bright patches, dark regions, or a dominant diagonal?
+* Or does it look nearly uniform, with only small variations scattered across the grid?
+* How large are the values on the colour scale?
+
+👉 At γ = 0.01 the heatmap will look **nearly uniform** — mostly the same mid-range colour with low-amplitude variation (roughly ±0.1) scattered throughout, and no obvious pattern. This is because γ = 0.01 is a relatively **global** kernel for variance-scaled data: typical squared distances between samples are around 6, and exp(−0.01 · 6) ≈ 0.94 — nearly all pairs have similar, high kernel values before centering. The centered matrix shows only the small residual differences. The variation is real and carries structure, but it is subtle and visually unremarkable.
 
 Now change gamma to a much larger value — try **Gamma → 1.0** — and regenerate.
 
 #### Questions:
 
-* How does the heatmap change? Is the overall pattern brighter, darker, or more concentrated?
-* Can you now see a thin bright diagonal strip? What does that mean?
+* How does the heatmap change? Is the overall colour distribution now more concentrated?
+* Can you see a bright diagonal stripe running from corner to corner? What does it mean?
 * Does the scores plot still show colour organisation at this gamma?
+
+👉 At γ = 1.0 the heatmap shows a **clear bright diagonal** with a near-black background. For a point distance of 6 units, exp(−1.0 · 6) ≈ 0.002 — most pairs are essentially invisible to the kernel. Only each sample's similarity with itself (the diagonal, always 1 before centering) remains. This is the unambiguous signature of a **too-local** kernel: it cannot see any global structure, and the scores plot loses its colour organisation.
 
 Now try a much smaller gamma — **Gamma → 0.001** — and regenerate.
 
 #### Questions:
 
-* What does the heatmap look like now? Is there still meaningful variation between cells?
-* Does the scores plot still show a smooth colour gradient?
+* How does the heatmap compare to γ = 0.01 — is the variation larger or smaller?
+* Does the scores plot improve or deteriorate?
 
-👉 **Reading the Kernel Matrix Heatmap:**
+👉 At γ = 0.001 the kernel is extremely global: exp(−0.001 · 6) ≈ 0.994 for typical pairs. The centered matrix is even more uniform than at γ = 0.01, and the scores plot loses structure.
 
-* **Large gamma** (e.g. 1.0): the kernel decays so quickly with distance that only each point's immediate neighbours have non-negligible similarity. The heatmap shows a bright diagonal — each sample is similar only to itself and perhaps one or two direct neighbours — with an otherwise dark background. The kernel is too *local* — it cannot see global manifold structure. The scores plot fragments into isolated colour islands.
+👉 **What the Kernel Matrix Heatmap can and cannot tell you:**
 
-* **Good gamma** (e.g. 0.01 with variance scaling): the heatmap shows meaningful variation — some pairs are bright, some dark — reflecting the actual geometric relationships between samples. The kernel's effective neighbourhood radius matches the characteristic spacing of the (preprocessed) data. The scores plot shows the best colour separation.
+* **Too-local kernel** (e.g. γ = 1.0): the bright diagonal is an unambiguous warning sign. You can read this failure directly from the heatmap.
 
-* **Small gamma** (e.g. 0.001): the kernel decays so slowly that nearly all pairs have similar (high) kernel values. The heatmap becomes uniformly bright, conveying little information. The kernel is too *global* — it treats the whole dataset as one undifferentiated cloud. The scores plot loses structure.
+* **Too-global kernel** (e.g. γ = 0.001): the heatmap becomes almost completely flat. This is also readable, though less dramatic than the diagonal case.
 
-> The Kernel Matrix Heatmap is your diagnostic for whether gamma is calibrated correctly: you want meaningful variation in the matrix — not uniform brightness, not a near-empty matrix with only a bright diagonal.
+* **The middle range** (e.g. γ = 0.01 to 0.1): the heatmap does **not** reliably identify the best gamma. Both γ = 0.01 (best scores) and γ = 0.1 (good scores) show meaningful variation, but they look quite different — the heatmap alone does not tell you which is better. **In this range, the scores plot is your primary diagnostic.** The heatmap eliminates clear failures; the scores plot finds the optimum.
+
+> The Kernel Matrix Heatmap is a useful tool for ruling out gamma values that are clearly wrong. For fine-tuning within the workable range, always check the scores plot with a meaningful colour variable.
 
 ---
 
@@ -292,22 +298,24 @@ With **Variance Scale** preprocessing active, work through this range of gamma v
 
 #### Questions:
 
-* Which gamma gives the cleanest colour gradient in the scores plot?
+* At which gamma does the scores plot first show a clearly separated cream/yellow cluster — and at which gamma does it break down entirely?
+* Is there a single "best" gamma, or a broad range where results look similar?
 * Is the best result at the smallest gamma you tried — or somewhere in the middle of the range?
-* At which gamma does the heatmap first show meaningful structure (neither uniformly bright nor nearly empty)?
-* Can you describe what happens to both the heatmap and the scores plot as you move from γ = 1.0 down to γ = 0.001?
+* Can you describe what happens to the scores plot as you move from γ = 1.0 down to γ = 0.001?
 
-👉 **Lower gamma is not always better.** There is an optimal range, with two distinct failure modes on either side:
+👉 **Lower gamma is not always better — but the failure modes are not symmetric.** Working through the full range reveals a clear pattern:
 
-* **Too large** (e.g. γ = 1.0): the kernel decays so sharply with distance that each sample is only similar to its immediate neighbours. The kernel matrix has a bright diagonal and is nearly empty elsewhere. The scores plot loses structure — colours fragment and separate into isolated islands rather than a smooth gradient.
+* **Too large** (γ = 1.0, γ = 0.5): the kernel decays so sharply with distance that only immediate neighbours retain non-zero similarity. The kernel matrix has a bright diagonal and is nearly empty elsewhere. The scores plot loses structure — PC1 and PC2 each explain less than 15% of variance, and colours fragment rather than showing a smooth gradient.
 
-* **Too small** (e.g. γ = 0.001): the kernel decays so slowly that nearly all pairs of samples look similar. The kernel matrix becomes uniformly bright. PCA on this near-uniform matrix finds little useful structure, and the scores plot loses its colour organisation.
+* **A gradual improvement** through γ = 0.1 and γ = 0.05: structure begins to recover. The cream/yellow cluster starts to separate from the main cloud, and explained variance climbs toward 30–33%.
 
-* **The sweet spot** (around γ = 0.01 with variance scaling for this dataset): the kernel's effective neighbourhood radius matches the characteristic spacing between samples on the manifold. The heatmap shows meaningful contrast, and the scores plot shows the best colour separation — high-value samples (cream/yellow, outer edge) pulled clearly away from the main cloud.
+* **A broad plateau of similar quality** from roughly γ = 0.01 down to γ = 0.001: explained variance stabilises around 37–38%, and the scores plot looks similar across this range — cream/yellow clearly pulled to the left, dark navy scattered on the right. There is no single sharp optimum; you are in an acceptable working range. The lower boundary of this plateau (where the kernel becomes too global) is somewhere below γ = 0.001, beyond the range explored here.
 
-**A practical starting point: the median heuristic.** Rather than searching blindly, you can get a rough initial estimate from the data itself. Compute the median of all squared pairwise distances between samples and set γ = 1 / median(‖x_i − x_j‖²). This anchors the kernel's effective radius to the actual length scale of your (preprocessed) data. For the Swiss Roll the heuristic gives a value in the range 0.05–0.1, which is a useful starting point — but empirical exploration (as you have done here) shows that the actual optimum is around 0.01 for this dataset. The heuristic narrows the search range but does not replace it.
+**What this means in practice:** the transition from "broken" to "working" happens between γ = 0.5 and γ = 0.05. Once you are in the plateau (γ ≤ 0.01 for this dataset), fine-tuning further has little effect. Search coarsely first to find the working range, then verify with the scores plot.
 
-> Note that the optimal gamma shifts with preprocessing. The values here apply after variance scaling. Without preprocessing, the raw Swiss Roll coordinates span a much wider range and you would need to search a different range of gamma values. Always re-examine gamma when you change preprocessing.
+**A practical starting point: the median heuristic.** Compute the median of all squared pairwise distances between samples and set γ = 1 / median(‖x_i − x_j‖²). For the Swiss Roll after variance scaling this gives roughly γ ≈ 0.05–0.1 — at the upper end of the working range identified above. It is a useful first guess that avoids the clearly broken region (γ ≥ 0.5), but exploring downward from there will find the plateau.
+
+> Note that the optimal gamma range shifts with preprocessing. The values here apply after variance scaling. Without preprocessing, the raw Swiss Roll coordinates span a much wider range and a different gamma range applies. Always re-examine gamma when you change preprocessing.
 
 ---
 
@@ -324,7 +332,7 @@ Compare the **Scores Plot** each time.
 
 * Is the difference between the two methods subtle or dramatic?
 * Which method reveals the 2D structure of the Swiss Roll?
-* Look at the scree plot for linear PCA — high explained variance, wrong structure. What does this tell you about using explained variance as the sole measure of PCA quality?
+* Look at the scree plot for linear PCA — moderate explained variance (~41% PC1, ~30% PC2), yet the scores plot reveals the wrong structure entirely. What does this tell you about using explained variance as the sole measure of PCA quality?
 * Can you describe in your own words, without jargon, why one method succeeds and the other does not?
 
 👉 This comparison is the central lesson of the Swiss Roll. Linear PCA produces a **tilted oval ring** with colours running in a closed loop — the roll has been squashed flat rather than unrolled, and the two ends of the sheet are wrapped around opposite sides of the ring. Kernel PCA, at a well-chosen gamma, produces a noticeably different arrangement: the colours are less randomly mixed, and low and high values are somewhat more separated. The result is still not a clean flat rectangle, but the improvement is real.
@@ -342,8 +350,8 @@ The Swiss Roll is a clean, noise-free example designed to make the comparison vi
 ### Challenges of Kernel PCA in practice
 
 * **Kernel choice**: the RBF kernel is the most versatile, but polynomial, sigmoid, and other kernels exist. There is no universal best choice.
-* **Gamma tuning**: without knowing the true structure, gamma must be found by cross-validation, by examining the kernel matrix, or by domain knowledge about typical inter-sample distances.
-* **Computational cost**: the kernel matrix is n×n — for 1,000 samples it is 1,000,000 entries. For 50,000 samples it would be 2.5 billion entries. Standard Kernel PCA becomes impractical for very large datasets without approximation methods.
+* **Gamma tuning**: without knowing the true structure, gamma must be found by exploring the scores plot and kernel matrix heatmap across a range of values (as you did in Steps 5–6), by domain knowledge about typical inter-sample distances, or — when a supervised target is available — by cross-validation against that target.
+* **Computational cost**: the kernel matrix is n×n — for 1,000 samples it is 1,000,000 entries (about 8 MB). For 50,000 samples it would be 2.5 billion entries, requiring roughly 20 GB of memory just to store the matrix, before any computation. Standard Kernel PCA becomes impractical for large datasets without approximation methods.
 * **No loadings**: you cannot directly interpret which original variables drive each component. The scores are interpretable; the components themselves are not.
 * **Choosing the right number of components**: the Scree Plot is still available, but the eigenvalue decay pattern in kernel space is different from linear PCA and may not provide as clear an elbow.
 
@@ -369,7 +377,7 @@ After completing this exploration, you should be able to:
 
 * Explain why linear PCA fails on the Swiss Roll — not because there are too many variables, but because the structure is curved
 * Describe the **kernel trick**: replacing the data covariance matrix with an n×n kernel matrix of pairwise similarities, enabling PCA in a high-dimensional feature space without computing the transformation explicitly
-* Interpret the **RBF kernel parameter gamma**: large gamma → local kernel (fragmented, near-empty matrix); small gamma → global kernel (all points similar, structure blurs); a good gamma matches the characteristic length scale of the data
+* Interpret the **RBF kernel parameter gamma**: large gamma → local kernel (fragmented, near-empty matrix, scores plot breaks down); very small gamma → global kernel (all points look similar, structure blurs); a working range of gamma exists and is typically broad — find it by sweeping and checking the scores plot
 * Read the **Kernel Matrix Heatmap** as a diagnostic for whether gamma is well-calibrated
 * Explain why **loadings do not exist for Kernel PCA** (components live in the feature space, not in the original variable space) and what this means for interpretation
 * Understand the **limitation of Euclidean-distance kernels** on the Swiss Roll: RBF kernel PCA improves on linear PCA but cannot perfectly unroll the manifold — perfect unrolling requires geodesic methods such as Isomap or LLE
