@@ -131,9 +131,9 @@ Set:
 
 * **PCA Method** → SVD
 
-Click **Go PCA** and open the **Scores Plot (PC1 vs PC2)**.
+Leave all other settings at their defaults. 
 
-Leave the colour variable as `color #target` (pre-selected automatically).
+Click **Go PCA** and look at the Visualization **Scores Plot** when it appears. Leave the colour variable as `color #target` (pre-selected automatically).
 
 
 #### Questions:
@@ -208,6 +208,7 @@ What *does* exist is the **scores** — the projections of each sample onto the 
 
 Change:
 
+* **Column Preprocessing** → Variance Scale
 * **PCA Method** → Kernel PCA
 * **Kernel Type** → RBF
 * **Gamma** → 0.01
@@ -220,7 +221,7 @@ Click **Go PCA** and open the **Scores Plot**.
 * Can you see that low colour values (inner edge) and high colour values (outer edge) are somewhat more separated than before?
 * Is the result a clean rectangular unrolling — or is there still some mixing?
 
-👉 The result is a **partial improvement**, not a perfect unrolling. The colour distribution is somewhat more organised than linear PCA — low values are less mixed with high values — but the scores plot does not show the clean flat rectangle you might expect.
+👉 The result is a **clear improvement over linear PCA, but not a perfect unrolling**. The high-value samples (cream/yellow, outer edge of the roll) are pulled away from the mass and cluster more distinctly, and the colour gradient is noticeably more organised than the closed oval loop you saw in Step 2. But the scores plot does not show the clean flat rectangle you might expect from a truly unrolled manifold — considerable mixing remains in the middle range of colour values.
 
 This is an honest and important result. The RBF kernel measures **straight-line Euclidean distance** in 3D. It cannot distinguish between two points that are *close in 3D space but on opposite layers of the spiral* and two points that are *close because they are genuine neighbours along the surface*. No choice of gamma fully resolves this: too small a gamma and adjacent layers are treated as similar (structure blurs together); too large a gamma and the kernel sees only immediate neighbours and the manifold fragments into disconnected islands.
 
@@ -228,7 +229,11 @@ A **perfect unrolling** of the Swiss Roll requires methods that compute *geodesi
 
 > This limitation is not a failure of Kernel PCA — it is a boundary condition. For many real datasets with milder curvature, Kernel PCA works very well. The Swiss Roll is a deliberately extreme case designed to test these limits.
 
-**Preprocessing note**: when Kernel PCA is selected, GoPCA restricts column-wise preprocessing to **Variance Scale** or **None**. Mean centering and standard scaling are unavailable because Kernel PCA handles centering through modified kernel matrix algebra — subtracting the feature-space mean implicitly without ever computing it explicitly (Schölkopf et al., 1998). For this dataset the variables are in the same units, so **None** is appropriate.
+**Preprocessing note**: when Kernel PCA is selected, GoPCA restricts column-wise preprocessing to **Variance Scale** or **None**. Mean centering is unavailable — and genuinely irrelevant — because the RBF kernel is *translation-invariant*: k(x_i, x_j) = exp(−γ · ‖x_i − x_j‖²), and subtracting the same mean from every point leaves ‖x_i − x_j‖ unchanged. The kernel matrix would be identical with or without data centering. (The internal double-centering of K, described in Schölkopf et al. 1998, is a separate step applied to the *kernel matrix* to remove the feature-space mean — it always runs regardless.)
+
+Variance scaling, by contrast, *does* genuinely change the kernel: dividing each variable by its standard deviation changes the effective inter-sample distances and therefore all kernel values. For the Swiss Roll, X and Z span a much wider range than Y (because x = t·cos(t) and z = t·sin(t) have large amplitude while y is a bounded random height), so the unscaled distance metric is dominated by the X–Z plane. Variance scaling makes all three dimensions contribute equally — equivalent to applying a different effective gamma in each axis direction.
+
+Try the analysis both ways: first with **None**, then switch to **Variance Scale** and click **Go PCA** again. At the same gamma value, the two results will differ noticeably. Note also that because preprocessing rescales the distances, the gamma that works well with one preprocessing choice may need adjustment when you switch to the other.
 
 **Available plots**: the **Loadings Plot**, **Biplot**, **3D Biplot**, **Circle of Correlations**, and **Diagnostic Plot** are all unavailable for Kernel PCA — for the reasons explained in Step 3. The **Scores Plot**, **Scree Plot**, and **Kernel Matrix Heatmap** remain available.
 
@@ -246,28 +251,28 @@ This plot is unique to Kernel PCA — it has no equivalent in linear PCA. It sho
 * Do any groups of samples appear clearly separated from the rest?
 * How does the overall brightness of the heatmap relate to gamma?
 
-Now change gamma to a much larger value — try **Gamma → 0.1** — and regenerate.
+Now change gamma to a much larger value — try **Gamma → 1.0** — and regenerate.
 
 #### Questions:
 
 * How does the heatmap change? Is the overall pattern brighter, darker, or more concentrated?
 * Can you now see a thin bright diagonal strip? What does that mean?
-* Does the scores plot still unroll the manifold correctly at this gamma?
+* Does the scores plot still show colour organisation at this gamma?
 
-Now try a much smaller gamma — **Gamma → 0.0005** — and regenerate.
+Now try a much smaller gamma — **Gamma → 0.001** — and regenerate.
 
 #### Questions:
 
 * What does the heatmap look like now? Is there still meaningful variation between cells?
-* Does the scores plot still recover the smooth low-to-high ordering?
+* Does the scores plot still show a smooth colour gradient?
 
 👉 **Reading the Kernel Matrix Heatmap:**
 
-* **Large gamma** (e.g. 0.1): the kernel decays so quickly with distance that only each point's immediate neighbours have non-negligible similarity. The heatmap shows a bright diagonal — each sample is similar only to itself and perhaps one or two direct neighbours — with an otherwise dark background. The kernel is too *local* — it cannot see global manifold structure. The scores plot breaks down.
+* **Large gamma** (e.g. 1.0): the kernel decays so quickly with distance that only each point's immediate neighbours have non-negligible similarity. The heatmap shows a bright diagonal — each sample is similar only to itself and perhaps one or two direct neighbours — with an otherwise dark background. The kernel is too *local* — it cannot see global manifold structure. The scores plot fragments into isolated colour islands.
 
-* **Good gamma** (e.g. 0.01): the heatmap shows meaningful variation — some pairs are bright, some dark — reflecting the actual geometric relationships between samples. The kernel's effective neighbourhood radius matches the characteristic spacing of the data. The scores plot shows more colour organisation than linear PCA.
+* **Good gamma** (e.g. 0.01 with variance scaling): the heatmap shows meaningful variation — some pairs are bright, some dark — reflecting the actual geometric relationships between samples. The kernel's effective neighbourhood radius matches the characteristic spacing of the (preprocessed) data. The scores plot shows the best colour separation.
 
-* **Small gamma** (e.g. 0.0005): the kernel decays so slowly that nearly all pairs have similar (high) kernel values. The heatmap becomes uniformly bright, conveying little information. The kernel is too *global* — it treats the whole dataset as one undifferentiated cloud. The scores plot loses structure.
+* **Small gamma** (e.g. 0.001): the kernel decays so slowly that nearly all pairs have similar (high) kernel values. The heatmap becomes uniformly bright, conveying little information. The kernel is too *global* — it treats the whole dataset as one undifferentiated cloud. The scores plot loses structure.
 
 > The Kernel Matrix Heatmap is your diagnostic for whether gamma is calibrated correctly: you want meaningful variation in the matrix — not uniform brightness, not a near-empty matrix with only a bright diagonal.
 
@@ -275,26 +280,34 @@ Now try a much smaller gamma — **Gamma → 0.0005** — and regenerate.
 
 ## Step 6: Explore the effect of the gamma parameter
 
-Return to gamma = 0.01 and work through the following values:
+With **Variance Scale** preprocessing active, work through this range of gamma values. For each value, regenerate and check both the **Scores Plot** and the **Kernel Matrix Heatmap**:
 
+* **Gamma = 1.0**
+* **Gamma = 0.5**
+* **Gamma = 0.1**
 * **Gamma = 0.05**
-* **Gamma = 0.02**
 * **Gamma = 0.01**
 * **Gamma = 0.005**
 * **Gamma = 0.001**
 
-For each value, check both the **Scores Plot** and the **Kernel Matrix Heatmap**.
-
 #### Questions:
 
-* Which gamma gives the cleanest smooth colour gradient in the scores plot?
+* Which gamma gives the cleanest colour gradient in the scores plot?
+* Is the best result at the smallest gamma you tried — or somewhere in the middle of the range?
 * At which gamma does the heatmap first show meaningful structure (neither uniformly bright nor nearly empty)?
-* Is the best gamma sharply defined, or is there a range of acceptable values?
-* Can you describe in words what happens to the heatmap as you move from too-large to too-small gamma?
+* Can you describe what happens to both the heatmap and the scores plot as you move from γ = 1.0 down to γ = 0.001?
 
-👉 The RBF kernel has a characteristic effective radius of 1/√γ. For γ = 0.01, this is 1/√0.01 = 10 units — roughly matching the spacing between moderately close points in the Swiss Roll, whose coordinates span about 25 units in each dimension. Choosing γ = 0.1 would shrink this to 3 units, which is too local: only the very closest neighbours retain non-zero similarity and the kernel matrix becomes nearly empty.
+👉 **Lower gamma is not always better.** There is an optimal range, with two distinct failure modes on either side:
 
-In a real application you do not know this a priori. You would need to search over gamma values, for example using cross-validation with a downstream task, or by examining the kernel matrix and scores plot as you have done here.
+* **Too large** (e.g. γ = 1.0): the kernel decays so sharply with distance that each sample is only similar to its immediate neighbours. The kernel matrix has a bright diagonal and is nearly empty elsewhere. The scores plot loses structure — colours fragment and separate into isolated islands rather than a smooth gradient.
+
+* **Too small** (e.g. γ = 0.001): the kernel decays so slowly that nearly all pairs of samples look similar. The kernel matrix becomes uniformly bright. PCA on this near-uniform matrix finds little useful structure, and the scores plot loses its colour organisation.
+
+* **The sweet spot** (around γ = 0.01 with variance scaling for this dataset): the kernel's effective neighbourhood radius matches the characteristic spacing between samples on the manifold. The heatmap shows meaningful contrast, and the scores plot shows the best colour separation — high-value samples (cream/yellow, outer edge) pulled clearly away from the main cloud.
+
+**A practical starting point: the median heuristic.** Rather than searching blindly, you can get a rough initial estimate from the data itself. Compute the median of all squared pairwise distances between samples and set γ = 1 / median(‖x_i − x_j‖²). This anchors the kernel's effective radius to the actual length scale of your (preprocessed) data. For the Swiss Roll the heuristic gives a value in the range 0.05–0.1, which is a useful starting point — but empirical exploration (as you have done here) shows that the actual optimum is around 0.01 for this dataset. The heuristic narrows the search range but does not replace it.
+
+> Note that the optimal gamma shifts with preprocessing. The values here apply after variance scaling. Without preprocessing, the raw Swiss Roll coordinates span a much wider range and you would need to search a different range of gamma values. Always re-examine gamma when you change preprocessing.
 
 ---
 
@@ -314,7 +327,7 @@ Compare the **Scores Plot** each time.
 * Look at the scree plot for linear PCA — high explained variance, wrong structure. What does this tell you about using explained variance as the sole measure of PCA quality?
 * Can you describe in your own words, without jargon, why one method succeeds and the other does not?
 
-👉 This comparison is the central lesson of the Swiss Roll. Both methods produce a horseshoe-shaped scores plot — but the colour organisation differs. Linear PCA mixes colour values almost randomly; Kernel PCA shows a more structured arrangement, with low and high values somewhat more separated, even though the result is not a clean rectangle.
+👉 This comparison is the central lesson of the Swiss Roll. Linear PCA produces a **tilted oval ring** with colours running in a closed loop — the roll has been squashed flat rather than unrolled, and the two ends of the sheet are wrapped around opposite sides of the ring. Kernel PCA, at a well-chosen gamma, produces a noticeably different arrangement: the colours are less randomly mixed, and low and high values are somewhat more separated. The result is still not a clean flat rectangle, but the improvement is real.
 
 The improvement from linear to kernel PCA is real but partial. The Swiss Roll is a deliberately extreme test case: its layers sit close together in Euclidean space, which limits how much any Euclidean-distance-based kernel can achieve. For data with milder curvature — or with a clear local neighbourhood structure that the RBF kernel can exploit — the improvement is often more dramatic.
 
