@@ -56,6 +56,11 @@ cmd/gocsv/build/bin/
 # Legacy build directory if it exists elsewhere
 build/
 cmd/gocsv/gocsv
+cmd/gopca-desktop/gopca-desktop
+
+# Working notes in references dir (PDFs and _summaries.txt are committed; md/png are not)
+docs/references/*.md
+docs/references/*.png
 
 # Node modules
 node_modules/
