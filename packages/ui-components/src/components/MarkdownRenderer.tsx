@@ -14,6 +14,11 @@ import 'katex/dist/katex.min.css';
 export interface MarkdownRendererProps {
   content: string;
   className?: string;
+  /** Called when the user clicks an external (http/https) link. If omitted,
+   *  the browser's default behaviour applies (target="_blank"). Provide this
+   *  in Wails-hosted windows to open links via BrowserOpenURL so they launch
+   *  in the system browser rather than inside the embedded WebView. */
+  onExternalLink?: (url: string) => void;
 }
 
 /**
@@ -25,7 +30,8 @@ export interface MarkdownRendererProps {
  */
 export const MarkdownRenderer: React.FC<MarkdownRendererProps> = ({
   content,
-  className = ''
+  className = '',
+  onExternalLink,
 }) => {
   return (
     <div className={`prose prose-lg dark:prose-invert max-w-none text-left
@@ -53,18 +59,31 @@ export const MarkdownRenderer: React.FC<MarkdownRendererProps> = ({
           rehypeKatex  // Renders math using KaTeX
         ]}
         components={{
-          // Custom link component to open external links in new tab
-          a: ({ children, href, ...props }) => (
-            <a
-              href={href}
-              target={href?.startsWith('http') ? '_blank' : undefined}
-              rel={href?.startsWith('http') ? 'noopener noreferrer' : undefined}
-              className="text-blue-600 dark:text-blue-400 hover:underline"
-              {...props}
-            >
-              {children}
-            </a>
-          ),
+          // Custom link component: external links are opened via onExternalLink
+          // callback (e.g. Wails BrowserOpenURL) when provided, so they launch
+          // in the system browser rather than navigating the embedded WebView.
+          // Falls back to target="_blank" when running in a regular browser.
+          a: ({ children, href, ...props }) => {
+            const isExternal = href?.startsWith('http');
+            const handleClick = isExternal && onExternalLink
+              ? (e: React.MouseEvent<HTMLAnchorElement>) => {
+                  e.preventDefault();
+                  onExternalLink(href!);
+                }
+              : undefined;
+            return (
+              <a
+                href={href}
+                target={isExternal && !onExternalLink ? '_blank' : undefined}
+                rel={isExternal && !onExternalLink ? 'noopener noreferrer' : undefined}
+                onClick={handleClick}
+                className="text-blue-600 dark:text-blue-400 hover:underline"
+                {...props}
+              >
+                {children}
+              </a>
+            );
+          },
           // Custom code block styling
           code: ({ className, children, ...props }) => {
             const match = /language-(\w+)/.exec(className || '');
