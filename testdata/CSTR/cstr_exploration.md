@@ -14,11 +14,13 @@ $$\text{A} \rightarrow \text{B} \quad (\text{exothermic})$$
 
 A CSTR is one of the most studied systems in chemical engineering [Uppal, Ray & Poore, 1974]. Reactant A flows in continuously, the reaction occurs inside the tank, and product B flows out. Because the reaction releases heat, a coolant circuit controls the reactor temperature.
 
+> **A note on the feed stream:** Although the model tracks only the reacting species A and product B explicitly, the reactor is assumed to contain a bulk liquid phase — typically a solvent such as water — that carries heat and dissolved reactants through the system. The solvent is not included as a separate state variable because its concentration changes negligibly compared to the reacting species. Its thermal effects appear implicitly through parameters such as the heat capacity and the overall heat-transfer coefficient `heat_transfer_UA_kJ_min_K`.
+
 > **Rich nonlinear dynamics:** Uppal, Ray & Poore (1974) showed analytically that, depending on the [Damköhler number](https://en.wikipedia.org/wiki/Damköhler_numbers) and the heat of reaction, a CSTR can have one or three steady states, and can exhibit *intrinsic* self-sustaining oscillations (limit cycles) arising purely from the Arrhenius thermal feedback — with no external forcing whatsoever. The simulation in this tutorial is tuned to a single stable operating point, so you will not encounter multiple steady states here. The 40-minute oscillation you will identify in Temporal PCA is an *externally imposed* feed flow disturbance, not an Arrhenius-driven limit cycle. In a real plant operating near a limit cycle boundary, oscillations would persist even after the external disturbance was removed — a substantially harder fault scenario to diagnose.
 
 ### The PI temperature controller
 
-A proportional-integral (PI) controller manipulates the coolant temperature T_c to keep the reactor temperature T near the setpoint (365 K). When T rises above setpoint, the controller requests colder coolant; when it falls, warmer coolant. Anti-windup logic prevents the controller from accumulating a large integral error when the coolant valve is fully open or closed.
+A [proportional-integral (PI) controller](https://en.wikipedia.org/wiki/PID_controller#PI_controller) manipulates the coolant temperature T_c to keep the reactor temperature T near the setpoint (365 K). When T rises above setpoint, the controller requests colder coolant; when it falls, warmer coolant. Anti-windup logic prevents the controller from accumulating a large integral error when the coolant valve is fully open or closed.
 
 This controller introduces **closed-loop dynamics** into the data — disturbances cause transients, the controller responds, and variables return to steady state. Temporal PCA can capture all of this.
 
