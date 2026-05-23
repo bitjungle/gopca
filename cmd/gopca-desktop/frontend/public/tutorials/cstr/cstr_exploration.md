@@ -100,9 +100,9 @@ Before introducing time lags, run a standard SVD PCA first. This lets you see ex
 
 Load `cstr_temporal_pca.csv` into GoPCA. Set:
 
-* **Preprocessing** → **Standard Scale**
 * **Number of Components** → **5**
 * **PCA Method** → **SVD**
+* **Preprocessing** → **Standard Scale**
 
 Click **Go PCA**.
 
@@ -126,12 +126,16 @@ Open the **Biplot** (color by `regime`).
 
 ## Step 2: Switch to Temporal PCA
 
-Now change the configuration to:
+Keep **Preprocessing → Standard Scale** from Step 1, and change:
 
 * **Lags (L)** → **10**
 * **Number of Components** → **8**
 
 Click **Go Temporal PCA**.
+
+> **Why keep Standard Scale?** GoPCA applies column-wise preprocessing to the original 12 variables *before* constructing the lag-embedded trajectory matrix. This means each lagged copy of a variable (e.g. `T_K` at lag 0, lag 1, …, lag 10) inherits the same scale as the original — which is exactly what you want. A change in `T_K` one minute ago should carry the same weight as a change right now. The mixed-unit argument from Step 1 applies equally here: without Standard Scale, the high-magnitude variables would dominate the trajectory matrix just as they would a standard PCA.
+>
+> **A note on industrial practice:** Here, Standard Scale is computed on all 800 minutes of data, including the fault period. In a real plant application you would compute the mean and standard deviation from the *normal-operation baseline only* (minutes 0–120), then apply those fixed scale factors to the full record. For this dataset the difference is small — the fault period is only 20% of the record — but in a real monitoring system this distinction matters: the model should describe what "normal" looks like, not what "fault" looks like.
 
 ### What GoPCA is doing under the hood
 
