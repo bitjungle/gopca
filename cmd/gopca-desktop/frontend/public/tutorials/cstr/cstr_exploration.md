@@ -211,24 +211,41 @@ With Row Index coloring you can immediately see, for example, that the diagonal 
 
 ## Step 5: The Temporal Loadings — what dynamics are in each component?
 
+This step uses two complementary plots. Start with the **Temporal Variable Importance** plot to find out which variables drive which components, then switch to the **Temporal Loadings Plot** to read the lag structure of those components.
+
+### 5a: Identify dominant variables with Temporal Variable Importance
+
+Open the **Temporal Variable Importance** plot. This heatmap shows the RMS loading of each variable aggregated across all lags, giving one importance value per (component, variable) cell. Bright cells identify the dominant variable(s) for each component.
+
+#### Questions:
+
+* Which component is most strongly driven by `Tf_K` (feed temperature)? This component captures the feed temperature step disturbance.
+* Which components are dominated by `F_L_min` (feed flow) and `residence_time_min`? These two variables are mathematically linked — τ = V/F — so they tend to appear together.
+* PC1 loads all variables at roughly equal importance. What does that tell you about what PC1 represents?
+* `cooling_duty_kJ_min` appears prominently in one or two components. Which ones? This variable carries the fault signature.
+
+### 5b: Read the lag structure with Temporal Loadings
+
 Open the **Temporal Loadings Plot**. Display at least 8 components.
 
-Each panel shows how one component's loading evolves across lags 0 to L. The x-axis is lag (minutes into the past); the y-axis shows the loading of the dominant channel for that component.
+Each curve shows how one component's loading evolves across lags 0 to L. The x-axis is lag (minutes into the past); the y-axis shows the loading magnitude at that lag. The Variable Importance plot told you *which variables matter*; this plot tells you *when in the past* they matter most.
 
 **Three patterns to look for:**
 
 | Shape | Interpretation |
 |---|---|
 | **Flat / near-zero** | No temporal structure — component captures instantaneous variance |
-| **Monotone decay** | Exponential response — controller or first-order process dynamics |
+| **Monotone ramp** | Step-response or slow drift — controller or first-order process dynamics |
 | **Sinusoidal oscillation** | Periodic variation — oscillatory process behaviour |
 
 #### Questions:
 
-* Which components show a monotone decaying shape? What time constant does the decay suggest (how many lags before it flattens)?
-* Can you find any components with a sinusoidal shape? These represent the 40-minute flow oscillation.
-* Compare the decay time constant to the PI integral time τ_I = 8 minutes. Do they match?
-* Look carefully at components dominated by `Tc_out_K` (coolant temperature) versus `T_K` (reactor temperature). Do their loading curves peak at different lags? This is **delayed thermal coupling**: the reactor has thermal inertia, so a change in coolant temperature takes several minutes to propagate into a change in reactor temperature. The lag axis makes this sequence visible — something a single-snapshot PCA cannot show.
+* Which components show a monotone ramp shape? What time constant does the ramp suggest?
+* Compare the ramp time constant to the PI integral time τ_I = 8 minutes. Do they match?
+* Can you find any components with a curved or peaked loading curve? This is a partial trace of the 40-minute oscillation — with only L = 10 lags you are seeing less than one quarter of one cycle, so a clean sinusoid is not expected.
+* Pick the component that the Variable Importance heatmap identified as dominated by `Tf_K`. Does the temporal loading curve for that component rise, fall, or stay flat across the 10 lags? The shape reflects the transient that the feed temperature step creates.
+
+> **Delayed thermal coupling — a closer look:** The reactor has thermal inertia: a change in coolant temperature (`Tc_out_K`) takes several minutes to propagate into a change in reactor temperature (`T_K`). This coupling is physically real, but at L = 10 it is subtle — both variables load broadly across many components at this lag length. To make the delay clearly visible, a longer window (L = 20–30) is needed so that the cause (`Tc_out_K` changing) and the effect (`T_K` responding) are separated by enough lags to be distinguishable. Keep this in mind when you compare lag settings in Step 8.
 
 > **Hint:** A sinusoidal temporal loading pattern means that component is tracking a variable that oscillates in time. The period of the oscillation can be estimated from the zero-crossings: if you count k zero-crossings over L lags, the oscillation period ≈ 2L/k minutes. For a 40-minute oscillation with L = 10 lags, you will see only about **one quarter of a cycle** (10/40 = 0.25) — far too little to recognise a clean sinusoid. Try L = 40 to resolve the full period.
 
