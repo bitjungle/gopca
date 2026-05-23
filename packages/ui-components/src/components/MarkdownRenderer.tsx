@@ -15,8 +15,8 @@ export interface MarkdownRendererProps {
   content: string;
   className?: string;
   /** Called when the user clicks an external (http/https) link. If omitted,
-   *  the browser's default behaviour applies (target="_blank"). Provide this
-   *  in Wails-hosted windows to open links via BrowserOpenURL so they launch
+   *  external links open in a new tab via target="_blank". Provide this in
+   *  Wails-hosted windows to open links via BrowserOpenURL so they launch
    *  in the system browser rather than inside the embedded WebView. */
   onExternalLink?: (url: string) => void;
 }
