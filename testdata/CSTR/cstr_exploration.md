@@ -108,14 +108,16 @@ Click **Go PCA**.
 
 > **Why Standard Scale?** The 12 variables have completely different units and magnitudes — temperatures in the hundreds of Kelvin, flow rates in hundreds of L/min, concentrations below 1 mol/L, heat duty in thousands of kJ/min. Without scaling, PCA would be dominated by whichever variable has the largest numerical variance, not the most process-relevant variation.
 
-Open the **Scores Plot** (color by `regime`) and the **Loadings Plot**.
+Open the **Biplot** (color by `regime`).
+
+> **Reading a biplot:** A biplot overlays the scores (one point per observation, coloured by regime) and the loadings (one arrow per variable) in the same panel. The direction and length of each arrow show how strongly that variable contributes to each PC — a long arrow means high variance explained. The angle between two arrows approximates the correlation between those variables: arrows pointing the same way are positively correlated; opposite arrows are negatively correlated. Note that the score points and the loading arrows live in different coordinate scales, so the absolute distance between a score point and an arrowhead is not directly meaningful.
 
 #### Questions:
 
 * Can you identify clusters corresponding to normal operation, feed disturbances, the cooling fault, and the oscillation regime?
-* PC1 typically captures **overall reaction intensity** — which variables have the largest loadings? You would expect `T_K`, `reaction_rate_mol_L_min`, and `conversion_fraction` to dominate, since they are all tightly coupled through the energy and mass balances at steady state.
-* Look at PC2. It is dominated by `F_L_min` (strongly negative) and `residence_time_min` (strongly positive). These two are mathematically coupled — τ = V/F, so they are exact inverses of each other. PC2 is essentially a **flow rate axis**. Does this explain why the oscillation period scatters along PC2 rather than PC1?
-* The **cooling fault** should appear far from the normal cluster along PC1. If it does, check the loadings — which variables drive this separation? Does the large offset compress the rest of the score plot into a small region on the left side?
+* PC1 typically captures **overall reaction intensity** — which loading arrows point most strongly along PC1? You would expect `T_K`, `reaction_rate_mol_L_min`, and `conversion_fraction` to dominate, since they are all tightly coupled through the energy and mass balances at steady state. Do the cooling fault points lie in the direction these arrows point?
+* Look at PC2. It is dominated by `F_L_min` (strongly negative — arrow pointing down) and `residence_time_min` (strongly positive — arrow pointing up). These two are mathematically coupled — τ = V/F, so they are exact inverses of each other. PC2 is essentially a **flow rate axis**. Does this explain why the oscillation period scatters along PC2 rather than PC1?
+* The **cooling fault** should appear far from the normal cluster along PC1. If it does, the biplot lets you read the cause directly: which loading arrows point toward the cooling fault cluster? Does the large offset compress the rest of the score plot into a small region on the left side?
 * Now look at the **flow oscillation** period. Rather than forming a compact cluster, it scatters broadly across the full vertical range of the plot. Why? SVD PCA has no sense of time — each measurement at minute 362 is treated as an independent sample, not as part of a repeating cycle. The oscillation appears as diffuse scatter rather than a recognisable structure.
 
 👉 SVD PCA sees the process at a **single instant in time**. It can detect large regime shifts (the cooling fault stands out clearly), but it cannot understand *how* a disturbance propagates through the process, *how quickly* the controller responds, or *whether* a periodic signal is present. The oscillation period looks like noise. That is the key limitation — and what Temporal PCA is designed to fix.
