@@ -54,10 +54,11 @@ In the PCA configuration panel, set:
 * **PCA Method** → SVD
 * **Preprocessing** → leave at the default (mean centering only) for now
 
-#### Questions:
+#### Question:
 
 * How many rows and columns does the dataset have?
-* At 128 Hz, two consecutive rows are only 7.8 ms apart. Do you expect neighbouring rows to be similar or very different?
+
+👉 At 128 Hz, two consecutive rows are only 7.8 ms apart. Brain signals change slowly relative to the sampling rate, so neighbouring rows are very similar — the data is far from a collection of independent snapshots.
 
 ---
 
