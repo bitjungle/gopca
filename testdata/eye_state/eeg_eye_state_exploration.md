@@ -1,10 +1,10 @@
 # Exploring Structure in Data: EEG Eye State Dataset and Temporal PCA
 
-## Background: Brain signals, time series, and a different kind of data
+## Background
 
-Electroencephalography (EEG) measures electrical activity at the scalp by placing small electrodes at standardised positions across the head. Each electrode records a voltage signal reflecting the summed electrical activity of neurons underneath. EEG is fast — it captures changes that occur within milliseconds — and it is widely used in neuroscience and brain–computer interface research.
+Electroencephalography (EEG) measures electrical activity at the scalp via small electrodes. Each electrode records a voltage signal reflecting the activity of neurons underneath, sampled many times per second.
 
-This dataset contains a recording from **one subject** using the **Emotiv EEG Neuroheadset**, with 14 electrodes placed according to the international 10–20 system:
+This dataset contains a 117-second recording from **one subject** using the **Emotiv EEG Neuroheadset**, with 14 electrodes placed according to the international 10–20 system:
 
 * Frontal: `AF3`, `F7`, `F3`, `F4`, `F8`, `AF4`
 * Central/temporal: `FC5`, `T7`, `T8`, `FC6`
@@ -14,58 +14,32 @@ The figure below shows the scalp positions of all 14 electrodes, viewed from abo
 
 ![EEG electrode positions](./eeg_electrode_map.png)
 
-The recording lasted **117 seconds** at a sampling rate of **128 Hz** — giving one measurement every 7.8 ms and approximately **14,980 rows** in total. During the recording, the subject alternately opened and closed their eyes. Eye state was determined from a video camera and added manually as a label:
+The sampling rate is **128 Hz** — one measurement every 7.8 ms, giving approximately **14,980 rows** in total. During the recording the subject alternately opened and closed their eyes. Eye state was determined from video and added as a label:
 
 * `eye_state = open` — eyes open
 * `eye_state = closed` — eyes closed
 
-In the original UCI dataset, eye state is encoded numerically: **0 = eyes open, 1 = eyes closed**. GoPCA displays these as `open` and `closed` text labels.
+> **Note on data quality**: the dataset contains four isolated time points with extreme values — at approximately t = 7 s, 81 s, 90 s, and 103 s — where one or more channels reach values 70–150× the normal signal range (almost certainly brief electrode artifacts). These will appear as isolated extreme points far from the main cluster in the scores plot. Keep them in mind when interpreting unexpected structure.
 
-> **Note on data quality**: the dataset contains four isolated time points with extreme values — at approximately t = 7 s, 81 s, 90 s, and 103 s — where one or more channels reach values 70–150× the normal signal range (almost certainly brief electrode or cable artifacts). These will appear as isolated extreme points far from the main cluster in the scores plot. They are part of the real dataset and do not need to be removed for this exploration, but keep them in mind when interpreting unexpected structure in the results.
-
-The original research motivation was classification: can the EEG signal alone predict whether the eyes are open or closed? Here, we approach the same data using **Principal Component Analysis (PCA)** — an *unsupervised* method that ignores the labels entirely. The question becomes: what structure does PCA find in the EEG channels on its own, and does that structure relate to eye state?
+The original research motivation was classification: can EEG alone predict eye state? Here we use PCA — an *unsupervised* method that ignores the labels entirely — to ask: what structure does PCA find on its own, and does it relate to eye state?
 
 ---
 
-## From Swiss Roll to EEG Eye State: when the problem is time
+## This dataset versus the others
 
-In the previous tutorial, the Swiss Roll showed us that the shape of the data matters — a linearly inseparable structure required a different PCA method. Here, the challenge is different: the structure is not about geometry, it is about **time**.
+In the previous tutorial, the Swiss Roll showed us that the *shape* of the data matters. Here, the challenge is different: the structure is about **time**.
 
 | | Swiss Roll | EEG Eye State |
 |---|---|---|
 | **What each row is** | One independent data point | One snapshot of an ongoing signal |
 | **What PCA sees first** | Geometric shape of the data cloud | Spatial correlations between 14 channels |
 | **What PCA misses** | Curved manifold structure | Temporal dynamics and oscillations |
-| **The solution** | Kernel PCA — work in a higher-dimensional feature space | Temporal PCA — give PCA a memory by embedding time |
-| **Why standard PCA fails** | Data lies on a curved surface, not a flat subspace | Shuffling the rows gives *identical* PCA results |
+| **The solution** | Kernel PCA | Temporal PCA — give PCA a memory by embedding time |
+| **Why standard PCA fails** | Data lies on a curved surface | Shuffling the rows gives *identical* PCA results |
 
-> **The key analogy**: Kernel PCA transforms *space*. Temporal PCA transforms *time*. Both use the same SVD algorithm on a larger, restructured matrix — but the restructuring reveals very different kinds of hidden structure.
+> **The key analogy**: Kernel PCA transforms *space*. Temporal PCA transforms *time*. Both use the same SVD algorithm on a larger, restructured matrix.
 
-This dataset is fundamentally different from Iris, Wine, Corn, and Swiss Roll:
-
-* Each row is **one time point**, not one independent sample — neighbouring rows are consecutive observations separated by 7.8 ms
-* The 14 EEG channels are measured **simultaneously** and are correlated in space and in time
-* There are no predefined sample classes in the static sense — variation is both spatial (across channels) and temporal (across time)
-
-This is a **multivariate time series**. Standard PCA can find spatial correlation patterns between channels, but it treats each time point as an independent observation and completely ignores the order of the rows. To make PCA sensitive to temporal dynamics, we need to first transform the data — and GoPCA's built-in **Temporal PCA** method does exactly this.
-
----
-
-## The challenge
-
-EEG data has two kinds of structure simultaneously:
-
-* **Spatial structure**: the 14 channels represent different scalp locations; nearby electrodes tend to respond similarly
-* **Temporal structure**: the signal evolves over time; oscillations, bursts, and waveform shapes carry the most meaningful information in EEG
-
-Standard PCA on the raw EEG table reveals only the spatial structure — the correlation between channels. It cannot detect oscillations, repeated waveforms, or delayed relationships between channels, because it does not know which row came before another.
-
-> Standard PCA treats the dataset as a cloud of points. Shuffling the rows would give exactly the same PCA result. It ignores time entirely.
-
-This tutorial therefore has two parts:
-
-* First, run standard SVD PCA on the raw EEG table and examine what it finds
-* Then, use GoPCA's **Temporal PCA** method to reveal the temporal structure hidden inside the signals
+Standard PCA treats each row as an independent observation and completely ignores row order. A shuffled EEG dataset gives exactly the same PCA result. This tutorial has two parts: first run standard PCA to see what it finds (and what it misses), then switch to Temporal PCA to reveal the temporal structure.
 
 ---
 
@@ -73,346 +47,224 @@ This tutorial therefore has two parts:
 
 Click the **EEG Eye State** sample dataset button to load the data.
 
-GoPCA will load the dataset automatically. The `time` column is used as row identifiers and is excluded from the PCA variables. The 14 EEG channel columns are the input variables. The `eye_state` column contains text labels (`open`/`closed`) and is automatically recognised as a categorical column — no manual configuration is needed for this.
+The `time` column is used as row identifiers and excluded from PCA. The 14 EEG channel columns are the input variables. The `eye_state` column is automatically recognised as categorical and available for plot colouring.
 
 In the PCA configuration panel, set:
 
 * **PCA Method** → SVD
-* **Preprocessing** → leave at the default for now (no scaling except for mean centering)
-
-The `eye_state` column will be available for colouring your plots. It is not used in the analysis itself — that is the whole point of unsupervised PCA.
+* **Preprocessing** → leave at the default (mean centering only) for now
 
 #### Questions:
 
 * How many rows and columns does the dataset have?
-* What does a single row represent — a single brain measurement, or something else?
-* Do you expect neighbouring rows (consecutive time points) to be similar or very different?
-
-👉 Hint: at 128 Hz, two consecutive rows are only 7.8 ms apart. Brain signals change slowly relative to the sampling rate, so neighbouring rows are very similar.
+* At 128 Hz, two consecutive rows are only 7.8 ms apart. Do you expect neighbouring rows to be similar or very different?
 
 ---
 
-## Step 2: Run standard PCA — diagnose the scale problem first
+## Step 2: Run standard PCA — scale problem and outliers
 
-Click **Go PCA** to run the analysis.
+Click **Go PCA**.
 
-Before looking at any plots, read the GoPCA warning banner. You will see something like:
+Before opening any plots, read the GoPCA warning banner:
 
 > *"Variables have very different scales (40000× difference). Consider standardisation unless this is intentional."*
 
-This is an important diagnostic signal. All 14 channels are EEG voltages measured in microvolts by the same amplifier — they should in principle be comparable. But this particular dataset contains brief electrode artifacts (see the Background note above) and channels with slightly different impedance conditions, leading to large variance differences between channels.
+All 14 channels are EEG voltages in microvolts — they should be comparable. The large scale difference comes from brief electrode artifacts and slightly different impedance conditions between channels.
 
-Now open the **Loadings Plot (PC1)**.
-
-#### Questions:
-
-* Which channels have large loadings (positive or negative)?
-* Which channels are near zero?
-* Does the pattern of important channels match your expectation from neuroscience — or does it look like a few channels are dominating simply because they have higher variance?
-
-👉 Without scaling, PCA measures *covariance* — it finds the directions of maximum variance. Channels with higher variance automatically dominate, regardless of whether that variance is signal or noise. If two or three channels have far higher variance than the others (perhaps due to artifacts), they will monopolise PC1 and push all genuine signal into later components. This is the scale problem in action.
-
-### Re-run with standardisation
-
-Change the **Preprocessing** setting to **Standard Scaling** (zero mean, unit variance). Click **Go PCA** again.
-
-Open the **Loadings Plot (PC1)** again.
+Open the **Loadings Plot (PC1)**.
 
 #### Questions:
 
-* How does the distribution of loadings change compared to the unscaled result?
-* Do more channels now contribute meaningfully to PC1?
-* Do occipital electrodes (`O1`, `O2`) stand out more than before?
+* Which channels dominate PC1? Do they look like a genuine signal pattern, or could a few high-variance channels simply be drowning out the rest?
 
-👉 With standard scaling, PCA measures *correlation* — all channels are treated as equally important regardless of their raw amplitude. The result reflects which channels *co-vary together*, not which channels happen to have the highest variance. For EEG data with known scale imbalances, this is generally the more informative starting point.
+👉 Without scaling, PCA measures *covariance* — channels with higher variance automatically dominate regardless of whether that variance is signal or noise.
 
-> **A note on when to scale**: EEG channels are all in the same physical units (µV), so standardisation discards amplitude information. If you specifically want to study which brain region generates the strongest signal, unscaled PCA is informative. If you want to understand the *pattern* of co-variation across channels — which is usually the goal in exploratory EEG analysis — standardisation is appropriate. The GoPCA warning is your cue to make this choice deliberately rather than by accident.
+### Re-run with Standard Scaling
+
+Change **Preprocessing** to **Standard Scaling**. Click **Go PCA** again and re-open the **Loadings Plot (PC1)**.
+
+#### Questions:
+
+* How does the loading distribution change? Do more channels now contribute meaningfully?
+* Do occipital electrodes (`O1`, `O2`) stand out more?
+
+👉 Standard scaling makes PCA measure *correlation* — all channels are treated equally regardless of raw amplitude. For EEG with known scale imbalances this is generally the more informative starting point. The GoPCA warning is your cue to make this choice deliberately.
 
 Now open the **Scores Plot (PC1 vs PC2)** and colour by `eye_state`.
 
 #### Questions:
 
-* Do you see most samples clustered tightly near the origin, with only a handful of extreme outliers far away?
-* Hover over the extreme outliers — what time labels do they carry?
-* Do those time values match the artifact time points mentioned in the Background (approximately 7 s, 81 s, 90 s, 103 s)?
+* Do you see most samples clustered near the origin with only a handful of extreme outliers far away?
+* Hover over the extreme outliers — what time labels do they carry? Do they match the artifact times mentioned above (~7 s, 81 s, 90 s, 103 s)?
 
-👉 If you see this pattern, you are observing a second important effect: **outlier domination**. Standard scaling equalises the variance of each *variable* (column), but it does not protect against extreme *observations* (rows). The four artifact time points have values 70–150× the normal EEG range. Even after standardisation, those four rows have score values far larger than all other observations, so PCA points both PC1 and PC2 towards them — and the remaining ~14,976 normal time points collapse into a tiny cluster near the origin.
-
-This is different from the scale problem we fixed with standardisation:
+👉 This is **outlier domination**: standard scaling equalises column variances but does not protect against extreme rows. The four artifact rows have values 70–150× the normal range, so PCA points both PC1 and PC2 towards them — collapsing the remaining ~14,976 normal time points into a tiny cluster near the origin.
 
 | Problem | What it is | Fix |
 |---|---|---|
 | **Scale imbalance** | Different *variables* have very different variance | Standard scaling (column-wise) |
-| **Outlier domination** | A few extreme *observations* dominate the components | Identify with Diagnostic Plot, then remove with lasso |
+| **Outlier domination** | A few extreme *observations* dominate the components | Identify with Diagnostic Plot, remove with lasso |
 
 ### Identify outliers with the Diagnostic Plot
 
-Open the **Diagnostic Plot**. This plot has two axes:
+Open the **Diagnostic Plot**. Two axes:
 
-* **Horizontal axis — Hotelling's T²**: how far an observation is from the centroid *within* the PCA model space. High T² means an unusual combination of scores — the observation is far from the typical pattern, but the model does project it somewhere.
-* **Vertical axis — Q-statistic (Residual Sum of Squares)**: how well the PCA model *fits* the observation. High Q means the observation has large residuals — it does not sit close to the subspace spanned by the retained components.
-
-The two dashed red lines divide the plot into four regions:
+* **Horizontal — Hotelling's T²**: how far an observation is from the centroid within the PCA model space
+* **Vertical — Q-statistic**: how well the model fits the observation (large Q = large residuals)
 
 | Region | T² | Q | Interpretation |
 |---|---|---|---|
-| Bottom-left | Low | Low | Regular observations — well-fitted and not extreme |
-| Top-left | Low | High | **Orthogonal outliers** — unusual structure the model cannot represent |
-| Bottom-right | High | Low | **Good leverage** — extreme but on-model; influential on the components |
-| Top-right | High | High | **Bad outliers** — both extreme and poorly fitted; most problematic |
+| Bottom-left | Low | Low | Regular observations |
+| Top-left | Low | High | Orthogonal outliers — structure the model cannot represent |
+| Bottom-right | High | Low | Good leverage — extreme but on-model |
+| Top-right | High | High | Bad outliers — extreme and poorly fitted |
 
-#### Questions:
-
-* Where does the main cluster of EEG time points appear — which quadrant?
-* Can you identify one or more points in the top-right (Bad Outliers) region? What time labels do they carry?
-* Are any extreme points in the bottom-right (Good Leverage) region? What does that tell you about those particular artifact rows?
-
-👉 The artifact time points should appear as extreme outliers — either Bad Outliers (high T² and high Q) or high-leverage points — while the normal ~14,976 time points form a dense cluster inside both limits in the bottom-left. The Diagnostic Plot makes this structure immediately visible, whereas in the Scores Plot it required zooming.
+The artifact points should appear in the top-right or far right. The normal ~14,976 time points should cluster in the bottom-left inside both dashed limits.
 
 ### Remove outliers with the lasso tool
 
-GoPCA lets you select and exclude observations directly from any plot using the **lasso selection tool** in the Plotly toolbar (the lasso icon at the top-right of the plot).
-
 1. Click the **lasso icon** in the plot toolbar
-2. Draw a freehand selection around the extreme outlier points — either in the Scores Plot or in the Diagnostic Plot
-3. The selected points will be highlighted; GoPCA will offer to **exclude** them from the analysis
-4. Click **Go PCA** again to re-run without the selected observations
+2. Draw a selection around the extreme outlier points
+3. GoPCA will offer to **exclude** them
+4. Click **Go PCA** again
 
-Repeat until all artifact time points are excluded. You should be left with the ~14,976 normal time points.
+Repeat until all artifact time points are excluded.
 
-#### Questions (after removing outliers and re-running PCA):
+#### Questions (after removing outliers):
 
-* How does the Scores Plot change when the artifact points are removed?
-* Do `open` and `closed` samples now show any visible separation?
+* How does the Scores Plot change?
+* Do `open` and `closed` samples show any visible separation now?
 * Is the separation clear, or do the two states still overlap considerably?
-* How does the Diagnostic Plot look now — are all remaining points inside the control limits?
 
-👉 After removing the artifacts, the scores plot should reveal real structure in the data. You may find:
-
-* **PC1** loads all 14 channels with similar magnitude and the same sign — a "global" or "common mode" component capturing the overall correlation between channels. This is the dominant pattern in highly correlated data like EEG, and it does not tell you much about which brain regions are specifically involved.
-* **PC2** often shows a more informative spatial contrast — for example, frontal channels (AF3, AF4, F7, F8) on one side, and posterior/occipital channels (P7, O1, O2, P8) on the other. Occipital channels are particularly relevant because they are most sensitive to alpha-band activity associated with eye state.
-
-The scores plot after outlier removal typically shows some separation between `open` and `closed`, but with considerable overlap. This is expected — standard PCA is working only with the spatial correlations between channels at each instant, not with the temporal dynamics. The main lessons from this step are: (1) outlier detection and removal is a standard part of exploratory data analysis; (2) even clean, well-scaled data may not yield clean class separation with standard PCA when the relevant structure is temporal rather than spatial.
+👉 Some separation is expected, but with considerable overlap. Standard PCA works only with spatial correlations between channels at each instant — not with temporal dynamics. The main lesson: even clean, well-scaled data may not yield clean class separation when the relevant structure is temporal rather than spatial.
 
 ---
 
-## Step 3: What standard PCA misses
+## Step 3: What standard PCA cannot see
 
-Standard PCA computes correlations between channels across all rows simultaneously. What it cannot see:
+Standard PCA computes correlations between channels across all rows simultaneously. What it cannot detect:
 
-* **Oscillations**: a 10 Hz alpha wave completes one full cycle in 100 ms — about 13 consecutive rows. Standard PCA has no way to detect this periodic structure.
-* **Delayed relationships**: one channel's activity may predict another channel's activity a few time steps later. Standard PCA ignores this.
-* **Waveform shape**: the characteristic shape of an EEG event (e.g., a slow wave during eye closure) spans many consecutive time points. Standard PCA sees only one snapshot at a time.
+* **Oscillations**: a 10 Hz alpha wave completes one full cycle in 100 ms (~13 consecutive rows). Standard PCA has no way to detect this periodic structure.
+* **Delayed relationships**: one channel's activity may predict another's activity a few time steps later. Standard PCA ignores row order entirely.
+* **Waveform shape**: EEG events span many consecutive time points. Standard PCA sees only one snapshot at a time.
 
-#### Questions:
+#### Question:
 
-* If you shuffled the 14,980 rows in a random order before running PCA, would the result change?
-* What does this tell you about what standard PCA can and cannot detect in time-series data?
-
-👉 Key insight: standard PCA is completely insensitive to the order of rows. A shuffled EEG dataset gives exactly the same PCA scores and loadings. All temporal structure is invisible to it.
+* If you shuffled the 14,980 rows in random order before running PCA, would the result change? What does this tell you about what standard PCA can and cannot detect?
 
 ---
 
-## Step 4: Temporal structure and the trajectory matrix
+## Step 4: The trajectory matrix
 
-To make PCA sensitive to time, we first transform the time series using a **sliding window**. This is the central idea of **Singular Spectrum Analysis (SSA)** and its multivariate extension **MSSA**.
+To make PCA sensitive to time, we transform the data using a **sliding window** — the central idea of **Singular Spectrum Analysis (SSA)** and its multivariate extension MSSA.
 
-### The embedding step
+Instead of describing each time point as one vector of 14 channel values, we describe it as a short sequence of *L* consecutive time points — a **window**. Each window becomes one row in a **trajectory matrix**:
 
-Instead of describing each time point as one vector of 14 channel values, we describe it as a short sequence of *L* consecutive time points — a **window** of length *L*.
+* Rows: approximately *T* − *L* + 1 (one per window position)
+* Columns: 14 channels × *L* lags = 14*L* columns
 
-For a single channel, a window of length *L* = 4 starting at time *t* would look like:
+With *L* = 32 and *T* = 14,980: approximately 14,949 rows and 448 columns. SVD on this larger matrix finds **spatiotemporal patterns** — capturing which channels co-vary and how that co-variation evolves across the window.
 
-```
-x(t), x(t+1), x(t+2), x(t+3)
-```
+> GoPCA implements the first two SSA steps — **embedding** (build the trajectory matrix) and **decomposition** (SVD). The full SSA algorithm also includes grouping and reconstruction, which transform selected components back into the time domain.
 
-For all 14 channels simultaneously (MSSA), the window captures all channels over *L* consecutive time steps. Each window is represented as a row in the **trajectory matrix** — a Hankel-block-Hankel structure where each channel contributes a Hankel block (Golyandina et al., 2015). The trajectory matrix has:
+### Choosing the window length *L*
 
-* One row per window position (approximately *T* − *L* + 1 rows, where *T* is the total number of time points)
-* One column per channel per lag: 14 channels × *L* lags = 14*L* columns
+The window should cover 2–3 full periods of the oscillation you want to detect. For this dataset, eye closure triggers **alpha activity at ~8–12 Hz** (period 83–125 ms). At 128 Hz, one alpha period is about 11–16 samples:
 
-With *L* = 32 lags and *T* = 14,980 time points, the trajectory matrix has approximately 14,949 rows and 448 columns. SVD is then applied to this larger matrix — the same algorithm as standard PCA, but on a matrix that encodes temporal context in its structure.
+| Lags | Duration | Notes |
+|-----:|--------:|-------|
+|    8 |    63 ms | Too short — less than one alpha cycle |
+|   16 |   125 ms | Borderline — one short alpha cycle |
+|   32 |   250 ms | **Recommended** — 2–3 alpha cycles, readable loadings |
+|   64 |   500 ms | Fine, but loadings plot becomes crowded |
 
-### The decomposition step
-
-SVD applied to the trajectory matrix produces components that are no longer simple spatial patterns — they are **spatiotemporal patterns**, capturing which channels co-vary and *how that co-variation evolves over the window*.
-
-**You should use the same preprocessing here as you did for standard PCA — Standard Scaling is appropriate.** GoPCA applies it to the original 14-channel time series first, then builds the trajectory matrix from the scaled data. The 448 columns of the trajectory matrix are never standardised independently — doing so would treat each lag as a separate, unrelated variable and destroy the temporal structure the embedding was designed to reveal.
-
-### The four SSA steps
-
-The full SSA algorithm consists of four steps (Golyandina, 2020):
-
-1. **Embedding** — construct the trajectory (Hankel) matrix using sliding windows
-2. **Decomposition** — apply SVD to decompose the trajectory matrix
-3. **Grouping** — combine components that represent related structures (e.g., a periodic pair)
-4. **Reconstruction** — transform selected components back into the time domain
-
-GoPCA's **Temporal PCA** method implements steps 1 and 2. This is the core of SSA: once the data is embedded, standard linear PCA/SVD on the trajectory matrix reveals the temporal structure.
-
-### Choosing the window length
-
-The window length *L* determines what temporal scale the analysis can resolve. There is no universal correct value — it depends on what structure you are trying to find. Three practical criteria are useful, and ideally all three should agree:
-
-**Criterion 1 — match the oscillation period (most important for EEG)**
-
-For oscillatory signals, *L* should cover at least one to two full periods of the frequency you want to detect (Golyandina, 2020). If the period is shorter than *L*, the sinusoidal pattern will be visible in the Temporal Loadings plot. If the period is longer than *L*, the window is too short to see the oscillation.
-
-For this dataset: eye closure triggers alpha activity at ~8–12 Hz (period 83–125 ms). At 128 Hz, one alpha period is about 11–16 samples. A window of **32 samples (250 ms)** covers 2–3 full alpha cycles — enough to make the oscillation clearly visible.
-
-**Criterion 2 — fraction of the series length**
-
-SSA theory (Broomhead & King, 1986; Golyandina et al., 2015) recommends *L* ≤ *T*/2, where *T* is the total number of time points — so that each window position has at least *L* "partner" positions. Beyond that, a common practical choice is *L* ≈ *T*/4 to *T*/5 for exploratory analysis. For 14,980 time points, this gives *L* ≈ 3,000–4,000 — far larger than needed for EEG, so for this dataset the oscillation-period criterion is the binding constraint.
-
-**Criterion 3 — computational and interpretability budget**
-
-The trajectory matrix has *T* − *L* + 1 rows and *p* × *L* columns, where *p* is the number of channels. Larger *L* gives more temporal context but increases memory use and makes the Temporal Loadings plot harder to read. For this dataset with *p* = 14:
-
-| Lags | Trajectory matrix columns | Duration | Notes |
-|-----:|--------:|--------:|-------|
-|    8 |   112 |    63 ms | Too short — less than one alpha cycle |
-|   16 |   224 |   125 ms | Borderline — one short alpha cycle |
-|   32 |   448 |   250 ms | **Recommended** — 2–3 alpha cycles, readable loadings |
-|   64 |   896 |   500 ms | Fine, but loadings plot becomes crowded |
-|  128 | 1,792 | 1,000 ms | Long window, slow rhythms, harder to interpret |
-
-> **Why not use *L* = *p* = 14 (same as the number of channels)?** That is sometimes suggested as a minimum for MSSA — it ensures the trajectory matrix has at least as many columns per lag block as the original data. But 14 samples at 128 Hz is only 110 ms, which covers less than one full alpha cycle. It is a floor, not a recommended value. For EEG alpha-band analysis, the oscillation-period criterion gives a much more informative result.
-
-> **General rule for other datasets**: start from the dynamics of interest. Convert the period of the slowest oscillation you want to detect into samples (period in seconds × sampling rate). Set *L* to 2–4 times that value. Then check that *L* ≪ *T*/2. If you have no prior knowledge of the oscillation frequency, try *L* = *T*/4 as a starting point and use the Scree Plot to check whether paired components appear.
-
-The key trade-off to keep in mind:
+> **General rule**: convert the period of the oscillation you want to detect into samples (period in seconds × sampling rate). Set *L* to 2–4 times that value.
 
 > Increasing the lag gives PCA memory. But too much memory can make the model harder to interpret.
 
 ---
 
-## Step 5: Switch to Temporal PCA in GoPCA
+## Step 5: Switch to Temporal PCA
 
-Change the **PCA Method** to **Temporal PCA**.
-
-A new option appears: **Number of Time Lags**. Set it to **32**.
-
-Keep **Preprocessing** set to **Standard Scaling** — the same choice we made for standard PCA. The same scale imbalance affects Temporal PCA, because preprocessing is applied to the original time series before the trajectory matrix is built.
-
-Keep the target column as `eye_state` for colouring.
+Change **PCA Method** to **Temporal PCA**. Set **Number of Time Lags** to **32**. Keep **Preprocessing** at **Standard Scaling** — the same scale imbalance affects Temporal PCA, since preprocessing is applied to the original time series before the trajectory matrix is built.
 
 Click **Go PCA**.
 
-GoPCA builds the trajectory matrix internally from the 14 EEG channels: each row of the original data is expanded into a window of 32 consecutive time steps, producing a trajectory matrix with 14 × 32 = 448 columns. SVD is then applied to this matrix. The result has approximately *T* − *L* + 1 = 14,949 score rows — one per window position.
+GoPCA builds the trajectory matrix (14 × 32 = 448 columns) and applies SVD. The result has approximately 14,949 score rows — one per window position.
 
 Open the **Scores Plot** and colour by `eye_state`.
 
-### Reading the scores plot as a trajectory — not a sample cloud
+### Reading the scores plot as a trajectory
 
-This is the most important conceptual shift from standard PCA to Temporal PCA, and it is especially challenging if your background is analytical chemistry or spectroscopy.
+This is the most important conceptual shift from standard PCA to Temporal PCA.
 
-In standard PCA on spectra or concentrations, each point in the scores plot is an **independent sample**. You look for clusters, outliers, and class separation. The positions of the points relative to each other is the story.
-
-In Temporal PCA, each point is a **moment in time**. Consecutive points are 7.8 ms apart and connected by the plotted line. You are not looking at a cloud of independent samples — you are watching the brain's state move through a 2D projection of a high-dimensional state space. The **path** is the story.
-
-> **Analogy from chemistry**: imagine plotting the NIR spectrum of a reaction mixture every second as the reaction proceeds. Each spectrum is a point in PC space, and the sequence of points traces the reaction pathway. Temporal PCA scores work exactly the same way — but on millisecond timescales.
+In standard PCA, each point is an **independent sample** — you look for clusters and class separation. In Temporal PCA, each point is a **moment in time**. Consecutive points are 7.8 ms apart. You are watching the brain's state move through a 2D projection of a high-dimensional state space. **The path is the story.**
 
 **How to read a phase-space trajectory:**
 
-1. **Identify distinct regions** — are there areas where the trajectory spends most of its time (attractors), and areas it passes through briefly (transitions)?
-2. **Colour tells you eye state** — which region is predominantly blue (open) and which is predominantly orange (closed)?
-3. **Tight loops = oscillations** — if the trajectory traces small, repeated circular or elliptical loops in one region, those loops are oscillations. The brain is oscillating at a fixed frequency and that oscillation traces a circle in the PC scores space.
-4. **Long sweeping arms = state transitions** — when the trajectory sweeps far from the central cluster, the brain is transitioning between states. The arm shape shows how the brain moves from one state to another.
+1. **Tight loops** — the trajectory traces small repeated loops: these are oscillations
+2. **Long sweeping arms** — the trajectory moves far from the central cluster: these are state transitions
+3. **Dense regions** — where the trajectory spends most time: stable states
 
-**Reading your specific scores plot:**
+**What to expect in this scores plot:**
 
-* The **dense central cluster** (both colors, right half of the plot) is where the brain spends most of its time. This is the "resting" state — mostly closed-eye periods.
-* The **long sweeping blue arms** extending to the left (very negative PC1) and upward (positive PC2) are the eyes-open periods. The trajectory sweeps far from center when eyes are open, reflecting a major change in the overall EEG amplitude pattern.
-* The arm shape — gradually moving out and then returning — shows that the brain takes several hundred milliseconds to transition fully into the eyes-open state and back.
-* **The key finding**: eyes-open → very negative PC1 scores. Since PC1's temporal loading is nearly flat (equal contribution at all lags), a large negative PC1 score means the overall EEG amplitude is suppressed in the direction captured by PC1. This is **alpha suppression**: when eyes open, alpha-band activity (8–12 Hz) drops sharply across the scalp, reducing the correlated EEG amplitude that PC1 captures.
+* A **dense central cluster** — mostly closed-eye periods (the resting state)
+* **Long sweeping arms** extending to very negative PC1 — eyes-open periods. When the eyes open, alpha-band activity drops sharply across the scalp (**alpha suppression**), which appears as a large negative PC1 score
+* The arm shape shows the brain taking several hundred milliseconds to transition fully into and out of the eyes-open state
 
 #### Questions:
 
-* Can you identify the dense central cluster (eyes-closed resting state) and the sweeping blue arms (eyes-open state)?
-* Hover over the tips of the leftmost blue arms — what time labels do they carry? Do they correspond to prolonged eyes-open periods in the recording?
-* Inside the dense cluster, can you find small repeated loops? Those loops are oscillations — the brain oscillating at a fixed rhythm while the eyes are closed.
-* Compare PC1 scores for open vs closed: which eye state is more negative?
+* Can you identify the dense central cluster (eyes closed) and the sweeping arms (eyes open)?
+* Inside the dense cluster, can you find small repeated loops? Those are oscillations — the brain's idle rhythms while the eyes are closed.
+* Which eye state produces more negative PC1 scores?
 
-**Note on available plots**: some plots available for SVD PCA are not available for Temporal PCA — specifically the **Loadings Plot**, **Biplot**, **3D Biplot**, **Circle of Correlations**, and **Diagnostic Plot**. These require loadings in the original variable space, which Temporal PCA does not produce directly (loadings live in the higher-dimensional trajectory space). Instead, two dedicated plots are available: **Temporal Loadings** and **Variable Importance**.
+> **Note on available plots**: the **Loadings Plot**, **Biplot**, **Circle of Correlations**, and **Diagnostic Plot** are not available for Temporal PCA — they require loadings in the original variable space, which Temporal PCA does not produce directly. The dedicated plots are **Temporal Loadings** and **Variable Importance**.
 
 ---
 
-## Step 6: Interpret the Temporal Loadings Plot
+## Step 6: The Temporal Loadings Plot
 
-Open the **Temporal Loadings** plot.
+Open the **Temporal Loadings** plot with **5 components** first, then increase to **15–20**.
 
-This plot is unique to Temporal PCA. It shows the **temporal eigenvectors** — the characteristic temporal shape of each principal component across the 32 lag positions.
+Each curve corresponds to one principal component. The horizontal axis is lag (0 to *L*−1); the vertical axis shows the loading of the most influential channel for that component across the window.
 
-Each curve in the plot corresponds to one principal component (PC1, PC2, PC3, ...). The horizontal axis is the lag index from 0 to *L*−1, and the vertical axis is the eigenvector value at that lag position.
+> Each curve is one line per *component* — not one line per EEG channel. For each component, GoPCA finds the single channel with the highest overall loading and plots its signed values across all lags. This preserves sign information, which is essential for reading temporal structure.
 
-> **Important**: these curves are *not* one line per EEG channel. They are one line per component, showing how the temporal pattern of that component unfolds across the window.
+**Three patterns to look for:**
 
-### Connecting loadings to scores — the same logic as standard PCA
+| Curve shape | Interpretation |
+|---|---|
+| **Nearly flat** | Global mean-shift — equal loading at all lags |
+| **Monotone ramp or S-shape** | Slow trend or step-response dynamics |
+| **Sinusoidal (multiple zero-crossings)** | Oscillatory rhythm |
 
-If you are used to spectroscopic PCA, you know the drill: a high score on PC1 means the sample looks like the PC1 loading pattern, scaled up. Temporal PCA uses exactly the same algebra — the difference is only what the loading *means*.
+**With only 5 components, do not expect oscillations.** The top components are dominated by slow eye-state modulation, which generates far more variance than fast rhythms:
 
-In standard PCA, the PC1 loading shows **which variables (channels) contribute**. In Temporal PCA, the PC1 temporal loading shows **which time lag positions contribute**, for the most influential channel. The score still tells you how strongly the current window matches that pattern — just that the pattern now has a shape in time, not only in space.
+* **PC1** (~53% variance): nearly flat — a global mean-shift component
+* **PC2–PC4**: gently sloped or arched — slow trend components
+* **PC5**: may show an S-shape — slow modulation, not yet a true oscillation
 
-**Concrete example from this dataset:**
+> **Why does slow structure dominate?** The eye-state shift lasts several seconds and affects all 14 channels simultaneously — this generates large variance. Alpha oscillations at 10 Hz are faster, more localised, and lower in variance. They are present, but outranked.
 
-PC1's temporal loading is nearly flat at about −0.05 across all 32 lags. That means PC1 fires equally regardless of *when* within the 250 ms window the signal is strong — it is sensitive only to the *overall average level* of the dominant channel. The very negative PC1 scores during eyes-open (the long blue arms in the scores plot) therefore mean: the overall EEG amplitude of the dominant channel is suppressed relative to the eyes-closed baseline. That is alpha suppression — the brain's dominant idle rhythm dropping when the eyes open.
-
-PC2's temporal loading is also nearly flat but slightly arched — it captures a slightly different amplitude pattern, explaining why the open-eye arms tilt upward in PC2 as well as leftward in PC1.
-
-> **Practical tip**: when a 20-component plot looks overwhelming, use the Plotly legend to isolate individual components. **Click a component name in the legend to hide it; double-click to show only that one.** Use double-click to isolate a single curve, then single-click to add others back one by one.
-
-### Where do these curves come from?
-
-When SVD is applied to the trajectory matrix it produces a V matrix (right singular vectors) of shape [*p*·*L* × rank]. The V matrix encodes, for every component, how much each (channel, lag) combination contributes. For each component, GoPCA identifies the **single most influential channel** — the one with the highest RMS loading across all lag positions — and displays the signed loadings of that channel across lags 0 to *L*−1 (Broomhead & King, 1986; Vautard & Ghil, 1989).
-
-This approach preserves the sign of the loadings, which is essential for reading temporal structure:
-
-* A curve that **oscillates as a sinusoid** — crossing zero, rising and falling — indicates a periodic component. The number of zero-crossings tells you the frequency: each full cycle produces two zero-crossings, so *k* zero-crossings over the window ≈ *k*/2 cycles ≈ (*k*/2) / (L/128) Hz.
-* A curve that is **monotone** (gradually rising or falling across the full window) indicates a slow trend component.
-* A curve that is **nearly flat** across all lags indicates a global mean shift — the component has equal loading strength at every lag position.
-
-> **Why show only the dominant channel?** In EEG, different brain regions often load with opposite signs on the same component (for example, frontal channels positive and occipital channels negative). If we averaged all channels, the positive and negative contributions would cancel and the result would appear flat — hiding the true temporal structure. Showing the single channel that contributes most avoids this cancellation and gives the clearest picture of the component's temporal shape.
-
-### What to expect in the top 5 components
-
-When you first open the Temporal Loadings plot with only 5 components displayed, **do not expect to see any oscillations**. The top 5 components for this dataset are dominated by slow, eye-state related modulation — not fast rhythms:
-
-* **PC1** (~53% variance): nearly flat — a global mean-shift component. The eye-state transition lasts seconds; 250 ms is far too short to see it changing, so the temporal loading is essentially horizontal.
-* **PC2–PC4**: gently sloped or arched curves — slow trend components capturing the gradual drift between open and closed eye states.
-* **PC5**: may show an S-shape (monotone crossing zero once) — this is a first-order trend, period ≈ 2×32/128 Hz ≈ 8 Hz... but with only one zero-crossing, it is more likely a slow modulation than a true oscillation.
-
-> **Why does slow structure dominate?** PCA ranks components by explained variance. The eye-state shift lasts several seconds and affects all 14 channels simultaneously — this generates a large amount of variance and dominates the top components. Alpha oscillations at 10 Hz are faster, more spatially localised, and contribute less total variance. They are real and present, but outweighed by the slow modulation in terms of explained variance.
-
-### Increasing the component count to find oscillations
-
-To find the oscillatory components, increase the number of **Components** computed in the GoPCA configuration panel to **15 or 20**, then click **Go PCA** again and re-open the Temporal Loadings plot.
-
-With 15–20 components visible, you will see three qualitatively different types of curve:
-
-| Curve shape | Example | Interpretation |
-|---|---|---|
-| Nearly flat | PC1 | Global mean, DC component |
-| Monotone (S-shape, no oscillation) | PC2–PC10 | Slow eye-state modulation |
-| Rapid sinusoid (multiple zero-crossings) | PC11+ | Oscillatory rhythm — alpha or beta band |
+Increase **Components** to **15 or 20** and click **Go PCA** again.
 
 #### Frequency from zero-crossings
 
-Count the number of times a curve crosses zero. Each pair of zero-crossings represents one complete oscillation cycle:
+Count the number of times a curve crosses zero. Each pair of zero-crossings = one complete cycle:
 
-* 2 zero-crossings over 32 lags → 1 cycle → 1 / (32/128) = **4 Hz** (theta)
+* 2 zero-crossings → 1 cycle → **4 Hz** (theta)
 * 4 zero-crossings → 2 cycles → **8 Hz** (alpha lower bound)
 * 5–6 zero-crossings → ~2.5 cycles → **~10 Hz** (alpha)
 * 10 zero-crossings → 5 cycles → **~20 Hz** (beta)
 
-Curves with many zero-crossings (8–10+) will look angular or triangular rather than smooth — this is normal at high frequencies where only a few samples exist per cycle. Smooth sinusoids indicate lower frequencies (alpha and below) where many samples span each cycle.
+Curves with many zero-crossings look angular rather than smooth — this is normal at high frequencies where only a few samples exist per cycle.
+
+> **Practical tip**: when a 20-component plot looks overwhelming, use the Plotly legend. **Click a component name to hide it; double-click to show only that one.** Add others back one by one.
 
 #### Questions:
 
-* Does PC1 appear nearly flat — consistent with a global component?
+* Does PC1 appear nearly flat?
 * Looking at components 11–15, can you identify any that cross zero multiple times?
 * Count the zero-crossings on the most rapidly oscillating curve — what frequency does this imply?
-* Are there any smooth, sinusoidal curves (as opposed to angular/jagged ones)? What frequency band would those represent?
 
 ---
 
@@ -420,92 +272,69 @@ Curves with many zero-crossings (8–10+) will look angular or triangular rather
 
 Open the **Scree Plot** alongside the Temporal Loadings plot.
 
-### Oscillatory modes come in pairs
+A fundamental property of SSA is that **oscillatory signals produce pairs of components** (Vautard & Ghil, 1989). SSA extracts two components per oscillation: one resembling a sine wave and one a cosine wave, offset by exactly one quarter of the period (90°).
 
-A fundamental property of SSA is that **oscillatory signals produce pairs of components** (Vautard & Ghil, 1989). When a periodic signal is present in the data, SSA extracts two components that together represent it: one resembling a sine wave and one resembling a cosine wave. They are in quadrature — offset by exactly one quarter of the oscillation period.
+**Two ways to identify a pair:**
 
-You can identify these pairs in two ways:
+1. **Scree Plot**: two adjacent bars of nearly equal height (e.g. both ~0.8%)
+2. **Temporal Loadings**: two curves at the same frequency, phase-shifted by ~90°
 
-1. **In the Scree Plot**: a pair of components will have nearly identical explained variance — two bars of the same height sitting side by side. Look for adjacent bars where both percentages are nearly equal (e.g., both showing 0.8%).
-2. **In the Temporal Loadings Plot**: the two components' curves will be similar sinusoids shifted by approximately 90° (a quarter-cycle phase offset). If one curve starts at a peak near lag 0, its paired partner will cross zero near lag 0 and reach its peak approximately one-quarter cycle later.
+Neither component alone gives the full picture. Together they encode one complete oscillation.
 
-Neither component alone gives the full picture. Together, they encode one complete oscillation at a specific frequency.
+**What to look for with 20 components:**
 
-### What to look for in the 15–20 component plot
+* **PC1** (53%): flat — global mean
+* **PC2–PC10** (declining): slow trend and modulation components
+* **PC11–PC14** (~0.8% each, nearly equal): the first oscillatory pairs — look for two adjacent components where one curve is a sine and the other is a cosine at the same frequency
+* **PC15–PC20** (~0.4–0.5%): higher-frequency pairs or noise
 
-With 20 components displayed, you should see a clear hierarchy of structure:
-
-* **PC1** (53%): flat — global mean component
-* **PC2–PC10** (declining, irregular): slow trend and modulation components
-* **PC11–PC14** (~0.8% each, nearly equal): the first oscillatory pairs. Look at these carefully in the Temporal Loadings plot — you should find two adjacent components where one curve looks like a sine and the other looks like a cosine of the same frequency.
-* **PC15–PC20** (~0.4–0.5% each): higher-frequency pairs or noise components
-
-A plateau of similarly-valued bars in the Scree Plot (like the 0.8% group) is a hint that oscillatory structure may be present — for a pure sinusoidal signal, SSA theory guarantees exactly equal eigenvalues for the pair. In practice, however, equal variance can also arise from coincidence between unrelated dynamics. **The definitive test is always the shape of the temporal loading curves.**
-
-#### Identifying a specific pair
-
-When inspecting components in the oscillatory region:
-
-1. Look at the Temporal Loadings curves for candidate components
-2. A true oscillatory pair has two curves that are sinusoidal at the **same frequency** and approximately **90° phase-shifted** from each other (one peaks where the other crosses zero)
-3. Similar % variance in the legend supports the identification, but is not sufficient on its own — two unrelated components can share the same variance by coincidence
-4. Count zero-crossings on either curve to estimate the frequency
-
-> **Example**: if PC12 and PC13 each explain 0.8% variance, and PC12 shows a curve that peaks at lag ~4 and troughs at lag ~20 (approximately 2.5 cycles over 32 lags), while PC13 shows the same frequency but shifted ~3–4 lags — these are an alpha-band (~10 Hz) oscillatory pair. GoPCA's scores for these two components together capture the full alpha oscillation in the data.
+**Definitive test**: always check the shape of the temporal loading curves. Equal variance alone is not sufficient — two unrelated components can share variance by coincidence.
 
 #### Questions:
 
-* How many components are needed to explain the bulk of the variance?
-* Do you see any adjacent pairs of components with nearly equal explained variance in the Scree Plot?
-* Identify the first oscillatory pair: which component numbers are they, what is their shared % variance, and how large is the phase shift between their Temporal Loadings curves?
-* What frequency does this pair correspond to?
-* How many complete oscillation periods fit within the 32-lag window for a 10 Hz signal at 128 Hz?
+* Do you see adjacent pairs of components with nearly equal explained variance in the Scree Plot?
+* Identify the first oscillatory pair: which component numbers, what % variance, and what frequency (from zero-crossings)?
+* Are the two curves approximately 90° phase-shifted — does one peak where the other crosses zero?
 
-👉 Quick calculation: a 10 Hz alpha wave has a period of about 12.8 samples at 128 Hz. Over 32 lags you would see approximately 2.5 complete cycles — enough for the sinusoidal pattern to be clearly visible in the Temporal Loadings plot.
+👉 A 10 Hz alpha wave has a period of ~12.8 samples at 128 Hz. Over 32 lags you see ~2.5 complete cycles — enough for the sinusoidal pattern to be clearly visible.
 
 ---
 
-## Step 8: Examine the Variable Importance plot
+## Step 8: Variable Importance
 
 Open the **Variable Importance** plot.
 
-This plot shows the aggregated contribution of each original EEG channel across all time lags, for each temporal principal component. Contributions are computed using root mean square (RMS) aggregation across lags: for each (channel, component) pair, GoPCA computes the square root of the mean squared loading across all *L* lag positions. This collapses the lag dimension and tells you which *channels* drive each component, regardless of when within the window.
+This heatmap shows the RMS loading of each EEG channel aggregated across all lags, for each component. It answers the question the Temporal Loadings plot cannot: *which channels* drive each component.
 
-The result is a heatmap: rows are principal components, columns are the 14 EEG channels. Brighter cells mean the channel contributes strongly to that component.
+> **Temporal Loadings** tells you the *temporal shape* of each component. **Variable Importance** tells you *where on the scalp* it originates. Together they give the full spatiotemporal picture.
 
 #### Questions:
 
-* Which EEG channels contribute most strongly to the first temporal component?
-* Do occipital electrodes (`O1`, `O2`) appear more or less important here than in standard PCA?
-* Is the pattern of variable importance similar across components, or does each component emphasise different channels?
-* For the oscillatory pair you identified in Step 7, do the two paired components show the same spatial pattern of channel importance? (They should — the two components represent the same oscillation, just phase-shifted in time, so the same channels should dominate both.)
-* Does the spatial pattern of important channels make physiological sense — for example, are occipital channels highlighted for alpha-wave related components?
-
-👉 Variable Importance answers the question standard Temporal Loadings cannot directly answer: *which channels* drive each component. The Temporal Loadings plot tells you *what temporal shape* the component has; Variable Importance tells you *where on the scalp* it originates. Together, they give the full spatiotemporal picture of each mode.
+* Which channels contribute most strongly to PC1?
+* For the oscillatory pair from Step 7: do the two paired components show the same spatial pattern of channel importance? (They should — they represent the same oscillation, just phase-shifted in time.)
+* Are occipital channels (`O1`, `O2`) prominent in the alpha-band components? Does that make physiological sense?
 
 ---
 
-## Step 9: Experiment with the Number of Time Lags
+## Step 9: Experiment with window length
 
-Change the **Number of Time Lags** and observe how the results shift. Try these values in order:
+Change **Number of Time Lags** and observe how the results shift. Try these values:
 
-* **8 lags** → 63 ms — very short memory, dominated by adjacent-sample correlations
-* **16 lags** → 125 ms — short temporal context, less than one full alpha cycle
-* **32 lags** → 250 ms — recommended default, 2–3 alpha cycles
-* **64 lags** → 500 ms — stronger temporal context, trajectory matrix grows larger
+* **8 lags** → 63 ms — less than one alpha cycle
+* **16 lags** → 125 ms — about one alpha cycle
+* **32 lags** → 250 ms — recommended: 2–3 alpha cycles
+* **64 lags** → 500 ms — more temporal context, wider trajectory matrix
 
-After each change, click **Go PCA** and examine the **Scores Plot**, **Temporal Loadings**, and **Scree Plot**.
+After each change, click **Go PCA** and compare the **Scores Plot**, **Temporal Loadings**, and **Scree Plot**.
 
 #### Questions:
 
-* Does the separation between `open` and `closed` change as *L* increases?
-* Do the Temporal Loading curves become smoother or more oscillatory with longer windows?
-* Does the number of components needed to explain most variance increase or decrease?
-* Is there a window length where the eye-state separation appears clearest?
-* At 16 lags (125 ms), is one full alpha cycle visible in the Temporal Loadings plot — or is the window too short?
-* At what point does the trajectory matrix become so wide that interpretation becomes difficult?
+* Does the eye-state separation in the scores plot change as *L* increases?
+* Do the temporal loading curves become smoother and more oscillatory with longer windows?
+* At 16 lags (125 ms), is one full alpha cycle visible — or is the window too short?
+* At what lag does interpretation start to become difficult?
 
-👉 The key trade-off: a short window cannot see a full oscillation cycle, so components reflect adjacent-sample correlations rather than meaningful rhythms. A very long window adds more temporal context, but makes the trajectory matrix much wider and the components harder to interpret. Too much memory can obscure structure rather than reveal it.
+👉 A short window cannot see a full oscillation cycle — components reflect adjacent-sample correlations rather than meaningful rhythms. A very long window adds temporal context but makes the trajectory matrix wider and components harder to interpret.
 
 ---
 
@@ -513,38 +342,28 @@ After each change, click **Go PCA** and examine the **Scores Plot**, **Temporal 
 
 After this exploration, you should be able to:
 
-* Explain why EEG data is a multivariate time series and why rows are not independent
-* Understand why standard PCA ignores temporal order — and what this means in practice
-* Diagnose a scale problem from the GoPCA warning and the Loadings Plot, and make a deliberate choice between covariance PCA (unscaled) and correlation PCA (standardised)
-* Describe the SSA embedding step: sliding windows, trajectory matrix, window length *L*
-* Interpret the **Temporal Loadings** plot: one curve per component, showing the dominant channel's signed temporal eigenvector across lag positions — not one curve per channel
-* Recognise the three curve types: flat (global component), monotone (slow trend), sinusoidal (oscillatory mode)
-* Estimate oscillation frequency from the number of zero-crossings in a Temporal Loadings curve
-* Recognise **paired oscillatory components** in the Scree Plot (equal variance) and Temporal Loadings Plot (90°-phase-shifted sinusoids)
-* Understand that the top components are dominated by slow eye-state modulation, and that fast rhythms (alpha, beta) appear in lower-ranked components
-* Use **Variable Importance** to identify which channels drive each temporal component, and verify that paired components share the same spatial pattern
-* Make an informed choice of window length based on the sampling rate and the dynamics of interest
-
-You should also recognise the trade-off:
-
-* Standard SVD PCA is simple, fast, and easy to interpret — each loading is one channel
-* Temporal PCA reveals rhythmic and dynamic structure invisible to standard PCA, but the trajectory matrix is much larger and the components require the Temporal Loadings plot and Variable Importance to interpret together
+* Explain why EEG is a multivariate time series and why rows are not independent samples
+* Diagnose a scale problem from the GoPCA warning and fix it with Standard Scaling
+* Identify and remove extreme outliers using the Diagnostic Plot and lasso tool
+* Explain the SSA embedding step: sliding windows, trajectory matrix, window length *L*
+* Interpret the Temporal Loadings plot: one curve per component showing the dominant channel's signed temporal eigenvector — not one curve per channel
+* Recognise the three curve types: flat (global), monotone (slow trend), sinusoidal (oscillation)
+* Estimate oscillation frequency from the number of zero-crossings
+* Identify **paired oscillatory components** from the Scree Plot (equal variance) and Temporal Loadings (90° phase shift)
+* Use **Variable Importance** to identify which channels drive each component, and verify that paired components share the same spatial pattern
 
 ---
 
 ## Final Reflection
 
-> Standard PCA treats the EEG table as a collection of independent snapshots. Temporal PCA, by embedding the data into sliding windows, gives PCA access to *sequences* — and the resulting components can represent oscillations and temporal dynamics rather than just spatial correlations. The same SVD algorithm is used in both cases; the embedding step is what makes the difference.
+> Standard PCA treats the EEG table as a collection of independent snapshots. Temporal PCA, by embedding the data into sliding windows, gives PCA access to *sequences* — and the resulting components represent oscillations and temporal dynamics rather than just spatial correlations. The same SVD algorithm is used in both cases; the embedding step is what makes the difference.
 >
 > In SSA, oscillatory signals leave a characteristic fingerprint: a pair of components with equal singular values, 90°-phase-shifted temporal eigenvectors, and the same spatial pattern of channel importance. Learning to recognise this fingerprint is the core skill of temporal dimensionality reduction.
 
 #### Questions:
 
-* Why does shuffling the rows of an EEG table leave standard PCA unchanged, but break Temporal PCA?
-* The SSA algorithm has four steps: embedding, decomposition, grouping, and reconstruction. GoPCA implements the first two. What would you gain from the grouping and reconstruction steps — and what tasks would those enable?
-* A window length of 32 at 128 Hz covers 250 ms. Alpha oscillations have a period of roughly 100 ms. What window length would you choose if you were primarily interested in theta band activity (4–8 Hz, period 125–250 ms)?
+* The SSA algorithm has four steps: embedding, decomposition, grouping, and reconstruction. GoPCA implements the first two. What would you gain from grouping and reconstruction — and what tasks would those enable?
 * Could the Temporal PCA scores be used as input features to a classifier predicting `eye_state`? What might be the advantage compared to using the raw EEG values?
-* If you found a paired component (PC12 + PC13) corresponding to alpha oscillations, and PC1 captured the eye-state shift, which components would you group together before reconstruction in a full SSA analysis?
 
 ---
 
