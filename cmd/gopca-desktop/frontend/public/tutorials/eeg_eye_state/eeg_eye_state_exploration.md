@@ -2,7 +2,7 @@
 
 ## Background
 
-Electroencephalography (EEG) measures electrical activity at the scalp via small electrodes. Each electrode records a voltage signal reflecting the activity of neurons underneath, sampled many times per second.
+[Electroencephalography](https://en.wikipedia.org/wiki/Electroencephalography) (EEG) measures electrical activity at the scalp via small electrodes. Each electrode records a voltage signal reflecting the activity of neurons underneath, sampled many times per second.
 
 This dataset contains a 117-second recording from **one subject** using the **Emotiv EEG Neuroheadset**, with 14 electrodes placed according to the international 10–20 system:
 
@@ -14,7 +14,7 @@ The figure below shows the scalp positions of all 14 electrodes, viewed from abo
 
 ![EEG electrode positions](./eeg_electrode_map.png)
 
-The sampling rate is **128 Hz** — one measurement every 7.8 ms, giving approximately **14,980 rows** in total. During the recording the subject alternately opened and closed their eyes. Eye state was determined from video and added as a label:
+The sampling rate is **128 Hz** — one measurement every 7.8 ms, giving approximately **14,980 rows** in total. During the recording the subject alternately opened and closed his or her eyes. Eye state was determined from video and added as a label:
 
 * `eye_state = open` — eyes open
 * `eye_state = closed` — eyes closed
@@ -379,4 +379,4 @@ Golyandina, N., Korobeynikov, A., Shlemov, A., & Usevich, K. (2015). Multivariat
 
 Golyandina, N. (2020). Particularities and commonalities of singular spectrum analysis as a method of time series analysis and signal processing. *WIREs Computational Statistics*, 12(4), e1487. https://doi.org/10.1002/wics.1487
 
-Roesler, O., & Suendermann, D. (2013). A first step towards eye state prediction using EEG. In *Proceedings of the AIHLS 2013*. UCI Machine Learning Repository. https://archive.ics.uci.edu/dataset/264/eeg+eye+state
+Roesler, O., & Suendermann, D. (2013). A first step towards eye state prediction using EEG. In *Proceedings of the AIHLS 2013*. UCI Machine Learning Repository. https://doi.org/10.24432/C57G7J
