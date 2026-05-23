@@ -27,7 +27,7 @@ The original research motivation was classification: can EEG alone predict eye s
 
 ## This dataset versus the others
 
-In the previous tutorial, the Swiss Roll showed us that the *shape* of the data matters. Here, the challenge is different: the structure is about **time**.
+In a previous tutorial, the Swiss Roll showed us that the *shape* of the data matters. Here, the challenge is different: the structure is about **time**.
 
 | | Swiss Roll | EEG Eye State |
 |---|---|---|
@@ -92,10 +92,12 @@ Change **Preprocessing** to **Standard Scaling**. Click **Go PCA** again and re-
 
 Now open the **Scores Plot (PC1 vs PC2)** and colour by `eye_state`.
 
+The plot will look almost empty — just two or three isolated points with what appears to be a single dot at the origin. **Do not be fooled.** Use the **zoom tool** (box-select or scroll wheel) to zoom into the region near the origin. You will find that the "dot" is in fact a dense cluster of ~14,976 observations squeezed into a tiny area because the axis range is dominated by the extreme outliers far from the centre.
+
 #### Questions:
 
-* Do you see most samples clustered near the origin with only a handful of extreme outliers far away?
-* Hover over the extreme outliers — what time labels do they carry? Do they match the artifact times mentioned above (~7 s, 81 s, 90 s, 103 s)?
+* After zooming in to the origin cluster, can you see the ~14,976 normal time points?
+* Hover over the extreme outliers at the edges of the unzoomed plot — what time labels do they carry? Do they match the artifact times mentioned above (~7 s, 81 s, 90 s, 103 s)?
 
 👉 This is **outlier domination**: standard scaling equalises column variances but does not protect against extreme rows. The four artifact rows have values 70–150× the normal range, so PCA points both PC1 and PC2 towards them — collapsing the remaining ~14,976 normal time points into a tiny cluster near the origin.
 
