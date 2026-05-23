@@ -49,10 +49,6 @@ Click the **EEG Eye State** sample dataset button to load the data.
 
 The `time` column is used as row identifiers and excluded from PCA. The 14 EEG channel columns are the input variables. The `eye_state` column is automatically recognised as categorical and available for plot colouring.
 
-In the PCA configuration panel, set:
-
-* **PCA Method** → SVD
-* **Preprocessing** → leave at the default (mean centering only) for now
 
 #### Question:
 
@@ -63,6 +59,11 @@ In the PCA configuration panel, set:
 ---
 
 ## Step 2: Run standard PCA — scale problem and outliers
+
+In the PCA configuration panel, set:
+
+* **PCA Method** → SVD
+* **Preprocessing** → leave at the default (mean centering only) for now
 
 Click **Go PCA**.
 
