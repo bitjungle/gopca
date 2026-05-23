@@ -271,18 +271,22 @@ This pairing occurs because a sine wave requires both a sine and a cosine compon
 
 **To actually find the oscillatory pair, switch to L = 40:**
 
-Run Temporal PCA with **L = 40** and **10 components**. Now the lag window spans one full oscillation period. The pair should become clearly visible:
+Run Temporal PCA with **L = 40** and **10 components**. Now the lag window spans one full oscillation period. Open the **Temporal Loadings Plot**. The oscillatory pair should become clearly visible as two adjacent components whose loading curves are both sinusoidal and approximately 90° phase-shifted from each other:
 
-* Two adjacent components with nearly equal variance
-* One with a cosine-shaped temporal loading (starts high, passes through zero, goes negative)
-* One with a sine-shaped temporal loading (starts near zero, rises or falls monotonically across the window)
-* Both dominated by the same process variable — `F_L_min` (feed flow rate)
+* Two adjacent components with nearly equal explained variance
+* One with a cosine-shaped temporal loading — one full wave across the 40-lag window, peaking near the centre
+* One with a sine-shaped temporal loading — also one full wave, but shifted approximately 10 lags (= 90° for a 40-minute period) relative to the cosine component
+
+> **Sign convention:** SSA eigenvectors have arbitrary sign — GoPCA may flip the sign of a loading curve relative to what you expect. A cosine that "starts high, passes through zero, and goes negative" and one that "starts low, rises to a peak, and returns to low" are the same component with opposite sign. Focus on the *shape* (one full sinusoidal wave) and the *phase offset between the two curves*, not on whether a curve starts positive or negative.
+
+To identify which process variable drives this pair, cross-reference with the **Temporal Variable Importance** heatmap from Step 5a. The Temporal Loadings plot shows one aggregated curve per component with no variable labels — it cannot tell you which variable dominates on its own.
 
 #### Questions (at L = 40):
 
-* Can you now identify the oscillatory pair? Which component numbers are they, and what are their explained variances?
-* Are the temporal loading curves of the two components approximately 90° shifted from each other?
-* Which variable dominates the loading of this pair? Does it match your expectation from the simulation?
+* Can you identify the oscillatory pair? Which component numbers are they, and what are their explained variances?
+* Estimate the oscillation period from the zero-crossings of the cosine component: if it crosses zero at lag *a* and lag *b*, the half-period = *b* − *a*, and the full period = 2(*b* − *a*) minutes. Does this match the 40-minute flow oscillation designed into the simulation?
+* Are the two loading curves approximately 90° shifted from each other? (For a 40-minute period, 90° = 10 lags.)
+* Check the Variable Importance heatmap for the component numbers you identified. Which variable has the highest importance for this pair? Does it match your expectation from the simulation?
 * Compare the Scree Plot at L = 40 to L = 10. Why does the explained variance of the top components drop when L increases?
 
 ---
