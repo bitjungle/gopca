@@ -6,19 +6,21 @@ In a chemical plant, sensors log dozens of measurements every minute — tempera
 
 This dataset was simulated from a **non-isothermal Continuous Stirred-Tank Reactor (CSTR)** running an irreversible first-order exothermic reaction:
 
-> **What does non-isothermal mean?** In reactor modelling, *isothermal* means the temperature is assumed constant — a useful simplification when cooling is perfect and instantaneous. *Non-isothermal* means the reactor temperature is a genuine dynamic state variable: it rises and falls in response to changes in feed, flow, or cooling, and must be described by its own differential equation (the energy balance). Having a PI controller does *not* make the reactor isothermal — the controller is imperfect. It acts through the coolant temperature, which has physical limits, responds with a time lag, and can saturate entirely during a fault. As a result, the reactor temperature still fluctuates, and during the cooling fault it drifts substantially away from setpoint. The word *non-isothermal* tells you how the model is built; the PI controller tells you how the plant tries — imperfectly — to manage the consequences.
+> **What does non-isothermal mean?** In reactor modelling, *isothermal* means the temperature is assumed constant — a useful simplification when cooling is perfect and instantaneous. *Non-isothermal* means the reactor temperature is a genuine dynamic state variable: it rises and falls in response to changes in feed, flow, or cooling, and must be described by its own differential equation (the energy balance). Having a temperature controller does *not* make the reactor isothermal — the controller is imperfect. It acts through the coolant temperature, which has physical limits, responds with a time lag, and can saturate entirely during a fault. As a result, the reactor temperature still fluctuates, and during the cooling fault it drifts substantially away from setpoint. The word *non-isothermal* tells you how the model is built; the temperature controller tells you how the plant tries — imperfectly — to manage the consequences.
 
 $$\text{A} \rightarrow \text{B} \quad (\text{exothermic})$$
 
-> **A chemistry note:** This is a *unimolecular* first-order reaction — A spontaneously converts into B without requiring a second reactant. Real examples include thermal decomposition, isomerisation, and cracking reactions. The key physics is the **Arrhenius temperature dependence** of the rate constant, $k(T) = k_0\, e^{-E/RT}$: higher temperature accelerates the reaction, releasing more heat, which drives the temperature higher still. That thermal feedback is what makes the CSTR a classic system for studying nonlinear process dynamics. No catalyst is modelled explicitly — the effect of any catalyst is absorbed into the kinetic pre-factor $k_0$.
+> **A chemistry note:** This is a *unimolecular* first-order reaction — A spontaneously converts into B without requiring a second reactant. Real examples include thermal decomposition, isomerisation, and cracking reactions. The key physics is the [Arrhenius temperature](https://en.wikipedia.org/wiki/Arrhenius_equation) dependence of the rate constant, $k(T) = k_0\, e^{-E/RT}$: higher temperature accelerates the reaction, releasing more heat, which drives the temperature higher still. That thermal feedback is what makes the CSTR a classic system for studying nonlinear process dynamics. No catalyst is modelled explicitly — the effect of any catalyst is absorbed into the kinetic pre-factor $k_0$.
 
 A CSTR is one of the most studied systems in chemical engineering [Uppal, Ray & Poore, 1974]. Reactant A flows in continuously, the reaction occurs inside the tank, and product B flows out. Because the reaction releases heat, a coolant circuit controls the reactor temperature.
 
-> **Rich nonlinear dynamics:** Uppal, Ray & Poore (1974) showed analytically that, depending on the Damköhler number and the heat of reaction, a CSTR can have one or three steady states, and can exhibit *intrinsic* self-sustaining oscillations (limit cycles) arising purely from the Arrhenius thermal feedback — with no external forcing whatsoever. The simulation in this tutorial is tuned to a single stable operating point, so you will not encounter multiple steady states here. The 40-minute oscillation you will identify in Temporal PCA is an *externally imposed* feed flow disturbance, not an Arrhenius-driven limit cycle. In a real plant operating near a limit cycle boundary, oscillations would persist even after the external disturbance was removed — a substantially harder fault scenario to diagnose.
+> **A note on the feed stream:** Although the model tracks only the reacting species A and product B explicitly, the reactor is assumed to contain a bulk liquid phase — typically a solvent such as water — that carries heat and dissolved reactants through the system. The solvent is not included as a separate state variable because its concentration changes negligibly compared to the reacting species. Its thermal effects appear implicitly through parameters such as the heat capacity and the overall heat-transfer coefficient `heat_transfer_UA_kJ_min_K`.
+
+> **Rich nonlinear dynamics:** Uppal, Ray & Poore (1974) showed analytically that, depending on the [Damköhler number](https://en.wikipedia.org/wiki/Damköhler_numbers) and the heat of reaction, a CSTR can have one or three steady states, and can exhibit *intrinsic* self-sustaining oscillations (limit cycles) arising purely from the Arrhenius thermal feedback — with no external forcing whatsoever. The simulation in this tutorial is tuned to a single stable operating point, so you will not encounter multiple steady states here. The 40-minute oscillation you will identify in Temporal PCA is an *externally imposed* feed flow disturbance, not an Arrhenius-driven limit cycle. In a real plant operating near a limit cycle boundary, oscillations would persist even after the external disturbance was removed — a substantially harder fault scenario to diagnose.
 
 ### The PI temperature controller
 
-A proportional-integral (PI) controller manipulates the coolant temperature T_c to keep the reactor temperature T near the setpoint (365 K). When T rises above setpoint, the controller requests colder coolant; when it falls, warmer coolant. Anti-windup logic prevents the controller from accumulating a large integral error when the coolant valve is fully open or closed.
+A [proportional-integral (PI) controller](https://en.wikipedia.org/wiki/PID_controller#PI_controller) manipulates the coolant temperature T_c to keep the reactor temperature T near the setpoint (365 K). When T rises above setpoint, the controller requests colder coolant; when it falls, warmer coolant. Anti-windup logic prevents the controller from accumulating a large integral error when the coolant valve is fully open or closed.
 
 This controller introduces **closed-loop dynamics** into the data — disturbances cause transients, the controller responds, and variables return to steady state. Temporal PCA can capture all of this.
 
@@ -29,7 +31,7 @@ This controller introduces **closed-loop dynamics** into the data — disturbanc
 
 ### The dataset
 
-The simulation runs for **800 minutes** at 1-minute sampling, producing **801 observations** across **12 process variables**:
+The simulation runs for **800 minutes** at a 1-minute sampling rate, producing **801 observations** across **12 process variables**:
 
 | Column | Symbol | Units | Description |
 |---|---|---|---|
@@ -98,22 +100,24 @@ Before introducing time lags, run a standard SVD PCA first. This lets you see ex
 
 Load `cstr_temporal_pca.csv` into GoPCA. Set:
 
-* **Preprocessing** → **Standard Scale**
 * **Number of Components** → **5**
 * **PCA Method** → **SVD**
+* **Preprocessing** → **Standard Scale**
 
 Click **Go PCA**.
 
 > **Why Standard Scale?** The 12 variables have completely different units and magnitudes — temperatures in the hundreds of Kelvin, flow rates in hundreds of L/min, concentrations below 1 mol/L, heat duty in thousands of kJ/min. Without scaling, PCA would be dominated by whichever variable has the largest numerical variance, not the most process-relevant variation.
 
-Open the **Scores Plot** (color by `regime`) and the **Loadings Plot**.
+Open the **Biplot** (color by `regime`).
+
+> **Reading a biplot:** A biplot overlays the scores (one point per observation, coloured by regime) and the loadings (one arrow per variable) in the same panel. The direction and length of each arrow show how strongly that variable contributes to each PC — a long arrow means high variance explained. The angle between two arrows approximates the correlation between those variables: arrows pointing the same way are positively correlated; opposite arrows are negatively correlated. Note that the score points and the loading arrows live in different coordinate scales, so the absolute distance between a score point and an arrowhead is not directly meaningful.
 
 #### Questions:
 
 * Can you identify clusters corresponding to normal operation, feed disturbances, the cooling fault, and the oscillation regime?
-* PC1 typically captures **overall reaction intensity** — which variables have the largest loadings? You would expect `T_K`, `reaction_rate_mol_L_min`, and `conversion_fraction` to dominate, since they are all tightly coupled through the energy and mass balances at steady state.
-* Look at PC2. It is dominated by `F_L_min` (strongly negative) and `residence_time_min` (strongly positive). These two are mathematically coupled — τ = V/F, so they are exact inverses of each other. PC2 is essentially a **flow rate axis**. Does this explain why the oscillation period scatters along PC2 rather than PC1?
-* The **cooling fault** should appear far from the normal cluster along PC1. If it does, check the loadings — which variables drive this separation? Does the large offset compress the rest of the score plot into a small region on the left side?
+* PC1 typically captures **overall reaction intensity** — which loading arrows point most strongly along PC1? You would expect `T_K`, `reaction_rate_mol_L_min`, and `conversion_fraction` to dominate, since they are all tightly coupled through the energy and mass balances at steady state. Do the cooling fault points lie in the direction these arrows point?
+* Look at PC2. It is dominated by `F_L_min` (strongly negative — arrow pointing down) and `residence_time_min` (strongly positive — arrow pointing up). These two are mathematically coupled — τ = V/F, so they are exact inverses of each other. PC2 is essentially a **flow rate axis**. Does this explain why the oscillation period scatters along PC2 rather than PC1?
+* The **cooling fault** should appear far from the normal cluster along PC1. If it does, the biplot lets you read the cause directly: which loading arrows point toward the cooling fault cluster? Does the large offset compress the rest of the score plot into a small region on the left side?
 * Now look at the **flow oscillation** period. Rather than forming a compact cluster, it scatters broadly across the full vertical range of the plot. Why? SVD PCA has no sense of time — each measurement at minute 362 is treated as an independent sample, not as part of a repeating cycle. The oscillation appears as diffuse scatter rather than a recognisable structure.
 
 👉 SVD PCA sees the process at a **single instant in time**. It can detect large regime shifts (the cooling fault stands out clearly), but it cannot understand *how* a disturbance propagates through the process, *how quickly* the controller responds, or *whether* a periodic signal is present. The oscillation period looks like noise. That is the key limitation — and what Temporal PCA is designed to fix.
@@ -122,12 +126,17 @@ Open the **Scores Plot** (color by `regime`) and the **Loadings Plot**.
 
 ## Step 2: Switch to Temporal PCA
 
-Now change the configuration to:
+Keep **Preprocessing → Standard Scale** from Step 1, and change:
 
 * **Lags (L)** → **10**
 * **Number of Components** → **8**
+* **Preprocessing** → **Standard Scale**
 
 Click **Go Temporal PCA**.
+
+> **Why keep Standard Scale?** GoPCA applies column-wise preprocessing to the original 12 variables *before* constructing the lag-embedded trajectory matrix. This means each lagged copy of a variable (e.g. `T_K` at lag 0, lag 1, …, lag 10) inherits the same scale as the original — which is exactly what you want. A change in `T_K` one minute ago should carry the same weight as a change right now. The mixed-unit argument from Step 1 applies equally here: without Standard Scale, the high-magnitude variables would dominate the trajectory matrix just as they would a standard PCA.
+>
+> **A note on industrial practice:** Here, Standard Scale is computed on all 800 minutes of data, including the fault period. In a real plant application you would compute the mean and standard deviation from the *normal-operation baseline only* (minutes 0–120), then apply those fixed scale factors to the full record. For this dataset the difference is small — the fault period is only 20% of the record — but in a real monitoring system this distinction matters: the model should describe what "normal" looks like, not what "fault" looks like.
 
 ### What GoPCA is doing under the hood
 
@@ -202,24 +211,41 @@ With Row Index coloring you can immediately see, for example, that the diagonal 
 
 ## Step 5: The Temporal Loadings — what dynamics are in each component?
 
+This step uses two complementary plots. Start with the **Temporal Variable Importance** plot to find out which variables drive which components, then switch to the **Temporal Loadings Plot** to read the lag structure of those components.
+
+### 5a: Identify dominant variables with Temporal Variable Importance
+
+Open the **Temporal Variable Importance** plot. This heatmap shows the RMS loading of each variable aggregated across all lags, giving one importance value per (component, variable) cell. Bright cells identify the dominant variable(s) for each component.
+
+#### Questions:
+
+* Which component is most strongly driven by `Tf_K` (feed temperature)? This component captures the feed temperature step disturbance.
+* Which components are dominated by `F_L_min` (feed flow) and `residence_time_min`? These two variables are mathematically linked — τ = V/F — so they tend to appear together.
+* PC1 loads all variables at roughly equal importance. What does that tell you about what PC1 represents?
+* `cooling_duty_kJ_min` appears prominently in one or two components. Which ones? This variable carries the fault signature.
+
+### 5b: Read the lag structure with Temporal Loadings
+
 Open the **Temporal Loadings Plot**. Display at least 8 components.
 
-Each panel shows how one component's loading evolves across lags 0 to L. The x-axis is lag (minutes into the past); the y-axis shows the loading of the dominant channel for that component.
+Each curve shows how one component's loading evolves across lags 0 to L. The x-axis is lag (minutes into the past); the y-axis shows the loading magnitude at that lag. The Variable Importance plot told you *which variables matter*; this plot tells you *when in the past* they matter most.
 
 **Three patterns to look for:**
 
 | Shape | Interpretation |
 |---|---|
 | **Flat / near-zero** | No temporal structure — component captures instantaneous variance |
-| **Monotone decay** | Exponential response — controller or first-order process dynamics |
+| **Monotone ramp** | Step-response or slow drift — controller or first-order process dynamics |
 | **Sinusoidal oscillation** | Periodic variation — oscillatory process behaviour |
 
 #### Questions:
 
-* Which components show a monotone decaying shape? What time constant does the decay suggest (how many lags before it flattens)?
-* Can you find any components with a sinusoidal shape? These represent the 40-minute flow oscillation.
-* Compare the decay time constant to the PI integral time τ_I = 8 minutes. Do they match?
-* Look carefully at components dominated by `Tc_out_K` (coolant temperature) versus `T_K` (reactor temperature). Do their loading curves peak at different lags? This is **delayed thermal coupling**: the reactor has thermal inertia, so a change in coolant temperature takes several minutes to propagate into a change in reactor temperature. The lag axis makes this sequence visible — something a single-snapshot PCA cannot show.
+* Which components show a monotone ramp shape? What time constant does the ramp suggest?
+* Compare the ramp time constant to the PI integral time τ_I = 8 minutes. Do they match?
+* Can you find any components with a curved or peaked loading curve? This is a partial trace of the 40-minute oscillation — with only L = 10 lags you are seeing less than one quarter of one cycle, so a clean sinusoid is not expected.
+* Pick the component that the Variable Importance heatmap identified as dominated by `Tf_K`. Does the temporal loading curve for that component rise, fall, or stay flat across the 10 lags? The shape reflects the transient that the feed temperature step creates.
+
+> **Delayed thermal coupling — a closer look:** The reactor has thermal inertia: a change in coolant temperature (`Tc_out_K`) takes several minutes to propagate into a change in reactor temperature (`T_K`). This coupling is physically real, but at L = 10 it is subtle — both variables load broadly across many components at this lag length. To make the delay clearly visible, a longer window (L = 20–30) is needed so that the cause (`Tc_out_K` changing) and the effect (`T_K` responding) are separated by enough lags to be distinguishable. Keep this in mind when you compare lag settings in Step 8.
 
 > **Hint:** A sinusoidal temporal loading pattern means that component is tracking a variable that oscillates in time. The period of the oscillation can be estimated from the zero-crossings: if you count k zero-crossings over L lags, the oscillation period ≈ 2L/k minutes. For a 40-minute oscillation with L = 10 lags, you will see only about **one quarter of a cycle** (10/40 = 0.25) — far too little to recognise a clean sinusoid. Try L = 40 to resolve the full period.
 
@@ -240,23 +266,27 @@ This pairing occurs because a sine wave requires both a sine and a cosine compon
 
 **What you will actually see at L = 10:**
 
-- Two components with equal explained variance (e.g. both 3.1%) — but with temporal loading curves that are not sinusoidal. One may be a linear ramp, the other nearly flat. These are slow trend components capturing the step disturbances and controller response, not the flow oscillation.
-- One or two higher-numbered components (low variance, <1%) with slightly curved or V-shaped loading curves — partial traces of the oscillation, but too compressed to identify clearly.
+- The top components (PC1–PC4) capture the dominant steady-state variance and step-response dynamics. Their temporal loading curves show monotone ramps or flat lines — no sinusoidal structure.
+- One or two lower-ranked components (low variance, <1%) with slightly curved or peaked loading curves — partial traces of the oscillation, but the window is too short to decompose it into a sine/cosine pair. Do not expect equal explained variance here: at L = 10 the oscillation is not fully resolved, so the equal-eigenvalue property of a pure sinusoidal SSA pair does not hold.
 
 **To actually find the oscillatory pair, switch to L = 40:**
 
-Run Temporal PCA with **L = 40** and **10 components**. Now the lag window spans one full oscillation period. The pair should become clearly visible:
+Run Temporal PCA with **L = 40** and **10 components**. Now the lag window spans one full oscillation period. Open the **Temporal Loadings Plot**. The oscillatory pair should become clearly visible as two adjacent components whose loading curves are both sinusoidal and approximately 90° phase-shifted from each other:
 
-* Two adjacent components with nearly equal variance
-* One with a cosine-shaped temporal loading (starts high, passes through zero, goes negative)
-* One with a sine-shaped temporal loading (starts near zero, rises or falls monotonically across the window)
-* Both dominated by the same process variable — `F_L_min` (feed flow rate)
+* Two adjacent components with nearly equal explained variance
+* One with a cosine-shaped temporal loading — one full wave across the 40-lag window, peaking near the centre
+* One with a sine-shaped temporal loading — also one full wave, but shifted approximately 10 lags (= 90° for a 40-minute period) relative to the cosine component
+
+> **Sign convention:** SSA eigenvectors have arbitrary sign — GoPCA may flip the sign of a loading curve relative to what you expect. A cosine that "starts high, passes through zero, and goes negative" and one that "starts low, rises to a peak, and returns to low" are the same component with opposite sign. Focus on the *shape* (one full sinusoidal wave) and the *phase offset between the two curves*, not on whether a curve starts positive or negative.
+
+To identify which process variable drives this pair, cross-reference with the **Temporal Variable Importance** heatmap from Step 5a. The Temporal Loadings plot shows one aggregated curve per component with no variable labels — it cannot tell you which variable dominates on its own.
 
 #### Questions (at L = 40):
 
-* Can you now identify the oscillatory pair? Which component numbers are they, and what are their explained variances?
-* Are the temporal loading curves of the two components approximately 90° shifted from each other?
-* Which variable dominates the loading of this pair? Does it match your expectation from the simulation?
+* Can you identify the oscillatory pair? Which component numbers are they, and what are their explained variances?
+* Estimate the oscillation period from the zero-crossings of the cosine component: if it crosses zero at lag *a* and lag *b*, the half-period = *b* − *a*, and the full period = 2(*b* − *a*) minutes. Does this match the 40-minute flow oscillation designed into the simulation?
+* Are the two loading curves approximately 90° shifted from each other? (For a 40-minute period, 90° = 10 lags.)
+* Check the Variable Importance heatmap for the component numbers you identified. Which variable has the highest importance for this pair? Does it match your expectation from the simulation?
 * Compare the Scree Plot at L = 40 to L = 10. Why does the explained variance of the top components drop when L increases?
 
 ---

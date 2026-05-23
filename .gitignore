@@ -42,8 +42,10 @@ docs/devel/milestone_*.md
 
 # Local documentation
 docs_tmp/
-# Keep reference summaries but ignore PDFs
+# Keep reference summaries but ignore PDFs and working notes (md/png)
 docs/references/*.pdf
+docs/references/*.md
+docs/references/*.png
 !docs/references/_summaries.txt
 
 # Build artifacts
@@ -56,6 +58,7 @@ cmd/gocsv/build/bin/
 # Legacy build directory if it exists elsewhere
 build/
 cmd/gocsv/gocsv
+cmd/gopca-desktop/gopca-desktop
 
 # Node modules
 node_modules/
