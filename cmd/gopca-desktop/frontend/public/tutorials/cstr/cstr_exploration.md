@@ -130,6 +130,7 @@ Keep **Preprocessing → Standard Scale** from Step 1, and change:
 
 * **Lags (L)** → **10**
 * **Number of Components** → **8**
+* **Preprocessing** → **Standard Scale**
 
 Click **Go Temporal PCA**.
 
@@ -248,8 +249,8 @@ This pairing occurs because a sine wave requires both a sine and a cosine compon
 
 **What you will actually see at L = 10:**
 
-- Two components with equal explained variance (e.g. both 3.1%) — but with temporal loading curves that are not sinusoidal. One may be a linear ramp, the other nearly flat. These are slow trend components capturing the step disturbances and controller response, not the flow oscillation.
-- One or two higher-numbered components (low variance, <1%) with slightly curved or V-shaped loading curves — partial traces of the oscillation, but too compressed to identify clearly.
+- The top components (PC1–PC4) capture the dominant steady-state variance and step-response dynamics. Their temporal loading curves show monotone ramps or flat lines — no sinusoidal structure.
+- One or two lower-ranked components (low variance, <1%) with slightly curved or peaked loading curves — partial traces of the oscillation, but the window is too short to decompose it into a sine/cosine pair. Do not expect equal explained variance here: at L = 10 the oscillation is not fully resolved, so the equal-eigenvalue property of a pure sinusoidal SSA pair does not hold.
 
 **To actually find the oscillatory pair, switch to L = 40:**
 
