@@ -45,9 +45,9 @@ Standard PCA treats each row as an independent observation and completely ignore
 
 ## Step 1: Load the dataset
 
-Click the **EEG Eye State** sample dataset button to load the data.
+Click the **EEG Eye State** sample dataset button to load the data (you may have done this already, see the **Loaded data** matrix preview).
 
-The `time` column is used as row identifiers and excluded from PCA. The 14 EEG channel columns are the input variables. The `eye_state` column is automatically recognised as categorical and available for plot colouring.
+The `time` column is used as row identifiers and excluded from the PCA model fitting. The 14 EEG channel columns are the input variables. The `eye_state` column is automatically recognised as categorical and available for plot colouring.
 
 
 #### Question:
@@ -128,7 +128,7 @@ The artifact points should appear in the top-right or far right. The normal ~14,
 
 1. Click the **lasso icon** in the plot toolbar
 2. Draw a selection around the extreme outlier points
-3. GoPCA will offer to **exclude** them
+3. GoPCA will **exclude** them (see e.g. the command line preview to confirm)
 4. Click **Go PCA** again
 
 Repeat until all artifact time points are excluded.
@@ -147,7 +147,7 @@ Repeat until all artifact time points are excluded.
 
 Standard PCA computes correlations between channels across all rows simultaneously. What it cannot detect:
 
-* **Oscillations**: a 10 Hz alpha wave completes one full cycle in 100 ms (~13 consecutive rows). Standard PCA has no way to detect this periodic structure.
+* **Oscillations**: a 10 Hz [alpha wave](https://en.wikipedia.org/wiki/Alpha_wave) completes one full cycle in 100 ms (~13 consecutive rows). Standard PCA has no way to detect this periodic structure.
 * **Delayed relationships**: one channel's activity may predict another's activity a few time steps later. Standard PCA ignores row order entirely.
 * **Waveform shape**: EEG events span many consecutive time points. Standard PCA sees only one snapshot at a time.
 
@@ -159,7 +159,7 @@ Standard PCA computes correlations between channels across all rows simultaneous
 
 ## Step 4: The trajectory matrix
 
-To make PCA sensitive to time, we transform the data using a **sliding window** — the central idea of **Singular Spectrum Analysis (SSA)** and its multivariate extension MSSA.
+To make PCA sensitive to time, we transform the data using a **sliding window** — the central idea of **[Singular Spectrum Analysis (SSA)](https://en.wikipedia.org/wiki/Singular_spectrum_analysis)** and its [multivariate extension MSSA](https://en.wikipedia.org/wiki/Singular_spectrum_analysis#Multivariate_extension).
 
 Instead of describing each time point as one vector of 14 channel values, we describe it as a short sequence of *L* consecutive time points — a **window**. Each window becomes one row in a **trajectory matrix**:
 
@@ -243,7 +243,7 @@ Each curve corresponds to one principal component. The horizontal axis is lag (0
 
 **With only 5 components, do not expect oscillations.** The top components are dominated by slow eye-state modulation, which generates far more variance than fast rhythms:
 
-* **PC1** (~53% variance): nearly flat — a global mean-shift component
+* **PC1** (~53% variance): nearly flat — a global mean-shift component. You may see a subtle U-shape; check the y-axis scale. The variation is only a few percent of the absolute loading value, so all lags contribute nearly equally.
 * **PC2–PC4**: gently sloped or arched — slow trend components
 * **PC5**: may show an S-shape — slow modulation, not yet a true oscillation
 
@@ -266,8 +266,8 @@ Curves with many zero-crossings look angular rather than smooth — this is norm
 
 #### Questions:
 
-* Does PC1 appear nearly flat?
-* Looking at components 11–15, can you identify any that cross zero multiple times?
+* Does PC1 appear nearly flat? (Check the y-axis scale — a U-shaped curve can still be "nearly flat" if the variation is small relative to the mean loading.)
+* Looking at components 13–15, can you identify any that cross zero multiple times?
 * Count the zero-crossings on the most rapidly oscillating curve — what frequency does this imply?
 
 ---
@@ -289,8 +289,9 @@ Neither component alone gives the full picture. Together they encode one complet
 
 * **PC1** (53%): flat — global mean
 * **PC2–PC10** (declining): slow trend and modulation components
-* **PC11–PC14** (~0.8% each, nearly equal): the first oscillatory pairs — look for two adjacent components where one curve is a sine and the other is a cosine at the same frequency
-* **PC15–PC20** (~0.4–0.5%): higher-frequency pairs or noise
+* **PC11–PC14** (~0.8–0.7%): still slow structure — bowls, arches, and S-shapes with no or very few zero-crossings; these represent very-low-frequency drift rather than oscillations
+* **PC15–PC16** (~0.6% each, nearly equal): the first oscillatory pair — PC15 shows ~2.5 cycles over 32 lags (~10 Hz alpha band); its pair (PC16) should be phase-shifted by ~90°
+* **PC17–PC20** (~0.4–0.5%): higher-frequency pairs or noise
 
 **Definitive test**: always check the shape of the temporal loading curves. Equal variance alone is not sufficient — two unrelated components can share variance by coincidence.
 
