@@ -274,16 +274,19 @@ Curves with many zero-crossings look angular rather than smooth — this is norm
 
 ## Step 7: Paired components and the Scree Plot
 
-Open the **Scree Plot** alongside the Temporal Loadings plot.
-
 A fundamental property of SSA is that **oscillatory signals produce pairs of components** (Vautard & Ghil, 1989). SSA extracts two components per oscillation: one resembling a sine wave and one a cosine wave, offset by exactly one quarter of the period (90°).
 
 **Two ways to identify a pair:**
 
-1. **Scree Plot**: two adjacent bars of nearly equal height (e.g. both ~0.8%)
+1. **Scree Plot**: two adjacent bars of nearly equal height
 2. **Temporal Loadings**: two curves at the same frequency, phase-shifted by ~90°
 
 Neither component alone gives the full picture. Together they encode one complete oscillation.
+
+**Workflow — use the two plots in sequence:**
+
+1. Open the **Scree Plot**. Note which adjacent components have nearly equal bar heights — those are your candidate pairs. Write down the component numbers.
+2. Switch to the **Temporal Loadings** plot (20 components) and inspect those specific curves. Use the Plotly legend to isolate them: **double-click a component name to show only that one**, then single-click others to add them back.
 
 **What to look for with 20 components:**
 
