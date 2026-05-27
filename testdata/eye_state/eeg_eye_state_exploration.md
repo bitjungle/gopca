@@ -175,7 +175,7 @@ GoPCA lets you select and exclude observations directly from any plot using the 
 
 1. Click the **lasso icon** in the plot toolbar
 2. Draw a freehand selection around the extreme outlier points — either in the Scores Plot or in the Diagnostic Plot
-3. The selected points will be highlighted; GoPCA will offer to **exclude** them from the analysis
+3. The selected points will be highlighted; GoPCA will **exclude** them from the analysis
 4. Click **Go PCA** again to re-run without the selected observations
 
 Repeat until all artifact time points are excluded. You should be left with the ~14,976 normal time points.
@@ -190,7 +190,7 @@ Repeat until all artifact time points are excluded. You should be left with the 
 👉 After removing the artifacts, the scores plot should reveal real structure in the data. You may find:
 
 * **PC1** loads all 14 channels with similar magnitude and the same sign — a "global" or "common mode" component capturing the overall correlation between channels. This is the dominant pattern in highly correlated data like EEG, and it does not tell you much about which brain regions are specifically involved.
-* **PC2** often shows a more informative spatial contrast — for example, frontal channels (AF3, AF4, F7, F8) on one side, and posterior/occipital channels (P7, O1, O2, P8) on the other. Occipital channels are particularly relevant because they are most sensitive to alpha-band activity associated with eye state.
+* **PC2** often shows a more informative spatial contrast: all frontal and fronto-central channels (AF3, F7, F3, FC5 on the left; AF4, F8, F4, FC6 on the right) loading positively, while all temporal, parietal, and occipital channels (T7, P7, O1, O2, P8, T8) load negatively. This is a clean anterior-posterior gradient — a spatial axis rather than an eye-state axis. Occipital channels (`O1`, `O2`) are particularly relevant because they overlie the visual cortex, the region most sensitive to alpha-band activity and eye state.
 
 The scores plot after outlier removal typically shows some separation between `open` and `closed`, but with considerable overlap. This is expected — standard PCA is working only with the spatial correlations between channels at each instant, not with the temporal dynamics. The main lessons from this step are: (1) outlier detection and removal is a standard part of exploratory data analysis; (2) even clean, well-scaled data may not yield clean class separation with standard PCA when the relevant structure is temporal rather than spatial.
 
