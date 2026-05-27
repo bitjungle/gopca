@@ -272,37 +272,34 @@ Curves with many zero-crossings look angular rather than smooth — this is norm
 
 ---
 
-## Step 7: Paired components and the Scree Plot
+## Step 7: Paired components
 
-A fundamental property of SSA is that **oscillatory signals produce pairs of components** (Vautard & Ghil, 1989). SSA extracts two components per oscillation: one resembling a sine wave and one a cosine wave, offset by exactly one quarter of the period (90°).
+A fundamental property of SSA is that **oscillatory signals produce pairs of components** (Vautard & Ghil, 1989). SSA extracts two components per oscillation: one resembling a sine wave and one a cosine wave, offset by exactly one quarter of the period (90°). Neither component alone gives the full picture — together they encode one complete oscillation.
 
-**Two ways to identify a pair:**
+### How to find a pair
 
-1. **Scree Plot**: two adjacent bars of nearly equal height
-2. **Temporal Loadings**: two curves at the same frequency, phase-shifted by ~90°
+The Scree Plot bars are not a reliable tool for this dataset. Below PC6, many components have nearly equal variance (PC10 through PC15 are all 0.56–0.81%) — far too many to identify specific pairs visually from bar heights alone.
 
-Neither component alone gives the full picture. Together they encode one complete oscillation.
+**Use the Temporal Loadings and Explained Variance panel instead, in this order:**
 
-**Workflow — use the two plots in sequence:**
+1. **Temporal Loadings (primary)**: open the plot with 15–20 components. Scan the curves for **sinusoidal shapes** — curves that cross zero multiple times and look like a sine wave. A monotone ramp or arch is *not* an oscillatory component, regardless of its variance.
+2. **Explained Variance panel (supporting check)**: once you find a sinusoidal curve, read off its % variance from the panel (or the legend). Check whether the immediately adjacent component (the one above or below it in the ranking) has nearly the same % variance.
+3. **Confirm with 90° phase shift**: in the Temporal Loadings, isolate the two candidate curves (double-click to show one, then single-click the other). A true pair shows the **same frequency** but with one curve shifted approximately one quarter-cycle — one peaks where the other crosses zero.
 
-1. Open the **Scree Plot**. Note which adjacent components have nearly equal bar heights — those are your candidate pairs. Write down the component numbers.
-2. Switch to the **Temporal Loadings** plot (20 components) and inspect those specific curves. Use the Plotly legend to isolate them: **double-click a component name to show only that one**, then single-click others to add them back.
+> Equal variance alone is not sufficient. Two unrelated components can share the same variance by coincidence. The definitive test is always the shape of the temporal loading curves.
 
-**What to look for with 20 components:**
+**What to look for with 15–20 components:**
 
-* **PC1** (53%): flat — global mean
-* **PC2–PC10** (declining): slow trend and modulation components
-* **PC11–PC14** (~0.8–0.7%): still slow structure — bowls, arches, and S-shapes with no or very few zero-crossings; these represent very-low-frequency drift rather than oscillations
-* **PC15–PC16** (~0.6% each, nearly equal): the first oscillatory pair — PC15 shows ~2.5 cycles over 32 lags (~10 Hz alpha band); its pair (PC16) should be phase-shifted by ~90°
-* **PC17–PC20** (~0.4–0.5%): higher-frequency pairs or noise
-
-**Definitive test**: always check the shape of the temporal loading curves. Equal variance alone is not sufficient — two unrelated components can share variance by coincidence.
+* **PC1** (~53%): flat — global mean
+* **PC2–PC14** (declining from ~12% to ~0.6%): slow structure — ramps, arches, bowls, and S-shapes with no or very few zero-crossings
+* **PC15 (~0.6%) and its neighbour**: the first clearly sinusoidal curve appears around this rank — ~2.5 cycles over 32 lags, corresponding to ~10 Hz (alpha band). The paired component should appear at a similar % variance with the same frequency but ~90° phase-shifted.
 
 #### Questions:
 
-* Do you see adjacent pairs of components with nearly equal explained variance in the Scree Plot?
-* Identify the first oscillatory pair: which component numbers, what % variance, and what frequency (from zero-crossings)?
-* Are the two curves approximately 90° phase-shifted — does one peak where the other crosses zero?
+* In the Temporal Loadings plot, which is the first component whose curve clearly oscillates (multiple zero-crossings)?
+* Read its % variance from the Explained Variance panel. Does the adjacent component have nearly the same value?
+* Isolate the two candidate curves in the Temporal Loadings. Are they the same frequency and ~90° phase-shifted?
+* What frequency does this pair correspond to?
 
 👉 A 10 Hz alpha wave has a period of ~12.8 samples at 128 Hz. Over 32 lags you see ~2.5 complete cycles — enough for the sinusoidal pattern to be clearly visible.
 
