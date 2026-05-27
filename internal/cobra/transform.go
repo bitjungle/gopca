@@ -235,7 +235,7 @@ func outputTransformTable(result *types.PCAResult, data *pkgcsv.Data) error {
 	fmt.Println("──────────────────────────────────────────────────────────────")
 
 	// Print headers
-	fmt.Printf("%-15s", "Sample")
+	fmt.Printf("%-15s", "Sample_ID")
 	for i := 0; i < len(result.ComponentLabels); i++ {
 		fmt.Printf("%12s", result.ComponentLabels[i])
 	}

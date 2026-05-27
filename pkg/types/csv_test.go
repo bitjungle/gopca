@@ -31,7 +31,7 @@ func TestCSVParser_Parse(t *testing.T) {
 				HasRowNames:      true,
 				NullValues:       []string{"", "NA", "NaN"},
 			},
-			input: `Sample,Feature1,Feature2,Feature3
+			input: `Sample_ID,Feature1,Feature2,Feature3
 Row1,1.5,2.3,4.1
 Row2,3.2,NA,5.6
 Row3,2.1,3.4,NaN`,
@@ -81,7 +81,7 @@ Row3,2.1,3.4,NaN`,
 				HasRowNames:      true,
 				NullValues:       []string{"", "NA", "m"},
 			},
-			input: `Sample;Var1;Var2;Var3
+			input: `Sample_ID;Var1;Var2;Var3
 S1;1,5;2,3;4,1
 S2;3,2;m;5,6
 S3;2,1;3,4;`,
