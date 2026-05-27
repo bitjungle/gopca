@@ -276,11 +276,9 @@ Curves with many zero-crossings look angular rather than smooth — this is norm
 
 A fundamental property of SSA is that **oscillatory signals produce pairs of components** (Vautard & Ghil, 1989). SSA extracts two components per oscillation: one resembling a sine wave and one a cosine wave, offset by exactly one quarter of the period (90°). Neither component alone gives the full picture — together they encode one complete oscillation.
 
-### How to find a pair
+Below PC6, many components have nearly equal variance, far too many to identify specific pairs visually from bar heights alone.
 
-The Scree Plot bars are not a reliable tool for this dataset. Below PC6, many components have nearly equal variance (PC10 through PC15 are all 0.56–0.81%) — far too many to identify specific pairs visually from bar heights alone.
-
-**Use the Temporal Loadings and Explained Variance panel instead, in this order:**
+**Use the Temporal Loadings and Explained Variance panel, in this order:**
 
 1. **Temporal Loadings (primary)**: open the plot with 15–20 components. Scan the curves for **sinusoidal shapes** — curves that cross zero multiple times and look like a sine wave. A monotone ramp or arch is *not* an oscillatory component, regardless of its variance.
 2. **Explained Variance panel (supporting check)**: once you find a sinusoidal curve, read off its % variance from the panel (or the legend). Check whether the immediately adjacent component (the one above or below it in the ranking) has nearly the same % variance.
@@ -315,9 +313,12 @@ This heatmap shows the RMS loading of each EEG channel aggregated across all lag
 
 #### Questions:
 
-* Which channels contribute most strongly to PC1?
-* For the oscillatory pair from Step 7: do the two paired components show the same spatial pattern of channel importance? (They should — they represent the same oscillation, just phase-shifted in time.)
-* Are occipital channels (`O1`, `O2`) prominent in the alpha-band components? Does that make physiological sense?
+* Look at PC1: do any channels stand out as clearly brighter than the rest, or are all channels nearly equally loaded? What does that tell you about the nature of PC1?
+* Scan down the rows (higher-ranked components). Is there any component where a **single channel** is dramatically brighter than all others — a bright isolated cell that stands out from its row? Which channel is it, and which component? Does its location on the scalp match any physiological expectation?
+* For the oscillatory pair you identified in Step 7: do the two paired components show the **same spatial pattern** of channel importance? (They should — they represent the same oscillation, just phase-shifted in time, so the same channels must drive both.)
+* Is there a clear difference between the channel patterns of the slow-structure components (PC2–PC10) and any oscillatory components?
+
+👉 PC1's nearly uniform row confirms it is a global component — all channels contribute equally, so no single brain region is specifically responsible. Contrast this with components where one or two channels are dramatically brighter — those components originate from a specific scalp region.
 
 ---
 
