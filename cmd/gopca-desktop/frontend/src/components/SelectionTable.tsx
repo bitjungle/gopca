@@ -281,7 +281,7 @@ export const SelectionTable: React.FC<SelectionTableProps> = ({
               <table className="text-xs">
                 <thead>
                   <tr>
-                    <th className="px-2 py-1 text-left text-gray-600 dark:text-gray-400">Sample</th>
+                    <th className="px-2 py-1 text-left text-gray-600 dark:text-gray-400">Sample_ID</th>
                     {headers.slice(0, 10).map((header, i) => (
                       <th key={i} className="px-2 py-1 text-right text-gray-600 dark:text-gray-400 truncate max-w-[100px]">
                         {header}

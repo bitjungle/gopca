@@ -237,7 +237,7 @@ func GenerateTestMatrix(rows, cols int, seed float64) [][]string {
 
 	// Header row
 	data[0] = make([]string, cols+1)
-	data[0][0] = "Sample"
+	data[0][0] = "Sample_ID"
 	for j := 1; j <= cols; j++ {
 		data[0][j] = fmt.Sprintf("Feature%d", j)
 	}

@@ -153,7 +153,7 @@ return;
     if (hasRowNames) {
       cols.push({
         accessorKey: 'rowName',
-        header: 'Sample',
+        header: 'Sample_ID',
         cell: info => <div className="font-medium">{String(info.getValue())}</div>
       });
     }
