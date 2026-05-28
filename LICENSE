@@ -1,21 +1,116 @@
-MIT License
+GoPCA Suite Source-Available Freeware License
+Version 1.0
 
-Copyright (c) 2025-2026 Rune Mathisen
+Copyright © 2026 Rune Mathisen <devel@bitjungle.com>
+All rights reserved except as expressly granted in this License.
 
-Permission is hereby granted, free of charge, to any person obtaining a copy
-of this software and associated documentation files (the "Software"), to deal
-in the Software without restriction, including without limitation the rights
-to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
-copies of the Software, and to permit persons to whom the Software is
-furnished to do so, subject to the following conditions:
+This License applies to GoPCA Suite, including its source code, documentation,
+and official compiled binary releases, unless otherwise stated.
 
-The above copyright notice and this permission notice shall be included in all
-copies or substantial portions of the Software.
+1. Definitions
+
+"Software" means GoPCA Suite and any files, source code, documentation,
+compiled binaries, or other materials distributed with it.
+
+"Source Code" means the human-readable source code form of the Software.
+
+"Official Binary Releases" means compiled executable versions of the Software
+published by the copyright holder.
+
+"Use" means running, executing, or interacting with the Software.
+
+"Redistribute" means making copies of the Software available to third parties,
+including by download, mirror, package repository, physical media, or inclusion
+in a software bundle.
+
+2. Binary License Grant
+
+You may use, copy, and redistribute the Official Binary Releases of the Software
+free of charge, provided that:
+
+(a) the binaries are redistributed unmodified;
+(b) this License and all copyright notices are included with the redistribution;
+(c) no fee is charged for the Software itself, except for reasonable costs of
+    distribution, hosting, packaging, or media;
+(d) you do not represent yourself as the author or owner of the Software; and
+(e) your use and redistribution comply with the restrictions in this License.
+
+3. Source Code Access Grant
+
+You may view and read the Source Code solely for personal review, education,
+security review, research, interoperability analysis, and evaluation.
+
+This grant does not include the right to modify, adapt, translate, redistribute,
+publish, sublicense, sell, incorporate, or otherwise reuse the Source Code in
+whole or in part.
+
+4. Restrictions on Source Code
+
+You may not, without prior written permission from the copyright holder:
+
+(a) modify, adapt, translate, or create derivative works based on the Source Code;
+(b) redistribute, publish, mirror, sublicense, or sell the Source Code;
+(c) create or distribute modified versions of the Software;
+(d) distribute binaries built from modified Source Code;
+(e) incorporate the Source Code into another software project;
+(f) remove, alter, or obscure copyright, license, or attribution notices.
+
+5. Prohibited Uses
+
+The Software may not be used, directly or indirectly, for military, warfare,
+weapons, intelligence, surveillance, targeting, or law-enforcement surveillance
+applications.
+
+This includes, but is not limited to:
+
+(a) the design, development, testing, production, operation, or maintenance of
+    weapons, weapon systems, military systems, or combat-support systems;
+(b) battlefield, targeting, reconnaissance, or command-and-control applications;
+(c) mass surveillance, biometric surveillance, location tracking, communications
+    monitoring, or other surveillance of individuals or groups;
+(d) predictive policing, law-enforcement profiling, or intelligence gathering
+    against individuals, groups, or populations;
+(e) use by or on behalf of military, intelligence, national security, or
+    surveillance agencies.
+
+6. Third-Party Components
+
+The Software may include third-party components that are governed by their own
+licenses. Those components remain subject to their respective license terms.
+Nothing in this License grants rights to third-party components beyond those
+provided by their applicable licenses.
+
+7. Ownership
+
+The Software is licensed, not sold. The copyright holder retains all rights,
+title, and interest in and to the Software. All rights not expressly granted in
+this License are reserved.
+
+8. Termination
+
+Your rights under this License terminate automatically if you violate any term
+of this License. Upon termination, you must stop using and redistributing the
+Software and delete any copies in your possession or control, except where
+retention is required by law.
+
+9. Disclaimer of Warranty
 
 THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
-IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
-AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
-LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
-OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
-SOFTWARE.
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS
+FOR A PARTICULAR PURPOSE, TITLE, AND NON-INFRINGEMENT. THE COPYRIGHT HOLDER DOES
+NOT WARRANT THAT THE SOFTWARE WILL BE ERROR-FREE, SECURE, OR SUITABLE FOR ANY
+PARTICULAR PURPOSE.
+
+10. Limitation of Liability
+
+TO THE MAXIMUM EXTENT PERMITTED BY LAW, THE COPYRIGHT HOLDER SHALL NOT BE LIABLE
+FOR ANY CLAIM, DAMAGES, OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT,
+TORT, OR OTHERWISE, ARISING FROM, OUT OF, OR IN CONNECTION WITH THE SOFTWARE OR
+THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+
+11. Governing Law
+
+This License shall be governed by and construed in accordance with the laws of
+Norway, without regard to its conflict of law provisions. Any disputes arising
+under this License shall be subject to the exclusive jurisdiction of the courts
+of Norway.
