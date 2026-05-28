@@ -86,18 +86,20 @@ export const AboutDialog: React.FC<AboutDialogProps> = ({
 
                     <div className="border-t border-gray-200 dark:border-gray-700 pt-4 w-full space-y-2">
                         <p className="text-sm text-gray-700 dark:text-gray-300">
-                            Licensed under the{' '}
+                            GoPCA Suite is source-available software with free binary redistribution.
+                            See the{' '}
                             <a
                                 href="#"
                                 onClick={onLicenseClick}
                                 className="text-blue-600 dark:text-blue-400 hover:underline"
                             >
-                                MIT License
+                                GoPCA Suite Source-Available Freeware License
                             </a>
+                            {' '}for full terms.
                         </p>
                         <p className="text-xs text-gray-600 dark:text-gray-400 italic">
-                            The author respectfully requests that it not be used for
-                            military, warfare, or surveillance applications.
+                            Use for military, warfare, weapons, intelligence, surveillance,
+                            or law-enforcement surveillance applications is prohibited.
                         </p>
                     </div>
 
