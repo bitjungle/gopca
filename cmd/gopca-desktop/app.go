@@ -1164,6 +1164,7 @@ type ModelMetricsRequest struct {
 	VariableLabels    []string    `json:"variableLabels"`
 	SelectedPC        int         `json:"selectedPC"`
 	StandardScale     bool        `json:"standardScale"`
+	RobustScale       bool        `json:"robustScale"`
 	OriginalData      [][]float64 `json:"originalData,omitempty"` // For scale detection
 }
 
@@ -1314,7 +1315,7 @@ func (a *App) CalculateModelMetrics(request ModelMetricsRequest) ModelMetricsRes
 				scaleRatio = maxVar / minVar
 
 				// Generate warning if scales are heterogeneous and not standardized
-				if scaleRatio > 100 && !request.StandardScale {
+				if scaleRatio > 100 && !request.StandardScale && !request.RobustScale {
 					if scaleRatio > 10000 {
 						scaleWarning = fmt.Sprintf("Variables have very different scales (%.0fx difference). Consider standardization unless this is intentional.", scaleRatio)
 					} else {

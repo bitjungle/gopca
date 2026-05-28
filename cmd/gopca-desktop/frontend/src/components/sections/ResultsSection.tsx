@@ -170,6 +170,7 @@ export function ResultsSection({ guiConfig }: ResultsSectionProps) {
                             pcaResult={pcaResponse.result}
                             selectedPC={selectedXComponent}
                             standardScale={config.standardScale}
+                            robustScale={config.robustScale}
                             originalData={fileData?.data}
                         />
                     </div>
