@@ -246,7 +246,7 @@ For the Iris example: 150 rows (flowers) × 4 columns (measurements) = a 150 × 
 Raw data rarely tells the full story. Variables measured in different units (mg/L vs pH) or with different ranges can bias your analysis. Preprocessing levels the playing field.
 
 **Centering (Essential):**  
-PCA requires **centered** data. By subtracting each variable's mean, you shift your data cloud to the origin. This ensures PCA finds the directions of maximum variance rather than being pulled toward arbitrary baseline levels.
+PCA requires **centered** data. By subtracting a reference value from each variable, you shift your data cloud to the origin — this ensures PCA finds the directions of genuine variation rather than being pulled toward arbitrary baseline levels. The standard approach subtracts each variable's **mean**. When your data contains outliers, the **median** is a more reliable choice, since a single extreme value can shift the mean substantially without changing the median at all.
 
 **Scaling (Often Critical):**  
 When variables have different units or ranges, **scaling** prevents variables with larger numbers from dominating. Consider:
@@ -256,9 +256,10 @@ When variables have different units or ranges, **scaling** prevents variables wi
 Without scaling, proline would dominate the analysis simply due to its larger numbers!
 
 > **Decision Guide:**
-> - **Always center** your data (PCA won't work properly without it)
-> - **Scale when:** Variables have different units, vastly different ranges, or you want equal contribution
-> - **Don't scale when:** All variables are in the same units and scale differences are meaningful
+> - **Always center** your data (PCA will not work properly without it)
+> - **Scale with Standard Scaling when:** Variables have different units or vastly different ranges, and you have no extreme outliers
+> - **Scale with Robust Scaling when:** Variables have different units or ranges *and* your data contains outliers that are genuine measurements — not errors — that you want to include without letting them distort the analysis
+> - **Don't scale when:** All variables are in the same units and scale differences carry scientific meaning
 
 **Advanced Preprocessing Options in GoPCA Suite:**
 
@@ -267,7 +268,7 @@ Beyond basic centering and scaling, GoPCA Suite offers specialized preprocessing
 1. **Standard Preprocessing:**
    - **Mean Centering**: Subtracts the mean of each variable (essential for PCA)
    - **Standard Scaling**: Divides by standard deviation (recommended for mixed units)
-   - **Robust Scaling**: Uses median and MAD instead of mean and SD (better for data with outliers)
+   - **Robust Scaling**: Achieves the same goals as Standard Scaling — centering each variable and equalizing their scales — but using statistics that are resistant to extreme values. Instead of the mean and standard deviation (which outliers can pull strongly), it uses the **median** and **MAD** (median absolute deviation). The practical difference: one unusually large measurement will barely affect the result of robust scaling, but can substantially distort standard scaling.
 
 2. **Spectroscopic Preprocessing:**
    - **SNV (Standard Normal Variate)**: Row-wise normalization that removes multiplicative scatter effects in spectroscopic data
