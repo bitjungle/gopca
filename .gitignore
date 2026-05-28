@@ -42,11 +42,8 @@ docs/devel/milestone_*.md
 
 # Local documentation
 docs_tmp/
-# Keep reference summaries but ignore PDFs and working notes (md/png)
-docs/references/*.pdf
-docs/references/*.md
-docs/references/*.png
-!docs/references/_summaries.txt
+# Reference materials are local-only (PDFs, summaries, notes)
+docs/references/
 
 # Build artifacts
 results/
