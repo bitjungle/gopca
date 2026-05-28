@@ -13,6 +13,7 @@ interface ModelOverviewProps {
   pcaResult: PCAResult;
   selectedPC?: number;
   standardScale?: boolean;
+  robustScale?: boolean;
   originalData?: number[][];
 }
 
@@ -26,7 +27,7 @@ interface ModelMetrics {
   scaleWarning?: string;
 }
 
-export const ModelOverview: React.FC<ModelOverviewProps> = ({ pcaResult, selectedPC = 0, standardScale = false, originalData }) => {
+export const ModelOverview: React.FC<ModelOverviewProps> = ({ pcaResult, selectedPC = 0, standardScale = false, robustScale = false, originalData }) => {
   const [metrics, setMetrics] = useState<ModelMetrics | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -59,6 +60,7 @@ export const ModelOverview: React.FC<ModelOverviewProps> = ({ pcaResult, selecte
           variableLabels: pcaResult.variable_labels || [],
           selectedPC: selectedPC,
           standardScale: standardScale,
+          robustScale: robustScale,
           originalData: originalData || []
         });
 
@@ -84,7 +86,7 @@ export const ModelOverview: React.FC<ModelOverviewProps> = ({ pcaResult, selecte
     };
 
     fetchMetrics();
-  }, [pcaResult, selectedPC, standardScale, originalData]);
+  }, [pcaResult, selectedPC, standardScale, robustScale, originalData]);
 
   // Render special Kernel PCA overview
   if (pcaResult?.method === 'kernel') {
