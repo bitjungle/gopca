@@ -4,7 +4,7 @@ Professional-grade PCA analysis made simple. A comprehensive suite of tools for 
 
 ## What is GoPCA Suite?
 
-GoPCA Suite makes **Principal Component Analysis (PCA) accessible to everyone** through professional-grade, user-friendly tools that are completely free and open source. PCA is one of the most versatile and interpretable machine learning methods for understanding complex data, and GoPCA Suite removes the barriers to using it effectively. As an added benefit, all processing happens locally on your machine, ensuring your data never leaves your computer.
+GoPCA Suite makes **Principal Component Analysis (PCA) accessible to everyone** through professional-grade, user-friendly tools that are completely free. PCA is one of the most versatile and interpretable machine learning methods for understanding complex data, and GoPCA Suite removes the barriers to using it effectively. As an added benefit, all processing happens locally on your machine, ensuring your data never leaves your computer.
 
 The suite provides three powerful tools that work together seamlessly:
 - **GoPCA Desktop** - Interactive visual analysis and exploration
@@ -109,7 +109,7 @@ GoPCA Suite prioritizes your data privacy:
 - **100% Local Processing** - All computations happen on your machine only
 - **Zero Telemetry** - No analytics, tracking, or data collection
 - **No Network Dependencies** - Works completely offline
-- **Open Source** - Entire codebase auditable on GitHub
+- **Source Available** - Entire codebase viewable on GitHub
 - **Compliance Ready** - Perfect for GDPR, HIPAA, and strict corporate policies
 
 Your data **never** leaves your computer. No cloud services, no external servers, no hidden connections.
@@ -240,8 +240,24 @@ Teach multivariate statistics with interactive visualizations, explore research 
 - **Report Issues**: [GitHub Issues](https://github.com/bitjungle/gopca/issues)
 - **Ask Questions**: [GitHub Discussions](https://github.com/bitjungle/gopca/discussions)
 - **Documentation**: See the docs folder for detailed guides
-- **Contributing**: Please read [CONTRIBUTING.md](CONTRIBUTING.md) before submitting code
+- **Contributing**: Please read [CONTRIBUTING.md](CONTRIBUTING.md) for bug reports, feature requests, and feedback
 
 ## License
 
-GoPCA Suite is open-source software licensed under the MIT License. However, the author respectfully requests that it **not be used for military, warfare, or surveillance applications**.
+GoPCA Suite is source-available freeware.
+
+Official compiled binaries may be used and redistributed free of charge under
+the GoPCA Suite Source-Available Freeware License.
+
+The source code is provided for viewing, review, education, security analysis,
+research, interoperability analysis, and evaluation only. Modification,
+redistribution, publication, sublicensing, or reuse of the source code is not
+permitted without prior written permission.
+
+Use for military, warfare, weapons, intelligence, surveillance, targeting, or
+law-enforcement surveillance applications is prohibited.
+
+This project is not open source under the Open Source Definition because the
+license does not permit modification or redistribution of the source code.
+
+See `LICENSE` for the full terms.
