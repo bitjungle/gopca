@@ -8,7 +8,6 @@
 
 import React, { useMemo } from 'react';
 import { Data, Layout } from 'plotly.js';
-import { getExportMenuItems } from '../utils/plotlyExport';
 import { PlotlyWithFullscreen } from '../utils/plotlyFullscreen';
 import { getWatermarkDataUrlSync } from '../assets/watermark';
 import { PlotlyVisualizationConfig } from '../core/PlotlyVisualization';
@@ -235,8 +234,6 @@ export class PlotlyTemporalVariableImportance {
       config: {
         displayModeBar: true,
         displaylogo: false,
-        modeBarButtonsToRemove: ['toImage'],
-        modeBarButtonsToAdd: getExportMenuItems(),
         responsive: true
       }
     };
