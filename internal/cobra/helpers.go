@@ -120,21 +120,21 @@ func validateCSVData(data *pkgcsv.Data) error {
 func getDataSummary(data *pkgcsv.Data) string {
 	var sb strings.Builder
 
-	sb.WriteString(fmt.Sprintf("Data dimensions: %d rows × %d columns\n", data.Rows, data.Columns))
+	fmt.Fprintf(&sb, "Data dimensions: %d rows × %d columns\n", data.Rows, data.Columns)
 
 	if len(data.Headers) > 0 {
-		sb.WriteString(fmt.Sprintf("Column names: %s", strings.Join(data.Headers, ", ")))
+		fmt.Fprintf(&sb, "Column names: %s", strings.Join(data.Headers, ", "))
 		if len(data.Headers) > 5 {
-			sb.WriteString(fmt.Sprintf(" (showing first 5 of %d)\n", len(data.Headers)))
+			fmt.Fprintf(&sb, " (showing first 5 of %d)\n", len(data.Headers))
 		} else {
 			sb.WriteString("\n")
 		}
 	}
 
 	if len(data.RowNames) > 0 {
-		sb.WriteString(fmt.Sprintf("Row names: %s", strings.Join(data.RowNames[:min(5, len(data.RowNames))], ", ")))
+		fmt.Fprintf(&sb, "Row names: %s", strings.Join(data.RowNames[:min(5, len(data.RowNames))], ", "))
 		if len(data.RowNames) > 5 {
-			sb.WriteString(fmt.Sprintf(" ... (showing first 5 of %d)\n", len(data.RowNames)))
+			fmt.Fprintf(&sb, " ... (showing first 5 of %d)\n", len(data.RowNames))
 		} else {
 			sb.WriteString("\n")
 		}
@@ -152,7 +152,7 @@ func getDataSummary(data *pkgcsv.Data) string {
 
 	totalValues := data.Rows * data.Columns
 	missingPercent := float64(missingCount) / float64(totalValues) * 100
-	sb.WriteString(fmt.Sprintf("Missing values: %d (%.1f%%)\n", missingCount, missingPercent))
+	fmt.Fprintf(&sb, "Missing values: %d (%.1f%%)\n", missingCount, missingPercent)
 
 	return sb.String()
 }

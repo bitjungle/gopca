@@ -43,7 +43,7 @@ func CheckJSONConsistency(v interface{}) ([]JSONFieldConsistency, error) {
 	var results []JSONFieldConsistency
 
 	t := reflect.TypeOf(v)
-	if t.Kind() == reflect.Ptr {
+	if t.Kind() == reflect.Pointer {
 		t = t.Elem()
 	}
 
@@ -141,7 +141,7 @@ func ValidateJSONMarshaling(v interface{}) error {
 
 	// Create a new instance of the same type
 	t := reflect.TypeOf(v)
-	if t.Kind() == reflect.Ptr {
+	if t.Kind() == reflect.Pointer {
 		t = t.Elem()
 	}
 	newV := reflect.New(t).Interface()

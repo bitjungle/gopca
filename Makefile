@@ -634,7 +634,7 @@ fmt:
 lint:
 ifdef GOLINT
 	@echo "Running golangci-lint..."
-	golangci-lint run --timeout=5m
+	golangci-lint run --timeout=5m ./cmd/... ./internal/... ./pkg/...
 else
 	@echo "golangci-lint not found. Install it with:"
 	@echo "  go install github.com/golangci/golangci-lint/cmd/golangci-lint@latest"

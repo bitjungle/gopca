@@ -1,7 +1,9 @@
 #!/bin/bash
-# Copyright 2025-2026 bitjungle - Rune Mathisen. All rights reserved.
-# Use of this source code is governed by the MIT license
-# that can be found in the LICENSE file.
+# GoPCA Suite
+#
+# Copyright © 2025-2026 Rune Mathisen <devel@bitjungle.com>
+#
+# This file is part of GoPCA Suite. See LICENSE for the full license terms.
 #
 # sync-datasets.sh — Compress source CSVs into internal/datasets/*.csv.gz
 #
@@ -16,7 +18,6 @@
 #   testdata/corn/corn.csv                   → internal/datasets/corn.csv.gz
 #   testdata/swiss_roll/circles.csv          → internal/datasets/swiss_roll.csv.gz
 #   testdata/eye_state/eeg_eye_state.csv     → internal/datasets/eeg_eye_state.csv.gz
-#   testdata/stocks/stock-data-AAPL.csv      → internal/datasets/stocks.csv.gz
 #   testdata/CSTR/cstr_temporal_pca.csv      → internal/datasets/cstr.csv.gz
 
 set -e
@@ -39,7 +40,6 @@ ENTRIES=(
     "testdata/corn/corn.csv:corn"
     "testdata/swiss_roll/circles.csv:swiss_roll"
     "testdata/eye_state/eeg_eye_state.csv:eeg_eye_state"
-    "testdata/stocks/stock-data-AAPL.csv:stocks"
     "testdata/CSTR/cstr_temporal_pca.csv:cstr"
 )
 
