@@ -450,153 +450,6 @@ jobs:
         retention-days: 1
         if-no-files-found: ignore
 
-  sign-windows-binaries:
-    name: Sign Windows Binaries
-    runs-on: ubuntu-latest
-    needs: [build-cli-binaries, build-desktop, build-gocsv]
-    # NOTE: Automated signing requires paid SignPath subscription for repository-based policies
-    # With free tier, use manual signing process documented in docs/devel/release-guide.md
-    # Only run if SignPath secrets are configured
-    if: |
-      github.event_name == 'push' && 
-      contains(github.ref, 'refs/tags/')
-    
-    steps:
-    - name: Check SignPath Configuration
-      id: check_signpath
-      run: |
-        if [ -n "${{ secrets.SIGNPATH_API_TOKEN }}" ] && [ -n "${{ secrets.SIGNPATH_ORG_ID }}" ]; then
-          echo "configured=true" >> $GITHUB_OUTPUT
-          echo "✓ SignPath secrets are configured"
-          echo "Note: If signing fails with 'Trusted build system' error:"
-          echo "  1. Go to SignPath.io organization settings"
-          echo "  2. Add GitHub as a trusted build system"
-          echo "  3. Link it to the 'gopca' project"
-        else
-          echo "configured=false" >> $GITHUB_OUTPUT
-          echo "⚠️ SignPath not configured, Windows binaries will be unsigned"
-          echo "To enable: Set SIGNPATH_API_TOKEN and SIGNPATH_ORG_ID secrets"
-        fi
-    
-    - name: Download Windows CLI artifact
-      if: steps.check_signpath.outputs.configured == 'true'
-      uses: actions/download-artifact@v4
-      with:
-        name: pca-windows-amd64
-        path: windows-cli
-    
-    - name: Download Windows GoPCA artifact
-      if: steps.check_signpath.outputs.configured == 'true'
-      uses: actions/download-artifact@v4
-      with:
-        name: gopca-desktop-windows-latest
-        path: windows-desktop
-    
-    - name: Download Windows GoCSV artifact
-      if: steps.check_signpath.outputs.configured == 'true'
-      uses: actions/download-artifact@v4
-      with:
-        name: gocsv-windows-latest
-        path: windows-gocsv
-    
-    # Sign pca CLI binary
-    - name: Upload pca CLI for signing
-      if: steps.check_signpath.outputs.configured == 'true'
-      id: upload-cli
-      uses: actions/upload-artifact@v4
-      with:
-        name: unsigned-cli
-        path: windows-cli/pca-windows-amd64.exe
-    
-    - name: Sign pca CLI binary
-      if: steps.check_signpath.outputs.configured == 'true'
-      id: sign-cli
-      uses: SignPath/github-action-submit-signing-request@v1
-      with:
-        api-token: ${{ secrets.SIGNPATH_API_TOKEN }}
-        organization-id: ${{ secrets.SIGNPATH_ORG_ID }}
-        project-slug: gopca
-        signing-policy-slug: test-signing
-        github-artifact-id: ${{ steps.upload-cli.outputs.artifact-id }}
-        wait-for-completion: true
-        output-artifact-directory: signed-cli
-    
-    # Sign GoPCA Desktop
-    - name: Upload GoPCA Desktop for signing
-      if: steps.check_signpath.outputs.configured == 'true'
-      id: upload-desktop
-      uses: actions/upload-artifact@v4
-      with:
-        name: unsigned-desktop
-        path: windows-desktop/GoPCA.exe
-    
-    - name: Sign GoPCA Desktop
-      if: steps.check_signpath.outputs.configured == 'true'
-      id: sign-desktop
-      uses: SignPath/github-action-submit-signing-request@v1
-      with:
-        api-token: ${{ secrets.SIGNPATH_API_TOKEN }}
-        organization-id: ${{ secrets.SIGNPATH_ORG_ID }}
-        project-slug: gopca
-        signing-policy-slug: test-signing
-        github-artifact-id: ${{ steps.upload-desktop.outputs.artifact-id }}
-        wait-for-completion: true
-        output-artifact-directory: signed-desktop
-    
-    # Sign GoCSV Desktop
-    - name: Upload GoCSV Desktop for signing
-      if: steps.check_signpath.outputs.configured == 'true'
-      id: upload-gocsv
-      uses: actions/upload-artifact@v4
-      with:
-        name: unsigned-gocsv
-        path: windows-gocsv/GoCSV.exe
-    
-    - name: Sign GoCSV Desktop
-      if: steps.check_signpath.outputs.configured == 'true'
-      id: sign-gocsv
-      uses: SignPath/github-action-submit-signing-request@v1
-      with:
-        api-token: ${{ secrets.SIGNPATH_API_TOKEN }}
-        organization-id: ${{ secrets.SIGNPATH_ORG_ID }}
-        project-slug: gopca
-        signing-policy-slug: test-signing
-        github-artifact-id: ${{ steps.upload-gocsv.outputs.artifact-id }}
-        wait-for-completion: true
-        output-artifact-directory: signed-gocsv
-    
-    # Upload signed artifacts
-    - name: Upload signed Windows artifacts
-      if: steps.check_signpath.outputs.configured == 'true'
-      uses: actions/upload-artifact@v4
-      with:
-        name: windows-signed
-        path: |
-          signed-cli/pca-windows-amd64.exe
-          signed-desktop/GoPCA.exe
-          signed-gocsv/GoCSV.exe
-        retention-days: 1
-    
-    - name: Create signing status artifact
-      if: always()
-      run: |
-        if [ "${{ steps.check_signpath.outputs.configured }}" = "true" ] && \
-           [ "${{ steps.sign-cli.outcome }}" = "success" ] && \
-           [ "${{ steps.sign-desktop.outcome }}" = "success" ] && \
-           [ "${{ steps.sign-gocsv.outcome }}" = "success" ]; then
-          echo "signed" > signing-status.txt
-        else
-          echo "unsigned" > signing-status.txt
-        fi
-    
-    - name: Upload signing status
-      if: always()
-      uses: actions/upload-artifact@v4
-      with:
-        name: signing-status
-        path: signing-status.txt
-        retention-days: 1
-
   build-msix:
     name: Build Bundled MSIX Package
     runs-on: windows-latest
@@ -628,38 +481,6 @@ jobs:
         echo "msix_version=$MSIX_VERSION" >> $GITHUB_OUTPUT
         echo "MSIX version will be: $MSIX_VERSION"
 
-    - name: Check signing status
-      id: check_signed
-      shell: bash
-      run: |
-        echo "Checking for signed Windows binaries..."
-        echo "use_signed=false" >> $GITHUB_OUTPUT
-
-    - name: Download signing status
-      uses: actions/download-artifact@v4
-      with:
-        name: signing-status
-        path: .
-      continue-on-error: true
-
-    - name: Update signing status
-      id: update_signed
-      shell: bash
-      run: |
-        SIGNED="false"
-        if [ -f "signing-status.txt" ]; then
-          STATUS=$(cat signing-status.txt)
-          if [ "$STATUS" = "signed" ]; then
-            SIGNED="true"
-            echo "✓ Using signed GoPCA.exe"
-          else
-            echo "⚠️ Using unsigned GoPCA.exe"
-          fi
-        else
-          echo "⚠️ No signing status found, using unsigned binaries"
-        fi
-        echo "use_signed=${SIGNED}" >> $GITHUB_OUTPUT
-
     - name: Download Windows GoPCA artifact
       uses: actions/download-artifact@v4
       with:
@@ -672,28 +493,15 @@ jobs:
         name: gocsv-windows-latest
         path: windows-gocsv
 
-    - name: Download signed Windows artifacts
-      if: steps.update_signed.outputs.use_signed == 'true'
-      uses: actions/download-artifact@v4
-      with:
-        name: windows-signed
-        path: windows-signed
-      continue-on-error: true
-
     - name: Prepare executables for MSIX
       shell: bash
       run: |
         mkdir -p msix-build
 
-        # Prepare GoPCA.exe (use signed binary if available, otherwise unsigned)
-        if [ "${{ steps.update_signed.outputs.use_signed }}" = "true" ] && [ -f "windows-signed/GoPCA.exe" ]; then
-          echo "Using signed GoPCA.exe"
-          cp windows-signed/GoPCA.exe msix-build/GoPCA.exe
-        elif [ -f "windows-desktop/GoPCA.exe" ]; then
-          echo "Using unsigned GoPCA.exe"
+        # Prepare GoPCA.exe
+        if [ -f "windows-desktop/GoPCA.exe" ]; then
           cp windows-desktop/GoPCA.exe msix-build/GoPCA.exe
         elif [ -f "windows-desktop/GoPCA-amd64.exe" ]; then
-          echo "Using unsigned GoPCA-amd64.exe (cross-compiled)"
           cp windows-desktop/GoPCA-amd64.exe msix-build/GoPCA.exe
         else
           echo "ERROR: No GoPCA.exe found!"
@@ -701,15 +509,10 @@ jobs:
           exit 1
         fi
 
-        # Prepare GoCSV.exe (use signed binary if available, otherwise unsigned)
-        if [ "${{ steps.update_signed.outputs.use_signed }}" = "true" ] && [ -f "windows-signed/GoCSV.exe" ]; then
-          echo "Using signed GoCSV.exe"
-          cp windows-signed/GoCSV.exe msix-build/GoCSV.exe
-        elif [ -f "windows-gocsv/GoCSV.exe" ]; then
-          echo "Using unsigned GoCSV.exe"
+        # Prepare GoCSV.exe
+        if [ -f "windows-gocsv/GoCSV.exe" ]; then
           cp windows-gocsv/GoCSV.exe msix-build/GoCSV.exe
         elif [ -f "windows-gocsv/GoCSV-amd64.exe" ]; then
-          echo "Using unsigned GoCSV-amd64.exe (cross-compiled)"
           cp windows-gocsv/GoCSV-amd64.exe msix-build/GoCSV.exe
         else
           echo "ERROR: No GoCSV.exe found!"
@@ -918,7 +721,7 @@ jobs:
   build-windows-installer:
     name: Build Windows Installer
     runs-on: self-hosted
-    needs: [sign-windows-binaries]
+    needs: [build-cli-binaries, build-desktop, build-gocsv]
     if: always() && !cancelled()
     
     steps:
@@ -937,107 +740,53 @@ jobs:
         fi
         echo "version=$VERSION" >> $GITHUB_OUTPUT
     
-    - name: Check signing status
-      id: check_signed
-      run: |
-        # Check if we have signed binaries available
-        echo "Checking for signed Windows binaries..."
-        SIGNED="false"
-        
-        # The signing-status artifact tells us if signing succeeded
-        if [ -f "signing-status.txt" ]; then
-          STATUS=$(cat signing-status.txt)
-          if [ "$STATUS" = "signed" ]; then
-            SIGNED="true"
-            echo "✓ Using signed Windows binaries"
-          else
-            echo "⚠️ Using unsigned Windows binaries"
-          fi
-        else
-          echo "⚠️ No signing status found, using unsigned binaries"
-        fi
-        
-        echo "use_signed=${SIGNED}" >> $GITHUB_OUTPUT
-    
-    - name: Download signing status
-      uses: actions/download-artifact@v4
-      with:
-        name: signing-status
-        path: .
-      continue-on-error: true
-    
     - name: Download Windows CLI artifact
       uses: actions/download-artifact@v4
       with:
         name: pca-windows-amd64
         path: windows-cli
     
-    - name: Download signed Windows artifacts
-      if: steps.check_signed.outputs.use_signed == 'true'
-      uses: actions/download-artifact@v4
-      with:
-        name: windows-signed
-        path: windows-signed
-      continue-on-error: true
-    
     - name: Download Windows GoPCA artifact
       uses: actions/download-artifact@v4
       with:
         name: gopca-desktop-windows-latest
         path: windows-desktop
-    
+
     - name: Download Windows GoCSV artifact
       uses: actions/download-artifact@v4
       with:
         name: gocsv-windows-latest
         path: windows-gocsv
-    
+
     - name: Prepare binaries for installer
       run: |
-        # Create directory for installer binaries
         mkdir -p build/windows-installer
-        
-        # Copy pca CLI binary (prefer signed)
-        if [ "${{ steps.check_signed.outputs.use_signed }}" = "true" ] && [ -f "windows-signed/pca-windows-amd64.exe" ]; then
-          echo "Using signed pca CLI binary"
-          cp windows-signed/pca-windows-amd64.exe build/windows-installer/pca-windows-amd64.exe
-        else
-          echo "Using unsigned pca CLI binary"
-          cp windows-cli/pca-windows-amd64.exe build/windows-installer/pca-windows-amd64.exe
-        fi
-        
-        # Copy GoPCA Desktop (prefer signed, handle both naming conventions)
-        if [ "${{ steps.check_signed.outputs.use_signed }}" = "true" ] && [ -f "windows-signed/GoPCA.exe" ]; then
-          echo "Using signed GoPCA binary"
-          cp windows-signed/GoPCA.exe build/windows-installer/GoPCA.exe
-        elif [ -f "windows-desktop/GoPCA-amd64.exe" ]; then
-          echo "Using unsigned GoPCA binary (cross-compiled)"
+
+        # Copy pca CLI binary
+        cp windows-cli/pca-windows-amd64.exe build/windows-installer/pca-windows-amd64.exe
+
+        # Copy GoPCA Desktop (handle both naming conventions)
+        if [ -f "windows-desktop/GoPCA-amd64.exe" ]; then
           cp windows-desktop/GoPCA-amd64.exe build/windows-installer/GoPCA.exe
         elif [ -f "windows-desktop/GoPCA.exe" ]; then
-          echo "Using unsigned GoPCA binary"
           cp windows-desktop/GoPCA.exe build/windows-installer/GoPCA.exe
         else
           echo "ERROR: No GoPCA.exe found!"
           ls -la windows-desktop/
           exit 1
         fi
-        
-        # Copy GoCSV Desktop (prefer signed, handle both naming conventions)
-        if [ "${{ steps.check_signed.outputs.use_signed }}" = "true" ] && [ -f "windows-signed/GoCSV.exe" ]; then
-          echo "Using signed GoCSV binary"
-          cp windows-signed/GoCSV.exe build/windows-installer/GoCSV.exe
-        elif [ -f "windows-gocsv/GoCSV-amd64.exe" ]; then
-          echo "Using unsigned GoCSV binary (cross-compiled)"
+
+        # Copy GoCSV Desktop (handle both naming conventions)
+        if [ -f "windows-gocsv/GoCSV-amd64.exe" ]; then
           cp windows-gocsv/GoCSV-amd64.exe build/windows-installer/GoCSV.exe
         elif [ -f "windows-gocsv/GoCSV.exe" ]; then
-          echo "Using unsigned GoCSV binary"
           cp windows-gocsv/GoCSV.exe build/windows-installer/GoCSV.exe
         else
           echo "ERROR: No GoCSV.exe found!"
           ls -la windows-gocsv/
           exit 1
         fi
-        
+
         echo "=== Installer binaries prepared ==="
         ls -lh build/windows-installer/
     
@@ -1074,7 +823,7 @@ jobs:
   create-release:
     name: Create Release with Artifacts
     runs-on: ubuntu-latest
-    needs: [build-cli-binaries, build-desktop, build-gocsv, build-appimages, sign-windows-binaries, build-windows-installer, build-msix]
+    needs: [build-cli-binaries, build-desktop, build-gocsv, build-appimages, build-windows-installer, build-msix]
     if: always() && !cancelled()
     
     steps:
@@ -1114,18 +863,6 @@ jobs:
         
         if [ -f "artifacts/pca-darwin-arm64/pca-darwin-arm64" ]; then
           chmod +x "artifacts/pca-darwin-arm64/pca-darwin-arm64"
-        fi
-    
-    - name: Check signing status
-      id: check_signed
-      run: |
-        if [ -f "artifacts/signing-status/signing-status.txt" ]; then
-          STATUS=$(cat artifacts/signing-status/signing-status.txt)
-          echo "windows_signed=${STATUS}" >> $GITHUB_OUTPUT
-          echo "Windows binaries are: ${STATUS}"
-        else
-          echo "windows_signed=unsigned" >> $GITHUB_OUTPUT
-          echo "Windows binaries are: unsigned (SignPath not configured)"
         fi
     
     - name: Organize and package artifacts
@@ -1175,30 +912,18 @@ jobs:
         # === Windows Bundle ===
         echo "Creating Windows bundle..."
         
-        # CLI binary (prefer signed)
-        if [ "${{ steps.check_signed.outputs.windows_signed }}" = "signed" ] && [ -f "windows-signed/pca-windows-amd64.exe" ]; then
-          echo "Using signed Windows CLI binary"
-          cp "windows-signed/pca-windows-amd64.exe" "windows/pca.exe"
-        elif [ -f "pca-windows-amd64/pca-windows-amd64.exe" ]; then
-          echo "Using unsigned Windows CLI binary"
+        # CLI binary
+        if [ -f "pca-windows-amd64/pca-windows-amd64.exe" ]; then
           cp "pca-windows-amd64/pca-windows-amd64.exe" "windows/pca.exe"
         fi
-        
-        # GoPCA app (prefer signed)
-        if [ "${{ steps.check_signed.outputs.windows_signed }}" = "signed" ] && [ -f "windows-signed/GoPCA.exe" ]; then
-          echo "Using signed Windows GoPCA binary"
-          cp "windows-signed/GoPCA.exe" "windows/GoPCA.exe"
-        elif [ -f "gopca-desktop-windows-latest/GoPCA.exe" ]; then
-          echo "Using unsigned Windows GoPCA binary"
+
+        # GoPCA app
+        if [ -f "gopca-desktop-windows-latest/GoPCA.exe" ]; then
           cp "gopca-desktop-windows-latest/GoPCA.exe" "windows/GoPCA.exe"
         fi
-        
-        # GoCSV app (prefer signed)
-        if [ "${{ steps.check_signed.outputs.windows_signed }}" = "signed" ] && [ -f "windows-signed/GoCSV.exe" ]; then
-          echo "Using signed Windows GoCSV binary"
-          cp "windows-signed/GoCSV.exe" "windows/GoCSV.exe"
-        elif [ -f "gocsv-windows-latest/GoCSV.exe" ]; then
-          echo "Using unsigned Windows GoCSV binary"
+
+        # GoCSV app
+        if [ -f "gocsv-windows-latest/GoCSV.exe" ]; then
           cp "gocsv-windows-latest/GoCSV.exe" "windows/GoCSV.exe"
         fi
         
@@ -1264,7 +989,7 @@ jobs:
 
         # Clean up temporary directories
         rm -rf macos windows linux
-        rm -rf pca-* gopca-desktop-* gocsv-* windows-signed signing-status unsigned-* windows-installer msix-package
+        rm -rf pca-* gopca-desktop-* gocsv-* windows-installer msix-package
 
         # Generate checksums for all artifacts (including AppImages and MSIX if built)
         if [ "${INSTALLER_AVAILABLE}" = "true" ]; then
