@@ -52,7 +52,7 @@ GoPCA Suite is designed with security in mind:
 - **100% local processing** - No data is sent to external servers
 - **No telemetry** - No usage data or metrics are collected
 - **No network dependencies** - Works completely offline
-- **Open source** - All code is publicly auditable
+- **Source available** - All code is publicly auditable
 
 However, users should:
 - Keep their installation updated to the latest version
@@ -61,6 +61,6 @@ However, users should:
 
 ## Disclaimer
 
-This is a personal open-source project maintained in spare time. While I take security seriously and will do my best to address vulnerabilities, there are no guarantees or SLAs for security fixes. Organizations requiring guaranteed security response times should consider alternative solutions or maintain their own fork.
+This is a personal source-available project maintained in spare time. While I take security seriously and will do my best to address vulnerabilities, there are no guarantees or SLAs for security fixes. Organizations requiring guaranteed security response times should consider alternative solutions or maintain their own fork.
 
 Thank you for helping keep GoPCA Suite secure!

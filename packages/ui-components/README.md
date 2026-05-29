@@ -295,7 +295,7 @@ Planned components for future releases:
 - StatusBar - Application status display
 - TabPanel - Consistent tab navigation
 
-## Contributing
+## Development Guidelines
 
 When modifying shared components:
 1. Ensure changes don't break existing usage in either app
@@ -306,5 +306,8 @@ When modifying shared components:
 
 ## License
 
-Copyright 2025 bitjungle - Rune Mathisen. All rights reserved.
-Licensed under the MIT License.
+Copyright © 2025-2026 Rune Mathisen. All rights reserved.
+
+This package is part of GoPCA Suite and is governed by the
+GoPCA Suite Source-Available Freeware License. See `LICENSE`
+in the repository root for full terms.
