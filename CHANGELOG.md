@@ -5,6 +5,40 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.4.0] - 2026-05-29
+
+### Added
+- **Six guided tutorials with real datasets** — each bundled directly in the application and opened automatically when a sample dataset is loaded (#664)
+  - **Iris** — classic multivariate dataset; introduces scores, loadings, and group separation (#662)
+  - **Wine** — classification with scale imbalance; teaches preprocessing choices (#665)
+  - **Corn (NIR)** — near-infrared spectroscopy; covers SNV preprocessing and spectral interpretation (#666)
+  - **Swiss Roll** — synthetic non-linear manifold; demonstrates Kernel PCA (#667)
+  - **EEG Eye State** — brain signal classification; introduces high-dimensional temporal data (#668, #670, #689)
+  - **CSTR** — chemical reactor time-series from a simulator; teaches Temporal PCA for process monitoring (#673)
+- **CSTR dataset** — simulated Continuous Stirred Tank Reactor data for Temporal PCA exploration (#673)
+- **EEG Eye State dataset** — replaces the former Stocks dataset; EEG recordings for binary classification (#668)
+
+### Fixed
+- External links in tutorials and documentation now open in the system browser instead of inside the app (#683)
+- Pre-bundle `plotly.js-dist-min` to prevent Wails dev-server crash on startup (#682)
+- Suppress misleading scale warning when Robust Scale preprocessing is selected (#690, fixes #684)
+- Restore Download as PNG button on the Variable Importance plot — was accidentally removed (#691, fixes #685)
+
+### Changed
+- Rename `Sample` column header to `Sample_ID` in all bundled datasets for clarity (#687, fixes #686)
+- **License changed from MIT to GoPCA Suite Source-Available Freeware License** — effective for versions 1.4.0 and later (#694)
+  - Compiled binaries remain free to use and redistribute
+  - Source code is publicly viewable for review, education, and security analysis
+  - Modification and redistribution of source code require prior written permission
+  - Previously released MIT-licensed versions (≤ 1.3.1) remain under the MIT License
+
+### Documentation
+- Clarify robust scaling explanation in the preprocessing guide (#692)
+- Extensive human QA and copy-editing pass across all six tutorials (#674, #681, #683, #689)
+
+### Security
+- Fix all Dependabot alerts: updated npm and Go dependencies (#679)
+
 ## [1.3.1] - 2026-04-24
 
 ### Fixed
