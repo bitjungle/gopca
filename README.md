@@ -95,7 +95,7 @@ All plots support PNG export, interactive tooltips, full-screen mode, and option
 ![GoPCA Scoreplot Example](docs/images/GoPCA_scoreplot_example.png)
 
 ### Built for Real Work
-- **Example datasets included**: Four interesting datasets for immediate exploration
+- **Example datasets included**: Six datasets with guided tutorials for immediate exploration
 - **Handles real-world data**: Robust to missing values, mixed scales, and outliers
 - **Smart defaults**: Automatic parameter selection based on your data
 - **Cross-platform**: Native performance on Windows, macOS, and Linux
@@ -126,7 +126,7 @@ See [PRIVACY.md](PRIVACY.md) for detailed privacy documentation and verification
 
 1. **Download** the latest release for your platform from [GitHub Releases](https://github.com/bitjungle/gopca/releases)
 2. **Launch** GoPCA Desktop
-3. **Try an example** - Select one of the example datasets (NIR, Iris, Wine, or Swiss roll)
+3. **Try an example** - Select one of the six example datasets (Iris, Wine, Corn NIR, Swiss Roll, Eye State EEG, or CSTR)
 4. **Or load your data** - Click "Open CSV" to load your own file
 5. **Configure preprocessing** - Choose centering, scaling, and other options
 6. **Click "Go PCA!"** - Explore results interactively
@@ -261,3 +261,14 @@ This project is not open source under the Open Source Definition because the
 license does not permit modification or redistribution of the source code.
 
 See `LICENSE` for the full terms.
+
+## Licensing history
+
+Versions of GoPCA Suite released up to version 1.3.1 were licensed under the
+MIT License.
+
+Starting with version 1.4.0, GoPCA Suite is distributed under the GoPCA Suite
+Source-Available Freeware License.
+
+Previously released MIT-licensed versions remain available under their original
+license terms. The new license applies only to versions 1.4.0 and later.
