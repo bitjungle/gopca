@@ -1,4 +1,26 @@
-// Copyright 2025-2026 bitjungle - Rune Mathisen. All rights reserved.
+// GoPCA Suite
+//
+// Copyright © 2025-2026 Rune Mathisen <devel@bitjungle.com>
+//
+// This file is part of GoPCA Suite.
+//
+// GoPCA Suite is source-available software with free binary redistribution.
+// Official compiled binary releases may be used and redistributed free of charge
+// under the GoPCA Suite Source-Available Freeware License.
+//
+// The source code is provided for viewing, review, education, security analysis,
+// research, interoperability analysis, and evaluation only.
+//
+// Modification, redistribution, publication, sublicensing, reuse, incorporation
+// into another project, or creation of derivative works based on the source code
+// is not permitted without prior written permission from the copyright holder.
+//
+// Usage Restriction: GoPCA Suite may not be used, directly or indirectly, for
+// military, warfare, weapons, intelligence, surveillance, targeting, or
+// law-enforcement surveillance applications.
+//
+// See LICENSE for the full license terms.
+
 // Plotly-based Temporal Loadings (U matrix) Visualization
 
 import React from 'react';
@@ -19,7 +41,7 @@ interface TemporalLoadingsPlotProps {
 
 export const TemporalLoadingsPlot: React.FC<TemporalLoadingsPlotProps> = ({
   pcaResult,
-  maxComponents = 5,
+  maxComponents,
   fontScale = 1.0
 }) => {
   const { theme } = useTheme();
@@ -40,9 +62,12 @@ export const TemporalLoadingsPlot: React.FC<TemporalLoadingsPlotProps> = ({
     );
   }
 
+  // Show all computed components unless caller explicitly limits the count
+  const componentCount = maxComponents ?? (pcaResult.component_labels?.length ?? 5);
+
   // Create config for Plotly component
   const plotlyConfig = createTemporalLoadingsPlotConfig(
-    maxComponents,
+    componentCount,
     theme,
     colorScheme,
     fontScale

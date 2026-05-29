@@ -1,8 +1,25 @@
-// Copyright 2025-2026 bitjungle - Rune Mathisen. All rights reserved.
-// Use of this source code is governed by the MIT license
-// that can be found in the LICENSE file.
-// The author respectfully requests that it not be used for
-// military, warfare, or surveillance applications.
+// GoPCA Suite
+//
+// Copyright © 2025-2026 Rune Mathisen <devel@bitjungle.com>
+//
+// This file is part of GoPCA Suite.
+//
+// GoPCA Suite is source-available software with free binary redistribution.
+// Official compiled binary releases may be used and redistributed free of charge
+// under the GoPCA Suite Source-Available Freeware License.
+//
+// The source code is provided for viewing, review, education, security analysis,
+// research, interoperability analysis, and evaluation only.
+//
+// Modification, redistribution, publication, sublicensing, reuse, incorporation
+// into another project, or creation of derivative works based on the source code
+// is not permitted without prior written permission from the copyright holder.
+//
+// Usage Restriction: GoPCA Suite may not be used, directly or indirectly, for
+// military, warfare, weapons, intelligence, surveillance, targeting, or
+// law-enforcement surveillance applications.
+//
+// See LICENSE for the full license terms.
 
 package types
 
@@ -31,7 +48,7 @@ func TestCSVParser_Parse(t *testing.T) {
 				HasRowNames:      true,
 				NullValues:       []string{"", "NA", "NaN"},
 			},
-			input: `Sample,Feature1,Feature2,Feature3
+			input: `Sample_ID,Feature1,Feature2,Feature3
 Row1,1.5,2.3,4.1
 Row2,3.2,NA,5.6
 Row3,2.1,3.4,NaN`,
@@ -81,7 +98,7 @@ Row3,2.1,3.4,NaN`,
 				HasRowNames:      true,
 				NullValues:       []string{"", "NA", "m"},
 			},
-			input: `Sample;Var1;Var2;Var3
+			input: `Sample_ID;Var1;Var2;Var3
 S1;1,5;2,3;4,1
 S2;3,2;m;5,6
 S3;2,1;3,4;`,

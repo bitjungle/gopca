@@ -1,8 +1,25 @@
-// Copyright 2025-2026 bitjungle - Rune Mathisen. All rights reserved.
-// Use of this source code is governed by the MIT license
-// that can be found in the LICENSE file.
-// The author respectfully requests that it not be used for
-// military, warfare, or surveillance applications.
+// GoPCA Suite
+//
+// Copyright © 2025-2026 Rune Mathisen <devel@bitjungle.com>
+//
+// This file is part of GoPCA Suite.
+//
+// GoPCA Suite is source-available software with free binary redistribution.
+// Official compiled binary releases may be used and redistributed free of charge
+// under the GoPCA Suite Source-Available Freeware License.
+//
+// The source code is provided for viewing, review, education, security analysis,
+// research, interoperability analysis, and evaluation only.
+//
+// Modification, redistribution, publication, sublicensing, reuse, incorporation
+// into another project, or creation of derivative works based on the source code
+// is not permitted without prior written permission from the copyright holder.
+//
+// Usage Restriction: GoPCA Suite may not be used, directly or indirectly, for
+// military, warfare, weapons, intelligence, surveillance, targeting, or
+// law-enforcement surveillance applications.
+//
+// See LICENSE for the full license terms.
 
 import React from 'react';
 import { ErrorBoundary, ErrorAlert } from '@gopca/ui-components';
@@ -11,6 +28,7 @@ import { useFileDataContext } from '../../contexts/FileDataContext';
 import { usePCAContext } from '../../contexts/PCAContext';
 import { useGoCSVContext } from '../../contexts/GoCSVContext';
 import { logger } from '../../utils/logger';
+import { OpenTutorial } from '../../../wailsjs/go/main/App';
 
 /**
  * Step 1: Load Data — file picker, GoCSV button, matrix illustration, sample
@@ -29,6 +47,17 @@ export function DataLoadSection() {
         handleRowSelectionChange, handleColumnSelectionChange,
     } = usePCAContext();
     const { goCSVStatus, isCheckingGoCSV, handleGoCSVAction } = useGoCSVContext();
+
+    // Load a sample dataset and open its tutorial in a separate window simultaneously.
+    // OpenTutorial is fire-and-forget; tutorial window failure does not block the load.
+    function loadDatasetWithTutorial(filename: string, groupColumn?: string, tutorialDataset?: string) {
+        handleLoadDataset(filename, groupColumn);
+        if (tutorialDataset) {
+            OpenTutorial(tutorialDataset).catch((err: unknown) => {
+                logger.error('Failed to open tutorial window:', err);
+            });
+        }
+    }
 
     return (
         <>
@@ -82,18 +111,9 @@ export function DataLoadSection() {
                             Or Try Sample Datasets
                         </label>
                         <div className="space-y-2">
-                            <HelpWrapper helpKey="sample-dataset-corn">
-                                <button
-                                    onClick={() => handleLoadDataset('corn.csv')}
-                                    className="w-full px-4 py-2 text-sm bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors"
-                                    disabled={loading}
-                                >
-                                    Corn (NIR)
-                                </button>
-                            </HelpWrapper>
                             <HelpWrapper helpKey="sample-dataset-iris">
                                 <button
-                                    onClick={() => handleLoadDataset('iris.csv', 'species')}
+                                    onClick={() => loadDatasetWithTutorial('iris.csv', 'species', 'iris')}
                                     className="w-full px-4 py-2 text-sm bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors"
                                     disabled={loading}
                                 >
@@ -102,29 +122,47 @@ export function DataLoadSection() {
                             </HelpWrapper>
                             <HelpWrapper helpKey="sample-dataset-wine">
                                 <button
-                                    onClick={() => handleLoadDataset('wine.csv', 'target')}
+                                    onClick={() => loadDatasetWithTutorial('wine.csv', 'target', 'wine')}
                                     className="w-full px-4 py-2 text-sm bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors"
                                     disabled={loading}
                                 >
                                     Wine
                                 </button>
                             </HelpWrapper>
+                            <HelpWrapper helpKey="sample-dataset-corn">
+                                <button
+                                    onClick={() => loadDatasetWithTutorial('corn.csv', undefined, 'corn')}
+                                    className="w-full px-4 py-2 text-sm bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors"
+                                    disabled={loading}
+                                >
+                                    Corn (NIR)
+                                </button>
+                            </HelpWrapper>
                             <HelpWrapper helpKey="sample-dataset-swiss-roll">
                                 <button
-                                    onClick={() => handleLoadDataset('swiss_roll.csv', 'color #target')}
+                                    onClick={() => loadDatasetWithTutorial('swiss_roll.csv', 'color #target', 'swiss_roll')}
                                     className="w-full px-4 py-2 text-sm bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors"
                                     disabled={loading}
                                 >
                                     Swiss Roll
                                 </button>
                             </HelpWrapper>
-                            <HelpWrapper helpKey="sample-dataset-stocks">
+                            <HelpWrapper helpKey="sample-dataset-cstr">
                                 <button
-                                    onClick={() => handleLoadDataset('stocks.csv')}
+                                    onClick={() => loadDatasetWithTutorial('cstr.csv', 'regime', 'cstr')}
                                     className="w-full px-4 py-2 text-sm bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors"
                                     disabled={loading}
                                 >
-                                    Stocks
+                                    CSTR (time series)
+                                </button>
+                            </HelpWrapper>
+                            <HelpWrapper helpKey="sample-dataset-eeg-eye-state">
+                                <button
+                                    onClick={() => loadDatasetWithTutorial('eeg_eye_state.csv', undefined, 'eeg_eye_state')}
+                                    className="w-full px-4 py-2 text-sm bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors"
+                                    disabled={loading}
+                                >
+                                    EEG Eye State
                                 </button>
                             </HelpWrapper>
                         </div>

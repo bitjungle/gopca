@@ -154,7 +154,7 @@ The `sign-windows-binaries` job in the release workflow:
 
 ### Certificate Types
 - **Test Certificate**: Self-signed, for workflow testing
-- **Production Certificate**: Apply for free open source certificate from SignPath
+- **Production Certificate**: Obtain a code signing certificate from a trusted certificate authority
 
 ## Local Windows Testing with Self-Signed Certificates
 

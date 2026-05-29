@@ -11,17 +11,12 @@ X, color = make_swiss_roll(n_samples=1000, noise=0.1, random_state=42)
 # X contains the 3D coordinates, color contains the color values
 # Merge X and color into a DataFrame
 df = pd.DataFrame(X, columns=['X', 'Y', 'Z'])
-df['color'] = color 
-# Save to CSV
+df['color'] = color
+# Save to CSV (legacy file kept for reference)
 df.to_csv('swiss_roll_color_target.csv', index=True)
 
-
-# Dicide the color variable into categories from A to H
-categories = ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H']
-color_normalized = (color - color.min()) / (color.max() - color.min())  # Normalize to [0, 1]
-color_categories = np.array([categories[min(int(c * len(categories)), len(categories) - 1)] for c in color_normalized])    
-
-# Save X and color_categories to a csv file using pandas
-df = pd.DataFrame(X, columns=['X', 'Y', 'Z'])
-df['color_category'] = color_categories
-df.to_csv('swiss_roll.csv', index=True)
+# Save the main dataset with the GoPCA #target convention:
+# columns ending in #target are excluded from PCA and used only for colouring.
+df_target = pd.DataFrame(X, columns=['X', 'Y', 'Z'])
+df_target['color #target'] = color
+df_target.to_csv('swiss_roll.csv', index=True)

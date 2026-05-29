@@ -1,107 +1,72 @@
 # Contributing to GoPCA Suite
 
-First off, thank you for your interest in GoPCA Suite! This document provides guidelines for contributing to the project.
+Thank you for your interest in GoPCA Suite! This document explains how you can help and what to expect.
 
 ## About This Project
 
-GoPCA Suite is a **personal exploration project** that I maintain in my spare time. It represents my learning journey in creating professional-grade PCA analysis tools. While the code is open source under the MIT license, please understand that this is primarily a personal project with a specific vision and roadmap.
+GoPCA Suite is a **personal project** that I maintain in my spare time. It is
+source-available freeware — the source code is publicly visible for review,
+education, and research, but it is not open source. The license does not permit
+modification, forking, or redistribution of the source code. If you need a
+customised version, please [contact me](mailto:devel@bitjungle.com) to discuss
+whether a collaboration arrangement makes sense.
 
-## Before You Contribute
+## How You Can Help
 
-### Consider Forking
+### Report Bugs
 
-If you need specific features or modifications for your use case, I encourage you to **fork the repository**. This gives you complete freedom to adapt the code to your needs without waiting for reviews or approvals.
+Bug reports are genuinely useful and always welcome.
 
-### Limited Maintenance Bandwidth
+Before filing an issue:
+- Check [existing issues](https://github.com/bitjungle/gopca/issues) to avoid duplicates
+- Confirm you can reproduce the problem on the latest release
+- Collect the relevant details: OS, version, steps to reproduce, and what you expected vs. what happened
 
-As this is a spare-time project, I have very limited bandwidth for reviewing contributions. Response times for issues and pull requests may range from several weeks to months. Please plan accordingly.
+Use the bug report template when opening an issue.
 
-## How to Contribute
+### Suggest Features
 
-### 1. Start with a Discussion
+Feature ideas are welcome through [GitHub Discussions](https://github.com/bitjungle/gopca/discussions).
+Please keep in mind:
+- Suggestions must align with the project's core mission of PCA analysis
+- I prioritise features I personally need or that many users request
+- There is no guarantee or timeline for implementation
 
-**Before writing any code**, please open a discussion in the [GitHub Discussions](https://github.com/bitjungle/gopca/discussions) area to:
-- Explain what you'd like to contribute
-- Understand if it aligns with the project's roadmap
-- Get feedback on your approach
+### Improve Documentation
 
-This saves everyone time and ensures we're aligned before you invest effort in code.
+If you spot a factual error, typo, or unclear explanation in the documentation,
+please open an issue or start a discussion. Documentation improvements are among
+the most valuable contributions you can make.
 
-### 2. Reporting Bugs
+### Share Your Use Cases
 
-Before reporting a bug:
-- Check if it's already reported in [existing issues](https://github.com/bitjungle/gopca/issues)
-- Ensure you can reproduce it with the latest version
-- Collect all relevant information (OS, version, steps to reproduce)
+Understanding how you use GoPCA — what datasets, which workflows, what you wish
+it could do — directly informs development priorities. A short note in
+[GitHub Discussions](https://github.com/bitjungle/gopca/discussions) is always
+appreciated.
 
-Use the bug report template when creating an issue.
+## Code Contributions
 
-### 3. Suggesting Features
+Because the license does not permit third-party modification or redistribution
+of the source code, unsolicited pull requests cannot be accepted. If you have
+an idea for a code change, please open a discussion first. In exceptional cases,
+where the scope is well-defined and agreed in advance, a contribution arrangement
+may be possible — but this requires explicit prior agreement.
 
-Feature suggestions are welcome through GitHub Discussions. Please understand that:
-- Features must align with the project's core mission of PCA analysis
-- I prioritize features that I personally need for my use cases
-- Implementation may take considerable time or may not happen
+## Response Times
 
-### 4. Code Contributions
+This is a spare-time project. Response times for issues and discussions may
+range from a few days to several weeks. No response does not mean rejection.
 
-If we've agreed through discussion that a contribution makes sense:
+## Contact
 
-#### Prerequisites
-- Go 1.24+ and Node.js 24+
-- Familiarity with the codebase structure
-- Understanding of PCA mathematics (for algorithm contributions)
+For questions not suited to public issues or discussions:
+[devel@bitjungle.com](mailto:devel@bitjungle.com)
 
-#### Quality Standards
-All contributions must meet these standards:
-- **Tests Required**: New features need comprehensive tests (target 80%+ coverage)
-- **Documentation**: Update relevant documentation and add inline comments
-- **Code Style**: Follow existing patterns in the codebase
-- **Commit Messages**: Use conventional commits format (`feat:`, `fix:`, etc.)
-- **Mathematical Correctness**: PCA-related code must be mathematically sound with references
-- **Cross-platform**: Code must work on Windows, macOS, and Linux
-- **No Breaking Changes**: Unless previously discussed and approved
+## License
 
-#### Pull Request Process
-1. Fork the repository
-2. Create a feature branch from `main`
-3. Make your changes following the standards above
-4. Ensure all tests pass: `make test`
-5. Run linters: `make lint`
-6. Submit a PR with:
-   - Clear description of changes
-   - Reference to the discussion thread
-   - Test results
-   - Screenshots (for UI changes)
+By submitting any content (issue descriptions, discussion posts, documentation
+suggestions) to this repository, you agree that the copyright holder may use
+your input freely without obligation or compensation.
 
-#### Review Timeline
-- PRs may take **several weeks** for review
-- Complex changes require more time
-- I may request changes or decide not to merge
-- No response doesn't mean rejection - it means I haven't had time yet
-
-## What Happens to Contributions
-
-Please understand that:
-- Not all PRs will be merged, even if they meet quality standards
-- I may implement your idea differently to match my vision
-- Merged code becomes part of the project under the MIT license
-- I may modify or revert changes in future versions
-
-## Alternative Ways to Contribute
-
-If code contributions don't work out:
-- **Report bugs**: Well-documented bug reports are incredibly helpful
-- **Improve documentation**: Spot a typo or unclear explanation? Let me know
-- **Share your use cases**: Understanding how you use GoPCA helps guide development
-- **Star the repository**: If you find it useful, a star is appreciated
-
-## Questions?
-
-For questions about contributing, please use [GitHub Discussions](https://github.com/bitjungle/gopca/discussions) rather than issues.
-
-## Final Note
-
-I deeply appreciate your interest in contributing to GoPCA Suite. While I maintain tight control over the project's direction due to limited time and specific vision, I value the open source community and encourage you to fork and adapt the code for your needs. The MIT license ensures you have complete freedom to do so.
-
-Thank you for understanding and respecting these contribution guidelines.
+See `LICENSE` for the full terms governing use of GoPCA Suite.

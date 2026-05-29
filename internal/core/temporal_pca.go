@@ -1,8 +1,25 @@
-// Copyright 2025-2026 bitjungle - Rune Mathisen. All rights reserved.
-// Use of this source code is governed by the MIT license
-// that can be found in the LICENSE file.
-// The author respectfully requests that it not be used for
-// military, warfare, or surveillance applications.
+// GoPCA Suite
+//
+// Copyright © 2025-2026 Rune Mathisen <devel@bitjungle.com>
+//
+// This file is part of GoPCA Suite.
+//
+// GoPCA Suite is source-available software with free binary redistribution.
+// Official compiled binary releases may be used and redistributed free of charge
+// under the GoPCA Suite Source-Available Freeware License.
+//
+// The source code is provided for viewing, review, education, security analysis,
+// research, interoperability analysis, and evaluation only.
+//
+// Modification, redistribution, publication, sublicensing, reuse, incorporation
+// into another project, or creation of derivative works based on the source code
+// is not permitted without prior written permission from the copyright holder.
+//
+// Usage Restriction: GoPCA Suite may not be used, directly or indirectly, for
+// military, warfare, weapons, intelligence, surveillance, targeting, or
+// law-enforcement surveillance applications.
+//
+// See LICENSE for the full license terms.
 
 package core
 
@@ -456,12 +473,43 @@ func (t *TemporalPCAImpl) Fit(data types.Matrix, config types.PCAConfig) (*types
 		cumulativeVar[i] = cumSum
 	}
 
-	// Extract U matrix (temporal eigenvectors) for the retained components
-	// U matrix has shape [effectiveRows × t.nComponents] where effectiveRows = numLags
+	// Build temporal eigenvectors matrix [numLags × nComponents] for visualization.
+	//
+	// For each component we show the signed loadings of its single most influential
+	// channel across all lag positions. The dominant channel for component c is
+	// defined as the variable v* with the largest RMS loading across lags:
+	//
+	//   v*(c) = argmax_v sqrt( mean_l loadings[c, l*p + v]^2 )
+	//   temporalEigenvectors[lag, c] = loadings[c, lag*p + v*(c)]
+	//
+	// This approach preserves sign (so oscillatory components appear as sinusoids
+	// and trend components as monotone curves) without the cancellation problem of
+	// averaging channels with opposite-sign spatial loadings — which is the common
+	// case in EEG where different brain regions load with opposite signs on the same
+	// component (Broomhead & King, 1986; Vautard & Ghil, 1989).
+	//
+	// Layout of t.loadings: row c, column lag*origVars+v  →  loading of component c
+	// for channel v at lag offset l.
 	temporalEigenvectors := mat.NewDense(t.numLags, t.nComponents, nil)
-	for i := 0; i < t.numLags && i < effectiveRows; i++ {
-		for j := 0; j < t.nComponents; j++ {
-			temporalEigenvectors.Set(i, j, u.At(i, j))
+	for comp := 0; comp < t.nComponents; comp++ {
+		// Find the dominant channel for this component (highest RMS across lags)
+		dominantVar := 0
+		maxRMS := -1.0
+		for v := 0; v < t.origVars; v++ {
+			sumSq := 0.0
+			for lag := 0; lag < t.numLags; lag++ {
+				val := t.loadings.At(comp, lag*t.origVars+v)
+				sumSq += val * val
+			}
+			rms := math.Sqrt(sumSq / float64(t.numLags))
+			if rms > maxRMS {
+				maxRMS = rms
+				dominantVar = v
+			}
+		}
+		// Store the signed loadings for the dominant channel across all lags
+		for lag := 0; lag < t.numLags; lag++ {
+			temporalEigenvectors.Set(lag, comp, t.loadings.At(comp, lag*t.origVars+dominantVar))
 		}
 	}
 

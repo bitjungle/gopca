@@ -1,8 +1,25 @@
-// Copyright 2025-2026 bitjungle - Rune Mathisen. All rights reserved.
-// Use of this source code is governed by the MIT license
-// that can be found in the LICENSE file.
-// The author respectfully requests that it not be used for
-// military, warfare, or surveillance applications.
+// GoPCA Suite
+//
+// Copyright © 2025-2026 Rune Mathisen <devel@bitjungle.com>
+//
+// This file is part of GoPCA Suite.
+//
+// GoPCA Suite is source-available software with free binary redistribution.
+// Official compiled binary releases may be used and redistributed free of charge
+// under the GoPCA Suite Source-Available Freeware License.
+//
+// The source code is provided for viewing, review, education, security analysis,
+// research, interoperability analysis, and evaluation only.
+//
+// Modification, redistribution, publication, sublicensing, reuse, incorporation
+// into another project, or creation of derivative works based on the source code
+// is not permitted without prior written permission from the copyright holder.
+//
+// Usage Restriction: GoPCA Suite may not be used, directly or indirectly, for
+// military, warfare, weapons, intelligence, surveillance, targeting, or
+// law-enforcement surveillance applications.
+//
+// See LICENSE for the full license terms.
 
 package cobra
 
@@ -103,21 +120,21 @@ func validateCSVData(data *pkgcsv.Data) error {
 func getDataSummary(data *pkgcsv.Data) string {
 	var sb strings.Builder
 
-	sb.WriteString(fmt.Sprintf("Data dimensions: %d rows × %d columns\n", data.Rows, data.Columns))
+	fmt.Fprintf(&sb, "Data dimensions: %d rows × %d columns\n", data.Rows, data.Columns)
 
 	if len(data.Headers) > 0 {
-		sb.WriteString(fmt.Sprintf("Column names: %s", strings.Join(data.Headers, ", ")))
+		fmt.Fprintf(&sb, "Column names: %s", strings.Join(data.Headers, ", "))
 		if len(data.Headers) > 5 {
-			sb.WriteString(fmt.Sprintf(" (showing first 5 of %d)\n", len(data.Headers)))
+			fmt.Fprintf(&sb, " (showing first 5 of %d)\n", len(data.Headers))
 		} else {
 			sb.WriteString("\n")
 		}
 	}
 
 	if len(data.RowNames) > 0 {
-		sb.WriteString(fmt.Sprintf("Row names: %s", strings.Join(data.RowNames[:min(5, len(data.RowNames))], ", ")))
+		fmt.Fprintf(&sb, "Row names: %s", strings.Join(data.RowNames[:min(5, len(data.RowNames))], ", "))
 		if len(data.RowNames) > 5 {
-			sb.WriteString(fmt.Sprintf(" ... (showing first 5 of %d)\n", len(data.RowNames)))
+			fmt.Fprintf(&sb, " ... (showing first 5 of %d)\n", len(data.RowNames))
 		} else {
 			sb.WriteString("\n")
 		}
@@ -135,7 +152,7 @@ func getDataSummary(data *pkgcsv.Data) string {
 
 	totalValues := data.Rows * data.Columns
 	missingPercent := float64(missingCount) / float64(totalValues) * 100
-	sb.WriteString(fmt.Sprintf("Missing values: %d (%.1f%%)\n", missingCount, missingPercent))
+	fmt.Fprintf(&sb, "Missing values: %d (%.1f%%)\n", missingCount, missingPercent)
 
 	return sb.String()
 }

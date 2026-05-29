@@ -1,8 +1,25 @@
-// Copyright 2025-2026 bitjungle - Rune Mathisen. All rights reserved.
-// Use of this source code is governed by the MIT license
-// that can be found in the LICENSE file.
-// The author respectfully requests that it not be used for
-// military, warfare, or surveillance applications.
+// GoPCA Suite
+//
+// Copyright © 2025-2026 Rune Mathisen <devel@bitjungle.com>
+//
+// This file is part of GoPCA Suite.
+//
+// GoPCA Suite is source-available software with free binary redistribution.
+// Official compiled binary releases may be used and redistributed free of charge
+// under the GoPCA Suite Source-Available Freeware License.
+//
+// The source code is provided for viewing, review, education, security analysis,
+// research, interoperability analysis, and evaluation only.
+//
+// Modification, redistribution, publication, sublicensing, reuse, incorporation
+// into another project, or creation of derivative works based on the source code
+// is not permitted without prior written permission from the copyright holder.
+//
+// Usage Restriction: GoPCA Suite may not be used, directly or indirectly, for
+// military, warfare, weapons, intelligence, surveillance, targeting, or
+// law-enforcement surveillance applications.
+//
+// See LICENSE for the full license terms.
 
 package main
 
@@ -30,6 +47,7 @@ func main() {
 	// Parse command-line flags
 	openFile := flag.String("open", "", "CSV file to open on startup")
 	showVersion := flag.Bool("version", false, "Show version information")
+	tutorialDataset := flag.String("tutorial", "", "Open a tutorial window for a sample dataset (iris|wine|corn|swiss_roll|stocks)")
 	flag.Parse()
 
 	// Handle version flag
@@ -38,43 +56,78 @@ func main() {
 		os.Exit(0)
 	}
 
-	// Create an instance of the app structure
+	var err error
+
+	// The same App struct serves both the main window and tutorial windows.
+	// In tutorial mode, SetTutorialDataset() is called so that GetAppMode()
+	// returns the correct mode to the frontend.
 	app := NewApp()
 
-	// Pass the file to open if provided
-	if *openFile != "" {
-		app.SetFileToOpen(*openFile)
-	}
-
-	// Create application with options
-	err := wails.Run(&options.App{
-		Title:            "GoPCA Desktop",
-		Width:            1200,
-		Height:           800,
-		WindowStartState: options.Normal,
-		AssetServer: &assetserver.Options{
-			Assets: assets,
-		},
-		BackgroundColour: &options.RGBA{R: 27, G: 38, B: 54, A: 1},
-		OnStartup:        app.startup,
-		Bind: []interface{}{
-			app,
-		},
-		Mac: &mac.Options{
-			TitleBar: &mac.TitleBar{
-				HideTitleBar:    false,
-				HideTitle:       false,
-				FullSizeContent: false,
-				UseToolbar:      false,
+	if *tutorialDataset != "" {
+		// Tutorial mode: launched by OpenTutorial() with --tutorial <dataset>.
+		// A smaller window shows only the TutorialViewer component.
+		app.SetTutorialDataset(*tutorialDataset)
+		err = wails.Run(&options.App{
+			Title:            fmt.Sprintf("GoPCA Tutorial — %s", *tutorialDataset),
+			Width:            900,
+			Height:           750,
+			WindowStartState: options.Normal,
+			AssetServer: &assetserver.Options{
+				Assets: assets,
 			},
-		},
-		Linux: &linux.Options{
-			Icon:                icon,
-			WindowIsTranslucent: false,
-			WebviewGpuPolicy:    linux.WebviewGpuPolicyAlways,
-			ProgramName:         "GoPCA",
-		},
-	})
+			BackgroundColour: &options.RGBA{R: 27, G: 38, B: 54, A: 1},
+			OnStartup:        app.startup,
+			Bind:             []interface{}{app},
+			Mac: &mac.Options{
+				TitleBar: &mac.TitleBar{
+					HideTitleBar:    false,
+					HideTitle:       false,
+					FullSizeContent: false,
+					UseToolbar:      false,
+				},
+			},
+			Linux: &linux.Options{
+				Icon:                icon,
+				WindowIsTranslucent: false,
+				WebviewGpuPolicy:    linux.WebviewGpuPolicyAlways,
+				ProgramName:         "GoPCA Tutorial",
+			},
+		})
+	} else {
+		// Normal mode: full GoPCA Desktop application.
+		if *openFile != "" {
+			app.SetFileToOpen(*openFile)
+		}
+
+		err = wails.Run(&options.App{
+			Title:            "GoPCA Desktop",
+			Width:            1200,
+			Height:           800,
+			WindowStartState: options.Normal,
+			AssetServer: &assetserver.Options{
+				Assets: assets,
+			},
+			BackgroundColour: &options.RGBA{R: 27, G: 38, B: 54, A: 1},
+			OnStartup:        app.startup,
+			Bind: []interface{}{
+				app,
+			},
+			Mac: &mac.Options{
+				TitleBar: &mac.TitleBar{
+					HideTitleBar:    false,
+					HideTitle:       false,
+					FullSizeContent: false,
+					UseToolbar:      false,
+				},
+			},
+			Linux: &linux.Options{
+				Icon:                icon,
+				WindowIsTranslucent: false,
+				WebviewGpuPolicy:    linux.WebviewGpuPolicyAlways,
+				ProgramName:         "GoPCA",
+			},
+		})
+	}
 
 	if err != nil {
 		println("Error:", err.Error())

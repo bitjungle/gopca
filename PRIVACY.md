@@ -8,7 +8,7 @@ GoPCA Suite is designed with **absolute privacy** as a fundamental principle. We
 - ✅ **Zero Telemetry** - No usage data, metrics, or analytics collection
 - ✅ **No External Connections** - Complete offline operation capability
 - ✅ **No Data Transmission** - Your data never leaves your computer
-- ✅ **Open Source Transparency** - Every line of code is publicly auditable
+- ✅ **Source Transparency** - Every line of code is publicly viewable and auditable
 
 ## Framework Privacy Analysis
 
@@ -219,7 +219,7 @@ If you discover any privacy issue:
 ## License & Rights
 
 This privacy policy is part of the GoPCA Suite documentation.
-- Source code: MIT License
+- Source code: GoPCA Suite Source-Available Freeware License — see `LICENSE` for full terms
 - Your data: Remains 100% yours
 - No rights claimed over user data
 

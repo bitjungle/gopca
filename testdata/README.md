@@ -1,3 +1,10 @@
 # Testdata for GoPCA 
 
 This folder contains various datasets used for testing and demonstrating the capabilities of GoPCA and GoCSV.
+
+## Interesting places to look for data:
+
+* UCI Machine Learning Repository: https://archive.ics.uci.edu
+* Our World in Data: https://ourworldindata.org
+* Kaggle: https://www.kaggle.com
+
