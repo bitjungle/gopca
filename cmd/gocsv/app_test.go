@@ -25,6 +25,9 @@ package main
 
 import (
 	"testing"
+
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 func TestAppMultiStepUndoRedo(t *testing.T) {
@@ -320,4 +323,20 @@ func TestCommandHistoryWithMultipleOperations(t *testing.T) {
 	if len(dataRedo3.Data) != 2 {
 		t.Errorf("Expected 2 rows after redo, got %d", len(dataRedo3.Data))
 	}
+}
+
+func TestLoadParquet(t *testing.T) {
+	app := &App{}
+	fileData, err := app.loadParquet("../../testdata/energy_mix/energy_mix.parquet")
+	require.NoError(t, err)
+	require.NotNil(t, fileData)
+
+	// 7314 rows (138 countries × 59 years), 105 numeric columns
+	// "country" (string) becomes RowNames — standard GoCSV behaviour for string identifiers
+	assert.Equal(t, 7314, fileData.Rows)
+	assert.Equal(t, 105, fileData.Columns)
+	assert.Equal(t, "year", fileData.Headers[0])
+	assert.Equal(t, "coal__twh", fileData.Headers[1])
+	assert.Equal(t, 7314, len(fileData.RowNames))
+	assert.NotEmpty(t, fileData.Data)
 }
