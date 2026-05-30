@@ -299,28 +299,40 @@ func (a *App) loadParquet(filePath string) (*FileData, error) {
 		return nil, fmt.Errorf("failed to parse Parquet file: %w", err)
 	}
 
-	// Extract column names from schema
+	// Build headers: prepend Sample_ID, mark string columns as #target.
+	// String columns (ByteArray kind) are categorical identifiers — marking them
+	// as #target makes GoPCA treat them as group labels for coloring the scores plot.
+	// Sample_ID provides a unique integer row identifier since string columns like
+	// "country" are not unique (the same country appears once per year).
 	fields := pf.Schema().Fields()
-	headers := make([]string, len(fields))
-	for i, field := range fields {
-		headers[i] = field.Name()
+	headers := make([]string, 0, len(fields)+1)
+	headers = append(headers, "Sample_ID")
+	for _, field := range fields {
+		name := field.Name()
+		if field.Type().Kind() == parquet.ByteArray || field.Type().Kind() == parquet.FixedLenByteArray {
+			name = name + "#target"
+		}
+		headers = append(headers, name)
 	}
 
 	// Build CSV: header row followed by data rows
 	var csvContent strings.Builder
 	writeCSVRow(&csvContent, headers)
 
+	rowNum := 0
 	buf := make([]parquet.Row, 128)
 	for _, rg := range pf.RowGroups() {
 		rows := rg.Rows()
 		for {
 			n, readErr := rows.ReadRows(buf)
 			for i := 0; i < n; i++ {
+				rowNum++
 				row := buf[i]
-				cells := make([]string, len(fields))
+				cells := make([]string, len(fields)+1)
+				cells[0] = strconv.Itoa(rowNum)
 				for j, val := range row {
 					if j < len(fields) {
-						cells[j] = parquetValueToString(val)
+						cells[j+1] = parquetValueToString(val)
 					}
 				}
 				writeCSVRow(&csvContent, cells)

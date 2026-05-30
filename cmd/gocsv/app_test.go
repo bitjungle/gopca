@@ -331,12 +331,17 @@ func TestLoadParquet(t *testing.T) {
 	require.NoError(t, err)
 	require.NotNil(t, fileData)
 
-	// 7314 rows (138 countries × 59 years), 105 numeric columns
-	// "country" (string) becomes RowNames — standard GoCSV behaviour for string identifiers
+	// 7314 rows (138 countries × 59 years)
+	// Sample_ID (prepended integers "1"…"7314") becomes the unique row identifier
+	// country#target is a categorical column; year + 104 energy columns are numeric
 	assert.Equal(t, 7314, fileData.Rows)
-	assert.Equal(t, 105, fileData.Columns)
-	assert.Equal(t, "year", fileData.Headers[0])
-	assert.Equal(t, "coal__twh", fileData.Headers[1])
+	assert.Equal(t, 106, fileData.Columns) // country#target + year + 104 energy cols
+	assert.Equal(t, "country#target", fileData.Headers[0])
+	assert.Equal(t, "year", fileData.Headers[1])
 	assert.Equal(t, 7314, len(fileData.RowNames))
+	assert.Equal(t, "1", fileData.RowNames[0])
+	assert.Equal(t, "categorical", fileData.ColumnTypes["country#target"])
+	_, hasCountry := fileData.CategoricalColumns["country#target"]
+	assert.True(t, hasCountry, "country#target should be in CategoricalColumns")
 	assert.NotEmpty(t, fileData.Data)
 }
