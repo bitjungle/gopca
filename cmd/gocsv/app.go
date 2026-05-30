@@ -162,6 +162,18 @@ func (a *App) LoadCSV(filePath string) (*FileData, error) {
 		filePath = selection
 	}
 
+	// If filePath is a remote URL, fetch it to a temp file first.
+	// The temp file is named with the detected extension so the switch below routes correctly.
+	if strings.HasPrefix(filePath, "https://") || strings.HasPrefix(filePath, "http://") {
+		a.logInfo(fmt.Sprintf("Fetching remote file: %s", filePath))
+		tmpPath, err := fetchRemoteFile(filePath)
+		if err != nil {
+			return nil, fmt.Errorf("failed to fetch remote file: %w", err)
+		}
+		defer os.Remove(tmpPath)
+		filePath = tmpPath
+	}
+
 	// Check file extension
 	ext := filepath.Ext(filePath)
 	var fileData *FileData
