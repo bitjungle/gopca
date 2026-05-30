@@ -94,6 +94,10 @@ export function LoadCSV(arg1) {
   return window['go']['main']['App']['LoadCSV'](arg1);
 }
 
+export function LoadOWIDDataset(arg1) {
+  return window['go']['main']['App']['LoadOWIDDataset'](arg1);
+}
+
 export function OpenInGoPCA(arg1) {
   return window['go']['main']['App']['OpenInGoPCA'](arg1);
 }
@@ -112,6 +116,10 @@ export function SaveCSV(arg1) {
 
 export function SaveExcel(arg1) {
   return window['go']['main']['App']['SaveExcel'](arg1);
+}
+
+export function SearchOWIDDatasets(arg1) {
+  return window['go']['main']['App']['SearchOWIDDatasets'](arg1);
 }
 
 export function SelectFileForImport() {

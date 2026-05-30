@@ -1,0 +1,56 @@
+[
+  {
+    "namespace": "energy",
+    "dataset": "energy_mix",
+    "version": "2024-06-20",
+    "table": "energy_mix",
+    "title": "Energy Mix by Country",
+    "description": "Primary energy consumption by source (coal, gas, oil, nuclear, renewables) for 138 countries, 1965–2023. 104 numeric variables — excellent for PCA.",
+    "path": "garden/energy/2024-06-20/energy_mix/energy_mix"
+  },
+  {
+    "namespace": "energy",
+    "dataset": "electricity_mix",
+    "version": "2024-06-20",
+    "table": "electricity_mix",
+    "title": "Electricity Mix by Country",
+    "description": "Electricity generation by source (coal, gas, nuclear, solar, wind, hydro, bioenergy) per country. 55 numeric variables.",
+    "path": "garden/energy/2024-06-20/electricity_mix/electricity_mix"
+  },
+  {
+    "namespace": "owid",
+    "dataset": "covid",
+    "version": "latest",
+    "table": "covid",
+    "title": "COVID-19 Dataset",
+    "description": "Cases, deaths, vaccinations, hospitalizations, and policy indicators by country. 62 numeric variables across 429 000 rows.",
+    "path": "garden/owid/latest/covid/covid"
+  },
+  {
+    "namespace": "ggdc",
+    "dataset": "maddison_project_database",
+    "version": "2024-04-26",
+    "table": "maddison_project_database",
+    "title": "Maddison Project Database",
+    "description": "Historical GDP per capita and population for countries worldwide, spanning centuries of economic history.",
+    "path": "garden/ggdc/2024-04-26/maddison_project_database/maddison_project_database"
+  },
+  {
+    "namespace": "demography",
+    "dataset": "population",
+    "version": "2023-03-31",
+    "table": "population",
+    "title": "World Population",
+    "description": "Population estimates by country from multiple sources, covering long historical and recent time series.",
+    "path": "garden/demography/2023-03-31/population/population"
+  },
+  {
+    "namespace": "living_planet",
+    "dataset": "lpd",
+    "version": "2020-09-10",
+    "table": "living_planet_database",
+    "title": "Living Planet Index Database",
+    "description": "Population trends for thousands of vertebrate species worldwide, with geographic coordinates and taxonomic classification.",
+    "path": "garden/living_planet/2020-09-10/lpd/living_planet_database"
+  }
+]

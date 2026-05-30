@@ -23,7 +23,7 @@
 
 import React, { useState, useRef, useEffect } from 'react';
 import './App.css';
-import { CSVGrid, ValidationResults, MissingValueSummary, MissingValueDialog, DataQualityDashboard, UndoRedoControls, ImportWizard, DataTransformDialog, DocumentationViewer, AboutDialog } from './components';
+import { CSVGrid, ValidationResults, MissingValueSummary, MissingValueDialog, DataQualityDashboard, UndoRedoControls, ImportWizard, DataTransformDialog, DocumentationViewer, AboutDialog, OwidCatalogDialog } from './components';
 import { ConfirmDialog, ErrorBoundary, ErrorAlert, ThemeProvider, ThemeToggle, HelpProvider, HelpDisplay, HelpWrapper, useHelp } from '@gopca/ui-components';
 import logo from './assets/images/GoCSV-logo-1024-transp.png';
 import helpContent from './help/help-content.json';
@@ -54,6 +54,7 @@ function AppContent() {
     const [showDocumentation, setShowDocumentation] = useState(false);
     const [showAboutDialog, setShowAboutDialog] = useState(false);
     const [showDownloadConfirm, setShowDownloadConfirm] = useState(false);
+    const [showOwidBrowser, setShowOwidBrowser] = useState(false);
     const [version, setVersion] = useState<string>('');
     const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
     const [errorMessage, setErrorMessage] = useState<string | null>(null);
@@ -297,6 +298,15 @@ return;
         // Filename will be set by the event from backend
     };
 
+    // Handle OWID dataset import
+    const handleOwidDataLoaded = (data: FileData) => {
+        setFileData(data);
+        setFileLoaded(true);
+        setShowOwidBrowser(false);
+        setValidationResult(null);
+        setMissingValueStats(null);
+    };
+
     // Handle transform completion
     const handleTransformComplete = (data: FileData) => {
         setFileData(data);
@@ -426,9 +436,17 @@ return;
                                         </button>
                                     </HelpWrapper>
                                 </div>
+                                <button
+                                    onClick={() => setShowOwidBrowser(true)}
+                                    disabled={isLoading}
+                                    className="w-full px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors text-sm"
+                                >
+                                    Browse OWID Datasets
+                                </button>
                                 <div className="text-xs text-gray-500 dark:text-gray-400 space-y-1">
                                     <p><span className="font-medium">Choose File:</span> Quick file picker for standard CSV/TSV files with automatic format detection</p>
                                     <p><span className="font-medium">Import with Wizard:</span> Advanced options for Excel sheets, custom delimiters, header rows, and column selection</p>
+                                    <p><span className="font-medium">Browse OWID Datasets:</span> Import directly from Our World in Data — energy, health, economics, demographics and more</p>
                                 </div>
                             </div>
 
@@ -724,6 +742,13 @@ return;
                 isOpen={showImportWizard}
                 onClose={() => setShowImportWizard(false)}
                 onImportComplete={handleImportComplete}
+            />
+
+            {/* OWID Catalog Browser */}
+            <OwidCatalogDialog
+                isOpen={showOwidBrowser}
+                onClose={() => setShowOwidBrowser(false)}
+                onDataLoaded={handleOwidDataLoaded}
             />
 
             {/* Data Transform Dialog */}

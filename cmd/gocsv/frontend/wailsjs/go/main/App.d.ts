@@ -49,6 +49,8 @@ export function ImportFile(arg1:string,arg2:main.ImportOptions):Promise<main.Fil
 
 export function LoadCSV(arg1:string):Promise<main.FileData>;
 
+export function LoadOWIDDataset(arg1:string):Promise<main.FileData>;
+
 export function OpenInGoPCA(arg1:main.FileData):Promise<void>;
 
 export function PreviewFile(arg1:string,arg2:main.ImportOptions):Promise<main.FilePreview>;
@@ -58,6 +60,8 @@ export function Redo(arg1:main.FileData):Promise<main.FileData>;
 export function SaveCSV(arg1:main.FileData):Promise<void>;
 
 export function SaveExcel(arg1:main.FileData):Promise<void>;
+
+export function SearchOWIDDatasets(arg1:string):Promise<Array<main.OWIDDataset>>;
 
 export function SelectFileForImport():Promise<string>;
 

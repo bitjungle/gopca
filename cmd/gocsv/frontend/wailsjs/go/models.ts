@@ -481,6 +481,30 @@ export namespace main {
 	        this.selectedColumns = source["selectedColumns"];
 	    }
 	}
+	export class OWIDDataset {
+	    namespace: string;
+	    dataset: string;
+	    version: string;
+	    table: string;
+	    title: string;
+	    description: string;
+	    path: string;
+	
+	    static createFrom(source: any = {}) {
+	        return new OWIDDataset(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.namespace = source["namespace"];
+	        this.dataset = source["dataset"];
+	        this.version = source["version"];
+	        this.table = source["table"];
+	        this.title = source["title"];
+	        this.description = source["description"];
+	        this.path = source["path"];
+	    }
+	}
 	export class TransformOptions {
 	    type: string;
 	    columns: string[];
