@@ -92,6 +92,40 @@ func TestFetchRemoteFile_UnknownType(t *testing.T) {
 	assert.Contains(t, err.Error(), "could not determine file type")
 }
 
+func TestFetchRemoteFile_Redirect(t *testing.T) {
+	// Serve a CSV at /final.csv; /redirect redirects there.
+	// Extension detection must use the final URL, not the original.
+	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.URL.Path == "/redirect" {
+			http.Redirect(w, r, "/final.csv", http.StatusFound)
+			return
+		}
+		w.Header().Set("Content-Type", "text/csv")
+		_, _ = w.Write([]byte("a,b\n1,2\n"))
+	}))
+	defer ts.Close()
+
+	tmpPath, err := fetchRemoteFile(ts.URL + "/redirect")
+	require.NoError(t, err)
+	defer os.Remove(tmpPath)
+
+	assert.True(t, strings.HasSuffix(tmpPath, ".csv"), "should detect .csv from redirected URL")
+}
+
+func TestFetchRemoteFile_CaseInsensitiveMIME(t *testing.T) {
+	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "Text/CSV; charset=utf-8")
+		_, _ = w.Write([]byte("x,y\n1,2\n"))
+	}))
+	defer ts.Close()
+
+	tmpPath, err := fetchRemoteFile(ts.URL + "/data")
+	require.NoError(t, err)
+	defer os.Remove(tmpPath)
+
+	assert.True(t, strings.HasSuffix(tmpPath, ".csv"), "mixed-case MIME type should map to .csv")
+}
+
 func TestLoadCSVFromURL(t *testing.T) {
 	ts := parquetTestServer(t)
 	defer ts.Close()

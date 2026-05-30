@@ -73,14 +73,17 @@ func fetchRemoteFile(url string) (string, error) {
 		return "", fmt.Errorf("server returned HTTP %d", resp.StatusCode)
 	}
 
-	// Detect extension from URL path first, Content-Type as fallback.
-	ext := strings.ToLower(path.Ext(req.URL.Path))
+	// Detect extension from the final (post-redirect) URL path first, then
+	// Content-Type as fallback. resp.Request.URL is the URL that actually served
+	// the body, which differs from req.URL when the server issued a redirect.
+	ext := strings.ToLower(path.Ext(resp.Request.URL.Path))
 	if ext == "" {
 		ct := resp.Header.Get("Content-Type")
 		if i := strings.Index(ct, ";"); i != -1 {
 			ct = strings.TrimSpace(ct[:i])
 		}
-		ext = contentTypeToExt[ct]
+		// MIME types are case-insensitive (RFC 2045); normalise before lookup.
+		ext = contentTypeToExt[strings.ToLower(ct)]
 	}
 	if ext == "" {
 		return "", fmt.Errorf("could not determine file type from URL or Content-Type header")
