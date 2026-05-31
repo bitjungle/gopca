@@ -202,14 +202,22 @@ export const LoadFromUrlDialog: React.FC<LoadFromUrlDialogProps> = ({
                         </div>
                     )}
 
-                    {/* Download spinner */}
+                    {/* Download progress bar */}
                     {isDownloading && (
-                        <div className="flex items-center gap-2 text-sm text-gray-500 dark:text-gray-400">
-                            <svg className="animate-spin w-4 h-4 text-violet-500" fill="none" viewBox="0 0 24 24">
-                                <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
-                                <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z" />
-                            </svg>
-                            Downloading…
+                        <div className="space-y-1.5">
+                            <div className="flex items-center justify-between text-sm">
+                                <span className="font-medium text-violet-700 dark:text-violet-300">
+                                    Downloading…
+                                </span>
+                                {(peekResult?.fileSizeBytes ?? -1) > 0 && (
+                                    <span className="text-xs text-gray-500 dark:text-gray-400">
+                                        {formatFileSize(peekResult!.fileSizeBytes)}
+                                    </span>
+                                )}
+                            </div>
+                            <div className="w-full h-2 bg-gray-200 dark:bg-gray-700 rounded-full overflow-hidden relative">
+                                <div className="h-full bg-violet-500 rounded-full animate-progress-indeterminate" />
+                            </div>
                         </div>
                     )}
 
