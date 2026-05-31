@@ -98,6 +98,10 @@ export function OpenInGoPCA(arg1) {
   return window['go']['main']['App']['OpenInGoPCA'](arg1);
 }
 
+export function PeekRemoteURL(arg1) {
+  return window['go']['main']['App']['PeekRemoteURL'](arg1);
+}
+
 export function PreviewFile(arg1, arg2) {
   return window['go']['main']['App']['PreviewFile'](arg1, arg2);
 }

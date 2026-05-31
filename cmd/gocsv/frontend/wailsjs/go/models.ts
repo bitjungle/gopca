@@ -539,6 +539,26 @@ export namespace main {
 		    return a;
 		}
 	}
+	export class URLPeekResult {
+	    url: string;
+	    fileFormat: string;
+	    fileSizeBytes: number;
+	    accessible: boolean;
+	    error?: string;
+	
+	    static createFrom(source: any = {}) {
+	        return new URLPeekResult(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.url = source["url"];
+	        this.fileFormat = source["fileFormat"];
+	        this.fileSizeBytes = source["fileSizeBytes"];
+	        this.accessible = source["accessible"];
+	        this.error = source["error"];
+	    }
+	}
 	export class UndoRedoState {
 	    canUndo: boolean;
 	    canRedo: boolean;
