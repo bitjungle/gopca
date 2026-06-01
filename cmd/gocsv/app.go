@@ -53,6 +53,7 @@ type App struct {
 	history           *CommandHistory
 	currentData       *FileData
 	hasUnsavedChanges bool
+	pendingZipPath    string // path to a downloaded ZIP awaiting entry selection
 }
 
 func (a *App) logInfo(msg string) {

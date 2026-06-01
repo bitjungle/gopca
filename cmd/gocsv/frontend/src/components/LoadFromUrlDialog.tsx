@@ -22,11 +22,18 @@
 // See LICENSE for the full license terms.
 
 import React, { useState, useRef } from 'react';
-import { PeekRemoteURL, LoadCSV } from '../../wailsjs/go/main/App';
+import {
+    PeekRemoteURL,
+    LoadCSV,
+    DownloadAndInspectZip,
+    LoadZipEntry,
+    CancelZipImport,
+} from '../../wailsjs/go/main/App';
 import { main } from '../../wailsjs/go/models';
 
 type FileData = main.FileData;
 type URLPeekResult = main.URLPeekResult;
+type ZipEntry = main.ZipEntry;
 
 interface LoadFromUrlDialogProps {
     isOpen: boolean;
@@ -51,12 +58,24 @@ export const LoadFromUrlDialog: React.FC<LoadFromUrlDialogProps> = ({
     const [peekResult, setPeekResult] = useState<URLPeekResult | null>(null);
     const [isPeeking, setIsPeeking] = useState(false);
     const [isDownloading, setIsDownloading] = useState(false);
+    // ZIP-specific state
+    const [zipEntries, setZipEntries] = useState<ZipEntry[] | null>(null);
+    const [selectedZipEntry, setSelectedZipEntry] = useState<ZipEntry | null>(null);
+    const [isImporting, setIsImporting] = useState(false);
     const inputRef = useRef<HTMLInputElement>(null);
 
-    const handleClose = () => {
-        if (isDownloading) return;
+    const resetState = () => {
         setUrl('');
         setPeekResult(null);
+        setZipEntries(null);
+        setSelectedZipEntry(null);
+    };
+
+    const handleClose = () => {
+        if (isDownloading || isImporting) return;
+        // If a ZIP was inspected but not imported, tell the backend to clean up.
+        if (zipEntries) CancelZipImport();
+        resetState();
         onClose();
     };
 
@@ -65,6 +84,8 @@ export const LoadFromUrlDialog: React.FC<LoadFromUrlDialogProps> = ({
         if (!trimmed) return;
         setIsPeeking(true);
         setPeekResult(null);
+        setZipEntries(null);
+        setSelectedZipEntry(null);
         try {
             const result = await PeekRemoteURL(trimmed);
             setPeekResult(result);
@@ -82,35 +103,84 @@ export const LoadFromUrlDialog: React.FC<LoadFromUrlDialogProps> = ({
     };
 
     const handleKeyDown = (e: React.KeyboardEvent) => {
-        if (e.key === 'Enter' && !isPeeking && !isDownloading) {
+        if (e.key === 'Enter' && !isPeeking && !isDownloading && !isImporting) {
             handleCheck();
+        }
+    };
+
+    // Import a specific entry from an already-inspected ZIP.
+    const doLoadZipEntry = async (entryName: string) => {
+        setIsImporting(true);
+        try {
+            const data = await LoadZipEntry(entryName);
+            setZipEntries(null);
+            setSelectedZipEntry(null);
+            onDataLoaded(data);
+            resetState();
+            onClose();
+        } catch (e) {
+            setPeekResult(prev => prev ? {
+                ...prev, accessible: false, error: `Import failed: ${e}`,
+            } : null);
+            setZipEntries(null);
+        } finally {
+            setIsImporting(false);
         }
     };
 
     const handleDownload = async () => {
         if (!peekResult?.accessible || !peekResult.url) return;
-        setIsDownloading(true);
-        try {
-            const data = await LoadCSV(peekResult.url);
-            onDataLoaded(data);
-            handleClose();
-        } catch (e) {
-            setPeekResult(prev => prev ? {
-                ...prev,
-                accessible: false,
-                error: `Download failed: ${e}`,
-            } : null);
-        } finally {
-            setIsDownloading(false);
+
+        if (peekResult.fileFormat === 'zip') {
+            // ZIP path: download + inspect, then auto-import or show picker.
+            setIsDownloading(true);
+            try {
+                const result = await DownloadAndInspectZip(peekResult.url);
+                if (result.error) {
+                    setPeekResult(prev => prev ? {
+                        ...prev, accessible: false, error: result.error,
+                    } : null);
+                    return;
+                }
+                if (result.entries.length === 1) {
+                    // Single data file — import immediately.
+                    await doLoadZipEntry(result.entries[0].name);
+                } else {
+                    // Multiple files — show picker.
+                    setZipEntries(result.entries);
+                    setSelectedZipEntry(result.entries[0]);
+                }
+            } catch (e) {
+                setPeekResult(prev => prev ? {
+                    ...prev, accessible: false, error: `Download failed: ${e}`,
+                } : null);
+            } finally {
+                setIsDownloading(false);
+            }
+        } else {
+            // Direct file path (CSV, Parquet, Excel, etc.)
+            setIsDownloading(true);
+            try {
+                const data = await LoadCSV(peekResult.url);
+                onDataLoaded(data);
+                resetState();
+                onClose();
+            } catch (e) {
+                setPeekResult(prev => prev ? {
+                    ...prev, accessible: false, error: `Download failed: ${e}`,
+                } : null);
+            } finally {
+                setIsDownloading(false);
+            }
         }
     };
 
     const canDownload = peekResult?.accessible === true &&
         !!peekResult.fileFormat &&
-        !isPeeking &&
-        !isDownloading;
+        !isPeeking && !isDownloading && !isImporting && !zipEntries;
 
     const isLargeFile = (peekResult?.fileSizeBytes ?? -1) > LARGE_FILE_THRESHOLD;
+    const isBusy = isDownloading || isImporting;
 
     if (!isOpen) return null;
 
@@ -125,7 +195,7 @@ export const LoadFromUrlDialog: React.FC<LoadFromUrlDialogProps> = ({
                     </h2>
                     <button
                         onClick={handleClose}
-                        disabled={isDownloading}
+                        disabled={isBusy}
                         className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 disabled:opacity-50"
                         aria-label="Close"
                     >
@@ -144,16 +214,16 @@ export const LoadFromUrlDialog: React.FC<LoadFromUrlDialogProps> = ({
                             ref={inputRef}
                             type="url"
                             value={url}
-                            onChange={e => { setUrl(e.target.value); setPeekResult(null); }}
+                            onChange={e => { setUrl(e.target.value); setPeekResult(null); setZipEntries(null); }}
                             onKeyDown={handleKeyDown}
                             placeholder="https://example.com/data.csv"
-                            disabled={isDownloading}
+                            disabled={isBusy}
                             autoFocus
                             className="flex-1 px-3 py-2 text-sm border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-violet-500 disabled:opacity-50"
                         />
                         <button
                             onClick={handleCheck}
-                            disabled={!url.trim() || isPeeking || isDownloading}
+                            disabled={!url.trim() || isPeeking || isBusy}
                             className="px-4 py-2 text-sm bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-200 border border-gray-300 dark:border-gray-600 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-600 disabled:opacity-50 disabled:cursor-not-allowed transition-colors whitespace-nowrap"
                         >
                             {isPeeking ? 'Checking…' : 'Check URL'}
@@ -161,7 +231,7 @@ export const LoadFromUrlDialog: React.FC<LoadFromUrlDialogProps> = ({
                     </div>
 
                     {/* Peek result */}
-                    {peekResult && (
+                    {peekResult && !zipEntries && (
                         <div className={`rounded-lg px-4 py-3 text-sm ${
                             peekResult.accessible
                                 ? 'bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800'
@@ -202,14 +272,61 @@ export const LoadFromUrlDialog: React.FC<LoadFromUrlDialogProps> = ({
                         </div>
                     )}
 
-                    {/* Download progress bar */}
-                    {isDownloading && (
+                    {/* ZIP file picker */}
+                    {zipEntries && (
+                        <div className="rounded-lg border border-gray-200 dark:border-gray-700 overflow-hidden">
+                            <div className="px-4 py-2 bg-gray-50 dark:bg-gray-700/50 border-b border-gray-200 dark:border-gray-700">
+                                <p className="text-sm font-medium text-gray-700 dark:text-gray-300">
+                                    ZIP archive — select a file to import:
+                                </p>
+                            </div>
+                            <div className="divide-y divide-gray-100 dark:divide-gray-700">
+                                {zipEntries.map(entry => (
+                                    <label
+                                        key={entry.name}
+                                        className={`flex items-center gap-3 px-4 py-3 cursor-pointer transition-colors ${
+                                            selectedZipEntry?.name === entry.name
+                                                ? 'bg-violet-50 dark:bg-violet-900/20'
+                                                : 'hover:bg-gray-50 dark:hover:bg-gray-700/50'
+                                        }`}
+                                    >
+                                        <input
+                                            type="radio"
+                                            name="zip-entry"
+                                            value={entry.name}
+                                            checked={selectedZipEntry?.name === entry.name}
+                                            onChange={() => setSelectedZipEntry(entry)}
+                                            className="text-violet-600 focus:ring-violet-500"
+                                        />
+                                        <div className="flex-1 min-w-0">
+                                            <span className="text-sm font-medium text-gray-900 dark:text-gray-100 truncate block">
+                                                {entry.name}
+                                            </span>
+                                        </div>
+                                        <div className="flex items-center gap-2 flex-shrink-0">
+                                            {entry.uncompressedSize > 0 && (
+                                                <span className="text-xs text-gray-400">
+                                                    {formatFileSize(entry.uncompressedSize)}
+                                                </span>
+                                            )}
+                                            <span className="text-xs uppercase font-medium text-violet-600 dark:text-violet-400">
+                                                {entry.format}
+                                            </span>
+                                        </div>
+                                    </label>
+                                ))}
+                            </div>
+                        </div>
+                    )}
+
+                    {/* Download/import progress bar */}
+                    {isBusy && (
                         <div className="space-y-1.5">
                             <div className="flex items-center justify-between text-sm">
                                 <span className="font-medium text-violet-700 dark:text-violet-300">
-                                    Downloading…
+                                    {isImporting ? 'Importing…' : 'Downloading…'}
                                 </span>
-                                {(peekResult?.fileSizeBytes ?? -1) > 0 && (
+                                {!isImporting && (peekResult?.fileSizeBytes ?? -1) > 0 && (
                                     <span className="text-xs text-gray-500 dark:text-gray-400">
                                         {formatFileSize(peekResult!.fileSizeBytes)}
                                     </span>
@@ -223,7 +340,7 @@ export const LoadFromUrlDialog: React.FC<LoadFromUrlDialogProps> = ({
 
                     {/* Help text */}
                     <p className="text-xs text-gray-500 dark:text-gray-400">
-                        Enter a direct file download URL (CSV, TSV, Excel, Parquet).
+                        Enter a direct file download URL (CSV, TSV, Excel, Parquet, ZIP).
                         GitHub links are rewritten to raw content URLs automatically.
                     </p>
 
@@ -233,18 +350,28 @@ export const LoadFromUrlDialog: React.FC<LoadFromUrlDialogProps> = ({
                 <div className="flex justify-end gap-2 p-4 border-t border-gray-200 dark:border-gray-700">
                     <button
                         onClick={handleClose}
-                        disabled={isDownloading}
+                        disabled={isBusy}
                         className="px-4 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg disabled:opacity-50 transition-colors"
                     >
                         Cancel
                     </button>
-                    <button
-                        onClick={handleDownload}
-                        disabled={!canDownload}
-                        className="px-4 py-2 text-sm text-white bg-violet-600 rounded-lg hover:bg-violet-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-                    >
-                        {isDownloading ? 'Downloading…' : 'Download and Import'}
-                    </button>
+                    {zipEntries ? (
+                        <button
+                            onClick={() => selectedZipEntry && doLoadZipEntry(selectedZipEntry.name)}
+                            disabled={!selectedZipEntry || isImporting}
+                            className="px-4 py-2 text-sm text-white bg-violet-600 rounded-lg hover:bg-violet-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                        >
+                            {isImporting ? 'Importing…' : 'Import Selected File'}
+                        </button>
+                    ) : (
+                        <button
+                            onClick={handleDownload}
+                            disabled={!canDownload}
+                            className="px-4 py-2 text-sm text-white bg-violet-600 rounded-lg hover:bg-violet-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                        >
+                            {isDownloading ? 'Downloading…' : 'Download and Import'}
+                        </button>
+                    )}
                 </div>
 
             </div>

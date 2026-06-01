@@ -46,7 +46,11 @@ var contentTypeToExt = map[string]string{
 	"text/csv":                       ".csv",
 	"text/tab-separated-values":      ".tsv",
 	"application/vnd.openxmlformats-officedocument.spreadsheetml.sheet": ".xlsx",
-	"application/vnd.ms-excel": ".xls",
+	"application/vnd.ms-excel":          ".xls",
+	"application/zip":                   ".zip",
+	"application/x-zip-compressed":      ".zip",
+	"application/x-zip":                 ".zip",
+	"multipart/x-zip":                   ".zip",
 }
 
 // fetchRemoteFile downloads the file at url to a secure temporary file and
@@ -161,6 +165,8 @@ func detectFormatFromExt(urlPath string) string {
 		return "xlsx"
 	case ".xls":
 		return "xls"
+	case ".zip":
+		return "zip"
 	}
 	return ""
 }
@@ -184,6 +190,9 @@ func detectFormatFromMIME(ct string) string {
 		return "xls"
 	case "text/html", "application/xhtml+xml":
 		return "html"
+	case "application/zip", "application/x-zip-compressed",
+		"application/x-zip", "multipart/x-zip":
+		return "zip"
 	}
 	return ""
 }
@@ -215,7 +224,7 @@ func detectFormatFromMagicBytes(rawURL string) string {
 	case string(buf[:4]) == "PAR1":
 		return "parquet"
 	case buf[0] == 'P' && buf[1] == 'K' && buf[2] == 0x03 && buf[3] == 0x04:
-		return "xlsx"
+		return "zip"
 	case string(buf[:2]) == "<!" || string(buf[:2]) == "<h" || string(buf[:2]) == "<H":
 		return "html"
 	default:

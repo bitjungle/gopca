@@ -9,9 +9,13 @@ export function AnalyzeMissingValues(arg1:main.FileData):Promise<dataquality.Mis
 
 export function ApplyTransformation(arg1:main.FileData,arg2:main.TransformOptions):Promise<main.TransformationResult>;
 
+export function CancelZipImport():Promise<void>;
+
 export function CheckGoPCAStatus():Promise<main.GoPCAStatus>;
 
 export function ClearHistory():Promise<void>;
+
+export function DownloadAndInspectZip(arg1:string):Promise<main.ZipInspectResult>;
 
 export function DownloadGoPCA():Promise<void>;
 
@@ -48,6 +52,8 @@ export function HasUnsavedChanges():Promise<boolean>;
 export function ImportFile(arg1:string,arg2:main.ImportOptions):Promise<main.FileData>;
 
 export function LoadCSV(arg1:string):Promise<main.FileData>;
+
+export function LoadZipEntry(arg1:string):Promise<main.FileData>;
 
 export function OpenInGoPCA(arg1:main.FileData):Promise<void>;
 
