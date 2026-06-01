@@ -21,7 +21,7 @@
 //
 // See LICENSE for the full license terms.
 
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useCallback } from 'react';
 import {
     PeekRemoteURL,
     LoadCSV,
@@ -63,6 +63,8 @@ export const LoadFromUrlDialog: React.FC<LoadFromUrlDialogProps> = ({
     const [selectedZipEntry, setSelectedZipEntry] = useState<ZipEntry | null>(null);
     const [isImporting, setIsImporting] = useState(false);
     const inputRef = useRef<HTMLInputElement>(null);
+    // Tracks the in-flight peek so handleClose can cancel it.
+    const cancelPeekRef = useRef<(() => void) | null>(null);
 
     const resetState = () => {
         setUrl('');
@@ -73,24 +75,31 @@ export const LoadFromUrlDialog: React.FC<LoadFromUrlDialogProps> = ({
 
     const handleClose = () => {
         if (isDownloading || isImporting) return;
+        // Cancel any in-flight peek so its result doesn't repopulate state
+        // after the dialog is hidden.
+        if (cancelPeekRef.current) { cancelPeekRef.current(); cancelPeekRef.current = null; }
         // If a ZIP was inspected but not imported, tell the backend to clean up.
         if (zipEntries) CancelZipImport();
         resetState();
         onClose();
     };
 
-    const handleCheck = async () => {
+    const handleCheck = useCallback(async () => {
         const trimmed = url.trim();
         if (!trimmed) return;
+        // Cancel any previous in-flight peek.
+        if (cancelPeekRef.current) cancelPeekRef.current();
+        let cancelled = false;
+        cancelPeekRef.current = () => { cancelled = true; };
         setIsPeeking(true);
         setPeekResult(null);
         setZipEntries(null);
         setSelectedZipEntry(null);
         try {
             const result = await PeekRemoteURL(trimmed);
-            setPeekResult(result);
+            if (!cancelled) setPeekResult(result);
         } catch (e) {
-            setPeekResult({
+            if (!cancelled) setPeekResult({
                 url: trimmed,
                 fileFormat: '',
                 fileSizeBytes: -1,
@@ -98,9 +107,10 @@ export const LoadFromUrlDialog: React.FC<LoadFromUrlDialogProps> = ({
                 error: `Unexpected error: ${e}`,
             });
         } finally {
-            setIsPeeking(false);
+            if (!cancelled) setIsPeeking(false);
+            cancelPeekRef.current = null;
         }
-    };
+    }, [url]);
 
     const handleKeyDown = (e: React.KeyboardEvent) => {
         if (e.key === 'Enter' && !isPeeking && !isDownloading && !isImporting) {
@@ -217,7 +227,7 @@ export const LoadFromUrlDialog: React.FC<LoadFromUrlDialogProps> = ({
                             onChange={e => { setUrl(e.target.value); setPeekResult(null); setZipEntries(null); }}
                             onKeyDown={handleKeyDown}
                             placeholder="https://example.com/data.csv"
-                            disabled={isBusy}
+                            disabled={isBusy || isPeeking}
                             autoFocus
                             className="flex-1 px-3 py-2 text-sm border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-violet-500 disabled:opacity-50"
                         />

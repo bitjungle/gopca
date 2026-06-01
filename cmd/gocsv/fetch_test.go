@@ -82,11 +82,12 @@ func TestFetchRemoteFile_404(t *testing.T) {
 func TestFetchRemoteFile_UnknownType(t *testing.T) {
 	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/octet-stream")
-		_, _ = w.Write([]byte("binary data"))
+		// Non-printable bytes that don't match any known magic number.
+		_, _ = w.Write([]byte{0x00, 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07})
 	}))
 	defer ts.Close()
 
-	// URL has no extension, Content-Type not in our map
+	// URL has no extension, Content-Type not in our map, magic bytes unrecognised
 	_, err := fetchRemoteFile(ts.URL + "/file")
 	require.Error(t, err)
 	assert.Contains(t, err.Error(), "could not determine file type")
@@ -268,26 +269,6 @@ func TestPeekRemoteURL_NoContentLength(t *testing.T) {
 	assert.Empty(t, result.Error)
 }
 
-func TestPeekRemoteURL_GitHubRewrite(t *testing.T) {
-	// Serve a CSV; verify that the GitHub blob URL is rewritten and the
-	// request reaches the server (which stands in for raw.githubusercontent.com).
-	var receivedPath string
-	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		receivedPath = r.URL.Path
-		w.Header().Set("Content-Type", "text/csv")
-		_, _ = w.Write([]byte("a,b\n1,2\n"))
-	}))
-	defer ts.Close()
-
-	// Construct a fake "GitHub blob" URL pointing at the test server.
-	// We can't truly test the host rewrite without DNS tricks, so instead
-	// we verify that rewriteGitHubURL produces the correct transformation
-	// and that PeekRemoteURL uses the rewritten URL (result.URL field).
-	app := &App{}
-	ghURL := "https://github.com/user/repo/blob/main/data.csv"
-	result := app.PeekRemoteURL(ghURL)
-	// The rewritten URL should be raw.githubusercontent.com — it will fail
-	// to connect in tests (no live network), but result.URL must be rewritten.
-	assert.Equal(t, "https://raw.githubusercontent.com/user/repo/main/data.csv", result.URL)
-	_ = receivedPath
-}
+// GitHub URL rewriting is fully covered by TestRewriteGitHubURL.
+// A PeekRemoteURL integration test for the GitHub path would require DNS
+// mocking to avoid a live network dependency, so it is omitted here.

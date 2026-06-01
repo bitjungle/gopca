@@ -24,6 +24,7 @@
 package main
 
 import (
+	"bytes"
 	"context"
 	"fmt"
 	"io"
@@ -56,8 +57,9 @@ var contentTypeToExt = map[string]string{
 // fetchRemoteFile downloads the file at url to a secure temporary file and
 // returns its path. The caller MUST remove the temp file when done.
 //
-// Extension is determined by (in order): URL path suffix, Content-Type header.
-// Returns an error if the extension cannot be determined or the download fails.
+// Extension is determined by (in order): URL path suffix, Content-Type header,
+// magic bytes from the response body. Returns an error if the type cannot be
+// determined or the download fails.
 func fetchRemoteFile(url string) (string, error) {
 	ctx, cancel := context.WithTimeout(context.Background(), fetchTimeout)
 	defer cancel()
@@ -77,9 +79,8 @@ func fetchRemoteFile(url string) (string, error) {
 		return "", fmt.Errorf("server returned HTTP %d", resp.StatusCode)
 	}
 
-	// Detect extension from the final (post-redirect) URL path first, then
-	// Content-Type as fallback. resp.Request.URL is the URL that actually served
-	// the body, which differs from req.URL when the server issued a redirect.
+	// Detect extension: URL path suffix → Content-Type → magic bytes.
+	// resp.Request.URL is the final (post-redirect) URL.
 	ext := strings.ToLower(path.Ext(resp.Request.URL.Path))
 	if ext == "" {
 		ct := resp.Header.Get("Content-Type")
@@ -89,8 +90,35 @@ func fetchRemoteFile(url string) (string, error) {
 		// MIME types are case-insensitive (RFC 2045); normalise before lookup.
 		ext = contentTypeToExt[strings.ToLower(ct)]
 	}
+
+	// Last resort: peek at the first 8 bytes of the response body.
+	// We buffer them so the full body can still be written to the temp file.
+	var peeked []byte
+	if ext == "" {
+		buf := make([]byte, 8)
+		n, _ := io.ReadFull(resp.Body, buf)
+		peeked = buf[:n]
+		switch {
+		case string(peeked[:min(4, n)]) == "PAR1":
+			ext = ".parquet"
+		case n >= 4 && peeked[0] == 'P' && peeked[1] == 'K' && peeked[2] == 0x03 && peeked[3] == 0x04:
+			ext = ".zip"
+		case n >= 2 && (string(peeked[:2]) == "<!" || strings.ToLower(string(peeked[:2])) == "<h"):
+			return "", fmt.Errorf("URL points to a webpage, not a downloadable file")
+		default:
+			if n > 0 && peeked[0] >= 0x20 && peeked[0] < 0x7F {
+				ext = ".csv"
+			}
+		}
+	}
 	if ext == "" {
 		return "", fmt.Errorf("could not determine file type from URL or Content-Type header")
+	}
+
+	// Reconstruct the full body: prepend any peeked bytes.
+	body := io.Reader(resp.Body)
+	if len(peeked) > 0 {
+		body = io.MultiReader(bytes.NewReader(peeked), resp.Body)
 	}
 
 	// Create a temp file with the detected extension so the caller can route it
@@ -103,7 +131,7 @@ func fetchRemoteFile(url string) (string, error) {
 	tmpPath := tmpFile.Name()
 
 	// Stream body to temp file with size limit.
-	written, err := io.Copy(tmpFile, io.LimitReader(resp.Body, fetchMaxBytes+1))
+	written, err := io.Copy(tmpFile, io.LimitReader(body, fetchMaxBytes+1))
 	tmpFile.Close()
 	if err != nil {
 		os.Remove(tmpPath)
@@ -291,8 +319,8 @@ func (a *App) PeekRemoteURL(rawURL string) *URLPeekResult {
 
 	size := resp.ContentLength // -1 when absent
 	if format == "" {
-		return &URLPeekResult{URL: finalURL, Accessible: true, FileSizeBytes: size,
-			Error: "Could not determine file type. Only CSV, TSV, Excel, and Parquet files are supported."}
+		return &URLPeekResult{URL: finalURL, Accessible: false, FileSizeBytes: size,
+			Error: "Could not determine file type. Only CSV, TSV, Excel, Parquet, and ZIP files are supported."}
 	}
 
 	return &URLPeekResult{
