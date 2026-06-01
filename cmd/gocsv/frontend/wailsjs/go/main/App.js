@@ -14,12 +14,20 @@ export function ApplyTransformation(arg1, arg2) {
   return window['go']['main']['App']['ApplyTransformation'](arg1, arg2);
 }
 
+export function CancelZipImport() {
+  return window['go']['main']['App']['CancelZipImport']();
+}
+
 export function CheckGoPCAStatus() {
   return window['go']['main']['App']['CheckGoPCAStatus']();
 }
 
 export function ClearHistory() {
   return window['go']['main']['App']['ClearHistory']();
+}
+
+export function DownloadAndInspectZip(arg1) {
+  return window['go']['main']['App']['DownloadAndInspectZip'](arg1);
 }
 
 export function DownloadGoPCA() {
@@ -94,8 +102,16 @@ export function LoadCSV(arg1) {
   return window['go']['main']['App']['LoadCSV'](arg1);
 }
 
+export function LoadZipEntry(arg1) {
+  return window['go']['main']['App']['LoadZipEntry'](arg1);
+}
+
 export function OpenInGoPCA(arg1) {
   return window['go']['main']['App']['OpenInGoPCA'](arg1);
+}
+
+export function PeekRemoteURL(arg1) {
+  return window['go']['main']['App']['PeekRemoteURL'](arg1);
 }
 
 export function PreviewFile(arg1, arg2) {

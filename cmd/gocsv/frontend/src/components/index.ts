@@ -37,6 +37,7 @@ export { DataTransformDialog } from './DataTransformDialog';
 export { DocumentationViewer } from './DocumentationViewer';
 export { RenameDialog } from './RenameDialog';
 export { AboutDialog } from './AboutDialog';
+export { LoadFromUrlDialog } from './LoadFromUrlDialog';
 export {
     TargetColumnIcon,
     CategoryColumnIcon,
