@@ -2,28 +2,64 @@
 
 ## Overview
 
-GoCSV Desktop prepares your data for analysis. It handles the tasks that come before PCA: loading different file formats, cleaning missing values, removing irrelevant columns, detecting outliers, and transferring clean data to GoPCA Desktop. GoPCA handles PCA-specific preprocessing (centering, scaling) — GoCSV focuses on everything before that.
+GoCSV Desktop is the data intake and preparation layer for GoPCA Desktop. Its job is to accept your data in whatever format it arrives — local files, web downloads, spreadsheets, columnar databases — shape it into a clean, well-structured dataset, and hand it off to GoPCA for analysis.
+
+The division of labour is deliberate:
+
+- **GoCSV** handles everything before the analysis: loading formats, cleaning missing values, removing irrelevant columns, detecting outliers, and exporting in a form GoPCA can use.
+- **GoPCA** handles the analysis: mean centering, scaling, PCA computation, and visualisation.
+
+Keeping these concerns separate means you can prepare your data once and re-run the analysis with different settings without touching the preparation steps.
 
 ---
 
 ## Supported File Formats
 
-GoCSV can open and save the following formats:
+### Opening files from disk
 
 | Format | Extension | Notes |
 |--------|-----------|-------|
 | CSV | `.csv` | Comma-separated; auto-detects delimiter and decimal separator |
 | TSV | `.tsv` | Tab-separated |
 | Excel | `.xlsx`, `.xls` | First sheet loaded; multi-sheet files use the first sheet |
-| Parquet | `.parquet` | Columnar format used by Kaggle, Hugging Face, OWID, and similar data sources |
+| Parquet | `.parquet` | Columnar format from Kaggle, Hugging Face, OWID, and similar sources |
+| ZIP | `.zip` | Archive containing one or more data files (see below) |
 
-**Parquet import details:**
-- A `Sample_ID` column (1, 2, 3 …) is added automatically as a unique row identifier, since Parquet files have no built-in row index
-- String columns (e.g. country, category, label) are imported as `column_name#target` — making them available as group variables in GoPCA's scores plot
-- Numeric columns (float, integer) import directly into the data grid
-- Null values become empty cells
+**Parquet import:** A `Sample_ID` column (1, 2, 3 …) is added automatically as a unique row identifier. String columns (e.g. country, category, label) are imported as `column_name#target`, making them available as group variables in GoPCA's scores plot.
 
-**Export formats:** CSV, Excel (.xlsx), TSV
+**ZIP import:** GoCSV lists the data files inside the archive. If there is only one recognisable data file it is imported automatically; if there are several, a file picker lets you choose. Safety checks guard against zip bombs and path traversal attacks.
+
+### Loading data from a URL
+
+Click **Load from URL** to import a file directly from a public web address without downloading it manually first.
+
+1. Paste the direct download URL into the input field and click **Check URL**.
+2. GoCSV makes a lightweight head request to verify the file is accessible and identify its format and size — no data is downloaded yet.
+3. Review the result, then click **Download and Import** to fetch and load the file.
+
+**Supported URL sources:** any public server that returns a direct file download — data repository pages, GitHub raw file links, OWID catalog URLs, and similar. GitHub *blob* links (the viewable file page) are automatically rewritten to the equivalent raw content URL.
+
+**Not supported:** URLs requiring authentication, login redirects, or JavaScript-driven download flows (e.g. Google Drive share links, Dropbox).
+
+### Saving / exporting
+
+| Format | Notes |
+|--------|-------|
+| CSV | Recommended for use with GoPCA; preserves all column type markers |
+| Excel (.xlsx) | For sharing or further editing in spreadsheet tools |
+| TSV | For tab-delimited workflows |
+
+---
+
+## The GoPCA-ready CSV format
+
+When GoCSV exports to CSV for GoPCA, it uses a set of naming conventions that GoPCA recognises automatically:
+
+- **Row identifiers** — if the first column contains non-numeric labels (sample names, IDs), GoPCA uses it as row labels in plots and excludes it from numerical analysis.
+- **Numeric columns** — standard values; used directly in PCA.
+- **Target / group columns** — column names ending in `#target` (e.g. `species#target`) are treated as group labels for colouring the scores plot. You can mark or unmark any column as a target using the column header menu in GoCSV.
+
+This is plain CSV — no proprietary format, no binary encoding. Any tool that reads CSV can open it.
 
 ---
 
@@ -33,9 +69,7 @@ GoCSV expects data in standard matrix form:
 - **Rows** = samples or observations
 - **Columns** = variables or measurements
 
-**Row identifiers:** If the first column contains non-numeric labels (sample names, IDs), GoCSV detects it automatically and uses it as the row name — it is shown in the grid but excluded from numerical analysis. For Parquet files, the auto-generated `Sample_ID` column serves this purpose.
-
-**Column types** are detected automatically:
+**Column types** detected automatically:
 - **Numeric** — values that parse as numbers (used in PCA)
 - **Categorical** — repeated string values; available as a group variable in GoPCA
 - **Target (`#target`)** — a column marked for use as a class label or group variable in GoPCA
@@ -127,34 +161,33 @@ GoCSV flags outliers using two methods:
 
 ---
 
-## 7. Export and Transfer to GoPCA
+## 7. Transfer to GoPCA
 
 **Direct transfer:**
-Click **Open in GoPCA Desktop** to validate and pass your data directly to GoPCA without an intermediate file.
+Click **Open in GoPCA Desktop** to validate and pass your data directly to GoPCA without saving an intermediate file.
 
-**Manual export:**
-- CSV — most compatible format; preserves `#target` column markers
-- Excel (.xlsx) — for sharing or further editing in spreadsheet tools
-- TSV — tab-delimited for other tools
+**Save then open:**
+Export as CSV, then open the file in GoPCA Desktop. This gives you a saved copy of the prepared dataset that you can reload later or share with colleagues.
 
-**Pre-export checklist:**
+**Pre-transfer checklist:**
 - [ ] Rows = samples, columns = variables
 - [ ] Missing values addressed
 - [ ] Irrelevant columns removed
-- [ ] Target / group columns marked with `#target`
+- [ ] Group / class columns marked with `#target`
 - [ ] No duplicate column names
 
 ---
 
 ## Division of Responsibility
 
-| Task | Where to do it |
-|------|---------------|
-| Load files (CSV, Excel, Parquet) | GoCSV |
+| Task | Tool |
+|------|------|
+| Load local files (CSV, Excel, Parquet, ZIP) | GoCSV |
+| Download and import from a URL | GoCSV |
 | Handle missing values | GoCSV |
 | Remove irrelevant columns | GoCSV |
-| Apply log / root transforms | GoCSV |
-| Mark group variables (#target) | GoCSV |
+| Apply log / root / scaling transforms | GoCSV |
+| Mark group variables (`#target`) | GoCSV |
 | Mean centering | GoPCA |
-| Scaling (autoscaling, Pareto, etc.) | GoPCA |
-| PCA computation and visualization | GoPCA |
+| Scaling (autoscaling, Pareto, robust, etc.) | GoPCA |
+| PCA computation and visualisation | GoPCA |
