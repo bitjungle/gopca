@@ -150,9 +150,11 @@ Consider your data scale:
 
 ### 2. Sample Size
 
-- Minimum: More samples than variables (n > p)
-- Recommended: At least 3-5 samples per variable
-- For stable results: 10+ samples per variable
+PCA does not require more samples than variables — it works naturally in both directions. The Corn NIR tutorial, for example, has 80 samples and 700 variables (n ≪ p). However, smaller sample counts relative to variables do reduce statistical reliability:
+
+- Workable: Any number of samples (PCA always produces results)
+- Recommended: At least 3–5 samples per variable for stable loadings
+- For reliable generalisation: 10+ samples per variable
 
 ### 3. Column Naming
 
