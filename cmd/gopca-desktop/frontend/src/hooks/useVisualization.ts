@@ -202,6 +202,8 @@ export function useVisualization(
     const resetVisualizationSelections = useCallback(() => {
         setSelectedXComponent(0);
         setSelectedYComponent(1);
+        setSelectedZComponent(2);
+        setSelectedLoadingComponent(0);
     }, []);
 
     return {
