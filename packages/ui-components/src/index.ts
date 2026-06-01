@@ -34,6 +34,8 @@ export { KeyboardHelp } from './components/KeyboardHelp';
 export { CustomSelect } from './components/CustomSelect';
 export { DocumentationViewer } from './components/DocumentationViewer';
 export { MarkdownRenderer } from './components/MarkdownRenderer';
+export { TableOfContents } from './components/TableOfContents';
+export { toSlug, extractTextContent, extractHeadings } from './utils/tocUtils';
 export { FontSizeControl } from './components/FontSizeControl';
 export { LoadingSpinner } from './components/LoadingSpinner';
 export { ErrorBoundary } from './components/ErrorBoundary';
@@ -61,6 +63,8 @@ export type { KeyboardHelpProps } from './components/KeyboardHelp';
 export type { SelectOption } from './components/CustomSelect';
 export type { DocumentationViewerProps } from './components/DocumentationViewer';
 export type { MarkdownRendererProps } from './components/MarkdownRenderer';
+export type { TableOfContentsProps } from './components/TableOfContents';
+export type { TocEntry } from './utils/tocUtils';
 
 // Contexts
 export { ThemeProvider, useTheme } from './contexts/ThemeContext';
