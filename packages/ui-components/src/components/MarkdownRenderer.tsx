@@ -51,6 +51,11 @@ export const MarkdownRenderer: React.FC<MarkdownRendererProps> = ({
   className = '',
   onExternalLink,
 }) => {
+  // Mutable counter map captured by the heading component overrides below.
+  // Declared inside the render function so it resets to empty on every render,
+  // ensuring duplicate headings are numbered consistently from scratch each time.
+  const headingCounts = new Map<string, number>();
+
   return (
     <div className={`prose prose-lg dark:prose-invert max-w-none text-left
       prose-headings:text-gray-900 dark:prose-headings:text-gray-100 prose-headings:text-left
@@ -169,15 +174,25 @@ export const MarkdownRenderer: React.FC<MarkdownRendererProps> = ({
               {children}
             </td>
           ),
-          // Heading overrides: generate stable IDs from text for TOC anchor links.
-          // The same slug function is used in extractHeadings so IDs always match.
+          // Heading overrides: generate stable, unique IDs for TOC anchor links.
+          // Duplicate heading texts are disambiguated with a numeric suffix that
+          // mirrors the logic in extractHeadings — "the-core-idea", then
+          // "the-core-idea-2" — so TOC links always land on the right element.
+          // id is placed after ...props spread so it cannot be overwritten by an
+          // id present in the AST node's props.
           h2: ({ children, ...props }) => {
-            const id = toSlug(extractTextContent(children));
-            return <h2 id={id} {...props}>{children}</h2>;
+            const base = toSlug(extractTextContent(children));
+            const count = headingCounts.get(base) ?? 0;
+            headingCounts.set(base, count + 1);
+            const id = count === 0 ? base : `${base}-${count + 1}`;
+            return <h2 {...props} id={id}>{children}</h2>;
           },
           h3: ({ children, ...props }) => {
-            const id = toSlug(extractTextContent(children));
-            return <h3 id={id} {...props}>{children}</h3>;
+            const base = toSlug(extractTextContent(children));
+            const count = headingCounts.get(base) ?? 0;
+            headingCounts.set(base, count + 1);
+            const id = count === 0 ? base : `${base}-${count + 1}`;
+            return <h3 {...props} id={id}>{children}</h3>;
           },
           // Custom image component to handle relative paths
           img: ({ src, alt, ...props }) => {

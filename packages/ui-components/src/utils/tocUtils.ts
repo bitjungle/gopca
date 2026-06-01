@@ -44,22 +44,29 @@ export function extractTextContent(children: React.ReactNode): string {
 
 /**
  * Parses a markdown string and returns H2 and H3 headings as TocEntry[].
- * Uses the same slug logic as the MarkdownRenderer heading overrides so that
- * IDs generated at parse time match the IDs rendered in the DOM.
+ *
+ * Duplicate heading texts are disambiguated with a numeric suffix so that
+ * every entry has a unique ID — matching the scheme used in MarkdownRenderer.
+ * Example: two "The Core Idea" headings → "the-core-idea", "the-core-idea-2".
  */
 export function extractHeadings(markdown: string): TocEntry[] {
     const entries: TocEntry[] = [];
+    const counts = new Map<string, number>();
+
     for (const line of markdown.split('\n')) {
         const trimmed = line.trim();
         const h2 = /^## (.+)$/.exec(trimmed);
         const h3 = /^### (.+)$/.exec(trimmed);
-        if (h2) {
-            const text = h2[1].trim();
-            entries.push({ level: 2, text, id: toSlug(text) });
-        } else if (h3) {
-            const text = h3[1].trim();
-            entries.push({ level: 3, text, id: toSlug(text) });
-        }
+        const match = h2 ?? h3;
+        if (!match) continue;
+
+        const level = h2 ? 2 : 3;
+        const text = match[1].trim();
+        const base = toSlug(text);
+        const count = counts.get(base) ?? 0;
+        counts.set(base, count + 1);
+        const id = count === 0 ? base : `${base}-${count + 1}`;
+        entries.push({ level: level as 2 | 3, text, id });
     }
     return entries;
 }

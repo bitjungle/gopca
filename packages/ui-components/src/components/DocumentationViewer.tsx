@@ -111,7 +111,13 @@ export const DocumentationViewer: React.FC<DocumentationViewerProps> = ({
     const observer = new IntersectionObserver(
       entries => {
         const visible = entries.filter(e => e.isIntersecting);
-        if (visible.length > 0) setActiveId(visible[0].target.id);
+        if (visible.length > 0) {
+          // When multiple headings are simultaneously within the intersection
+          // band, pick the one closest to the top of the scroll container so
+          // the active TOC item is always stable and predictable.
+          visible.sort((a, b) => a.boundingClientRect.top - b.boundingClientRect.top);
+          setActiveId(visible[0].target.id);
+        }
       },
       {
         root,

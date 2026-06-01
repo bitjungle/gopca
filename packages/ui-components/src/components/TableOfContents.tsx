@@ -46,6 +46,7 @@ export const TableOfContents: React.FC<TableOfContentsProps> = ({
                             return (
                                 <li key={entry.id}>
                                     <button
+                                        type="button"
                                         onClick={() => onEntryClick(entry.id)}
                                         className={[
                                             'w-full text-left leading-snug rounded-r transition-colors',
