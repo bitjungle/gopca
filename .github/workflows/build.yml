@@ -55,8 +55,13 @@ jobs:
         restore-keys: |
           ${{ runner.os }}-go-
     
-    - name: Download dependencies
-      run: go mod tidy
+    - name: Download Go dependencies
+      run: go mod download
+
+    - name: Verify go.mod is tidy
+      run: |
+        go mod tidy
+        git diff --exit-code -- go.mod go.sum
     
     - name: Set up Python for validation
       uses: actions/setup-python@v5
