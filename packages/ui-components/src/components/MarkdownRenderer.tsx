@@ -27,6 +27,7 @@ import remarkMath from 'remark-math';
 import remarkGfm from 'remark-gfm';
 import rehypeKatex from 'rehype-katex';
 import 'katex/dist/katex.min.css';
+import { toSlug, extractTextContent } from '../utils/tocUtils';
 
 export interface MarkdownRendererProps {
   content: string;
@@ -168,6 +169,16 @@ export const MarkdownRenderer: React.FC<MarkdownRendererProps> = ({
               {children}
             </td>
           ),
+          // Heading overrides: generate stable IDs from text for TOC anchor links.
+          // The same slug function is used in extractHeadings so IDs always match.
+          h2: ({ children, ...props }) => {
+            const id = toSlug(extractTextContent(children));
+            return <h2 id={id} {...props}>{children}</h2>;
+          },
+          h3: ({ children, ...props }) => {
+            const id = toSlug(extractTextContent(children));
+            return <h3 id={id} {...props}>{children}</h3>;
+          },
           // Custom image component to handle relative paths
           img: ({ src, alt, ...props }) => {
             // If the src is a relative path starting with 'images/', prepend the docs path
