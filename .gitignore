@@ -1,6 +1,3 @@
-.DS_Store
-.gitconfig
-
 # Binaries for programs and plugins
 *.exe
 *.exe~
@@ -30,20 +27,13 @@ go.work.sum
 # Editor/IDE
 .vscode/
 
-# Claude
-.claude/
-CLAUDE.md
-CLAUDE.md.bak
-CLAUDE-backup*.md
-docs/CLAUDE.md
-docs/devel/milestone_*.md
-.mcp.json
-.serena
-
 # Local documentation
 docs_tmp/
 # Reference materials are local-only (PDFs, summaries, notes)
 docs/references/
+
+# Internal milestone and planning docs (not for public repo)
+docs/devel/milestone_*.md
 
 # Build artifacts
 results/
@@ -60,12 +50,11 @@ cmd/gopca-desktop/gopca-desktop
 # Node modules
 node_modules/
 
-# Python 
+# Python
 __pycache__/
 .venv/
-# Screenshots and temporary images
-Skjermbilde*.png
-Screenshot*.png
+
+# Temporary images
 *.tmp.png
 
 # Certificate files (never commit!)
@@ -82,6 +71,3 @@ cmd/gopca-desktop/AppxManifest.xml
 _tmp/
 testdata/wine/plotly/
 testdata/validation/reference_results
-
-# Internal milestone planning docs (not for public repo)
-docs/devel/milestone_*.md
