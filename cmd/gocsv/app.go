@@ -27,6 +27,7 @@ import (
 	"context"
 	"encoding/csv"
 	"fmt"
+	"io"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -37,6 +38,7 @@ import (
 	pkgcsv "github.com/bitjungle/gopca/pkg/csv"
 
 	"github.com/bitjungle/gopca/internal/version"
+	parquet "github.com/parquet-go/parquet-go"
 	"github.com/bitjungle/gopca/pkg/dataquality"
 	"github.com/bitjungle/gopca/pkg/integration"
 	"github.com/bitjungle/gopca/pkg/transform"
@@ -51,6 +53,25 @@ type App struct {
 	history           *CommandHistory
 	currentData       *FileData
 	hasUnsavedChanges bool
+	pendingZipPath    string // path to a downloaded ZIP awaiting entry selection
+}
+
+func (a *App) logInfo(msg string) {
+	if a.ctx != nil {
+		wailsruntime.LogInfo(a.ctx, msg)
+	}
+}
+
+func (a *App) logWarning(msg string) {
+	if a.ctx != nil {
+		wailsruntime.LogWarning(a.ctx, msg)
+	}
+}
+
+func (a *App) logError(msg string) {
+	if a.ctx != nil {
+		wailsruntime.LogError(a.ctx, msg)
+	}
 }
 
 // NewApp creates a new App application struct
@@ -108,8 +129,8 @@ func (a *App) LoadCSV(filePath string) (*FileData, error) {
 			Title: "Select CSV File",
 			Filters: []wailsruntime.FileFilter{
 				{
-					DisplayName: "Supported Files (*.csv,*.xlsx,*.xls,*.tsv)",
-					Pattern:     "*.csv;*.xlsx;*.xls;*.tsv",
+					DisplayName: "Supported Files (*.csv,*.xlsx,*.xls,*.tsv,*.parquet)",
+					Pattern:     "*.csv;*.xlsx;*.xls;*.tsv;*.parquet",
 				},
 				{
 					DisplayName: "CSV Files (*.csv)",
@@ -122,6 +143,10 @@ func (a *App) LoadCSV(filePath string) (*FileData, error) {
 				{
 					DisplayName: "TSV Files (*.tsv)",
 					Pattern:     "*.tsv",
+				},
+				{
+					DisplayName: "Parquet Files (*.parquet)",
+					Pattern:     "*.parquet",
 				},
 				{
 					DisplayName: "All Files (*.*)",
@@ -138,6 +163,18 @@ func (a *App) LoadCSV(filePath string) (*FileData, error) {
 		filePath = selection
 	}
 
+	// If filePath is a remote URL, fetch it to a temp file first.
+	// The temp file is named with the detected extension so the switch below routes correctly.
+	if strings.HasPrefix(filePath, "https://") || strings.HasPrefix(filePath, "http://") {
+		a.logInfo(fmt.Sprintf("Fetching remote file: %s", filePath))
+		tmpPath, err := fetchRemoteFile(filePath)
+		if err != nil {
+			return nil, fmt.Errorf("failed to fetch remote file: %w", err)
+		}
+		defer os.Remove(tmpPath)
+		filePath = tmpPath
+	}
+
 	// Check file extension
 	ext := filepath.Ext(filePath)
 	var fileData *FileData
@@ -150,6 +187,13 @@ func (a *App) LoadCSV(filePath string) (*FileData, error) {
 		if err != nil {
 			return nil, fmt.Errorf("error loading Excel file: %w", err)
 		}
+	case ".parquet":
+		// Handle Parquet files
+		var err error
+		fileData, err = a.loadParquet(filePath)
+		if err != nil {
+			return nil, fmt.Errorf("error loading Parquet file: %w", err)
+		}
 	case ".tsv", ".csv", "":
 		// Handle CSV/TSV files
 		content, err := os.ReadFile(filePath)
@@ -159,7 +203,7 @@ func (a *App) LoadCSV(filePath string) (*FileData, error) {
 
 		// Check file size
 		if len(content) > 100*1024*1024 { // 100MB
-			wailsruntime.LogWarning(a.ctx, fmt.Sprintf("Large file detected: %d MB", len(content)/1024/1024))
+			a.logWarning(fmt.Sprintf("Large file detected: %d MB", len(content)/1024/1024))
 		}
 
 		// Parse using GoPCA's parser with format detection
@@ -188,9 +232,26 @@ func (a *App) LoadCSV(filePath string) (*FileData, error) {
 	return fileData, nil
 }
 
+// writeCSVRow writes a single row of cells to b in RFC 4180 CSV format.
+func writeCSVRow(b *strings.Builder, cells []string) {
+	for i, cell := range cells {
+		if i > 0 {
+			b.WriteString(",")
+		}
+		if strings.ContainsAny(cell, ",\"\n\r") {
+			b.WriteString("\"")
+			b.WriteString(strings.ReplaceAll(cell, "\"", "\"\""))
+			b.WriteString("\"")
+		} else {
+			b.WriteString(cell)
+		}
+	}
+	b.WriteString("\n")
+}
+
 // loadExcel loads data from an Excel file
 func (a *App) loadExcel(filePath string) (*FileData, error) {
-	wailsruntime.LogInfo(a.ctx, fmt.Sprintf("Loading Excel file: %s", filePath))
+	a.logInfo(fmt.Sprintf("Loading Excel file: %s", filePath))
 
 	f, err := excelize.OpenFile(filePath)
 	if err != nil {
@@ -207,7 +268,7 @@ func (a *App) loadExcel(filePath string) (*FileData, error) {
 	// For now, use the first sheet. TODO: Add sheet selection dialog
 	selectedSheet := sheets[0]
 	if len(sheets) > 1 {
-		wailsruntime.LogInfo(a.ctx, fmt.Sprintf("Multiple sheets found. Using first sheet: %s", selectedSheet))
+		a.logInfo(fmt.Sprintf("Multiple sheets found. Using first sheet: %s", selectedSheet))
 	}
 
 	// Get all rows from the selected sheet
@@ -223,25 +284,112 @@ func (a *App) loadExcel(filePath string) (*FileData, error) {
 	// Convert Excel data to CSV format for parsing
 	var csvContent strings.Builder
 	for _, row := range rows {
-		for i, cell := range row {
-			if i > 0 {
-				csvContent.WriteString(",")
-			}
-			// Quote cells that contain commas or quotes
-			if strings.Contains(cell, ",") || strings.Contains(cell, "\"") {
-				csvContent.WriteString("\"")
-				csvContent.WriteString(strings.ReplaceAll(cell, "\"", "\"\""))
-				csvContent.WriteString("\"")
-			} else {
-				csvContent.WriteString(cell)
-			}
-		}
-		csvContent.WriteString("\n")
+		writeCSVRow(&csvContent, row)
 	}
 
 	// Parse the CSV content using GoPCA's parser
-	wailsruntime.LogInfo(a.ctx, fmt.Sprintf("Excel data converted to CSV, %d bytes", csvContent.Len()))
+	a.logInfo(fmt.Sprintf("Excel data converted to CSV, %d bytes", csvContent.Len()))
 	return a.parseCSVContent(csvContent.String(), ".csv")
+}
+
+// loadParquet loads data from a Parquet file and converts it to a FileData struct.
+func (a *App) loadParquet(filePath string) (*FileData, error) {
+	a.logInfo(fmt.Sprintf("Loading Parquet file: %s", filePath))
+
+	f, err := os.Open(filePath)
+	if err != nil {
+		return nil, fmt.Errorf("failed to open Parquet file: %w", err)
+	}
+	defer f.Close()
+
+	stat, err := f.Stat()
+	if err != nil {
+		return nil, fmt.Errorf("failed to stat Parquet file: %w", err)
+	}
+
+	pf, err := parquet.OpenFile(f, stat.Size())
+	if err != nil {
+		return nil, fmt.Errorf("failed to parse Parquet file: %w", err)
+	}
+
+	// Build headers: prepend Sample_ID, mark string columns as #target.
+	// String columns (ByteArray kind) are categorical identifiers — marking them
+	// as #target makes GoPCA treat them as group labels for coloring the scores plot.
+	// Sample_ID provides a unique integer row identifier since string columns like
+	// "country" are not unique (the same country appears once per year).
+	fields := pf.Schema().Fields()
+	headers := make([]string, 0, len(fields)+1)
+	headers = append(headers, "Sample_ID")
+	for _, field := range fields {
+		name := field.Name()
+		if field.Type().Kind() == parquet.ByteArray || field.Type().Kind() == parquet.FixedLenByteArray {
+			name = name + "#target"
+		}
+		headers = append(headers, name)
+	}
+
+	// Build CSV: header row followed by data rows
+	var csvContent strings.Builder
+	writeCSVRow(&csvContent, headers)
+
+	rowNum := 0
+	buf := make([]parquet.Row, 128)
+	for _, rg := range pf.RowGroups() {
+		rows := rg.Rows()
+		for {
+			n, readErr := rows.ReadRows(buf)
+			for i := 0; i < n; i++ {
+				rowNum++
+				row := buf[i]
+				cells := make([]string, len(fields)+1)
+				cells[0] = strconv.Itoa(rowNum)
+				for j, val := range row {
+					if j < len(fields) {
+						cells[j+1] = parquetValueToString(val)
+					}
+				}
+				writeCSVRow(&csvContent, cells)
+			}
+			if readErr == io.EOF {
+				break
+			}
+			if readErr != nil {
+				rows.Close()
+				return nil, fmt.Errorf("error reading Parquet rows: %w", readErr)
+			}
+		}
+		rows.Close()
+	}
+
+	a.logInfo(fmt.Sprintf("Parquet data converted to CSV, %d bytes", csvContent.Len()))
+	return a.parseCSVContent(csvContent.String(), ".csv")
+}
+
+// parquetValueToString converts a parquet.Value to its string representation.
+// Null values become empty strings (GoCSV's convention for missing values).
+func parquetValueToString(v parquet.Value) string {
+	if v.IsNull() {
+		return ""
+	}
+	switch v.Kind() {
+	case parquet.Boolean:
+		if v.Boolean() {
+			return "true"
+		}
+		return "false"
+	case parquet.Int32:
+		return strconv.FormatInt(int64(v.Int32()), 10)
+	case parquet.Int64:
+		return strconv.FormatInt(v.Int64(), 10)
+	case parquet.Float:
+		return strconv.FormatFloat(float64(v.Float()), 'f', -1, 32)
+	case parquet.Double:
+		return strconv.FormatFloat(v.Double(), 'f', -1, 64)
+	case parquet.ByteArray, parquet.FixedLenByteArray:
+		return string(v.ByteArray())
+	default:
+		return fmt.Sprintf("%v", v)
+	}
 }
 
 // parseCSVContent parses CSV content using GoPCA's parser
@@ -300,10 +448,10 @@ func (a *App) parseCSVContent(content string, ext string) (*FileData, error) {
 
 	if csvData == nil {
 		if lastErr != nil {
-			wailsruntime.LogError(a.ctx, fmt.Sprintf("Failed to parse CSV: %v", lastErr))
+			a.logError(fmt.Sprintf("Failed to parse CSV: %v", lastErr))
 			return nil, fmt.Errorf("failed to parse CSV: %w", lastErr)
 		}
-		wailsruntime.LogError(a.ctx, "No data found in file")
+		a.logError("No data found in file")
 		return nil, fmt.Errorf("no data found in file")
 	}
 
@@ -350,7 +498,7 @@ func (a *App) parseCSVContent(content string, ext string) (*FileData, error) {
 		ColumnTypes:          columnTypes,
 	}
 
-	wailsruntime.LogInfo(a.ctx, fmt.Sprintf("Parsed data: %d rows, %d columns, %d headers", csvData.Rows, csvData.Columns, len(csvData.Headers)))
+	a.logInfo(fmt.Sprintf("Parsed data: %d rows, %d columns, %d headers", csvData.Rows, csvData.Columns, len(csvData.Headers)))
 
 	// If we have categorical or target columns, we need to combine them with numeric data
 	// for the full data display
@@ -778,8 +926,8 @@ func (a *App) OpenInGoPCA(data *FileData) error {
 	}
 
 	// Log the temporary file location
-	wailsruntime.LogInfo(a.ctx, fmt.Sprintf("Exported data to: %s", tempFile))
-	wailsruntime.LogInfo(a.ctx, fmt.Sprintf("Launched GoPCA Desktop: %s", status.Path))
+	a.logInfo(fmt.Sprintf("Exported data to: %s", tempFile))
+	a.logInfo(fmt.Sprintf("Launched GoPCA Desktop: %s", status.Path))
 
 	// Schedule cleanup of temp file after a delay
 	go func() {
@@ -822,9 +970,9 @@ func (a *App) Undo(data *FileData) (*FileData, error) {
 		return nil, err
 	}
 	a.markDirty()
-	// Emit event to update UI
-	wailsruntime.EventsEmit(a.ctx, "undo-redo-state-changed", a.GetUndoRedoState())
-	// Return the modified data
+	if a.ctx != nil {
+		wailsruntime.EventsEmit(a.ctx, "undo-redo-state-changed", a.GetUndoRedoState())
+	}
 	return data, nil
 }
 
@@ -834,9 +982,9 @@ func (a *App) Redo(data *FileData) (*FileData, error) {
 		return nil, err
 	}
 	a.markDirty()
-	// Emit event to update UI
-	wailsruntime.EventsEmit(a.ctx, "undo-redo-state-changed", a.GetUndoRedoState())
-	// Return the modified data
+	if a.ctx != nil {
+		wailsruntime.EventsEmit(a.ctx, "undo-redo-state-changed", a.GetUndoRedoState())
+	}
 	return data, nil
 }
 

@@ -539,6 +539,26 @@ export namespace main {
 		    return a;
 		}
 	}
+	export class URLPeekResult {
+	    url: string;
+	    fileFormat: string;
+	    fileSizeBytes: number;
+	    accessible: boolean;
+	    error?: string;
+	
+	    static createFrom(source: any = {}) {
+	        return new URLPeekResult(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.url = source["url"];
+	        this.fileFormat = source["fileFormat"];
+	        this.fileSizeBytes = source["fileSizeBytes"];
+	        this.accessible = source["accessible"];
+	        this.error = source["error"];
+	    }
+	}
 	export class UndoRedoState {
 	    canUndo: boolean;
 	    canRedo: boolean;
@@ -570,6 +590,54 @@ export namespace main {
 	        this.isValid = source["isValid"];
 	        this.messages = source["messages"];
 	    }
+	}
+	export class ZipEntry {
+	    name: string;
+	    uncompressedSize: number;
+	    format: string;
+	
+	    static createFrom(source: any = {}) {
+	        return new ZipEntry(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.name = source["name"];
+	        this.uncompressedSize = source["uncompressedSize"];
+	        this.format = source["format"];
+	    }
+	}
+	export class ZipInspectResult {
+	    entries: ZipEntry[];
+	    error?: string;
+	
+	    static createFrom(source: any = {}) {
+	        return new ZipInspectResult(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.entries = this.convertValues(source["entries"], ZipEntry);
+	        this.error = source["error"];
+	    }
+	
+		convertValues(a: any, classs: any, asMap: boolean = false): any {
+		    if (!a) {
+		        return a;
+		    }
+		    if (a.slice && a.map) {
+		        return (a as any[]).map(elem => this.convertValues(elem, classs));
+		    } else if ("object" === typeof a) {
+		        if (asMap) {
+		            for (const key of Object.keys(a)) {
+		                a[key] = new classs(a[key]);
+		            }
+		            return a;
+		        }
+		        return new classs(a);
+		    }
+		    return a;
+		}
 	}
 
 }

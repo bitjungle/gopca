@@ -10,6 +10,10 @@ on:
       - 'scripts/sync-docs.sh'
       - 'Makefile'
 
+# Restrict all jobs to read-only repository access by default.
+permissions:
+  contents: read
+
 jobs:
   check-sync:
     name: Verify documentation synchronization

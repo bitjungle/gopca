@@ -23,7 +23,7 @@
 
 import React, { useState, useRef, useEffect } from 'react';
 import './App.css';
-import { CSVGrid, ValidationResults, MissingValueSummary, MissingValueDialog, DataQualityDashboard, UndoRedoControls, ImportWizard, DataTransformDialog, DocumentationViewer, AboutDialog } from './components';
+import { CSVGrid, ValidationResults, MissingValueSummary, MissingValueDialog, DataQualityDashboard, UndoRedoControls, ImportWizard, DataTransformDialog, DocumentationViewer, AboutDialog, LoadFromUrlDialog } from './components';
 import { ConfirmDialog, ErrorBoundary, ErrorAlert, ThemeProvider, ThemeToggle, HelpProvider, HelpDisplay, HelpWrapper, useHelp } from '@gopca/ui-components';
 import logo from './assets/images/GoCSV-logo-1024-transp.png';
 import helpContent from './help/help-content.json';
@@ -54,6 +54,7 @@ function AppContent() {
     const [showDocumentation, setShowDocumentation] = useState(false);
     const [showAboutDialog, setShowAboutDialog] = useState(false);
     const [showDownloadConfirm, setShowDownloadConfirm] = useState(false);
+    const [showLoadFromUrl, setShowLoadFromUrl] = useState(false);
     const [version, setVersion] = useState<string>('');
     const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
     const [errorMessage, setErrorMessage] = useState<string | null>(null);
@@ -297,6 +298,15 @@ return;
         // Filename will be set by the event from backend
     };
 
+    // Handle Load from URL completion
+    const handleLoadFromUrlComplete = (data: FileData) => {
+        setFileData(data);
+        setFileLoaded(true);
+        setShowLoadFromUrl(false);
+        setValidationResult(null);
+        setMissingValueStats(null);
+    };
+
     // Handle transform completion
     const handleTransformComplete = (data: FileData) => {
         setFileData(data);
@@ -406,7 +416,7 @@ return;
                             </div>
 
                             <div className="space-y-3">
-                                <div className="grid grid-cols-2 gap-2">
+                                <div className="grid grid-cols-3 gap-2">
                                     <HelpWrapper helpKey="browse-file">
                                         <button
                                             onClick={handleLoadFromDialog}
@@ -425,10 +435,20 @@ return;
                                             Import with Wizard
                                         </button>
                                     </HelpWrapper>
+                                    <HelpWrapper helpKey="load-from-url">
+                                        <button
+                                            onClick={() => setShowLoadFromUrl(true)}
+                                            disabled={isLoading}
+                                            className="w-full px-4 py-2 bg-violet-600 text-white rounded-lg hover:bg-violet-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                                        >
+                                            Load from URL
+                                        </button>
+                                    </HelpWrapper>
                                 </div>
                                 <div className="text-xs text-gray-500 dark:text-gray-400 space-y-1">
                                     <p><span className="font-medium">Choose File:</span> Quick file picker for standard CSV/TSV files with automatic format detection</p>
                                     <p><span className="font-medium">Import with Wizard:</span> Advanced options for Excel sheets, custom delimiters, header rows, and column selection</p>
+                                    <p><span className="font-medium">Load from URL:</span> Import directly from a public web URL — CSV, TSV, Excel, or Parquet. GitHub links rewritten automatically.</p>
                                 </div>
                             </div>
 
@@ -724,6 +744,13 @@ return;
                 isOpen={showImportWizard}
                 onClose={() => setShowImportWizard(false)}
                 onImportComplete={handleImportComplete}
+            />
+
+            {/* Load from URL */}
+            <LoadFromUrlDialog
+                isOpen={showLoadFromUrl}
+                onClose={() => setShowLoadFromUrl(false)}
+                onDataLoaded={handleLoadFromUrlComplete}
             />
 
             {/* Data Transform Dialog */}

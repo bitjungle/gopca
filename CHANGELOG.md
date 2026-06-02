@@ -5,6 +5,48 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.5.0] - 2026-06-02
+
+### Added
+- **Load from URL** in GoCSV — paste any public download URL and GoCSV fetches, validates, and imports
+  the file directly. Supports CSV, TSV, Excel, Parquet, and ZIP archives. GitHub blob URLs are
+  rewritten to raw content URLs automatically. Format and size are shown before download commits.
+  ZIP archives with multiple data files show a file picker (#699, #703, #704)
+- **Parquet file import** in GoCSV — open `.parquet` files from disk. String columns are marked
+  as `#target` group variables; a `Sample_ID` column provides unique row identifiers (#697, #698)
+- **Table of Contents** in documentation viewer — sticky sidebar TOC with active-section highlighting
+  as you scroll, covering both GoPCA Desktop and GoCSV Desktop (#436)
+
+### Fixed
+- Z-axis and loading component indices not reset when re-running PCA with fewer components,
+  causing 3D plots and loadings views to request out-of-range components (#635)
+- `copyToClipboard` in `useUIState` scheduled stacked `setTimeout` calls with no cleanup on
+  unmount; rapid clicks could dismiss the "Copied!" indicator early (#636)
+- Stale closure in `useAppInit` — startup file handler always called the callback captured at
+  mount instead of the latest version (#637)
+
+### Security
+- Fixed polynomial ReDoS in `errorMessages.ts`; replaced backtracking-prone regex with
+  `indexOf`-based string parsing (#710)
+- Added explicit `permissions: contents: read` to `build.yml` and `check-docs-sync.yml`
+  workflows to restrict default GitHub Actions token scope (#710)
+
+### Changed
+- **License changed to GoPCA Suite Source-Available Freeware License** — binaries remain free;
+  source available for review. Previously released versions ≤ 1.4.0 remain under MIT (#694)
+- Removed SignPath from release pipeline — Windows signing handled via Microsoft Store (#696)
+
+### CI/Build
+- CI now uses `go mod download` for dependency fetching (deterministic, read-only) followed by
+  a tidiness verification step that fails the build if `go.mod`/`go.sum` drift (#638, #707)
+
+### Documentation
+- GoCSV data preparation guide rewritten as concise task-oriented reference; includes Load from
+  URL, ZIP import, and GoPCA-ready CSV format sections (#704)
+- Fixed "five datasets" → "six datasets" in `intro_to_pca.md` introduction (#706)
+- Fixed incorrect "n > p" minimum sample size claim in `data-format.md` (#706)
+- Fixed `csv-format.md` internal spec to match current `pkg/csv` implementation (#706)
+
 ## [1.4.0] - 2026-05-29
 
 ### Added

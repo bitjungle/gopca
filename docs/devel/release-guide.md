@@ -611,7 +611,7 @@ The Windows installer (`GoPCA-Setup-vX.X.X.exe`) released on GitHub is **not dig
 
 ### Why No Signed Installer?
 
-Code signing certificates are expensive and require annual renewal. We evaluated SignPath.io for automated signing but dropped it because the free tier does not support GitHub Actions integration. Rather than paying for a certificate, we invested in Microsoft Partner Center distribution instead.
+Code signing certificates are expensive and require annual renewal. We distribute GoPCA on Windows through the Microsoft Store, which handles signing and trust automatically. This is a better experience for end users than a self-signed certificate.
 
 ### Microsoft Store as the Windows Signing Strategy
 

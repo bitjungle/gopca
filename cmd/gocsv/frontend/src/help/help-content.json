@@ -45,6 +45,11 @@
       "text": "Advanced import with custom delimiters, encoding, and column selection.",
       "category": "data-input"
     },
+    "load-from-url": {
+      "title": "Load from URL",
+      "text": "Download and import a file directly from a public web URL. Supports CSV, TSV, Excel, and Parquet. GitHub links are rewritten to raw content URLs automatically. Enter a direct download URL — not a webpage URL.",
+      "category": "data-input"
+    },
     "validate-gopca": {
       "title": "Validate for GoPCA",
       "text": "Check if data meets requirements for PCA analysis.",

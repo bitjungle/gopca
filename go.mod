@@ -1,6 +1,6 @@
 module github.com/bitjungle/gopca
 
-go 1.24.5
+go 1.24.9
 
 replace github.com/bitjungle/gopca => ./
 

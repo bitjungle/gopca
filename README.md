@@ -235,13 +235,6 @@ Teach multivariate statistics with interactive visualizations, explore research 
 
 *Note: Memory and disk requirements depend on your dataset size. The applications themselves are lightweight (~50-100MB), but processing large datasets will require corresponding RAM.*
 
-## Support & Community
-
-- **Report Issues**: [GitHub Issues](https://github.com/bitjungle/gopca/issues)
-- **Ask Questions**: [GitHub Discussions](https://github.com/bitjungle/gopca/discussions)
-- **Documentation**: See the docs folder for detailed guides
-- **Contributing**: Please read [CONTRIBUTING.md](CONTRIBUTING.md) for bug reports, feature requests, and feedback
-
 ## License
 
 GoPCA Suite is source-available freeware.

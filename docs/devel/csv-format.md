@@ -10,11 +10,15 @@ This document describes the internal CSV format handling in GoPCA, implemented t
 
 ```
 pkg/csv/
-├── types.go       # Common interfaces and types
-├── reader.go      # Unified CSV reading functionality
-├── writer.go      # Unified CSV writing functionality
-├── validation.go  # CSV validation and statistics
-└── *_test.go      # Comprehensive test coverage
+├── types.go          # Common interfaces, types, Options, Data, ParseMode
+├── detect.go         # Delimiter and decimal-separator auto-detection
+├── parse.go          # Core parsing logic (numeric, string, mixed)
+├── reader.go         # Reader type and ReadFile/Read entry points
+├── output.go         # Output formatting helpers
+├── writer.go         # Writer type and WriteFile/WriteMatrixFile
+├── validation.go     # Validator type and validation/statistics
+├── doc.go            # Package-level documentation
+└── *_test.go         # Comprehensive test coverage
 ```
 
 ### Design Principles
@@ -40,13 +44,14 @@ type Options struct {
     NullValues       []string  // Strings to treat as missing values
     ParseMode        ParseMode // How to parse the data
     TargetSuffix     string    // Suffix to identify target columns (e.g., "#target")
-    
+    TargetCols       []string  // Explicit list of target column names to exclude from PCA
+
     // Reading options (for large files)
     SkipRows      int   // Number of rows to skip at start
     MaxRows       int   // Maximum rows to read (0 for all)
     Columns       []int // Specific columns to read (empty for all)
     StreamingMode bool  // Enable streaming for large files
-    
+
     // Writing options
     FloatFormat byte // Format for float output: 'g', 'f', 'e'
     Precision   int  // Decimal precision (-1 for auto)
@@ -79,11 +84,11 @@ type Data struct {
     MissingMask [][]bool     // Track missing values
     Rows        int          // Number of data rows
     Columns     int          // Number of data columns
-    
+
     // Additional data types (optional)
-    StringData           [][]string            // Raw string data (for GoCSV)
-    CategoricalColumns   map[string][]string   // Categorical columns by name
-    NumericTargetColumns map[string][]float64  // Numeric target columns
+    StringData           [][]string           // Raw string data (for GoCSV)
+    CategoricalColumns   map[string][]string  // Categorical columns by name
+    NumericTargetColumns map[string][]float64 // Numeric target columns
 }
 ```
 
@@ -206,46 +211,6 @@ for _, stats := range result.ColumnStats {
 
 ## Migration Guide
 
-### From internal/cli/csv_parser.go
-
-Before:
-```go
-import "github.com/bitjungle/gopca/internal/cli"
-
-opts := cli.NewCSVParseOptions()
-data, err := cli.ParseCSV(filename, opts)
-```
-
-After:
-```go
-import pkgcsv "github.com/bitjungle/gopca/pkg/csv"
-
-opts := pkgcsv.DefaultOptions()
-opts.ParseMode = pkgcsv.ParseMixed
-reader := pkgcsv.NewReader(opts)
-data, err := reader.ReadFile(filename)
-```
-
-### From internal/io/csv.go
-
-Before:
-```go
-import "github.com/bitjungle/gopca/internal/io"
-
-opts := io.DefaultCSVOptions()
-matrix, headers, err := io.LoadCSV(filename, opts)
-```
-
-After:
-```go
-import pkgcsv "github.com/bitjungle/gopca/pkg/csv"
-
-opts := pkgcsv.DefaultOptions()
-reader := pkgcsv.NewReader(opts)
-data, err := reader.ReadFile(filename)
-matrix, headers := data.Matrix, data.Headers
-```
-
 ### From cmd/gopca-desktop/parse_csv.go
 
 Before:
@@ -294,23 +259,6 @@ Run tests:
 ```bash
 go test ./pkg/csv/...
 ```
-
-## Future Enhancements
-
-Planned improvements:
-1. Full streaming support for very large files
-2. Parallel parsing for multi-core systems
-3. Automatic format detection improvements
-4. Support for quoted fields with embedded delimiters
-5. Memory-mapped file support for huge datasets
-
-## API Stability
-
-The `pkg/csv` package is considered stable with these guarantees:
-- No breaking changes to exported types and functions
-- New features added through additional options
-- Deprecated functions kept for backward compatibility
-- Clear migration paths for any necessary changes
 
 ## References
 
