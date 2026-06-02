@@ -286,13 +286,20 @@ func (a *App) PeekRemoteURL(rawURL string) *URLPeekResult {
 	}
 	resp.Body.Close()
 
-	switch resp.StatusCode {
-	case http.StatusOK, http.StatusPartialContent:
+	// headUnsupported is set when the server returns 405 (Method Not Allowed)
+	// for HEAD. Some CDNs and servers reject HEAD but serve GET normally; we
+	// still allow the URL to proceed using URL-extension detection only.
+	headUnsupported := resp.StatusCode == http.StatusMethodNotAllowed
+
+	switch {
+	case resp.StatusCode == http.StatusOK || resp.StatusCode == http.StatusPartialContent:
 		// continue
-	case http.StatusNotFound:
+	case headUnsupported:
+		// Fall through — detect format from URL path only; size will be -1.
+	case resp.StatusCode == http.StatusNotFound:
 		return &URLPeekResult{URL: finalURL, FileSizeBytes: -1,
 			Error: "File not found (HTTP 404)."}
-	case http.StatusForbidden, http.StatusUnauthorized:
+	case resp.StatusCode == http.StatusForbidden || resp.StatusCode == http.StatusUnauthorized:
 		return &URLPeekResult{URL: finalURL, FileSizeBytes: -1,
 			Error: "Access denied — this file may require authentication."}
 	default:
@@ -300,16 +307,16 @@ func (a *App) PeekRemoteURL(rawURL string) *URLPeekResult {
 			Error: fmt.Sprintf("Server returned HTTP %d.", resp.StatusCode)}
 	}
 
-	// Detect format: URL extension → Content-Type → magic bytes.
+	// Detect format: URL extension → Content-Type (skipped for 405) → magic bytes.
 	format := detectFormatFromExt(resp.Request.URL.Path)
-	if format == "" {
+	if format == "" && !headUnsupported {
 		format = detectFormatFromMIME(resp.Header.Get("Content-Type"))
 	}
 	if format == "html" {
 		return &URLPeekResult{URL: finalURL, FileSizeBytes: -1,
 			Error: "This URL points to a webpage, not a downloadable file. Try right-clicking the download button on the data portal and copying the direct link address."}
 	}
-	if format == "" {
+	if format == "" && !headUnsupported {
 		format = detectFormatFromMagicBytes(finalURL)
 		if format == "html" {
 			return &URLPeekResult{URL: finalURL, FileSizeBytes: -1,
@@ -317,7 +324,7 @@ func (a *App) PeekRemoteURL(rawURL string) *URLPeekResult {
 		}
 	}
 
-	size := resp.ContentLength // -1 when absent
+	size := resp.ContentLength // -1 when absent or HEAD unsupported
 	if format == "" {
 		return &URLPeekResult{URL: finalURL, Accessible: false, FileSizeBytes: size,
 			Error: "Could not determine file type. Only CSV, TSV, Excel, Parquet, and ZIP files are supported."}
