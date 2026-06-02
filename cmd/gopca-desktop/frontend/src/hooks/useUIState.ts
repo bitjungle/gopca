@@ -21,7 +21,7 @@
 //
 // See LICENSE for the full license terms.
 
-import { useState, useCallback, useRef } from 'react';
+import { useState, useCallback, useRef, useEffect } from 'react';
 import { logger } from '../utils/logger';
 
 export interface UIStateResult {
@@ -45,6 +45,14 @@ export function useUIState(): UIStateResult {
     const [showCopied, setShowCopied] = useState(false);
 
     const mainScrollRef = useRef<HTMLDivElement>(null);
+    const copyTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+    // Clear any pending timeout when the component unmounts.
+    useEffect(() => {
+        return () => {
+            if (copyTimeoutRef.current !== null) clearTimeout(copyTimeoutRef.current);
+        };
+    }, []);
 
     const handleLogoClick = useCallback(() => {
         setShowAboutDialog(true);
@@ -54,7 +62,12 @@ export function useUIState(): UIStateResult {
         try {
             await navigator.clipboard.writeText(text);
             setShowCopied(true);
-            setTimeout(() => setShowCopied(false), 2000);
+            // Cancel any previous timeout so rapid clicks don't stack.
+            if (copyTimeoutRef.current !== null) clearTimeout(copyTimeoutRef.current);
+            copyTimeoutRef.current = setTimeout(() => {
+                setShowCopied(false);
+                copyTimeoutRef.current = null;
+            }, 2000);
         } catch (err) {
             logger.error('Failed to copy to clipboard:', err);
         }

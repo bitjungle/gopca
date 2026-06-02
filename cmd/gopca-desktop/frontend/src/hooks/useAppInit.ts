@@ -21,7 +21,7 @@
 //
 // See LICENSE for the full license terms.
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { GetVersion, GetGUIConfig, SaveFile, CheckGoCSVStatus, LoadCSVFile } from '../../wailsjs/go/main/App';
 import { EventsOn } from '../../wailsjs/runtime/runtime';
 import { setupPlotlyWailsIntegration } from '@gopca/ui-components';
@@ -46,6 +46,11 @@ export function useAppInit(
 ): AppInitResult {
     const [version, setVersion] = useState<string>('');
     const [guiConfig, setGuiConfig] = useState<config.GUIConfig | null>(null);
+
+    // Keep a ref to the latest callback so the one-time event listener always
+    // calls the current version even if the parent re-renders with a new function.
+    const onStartupFileRef = useRef(onStartupFile);
+    useEffect(() => { onStartupFileRef.current = onStartupFile; });
 
     useEffect(() => {
         // Make SaveFile available globally for Plotly export integration
@@ -72,17 +77,13 @@ export function useAppInit(
         const unsubscribe = EventsOn('load-file-on-startup', async (filePath: string) => {
             try {
                 const result = await LoadCSVFile(filePath);
-                onStartupFile(result);
+                onStartupFileRef.current(result);
             } catch (err) {
                 logger.error('Failed to load startup file:', err);
             }
         });
 
         return () => { unsubscribe(); };
-        // onStartupFile is intentionally excluded: it changes on every render
-        // because it closes over setState, but the handler only needs to be
-        // registered once at mount.
-        // eslint-disable-next-line react-hooks/exhaustive-deps
     }, []);
 
     return { version, guiConfig };
