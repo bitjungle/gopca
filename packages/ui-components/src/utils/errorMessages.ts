@@ -259,8 +259,13 @@ export function parseError(error: unknown): FormattedError {
   if (error instanceof Error) {
     // Check for specific error types
     if (error.message.includes('ENOENT')) {
-      const match = error.message.match(/ENOENT[^']*'([^']+)'/);
-      const filename = match ? match[1] : 'unknown';
+      // Extract the filename from messages like: ENOENT: no such file or directory, open '/path/file'
+      // Use string splitting rather than a regex to avoid polynomial backtracking on unexpected input.
+      const firstQuote = error.message.indexOf("'");
+      const secondQuote = firstQuote >= 0 ? error.message.indexOf("'", firstQuote + 1) : -1;
+      const filename = firstQuote >= 0 && secondQuote > firstQuote
+        ? error.message.slice(firstQuote + 1, secondQuote)
+        : 'unknown';
       return ErrorTemplates.FILE_NOT_FOUND(filename);
     }
 
