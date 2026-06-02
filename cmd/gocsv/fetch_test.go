@@ -269,6 +269,29 @@ func TestPeekRemoteURL_NoContentLength(t *testing.T) {
 	assert.Empty(t, result.Error)
 }
 
+func TestPeekRemoteURL_HeadNotAllowed(t *testing.T) {
+	// Some servers reject HEAD (405) but serve GET normally.
+	// PeekRemoteURL should still mark the URL accessible when the extension
+	// reveals the file type, even though Content-Type and size are unavailable.
+	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.Method == http.MethodHead {
+			w.WriteHeader(http.StatusMethodNotAllowed)
+			return
+		}
+		w.Header().Set("Content-Type", "text/csv")
+		_, _ = w.Write([]byte("a,b\n1,2\n"))
+	}))
+	defer ts.Close()
+
+	app := &App{}
+	result := app.PeekRemoteURL(ts.URL + "/data.csv")
+
+	assert.True(t, result.Accessible, "should be accessible despite 405 on HEAD")
+	assert.Equal(t, "csv", result.FileFormat, "format detected from URL extension")
+	assert.Equal(t, int64(-1), result.FileSizeBytes, "size unknown when HEAD rejected")
+	assert.Empty(t, result.Error)
+}
+
 // GitHub URL rewriting is fully covered by TestRewriteGitHubURL.
 // A PeekRemoteURL integration test for the GitHub path would require DNS
 // mocking to avoid a live network dependency, so it is omitted here.

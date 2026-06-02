@@ -226,8 +226,14 @@ func (a *App) LoadZipEntry(entryName string) (*FileData, error) {
 		return a.loadParquet(tmpPath)
 	case ".xlsx", ".xls":
 		return a.loadExcel(tmpPath)
+	case ".tsv":
+		content, err := os.ReadFile(tmpPath)
+		if err != nil {
+			return nil, fmt.Errorf("could not read extracted file: %w", err)
+		}
+		return a.parseCSVContent(string(content), ".tsv")
 	default:
-		// .csv, .tsv, .data and anything else — use CSV parser with auto-detection.
+		// .csv, .data and unrecognised text extensions — CSV parser with auto-detection.
 		content, err := os.ReadFile(tmpPath)
 		if err != nil {
 			return nil, fmt.Errorf("could not read extracted file: %w", err)
