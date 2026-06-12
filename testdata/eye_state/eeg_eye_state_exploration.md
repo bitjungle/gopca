@@ -4,15 +4,17 @@
 
 [Electroencephalography](https://en.wikipedia.org/wiki/Electroencephalography) (EEG) measures electrical activity at the scalp via small electrodes. Each electrode records a voltage signal reflecting the activity of neurons underneath, sampled many times per second.
 
-This dataset contains a 117-second recording from **one subject** using the **Emotiv EEG Neuroheadset**, with 14 electrodes placed according to the international 10–20 system:
+![How EEG measures brain activity](./eeg_illustration.png)
+
+This dataset contains a 117-second recording from **one subject** using the **Emotiv EPOC headset**, with 14 electrodes placed at positions corresponding to the international 10–20 / 10–10 electrode naming convention:
 
 * Frontal: `AF3`, `F7`, `F3`, `F4`, `F8`, `AF4`
 * Central/temporal: `FC5`, `T7`, `T8`, `FC6`
 * Parietal/occipital: `P7`, `O1`, `O2`, `P8`
 
-The figure below shows the scalp positions of all 14 electrodes, viewed from above (nose pointing up). The occipital electrodes `O1` and `O2` sit at the bottom — the region most sensitive to visual and alpha-band activity.
+The figure below shows the scalp positions of all 14 electrodes, viewed from above (nose pointing up). The occipital electrodes `O1` and `O2` sit at the bottom — the region most sensitive to visual and alpha-band activity. The electrode coordinates shown are based on the MNE `standard_1020` montage, which provides the best available approximation; the original dataset documentation identifies the 14 channels by name but does not specify explicit coordinates.
 
-![EEG electrode positions](./eeg_electrode_map.png)
+![EEG electrode positions](./eeg_illustration_electrode_map.png)
 
 The sampling rate is **128 Hz** — one measurement every 7.8 ms, giving approximately **14,980 rows** in total. During the recording the subject alternately opened and closed his or her eyes. Eye state was determined from video and added as a label:
 
@@ -166,7 +168,7 @@ Instead of describing each time point as one vector of 14 channel values, we des
 * Rows: approximately *T* − *L* + 1 (one per window position)
 * Columns: 14 channels × *L* lags = 14*L* columns
 
-With *L* = 32 and *T* = 14,980: approximately 14,949 rows and 448 columns. SVD on this larger matrix finds **spatiotemporal patterns** — capturing which channels co-vary and how that co-variation evolves across the window.
+With *L* = 32 and *T* ≈ 14,976 (after removing the four artifact rows): approximately 14,945 rows and 448 columns. SVD on this larger matrix finds **spatiotemporal patterns** — capturing which channels co-vary and how that co-variation evolves across the window.
 
 > GoPCA implements the first two SSA steps — **embedding** (build the trajectory matrix) and **decomposition** (SVD). The full SSA algorithm also includes grouping and reconstruction, which transform selected components back into the time domain.
 
@@ -193,7 +195,7 @@ Change **PCA Method** to **Temporal PCA**. Set **Number of Time Lags** to **32**
 
 Click **Go PCA**.
 
-GoPCA builds the trajectory matrix (14 × 32 = 448 columns) and applies SVD. The result has approximately 14,949 score rows — one per window position.
+GoPCA builds the trajectory matrix (14 × 32 = 448 columns) and applies SVD. The result has approximately 14,945 score rows — one per window position.
 
 Open the **Scores Plot** and colour by `eye_state`.
 
@@ -392,3 +394,5 @@ Golyandina, N., Korobeynikov, A., Shlemov, A., & Usevich, K. (2015). Multivariat
 Golyandina, N. (2020). Particularities and commonalities of singular spectrum analysis as a method of time series analysis and signal processing. *WIREs Computational Statistics*, 12(4), e1487. https://doi.org/10.1002/wics.1487
 
 Roesler, O., & Suendermann, D. (2013). A first step towards eye state prediction using EEG. In *Proceedings of the AIHLS 2013*. UCI Machine Learning Repository. https://doi.org/10.24432/C57G7J
+
+Alghamdi, A., Nilashi, M., Abumalloh, R. A., Ahmadi, H., Alrizq, M., Alyami, S., Zogaan, W. A., & Nayer, F. K. (2026). Accuracy improvements for electroencephalography (EEG) eye state classification using eXtreme gradient boosting and cluster ensembles. *Journal on Advances in Signal Processing*, 2026, 20. https://doi.org/10.1186/s13634-025-01290-z
