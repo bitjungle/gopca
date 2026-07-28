@@ -23,7 +23,10 @@
 
 package profiling
 
-import "testing"
+import (
+	"runtime"
+	"testing"
+)
 
 func TestFormatBytes(t *testing.T) {
 	tests := []struct {
@@ -106,7 +109,7 @@ func TestMemoryProfilerLifecycle(t *testing.T) {
 		t.Error("PeakAlloc should be non-zero when profiling is enabled")
 	}
 	// Keep sink alive until after Stop so the allocation is observable.
-	_ = sink[0]
+	runtime.KeepAlive(sink)
 }
 
 func TestProfileFunc(t *testing.T) {

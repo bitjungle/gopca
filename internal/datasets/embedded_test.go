@@ -50,7 +50,10 @@ func TestGetDataset(t *testing.T) {
 			// Decompressed content should look like CSV: at least one row
 			// separator and one field separator.
 			if !strings.Contains(content, "\n") {
-				t.Errorf("GetDataset(%q) content has no newline, not CSV-like", name)
+				t.Errorf("GetDataset(%q) content has no newline (row separator), not CSV-like", name)
+			}
+			if !strings.Contains(content, ",") {
+				t.Errorf("GetDataset(%q) content has no comma (field separator), not CSV-like", name)
 			}
 		})
 	}
