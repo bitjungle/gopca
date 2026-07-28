@@ -29,7 +29,7 @@ mkdir -p cmd/gopca-desktop/frontend/dist
 echo '<!DOCTYPE html><html><body>Test</body></html>' > cmd/gopca-desktop/frontend/dist/index.html
 
 # First run core packages and GoPCA Desktop tests
-if ! go test -v -cover ./internal/cli ./internal/core ./internal/utils ./pkg/types ./pkg/csv ./pkg/dataquality ./pkg/transform ./pkg/integration ./cmd/gopca-desktop; then
+if ! go test -v -cover ./internal/cli ./internal/config ./internal/core ./internal/datasets ./internal/utils ./internal/version ./pkg/types ./pkg/csv ./pkg/dataquality ./pkg/profiling ./pkg/transform ./pkg/integration ./cmd/gopca-desktop; then
     echo "✗ Core tests failed"
     exit 1
 fi
