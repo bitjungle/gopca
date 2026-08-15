@@ -31,7 +31,7 @@ git config --global alias.feature "!f() { git checkout develop && git pull && gi
 git config --global alias.sync-develop "!git checkout develop && git fetch origin && git merge origin/main && git push"
 
 # Delete local branches already merged into develop (conservative — see note below):
-git config --global alias.cleanup "!git checkout develop >/dev/null 2>&1; git branch --merged | grep -vE '^\\*|^\\+| (develop|main)\$' | xargs -r git branch -d && git remote prune origin"
+git config --global alias.cleanup "!git checkout develop >/dev/null 2>&1 && git branch --merged | grep -vE '^\\*|^\\+| (develop|main)\$' | xargs -r git branch -d && git remote prune origin"
 ```
 
 ### Option B — paste into `~/.gitconfig`
@@ -46,7 +46,7 @@ git config --global alias.cleanup "!git checkout develop >/dev/null 2>&1; git br
     pushup  = push -u origin HEAD
     feature = "!f() { git checkout develop && git pull && git checkout -b \"$1\"; }; f"
     sync-develop = "!git checkout develop && git fetch origin && git merge origin/main && git push"
-    cleanup = "!git checkout develop >/dev/null 2>&1; git branch --merged | grep -vE '^\\*|^\\+| (develop|main)$' | xargs -r git branch -d && git remote prune origin"
+    cleanup = "!git checkout develop >/dev/null 2>&1 && git branch --merged | grep -vE '^\\*|^\\+| (develop|main)$' | xargs -r git branch -d && git remote prune origin"
 ```
 
 ## What each alias does
@@ -104,9 +104,11 @@ else
 fi
 ```
 
-Branches **without** a merged PR — work in progress, long-lived maintenance
-lines (e.g. `maintenance/v1.0.x`), or manual backups — are deliberately left
-alone by this script.
+This deletes only branches whose name matches a **merged** pull request.
+Work-in-progress branches, long-lived maintenance lines (`maintenance/*`), and
+manual backups have no merged PR, so they are left untouched. The only
+name-based exclusions are `develop` and `main`; a branch that happens to share a
+name with a merged PR would still be removed.
 
 > Local branch deletion is reversible: `git reflog` keeps the tips for ~90 days,
 > and any branch that reached `develop`/`main` is preserved in that history.
