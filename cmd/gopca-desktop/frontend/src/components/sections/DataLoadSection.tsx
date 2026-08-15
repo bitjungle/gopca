@@ -165,6 +165,15 @@ export function DataLoadSection() {
                                     EEG Eye State
                                 </button>
                             </HelpWrapper>
+                            <HelpWrapper helpKey="sample-dataset-body-measures">
+                                <button
+                                    onClick={() => loadDatasetWithTutorial('body_measures.csv', undefined, 'body_measures')}
+                                    className="w-full px-4 py-2 text-sm bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors"
+                                    disabled={loading}
+                                >
+                                    Body Measures
+                                </button>
+                            </HelpWrapper>
                         </div>
                     </div>
                 </div>

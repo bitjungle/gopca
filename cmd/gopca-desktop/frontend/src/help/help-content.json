@@ -45,6 +45,11 @@
       "text": "117-second EEG recording from one subject using a 14-channel Emotiv neuroheadset. Each row is one time point at 128 Hz. The eye_state label (open/closed) was added from video analysis. Use with Temporal PCA to explore oscillatory brain dynamics.",
       "category": "data-input"
     },
+    "sample-dataset-body-measures": {
+      "title": "Body Measures Dataset",
+      "text": "Seven anthropometric measurements (weight, height, and limb lengths and circumferences) for 5,096 US adults from NHANES 2017-2018. A real population sample that shows how PCA separates an overall body-size factor (PC1) from a body-shape factor (PC2). Color by Gender, BMI, or Age.",
+      "category": "data-input"
+    },
     "gocsv-integration": {
       "title": "GoCSV Data Editor",
       "text": "GoCSV is a companion app for data preparation. Click to install GoCSV if not available, and open your data file in GoCSV for editing and cleaning.",

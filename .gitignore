@@ -71,3 +71,6 @@ cmd/gopca-desktop/AppxManifest.xml
 _tmp/
 testdata/wine/plotly/
 testdata/validation/reference_results
+
+# Private PCA presentation (personal, not shared)
+testdata/nhanes/pca_presentation/

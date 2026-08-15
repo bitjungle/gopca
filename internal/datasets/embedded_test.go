@@ -37,6 +37,7 @@ func TestGetDataset(t *testing.T) {
 		"swiss_roll.csv",
 		"eeg_eye_state.csv",
 		"cstr.csv",
+		"body_measures.csv",
 	}
 	for _, name := range validFiles {
 		t.Run(name, func(t *testing.T) {
