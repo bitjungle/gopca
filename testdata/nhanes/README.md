@@ -114,7 +114,7 @@ axis, or by `BMI_class#target` to see separation along the size axis.
 
 ## Background and further reading
 
-NHANES body-measures data is widely used in epidemiology and health machine
+NHANES body-measures data are widely used in epidemiology and health machine
 learning. Studies commonly (a) **pool multiple cycles** (e.g. `BMX_J` with the
 earlier `BMX_I` 2015–2016 and `BMX_H` 2013–2014 files) for statistical power,
 (b) derive **non-linear body-shape indices** such as the waist-to-height ratio

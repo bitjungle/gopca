@@ -47,7 +47,7 @@
     },
     "sample-dataset-body-measures": {
       "title": "Body Measures Dataset",
-      "text": "Seven anthropometric measurements (weight, height, and limb lengths and circumferences) for 5,096 US adults from NHANES 2017-2018. A real population sample that shows how PCA separates an overall body-size factor (PC1) from a body-shape factor (PC2). Colour by Gender, BMI, or Age.",
+      "text": "Seven anthropometric measurements (weight, height, and limb lengths and circumferences) for 5,096 US adults from NHANES 2017-2018. A real population sample that shows how PCA separates an overall body-size factor (PC1) from a body-shape factor (PC2). Color by Gender, BMI, or Age.",
       "category": "data-input"
     },
     "gocsv-integration": {
