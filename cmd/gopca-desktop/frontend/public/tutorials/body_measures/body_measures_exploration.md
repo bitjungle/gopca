@@ -1,5 +1,11 @@
 # Exploring Structure in Data: The Body Measures Dataset and PCA
 
+![Vitruvian Man](./vitruvian_man.jpg)
+*Leonardo da Vinci's* Vitruvian Man *(c. 1490) — a Renaissance study of the
+proportions of the human body. Five centuries later, we will study the same
+question — human size and shape — with PCA. Public-domain illustration via
+Wikimedia Commons.*
+
 ## Background: measuring the human body
 
 Every two years, the US **National Health and Nutrition Examination Survey
