@@ -123,9 +123,9 @@ func getDataSummary(data *pkgcsv.Data) string {
 	fmt.Fprintf(&sb, "Data dimensions: %d rows × %d columns\n", data.Rows, data.Columns)
 
 	if len(data.Headers) > 0 {
-		fmt.Fprintf(&sb, "Column names: %s", strings.Join(data.Headers, ", "))
+		fmt.Fprintf(&sb, "Column names: %s", strings.Join(data.Headers[:min(5, len(data.Headers))], ", "))
 		if len(data.Headers) > 5 {
-			fmt.Fprintf(&sb, " (showing first 5 of %d)\n", len(data.Headers))
+			fmt.Fprintf(&sb, " ... (showing first 5 of %d)\n", len(data.Headers))
 		} else {
 			sb.WriteString("\n")
 		}

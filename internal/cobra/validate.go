@@ -106,7 +106,11 @@ func runValidate(opts *ValidateOptions, inputFile string) error {
 	parseOpts := pkgcsv.DefaultOptions()
 	parseOpts.HasHeaders = !opts.NoHeaders
 	parseOpts.HasRowNames = !opts.NoIndex
-	parseOpts.Delimiter = rune(opts.Delimiter[0])
+	parsedDelim, delimErr := parseDelimiter(opts.Delimiter)
+	if delimErr != nil {
+		return fmt.Errorf("invalid delimiter: %w", delimErr)
+	}
+	parseOpts.Delimiter = parsedDelim
 	parseOpts.ParseMode = pkgcsv.ParseMixedWithTargets
 
 	// Parse NA values
