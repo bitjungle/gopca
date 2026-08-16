@@ -1107,6 +1107,11 @@ func (a *App) GetFileInfo(filePath string) (*ImportFileInfo, error) {
 		} else {
 			info.Sheets = sheets
 		}
+	case ".json":
+		// JSON import is not supported. Reject explicitly rather than letting a
+		// .json file fall through to content-based detection (where it would be
+		// misclassified as CSV). See #719.
+		return nil, fmt.Errorf("JSON files are not supported by GoCSV")
 	default:
 		// Try to detect format by content
 		info.FileFormat = a.detectFileFormat(filePath)

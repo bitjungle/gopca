@@ -42,13 +42,12 @@ func TestIssue719_JSONImportRemoved(t *testing.T) {
 		t.Fatalf("write temp json: %v", err)
 	}
 
-	// GetFileInfo must no longer classify .json as the importable "json" format.
-	info, err := app.GetFileInfo(jsonPath)
-	if err != nil {
-		t.Fatalf("GetFileInfo failed: %v", err)
-	}
-	if info.FileFormat == "json" {
-		t.Errorf("FileFormat = %q; .json should no longer be detected as an importable json format", info.FileFormat)
+	// A .json file must be rejected explicitly, not silently classified as an
+	// importable format (e.g. CSV). GetFileInfo returns an error for .json.
+	if _, err := app.GetFileInfo(jsonPath); err == nil {
+		t.Fatal("GetFileInfo(.json): expected an error (JSON is not importable), got nil")
+	} else if strings.Contains(err.Error(), "not yet implemented") {
+		t.Errorf("GetFileInfo(.json): stale stub error, got %v", err)
 	}
 
 	// The old stub returned "JSON import not yet implemented"; that dead end must be
