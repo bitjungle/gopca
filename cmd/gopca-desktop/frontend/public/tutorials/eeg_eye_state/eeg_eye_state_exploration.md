@@ -6,7 +6,7 @@
 
 ![How EEG measures brain activity](./eeg_illustration.png)
 
-This dataset contains a 117-second recording from **one subject** using the **Emotiv EPOC headset**, with 14 electrodes placed at positions corresponding to the international 10–20 / 10–10 electrode naming convention:
+This dataset contains a 117-second recording from **one subject** using the **Emotiv EPOC headset** (named the "Emotiv EEG Neuroheadset" in the original dataset description), with 14 electrodes placed at positions corresponding to the international 10–20 / 10–10 electrode naming convention:
 
 * Frontal: `AF3`, `F7`, `F3`, `F4`, `F8`, `AF4`
 * Central/temporal: `FC5`, `T7`, `T8`, `FC6`
