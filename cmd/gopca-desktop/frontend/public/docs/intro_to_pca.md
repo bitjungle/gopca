@@ -761,7 +761,7 @@ You've traveled from the basic intuition of PCA through its mathematical foundat
 
 ### Your Next Steps with GoPCA Suite
 
-**Start with the interactive tutorials:** Each of the seven sample datasets has a guided tutorial in GoPCA Desktop. Work through them in order — Iris first to build your foundations, then Wine, Corn, Swiss Roll, CSTR, and EEG. By the end of the EEG tutorial, you will have used every major feature of GoPCA and encountered every major challenge that real datasets present. Body Measures makes a fitting close: a simple, real population dataset that steps back from method complexity to ask what the principal components actually *mean* — how PC1 and PC2 become interpretable "size" and "shape" factors.
+**Start with the interactive tutorials:** Each of the seven sample datasets has a guided tutorial in GoPCA Desktop. Work through the first six in order — Iris first to build your foundations, then Wine, Corn, Swiss Roll, CSTR, and EEG. By the end of the EEG tutorial, you will have used every major feature of GoPCA and encountered every major challenge that real datasets present. Then finish with Body Measures, the seventh — a fitting close: a simple, real population dataset that steps back from method complexity to ask what the principal components actually *mean* — how PC1 and PC2 become interpretable "size" and "shape" factors.
 
 **Then bring your own data:**
 1. Prepare your data with GoCSV Desktop (handle missing values, check quality)
