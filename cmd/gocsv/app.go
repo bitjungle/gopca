@@ -1044,7 +1044,7 @@ type ImportFileInfo struct {
 	FileName   string   `json:"fileName"`
 	FilePath   string   `json:"filePath"`
 	FileSize   int64    `json:"fileSize"`
-	FileFormat string   `json:"fileFormat"` // "csv", "tsv", "excel", "json"
+	FileFormat string   `json:"fileFormat"` // "csv", "tsv", "excel"
 	Encoding   string   `json:"encoding"`
 	Sheets     []string `json:"sheets,omitempty"` // For Excel files
 	Error      string   `json:"error,omitempty"`
@@ -1107,9 +1107,6 @@ func (a *App) GetFileInfo(filePath string) (*ImportFileInfo, error) {
 		} else {
 			info.Sheets = sheets
 		}
-	case ".json":
-		info.FileFormat = "json"
-		info.Encoding = "UTF-8"
 	default:
 		// Try to detect format by content
 		info.FileFormat = a.detectFileFormat(filePath)
@@ -1130,8 +1127,6 @@ func (a *App) PreviewFile(filePath string, options ImportOptions) (*FilePreview,
 		return a.previewCSV(filePath, options, preview)
 	case "excel":
 		return a.previewExcel(filePath, options, preview)
-	case "json":
-		return a.previewJSON(filePath, options, preview)
 	default:
 		return nil, fmt.Errorf("unsupported format: %s", options.Format)
 	}
@@ -1144,8 +1139,6 @@ func (a *App) ImportFile(filePath string, options ImportOptions) (*FileData, err
 		return a.importCSVWithOptions(filePath, options)
 	case "excel":
 		return a.importExcelWithOptions(filePath, options)
-	case "json":
-		return a.importJSONWithOptions(filePath, options)
 	default:
 		return nil, fmt.Errorf("unsupported format: %s", options.Format)
 	}
@@ -1186,12 +1179,8 @@ func (a *App) detectFileFormat(filePath string) string {
 		}
 	}
 
-	// Check for JSON
 	content := string(buf)
 	content = strings.TrimSpace(content)
-	if strings.HasPrefix(content, "{") || strings.HasPrefix(content, "[") {
-		return "json"
-	}
 
 	// Check for TSV (more tabs than commas)
 	tabCount := strings.Count(content, "\t")
@@ -1317,12 +1306,6 @@ func (a *App) previewExcel(filePath string, options ImportOptions, preview *File
 		return nil, fmt.Errorf("no data found in sheet %s", sheet)
 	}
 
-	// Apply range if specified
-	if options.Range != "" {
-		// TODO: Implement range parsing
-		preview.Issues = append(preview.Issues, "Range selection not yet implemented")
-	}
-
 	// Skip rows if specified
 	if options.SkipRows > 0 && options.SkipRows < len(rows) {
 		rows = rows[options.SkipRows:]
@@ -1364,12 +1347,6 @@ func (a *App) previewExcel(filePath string, options ImportOptions, preview *File
 	}
 
 	return preview, nil
-}
-
-// previewJSON generates a preview of a JSON file
-func (a *App) previewJSON(filePath string, options ImportOptions, preview *FilePreview) (*FilePreview, error) {
-	// TODO: Implement JSON preview
-	return nil, fmt.Errorf("JSON import not yet implemented")
 }
 
 // importCSVWithOptions imports a CSV file with specific options
@@ -1654,12 +1631,6 @@ func (a *App) importExcelWithOptions(filePath string, options ImportOptions) (*F
 	return fileData, nil
 }
 
-// importJSONWithOptions imports a JSON file with specific options
-func (a *App) importJSONWithOptions(filePath string, options ImportOptions) (*FileData, error) {
-	// TODO: Implement JSON import
-	return nil, fmt.Errorf("JSON import not yet implemented")
-}
-
 // SelectFileForImport opens a file dialog and returns the selected file path
 func (a *App) SelectFileForImport() (string, error) {
 	dialogOptions := wailsruntime.OpenDialogOptions{
@@ -1667,7 +1638,7 @@ func (a *App) SelectFileForImport() (string, error) {
 		Filters: []wailsruntime.FileFilter{
 			{
 				DisplayName: "All Supported Files",
-				Pattern:     "*.csv;*.tsv;*.xlsx;*.xls;*.json",
+				Pattern:     "*.csv;*.tsv;*.xlsx;*.xls",
 			},
 			{
 				DisplayName: "CSV Files",
@@ -1680,10 +1651,6 @@ func (a *App) SelectFileForImport() (string, error) {
 			{
 				DisplayName: "Excel Files",
 				Pattern:     "*.xlsx;*.xls",
-			},
-			{
-				DisplayName: "JSON Files",
-				Pattern:     "*.json",
 			},
 		},
 	}

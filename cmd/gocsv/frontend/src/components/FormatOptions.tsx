@@ -120,24 +120,6 @@ return '0 Bytes';
                             className="w-full"
                         />
                     </div>
-
-                    {/* Range (disabled for now) */}
-                    <div>
-                        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                            Range (Optional)
-                        </label>
-                        <input
-                            type="text"
-                            value={options.range}
-                            onChange={(e) => onChange({ ...options, range: e.target.value })}
-                            placeholder="e.g., A1:Z100"
-                            disabled
-                            className="w-full px-3 py-2 text-sm border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 disabled:opacity-50"
-                        />
-                        <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
-                            Range selection coming soon
-                        </p>
-                    </div>
                 </div>
             )}
 
