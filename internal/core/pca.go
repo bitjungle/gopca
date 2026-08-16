@@ -167,10 +167,13 @@ func (p *PCAImpl) Fit(data types.Matrix, config types.PCAConfig) (*types.PCAResu
 	explainedVarRatio := make([]float64, len(eigenvalues))
 	cumulativeVar := make([]float64, len(eigenvalues))
 
-	if p.config.Method == "nipals" && p.config.MissingStrategy == types.MissingNative {
-		// For NIPALS with missing values, we cannot calculate true percentages
+	if usingNativeMissing {
+		// For NIPALS with actual missing values, we cannot calculate true percentages
 		// because total variance is undefined with missing data
-		// Instead, show relative proportions of extracted components
+		// Instead, show relative proportions of extracted components.
+		// Note: gated on usingNativeMissing (which requires hasMissing) so that
+		// NIPALS-native on a COMPLETE dataset still uses the standard total-variance
+		// denominator below, matching SVD.
 		totalExtractedVar := 0.0
 		for _, v := range eigenvalues {
 			totalExtractedVar += v
