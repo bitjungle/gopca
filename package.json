@@ -7,6 +7,9 @@
     "cmd/gopca-desktop/frontend",
     "cmd/gocsv/frontend"
   ],
+  "engines": {
+    "node": ">=24.0.0"
+  },
   "scripts": {
     "install-all": "npm install",
     "build-ui": "npm run build -w @gopca/ui-components",

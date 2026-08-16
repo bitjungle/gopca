@@ -27,9 +27,6 @@ import "testing"
 
 func TestDefaultConfig(t *testing.T) {
 	cfg := DefaultConfig()
-	if cfg == nil {
-		t.Fatal("DefaultConfig() returned nil")
-	}
 	if cfg.CSV.TypeDetectionSampleSize != 10 {
 		t.Errorf("TypeDetectionSampleSize = %d, want 10", cfg.CSV.TypeDetectionSampleSize)
 	}
@@ -62,9 +59,6 @@ func TestDefaultAlgorithmConfig(t *testing.T) {
 
 func TestDefaultGUIConfig(t *testing.T) {
 	cfg := DefaultGUIConfig()
-	if cfg == nil {
-		t.Fatal("DefaultGUIConfig() returned nil")
-	}
 	if cfg.Visualization.DefaultConfidenceLevel != 0.95 {
 		t.Errorf("DefaultConfidenceLevel = %g, want 0.95", cfg.Visualization.DefaultConfidenceLevel)
 	}
