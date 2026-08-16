@@ -125,7 +125,11 @@ func runTransform(opts *TransformOptions, modelFile, inputFile string) error {
 	parseOpts := pkgcsv.DefaultOptions()
 	parseOpts.HasHeaders = !opts.NoHeaders
 	parseOpts.HasRowNames = !opts.NoIndex
-	parseOpts.Delimiter = rune(opts.Delimiter[0])
+	parsedDelim, delimErr := parseDelimiter(opts.Delimiter)
+	if delimErr != nil {
+		return fmt.Errorf("invalid delimiter: %w", delimErr)
+	}
+	parseOpts.Delimiter = parsedDelim
 	// Use ParseMixedWithTargets to properly identify and exclude target columns
 	parseOpts.ParseMode = pkgcsv.ParseMixedWithTargets
 
