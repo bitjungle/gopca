@@ -127,7 +127,7 @@ jobs:
           # Run tests for all packages with test files
           # Note: Use explicit list to avoid Windows issues with packages without tests
           # Skip TestValidateOutputPath on Windows as it uses Unix-specific paths
-          go test -v -race -timeout 10m ./internal/cli ./internal/core ./pkg/types ./cmd/gopca-desktop
+          go test -v -race -timeout 10m ./internal/cli ./internal/cobra ./internal/core ./pkg/types ./cmd/gopca-desktop
           
           # Run sklearn validation tests if reference files exist
           if [ -d "testdata/validation/reference_results" ]; then
