@@ -1559,16 +1559,19 @@ func (a *App) exportDataToCSV(data *FileData, filePath string) error {
 		// Convert float64 values to strings
 		rowStrings := make([]string, 0, len(row)+1)
 
-		// Add row name if present
+		// Add row name if present. Track whether a prefix column was added so the
+		// missing-value lookup can map a rowStrings position back to its data column.
+		rowNamePrefix := 0
 		if len(data.RowNames) > 0 && i < len(data.RowNames) {
 			rowStrings = append(rowStrings, data.RowNames[i])
+			rowNamePrefix = 1
 		}
 
 		// Convert numeric values to strings
 		for _, value := range row {
 			// Handle missing values
 			if data.MissingMask != nil && i < len(data.MissingMask) {
-				colIdx := len(rowStrings) - len(data.RowNames)
+				colIdx := len(rowStrings) - rowNamePrefix
 				if colIdx >= 0 && colIdx < len(data.MissingMask[i]) && data.MissingMask[i][colIdx] {
 					rowStrings = append(rowStrings, "")
 					continue
