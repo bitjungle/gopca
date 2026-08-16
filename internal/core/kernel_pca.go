@@ -321,9 +321,10 @@ func (kpca *KernelPCAImpl) Fit(data types.Matrix, config types.PCAConfig) (*type
 	kpca.fitted = true
 
 	// Compute projections for the training data. The kernel-PCA score of a point on
-	// component i is KP_i(x) = Σ_k α_k^i · K(x, x_k) with α = v/√λ; for a training
-	// point this evaluates to √λ_i · v_i (Schölkopf, Smola & Müller 1998, §3). This
-	// matches Transform() — which computes Kc·v/√λ = √λ·v — and scikit-learn's
+	// component i is KP_i(x) = Σ_k α_k^i · Kc(x, x_k) with α = v/√λ, where Kc is the
+	// centered kernel; for a training point this evaluates to √λ_i · v_i (Schölkopf,
+	// Smola & Müller 1998, §3). This matches Transform() — which centers the test
+	// kernel row and computes Kc·v/√λ = √λ·v — and scikit-learn's
 	// KernelPCA.fit_transform. (Using v/√λ here would return the expansion
 	// coefficients α instead of the scores, off by a factor of λ per component.)
 	scores := mat.NewDense(nSamples, config.Components, nil)
