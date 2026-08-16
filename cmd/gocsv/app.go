@@ -1187,6 +1187,13 @@ func (a *App) detectFileFormat(filePath string) string {
 	content := string(buf)
 	content = strings.TrimSpace(content)
 
+	// JSON content is recognized but is NOT an importable format (see #719).
+	// Returning "json" routes it to a clean "unsupported format" rejection instead
+	// of misparsing it as CSV.
+	if strings.HasPrefix(content, "{") || strings.HasPrefix(content, "[") {
+		return "json"
+	}
+
 	// Check for TSV (more tabs than commas)
 	tabCount := strings.Count(content, "\t")
 	commaCount := strings.Count(content, ",")

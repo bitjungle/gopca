@@ -60,4 +60,14 @@ func TestIssue719_JSONImportRemoved(t *testing.T) {
 		strings.Contains(err.Error(), "not yet implemented") {
 		t.Errorf("ImportFile(json): expected an unsupported-format error, got %v", err)
 	}
+
+	// JSON content under a non-.json extension must not be misclassified as an
+	// importable format; it is recognized as the non-importable "json" format.
+	txtPath := filepath.Join(dir, "data.txt")
+	if err := os.WriteFile(txtPath, []byte(`[{"a":1}]`), 0644); err != nil {
+		t.Fatalf("write temp txt: %v", err)
+	}
+	if f := app.detectFileFormat(txtPath); f == "csv" || f == "tsv" || f == "excel" {
+		t.Errorf("JSON content classified as importable format %q; should be rejected", f)
+	}
 }
