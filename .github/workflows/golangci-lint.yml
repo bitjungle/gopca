@@ -34,7 +34,7 @@ jobs:
       - name: Set up Go
         uses: actions/setup-go@v6
         with:
-          go-version: '1.24'
+          go-version: '1.26'
           cache: true
 
       - name: Create frontend dist directories for Wails apps
@@ -48,8 +48,8 @@ jobs:
         uses: golangci/golangci-lint-action@v8
         with:
           # Required: the version of golangci-lint to use.
-          # Note: v2.4.0 is compatible with our configuration
-          version: v2.4
+          # Note: v2.12.x is required to lint a go 1.26 module (older builds reject it).
+          version: v2.12.2
           
           # Optional: working directory, useful for monorepos
           # working-directory: .
