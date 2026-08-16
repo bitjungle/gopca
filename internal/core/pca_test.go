@@ -330,18 +330,30 @@ func TestIssue738_NIPALSNativeExplainedVarianceOnCompleteData(t *testing.T) {
 		t.Fatalf("SVD fit failed: %v", err)
 	}
 
-	// The two retained components do not explain all variance, so the ratios must
-	// sum to well under 100%. Before the fix this summed to exactly 100%.
-	sumRatio := 0.0
-	for _, r := range nipalsNative.ExplainedVarRatio {
-		sumRatio += r
+	// NIPALS-native and SVD must agree on the total variance explained by the
+	// retained components (both should use the total-variance denominator). Before
+	// the fix, NIPALS-native normalized over the retained components only, forcing
+	// its ratio sum toward ~100% while SVD's stayed lower. Comparing the two sums —
+	// rather than testing against a fixed threshold — is robust regardless of how
+	// much variance the retained components happen to explain.
+	sumOf := func(rs []float64) float64 {
+		s := 0.0
+		for _, r := range rs {
+			s += r
+		}
+		return s
 	}
-	if sumRatio >= 99.0 {
-		t.Errorf("NIPALS-native explained-variance ratios sum to %.2f%% on complete data; "+
-			"expected < 100%% (total-variance denominator). Bug #738 would give ~100%%.", sumRatio)
+	nipalsSum, svdSum := sumOf(nipalsNative.ExplainedVarRatio), sumOf(svd.ExplainedVarRatio)
+	if math.Abs(nipalsSum-svdSum) > 0.5 {
+		t.Errorf("explained-variance ratio sums differ: NIPALS-native=%.2f%%, SVD=%.2f%% "+
+			"(bug #738 forces NIPALS-native toward ~100%%)", nipalsSum, svdSum)
 	}
 
-	// And they must match the SVD ratios (same denominator = total variance).
+	// Component counts must match before comparing element-wise (NIPALS can early-stop).
+	if len(nipalsNative.ExplainedVarRatio) != len(svd.ExplainedVarRatio) {
+		t.Fatalf("component-count mismatch: NIPALS-native=%d, SVD=%d",
+			len(nipalsNative.ExplainedVarRatio), len(svd.ExplainedVarRatio))
+	}
 	for i := range svd.ExplainedVarRatio {
 		diff := math.Abs(nipalsNative.ExplainedVarRatio[i] - svd.ExplainedVarRatio[i])
 		if diff > 0.5 {
