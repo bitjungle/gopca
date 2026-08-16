@@ -16,12 +16,12 @@ The **GoPCA Suite** brings this powerful technique to your fingertips with a foc
 
 GoPCA is designed to serve two roles simultaneously — and it does not compromise on either:
 
-* **A learning tool:** GoPCA ships with six carefully chosen sample datasets spanning biology, chemistry, spectroscopy, chemical engineering, and neuroscience. Each dataset comes with a step-by-step interactive tutorial that teaches both PCA concepts and how to use the software. You can go from zero to a complete multivariate analysis — including data diagnostics, outlier removal, and interpretation — without leaving the application. The tutorials are not toy examples; they are real datasets with real challenges, selected precisely because they expose the situations you will encounter in your own work.
+* **A learning tool:** GoPCA ships with seven carefully chosen sample datasets spanning biology, chemistry, spectroscopy, chemical engineering, neuroscience, and public health. Each dataset comes with a step-by-step interactive tutorial that teaches both PCA concepts and how to use the software. You can go from zero to a complete multivariate analysis — including data diagnostics, outlier removal, and interpretation — without leaving the application. The tutorials are not toy examples; they are real datasets with real challenges, selected precisely because they expose the situations you will encounter in your own work.
 
 * **A professional analysis tool:** The same application you use to learn is the one you use on your own data. Load your CSV, configure your preprocessing, choose your method (standard SVD, NIPALS, Kernel PCA, or Temporal PCA), and export your model. There are no artificial limits, no watermarks, and no features locked behind a tutorial mode. When you are ready to analyse your own datasets, GoPCA is ready too.
 
 > **Interactive Tutorials:**  
-> GoPCA Desktop includes guided interactive tutorials for six carefully chosen sample datasets. Each tutorial walks you through a complete analysis, explains what to look for, and teaches you a specific aspect of PCA or data analysis. This introduction gives you the conceptual foundation; the tutorials give you the hands-on experience. Look for the **Open Tutorial** button next to each sample dataset in GoPCA Desktop.
+> GoPCA Desktop includes guided interactive tutorials for seven carefully chosen sample datasets. Each tutorial walks you through a complete analysis, explains what to look for, and teaches you a specific aspect of PCA or data analysis. This introduction gives you the conceptual foundation; the tutorials give you the hands-on experience. Look for the **Open Tutorial** button next to each sample dataset in GoPCA Desktop.
 
 > **Note on Data Preparation:**  
 > Before performing PCA, your data should be properly cleaned and structured. If you're starting with raw data that contains missing values, outliers, or quality issues, consider using **GoCSV Desktop** for data preparation. See our companion guide *"Data Preparation with GoCSV Desktop"* for detailed guidance on getting your data ready for analysis.
@@ -72,9 +72,9 @@ The benefits are immediate and tangible. A simple plot of the first two principa
 
 ---
 
-## 4. Six Datasets, Six Lessons
+## 4. Seven Datasets, Seven Lessons
 
-GoPCA Desktop ships with six carefully selected sample datasets. Together they cover the most important situations you will encounter in practice — from a clean textbook case to spectroscopic data to a nonlinear manifold to a time series from a chemical reactor. Each dataset teaches a specific lesson about data, preprocessing, and the choice of PCA method. This section introduces all six. The interactive tutorials in GoPCA Desktop go deeper into each one.
+GoPCA Desktop ships with seven carefully selected sample datasets. Together they cover the most important situations you will encounter in practice — from a clean textbook case to spectroscopic data to a nonlinear manifold to a time series from a chemical reactor to a real population health survey. Each dataset teaches a specific lesson about data, preprocessing, and the choice of PCA method. This section introduces all seven. The interactive tutorials in GoPCA Desktop go deeper into each one.
 
 ![Wine Analysis Walkthrough](images/intro_to_pca_fig_04-01.jpg)
 
@@ -208,7 +208,27 @@ GoPCA Desktop ships with six carefully selected sample datasets. Together they c
 
 ---
 
-### The Six Datasets at a Glance
+### Dataset 7: Body Measures — What the Components Mean
+
+**The data:** Seven body measurements from 5,096 US adults in the 2017–2018 National Health and Nutrition Examination Survey (NHANES): weight, height, upper leg length, upper arm length, and arm, waist, and hip circumferences. Unlike the curated benchmarks above, this is a slice of a real population survey.
+
+**Why it is special:** Iris and Wine were about separating *known groups*. Body Measures has no natural classes — instead, the interesting question is what the components themselves *mean*. Because every body measurement grows with overall size, PCA hands you two remarkably interpretable axes: **PC1 (~60% of the variance) is an overall "size" factor** — all seven loadings share the same sign, so moving along it makes a person larger or smaller in every dimension at once — and **PC2 (~29%) is a "shape" factor** that contrasts stature (height, limb lengths) against girth (waist, hip, arm circumference). Together they capture about 88% of the variation in a clean 2D picture.
+
+**What you will learn:**
+- How a principal component can be an *interpretable factor* (size, shape), not just an abstract axis
+- Why a set of positively correlated measurements always yields a first component with same-sign loadings — a general "size" component
+- How to tell a *shift between overlapping groups* (men and women differ along the shape axis but overlap heavily) from the clean cluster separation seen in Iris
+- That PCA finds the directions of greatest variance, which need not line up with any variable you care about (colouring by age reveals almost no structure)
+
+**Preprocessing:** Standard scaling is essential — weight is in kilograms while the lengths and circumferences are in centimetres, and weight's numerical variance is roughly 60× that of arm length. Without scaling, weight and the largest girths dominate; with it, the size-and-shape structure emerges cleanly.
+
+**PCA method:** Standard SVD. The lesson is about *interpretation* — reading meaning into the components — rather than a new algorithm.
+
+> **→ Open the Body Measures tutorial in GoPCA Desktop** to see how PCA separates body size from body shape.
+
+---
+
+### The Seven Datasets at a Glance
 
 | Dataset | Domain | Variables | Key lesson | Preprocessing | Method |
 |---|---|---|---|---|---|
@@ -218,6 +238,7 @@ GoPCA Desktop ships with six carefully selected sample datasets. Together they c
 | **Swiss Roll** | Synthetic | 3 | Nonlinear structure | None | Kernel PCA |
 | **CSTR** | Chemical engineering | 12 (×time) | Process dynamics, fault detection | Standard scaling | Temporal PCA |
 | **EEG Eye State** | Neuroscience | 14 (×time) | Brain rhythms, phase-space trajectories | Standard scaling | Temporal PCA |
+| **Body Measures** | Public health | 7 | Interpreting components (size vs shape) | Standard scaling | SVD |
 
 ---
 
@@ -740,7 +761,7 @@ You've traveled from the basic intuition of PCA through its mathematical foundat
 
 ### Your Next Steps with GoPCA Suite
 
-**Start with the interactive tutorials:** Each of the six sample datasets has a guided tutorial in GoPCA Desktop. Work through them in order — Iris first to build your foundations, then Wine, Corn, Swiss Roll, CSTR, and EEG. By the end of the EEG tutorial, you will have used every major feature of GoPCA and encountered every major challenge that real datasets present.
+**Start with the interactive tutorials:** Each of the seven sample datasets has a guided tutorial in GoPCA Desktop. Work through the first six in order — Iris first to build your foundations, then Wine, Corn, Swiss Roll, CSTR, and EEG. By the end of the EEG tutorial, you will have used every major feature of GoPCA and encountered every major challenge that real datasets present. Then finish with Body Measures, the seventh — a fitting close: a simple, real population dataset that steps back from method complexity to ask what the principal components actually *mean* — how PC1 and PC2 become interpretable "size" and "shape" factors.
 
 **Then bring your own data:**
 1. Prepare your data with GoCSV Desktop (handle missing values, check quality)
