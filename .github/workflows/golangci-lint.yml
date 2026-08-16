@@ -48,7 +48,7 @@ jobs:
         uses: golangci/golangci-lint-action@v8
         with:
           # Required: the version of golangci-lint to use.
-          # Note: v2.4.0 is compatible with our configuration
+          # Note: v2.12.x is required to lint a go 1.26 module (older builds reject it).
           version: v2.12.2
           
           # Optional: working directory, useful for monorepos
