@@ -296,7 +296,10 @@ metadata you have. Let us test that. Set **Color by → `Age`**.
 👉 Age shows **almost no alignment** with either component (its correlation with
 both PC1 and PC2 is weak). Among adults, overall body size is not strongly tied
 to age, so PCA — which only knows about the seven measurements — has no reason to
-produce an "age axis." This is an important lesson: **PCA finds the directions of
+produce an "age axis." (Look closer, though, and age *does* correlate with the minor **third**
+component — a limb-proportion axis worth only about 5% of the variance — a
+reminder that a signal you care about can hide in a small component rather than a
+large one.) This is an important lesson: **PCA finds the directions of
 greatest variance in the data you give it, and those need not correspond to any
 particular variable you care about.** If you want to study age specifically, PCA
 of body measurements is the wrong tool; a method that uses age directly would be

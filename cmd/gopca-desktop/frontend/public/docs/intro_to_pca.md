@@ -44,6 +44,8 @@ Principal Component Analysis is a **dimensionality reduction** technique that tr
 
 * **They're interpretable:** Each PC is a weighted combination of your original variables, revealing what aspects of your data each component represents.
 
+If "a weighted combination of your original variables" sounds abstract, you already rely on such combinations every day. **Body Mass Index (BMI)** — weight divided by height squared — folds two measurements into a single number that summarizes body build. Someone designed that formula by hand. PCA does the same job automatically: instead of a formula handed down by an expert, it *learns* the most informative combinations straight from the data.
+
 Without diving too deep into the mathematics (we'll explore that later for those interested), PCA essentially rotates your data's coordinate system to align with the directions of maximum variation. It's like turning a tilted oval until it lies flat along the x-axis: suddenly, the main pattern becomes crystal clear.
 
 ![Dimensionality reduction](images/intro_to_pca_fig_02-02.jpg)
@@ -362,6 +364,8 @@ PCA essentially rotates your coordinate system to align with the natural "shape"
 1. **Finding the Main Axis:** PCA first finds the direction through your data cloud along which the points are most spread out. This becomes PC1.
 2. **Finding Perpendicular Axes:** It then finds the next direction of maximum spread that's perpendicular to the first. This becomes PC2.
 3. **Continuing the Process:** This continues for PC3, PC4, and so on, each perpendicular to all previous ones.
+
+There is a subtle but important detail in that first step. The line PCA draws through the cloud is the one that stays *closest* to every point — but "closest" measured **perpendicular** to the line, not straight up and down. That makes it different from the familiar "line of best fit" you may know from regression, which minimizes only the **vertical** gaps because it treats one variable as the thing to be predicted. PCA plays no favorites: it minimizes the perpendicular distance to all the variables at once. This is, in fact, the original definition of a principal component — Karl Pearson introduced it in 1901 in a paper titled *On Lines and Planes of Closest Fit to Systems of Points in Space*. The axis PCA finds is quite literally Pearson's "line of closest fit."
 
 Projecting onto PC1–PC2 is like shining a light through your data cloud and looking at its 2D shadow — but unlike random projections, this shadow is carefully chosen to preserve as much of the cloud's structure as possible.
 
