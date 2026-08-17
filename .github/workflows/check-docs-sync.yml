@@ -7,6 +7,13 @@ on:
       - 'docs/images/intro_to_*.jpg'
       - 'cmd/*/frontend/public/docs/*.md'
       - 'cmd/*/frontend/public/docs/images/*.png'
+      # Tutorial sources (testdata/<dataset>/) and their frontend mirrors
+      - 'testdata/**/*.md'
+      - 'testdata/**/*.png'
+      - 'testdata/**/*.jpg'
+      - 'testdata/**/*.jpeg'
+      - 'testdata/**/*.svg'
+      - 'cmd/*/frontend/public/tutorials/**'
       - 'scripts/sync-docs.sh'
       - 'Makefile'
 

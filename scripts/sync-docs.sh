@@ -23,6 +23,12 @@ GREEN='\033[0;32m'
 YELLOW='\033[1;33m'
 NC='\033[0m' # No Color
 
+# --check mode: report drift without modifying any files; exit 1 if out of sync.
+# Used by the pre-commit hook and CI to catch a stale mirror before it lands.
+CHECK_ONLY=false
+[ "${1:-}" = "--check" ] && CHECK_ONLY=true
+DRIFT=0
+
 # Source documentation files
 GOPCA_DOC="docs/intro_to_pca.md"
 GOCSV_DOC="docs/intro_to_data_prep.md"
@@ -54,18 +60,25 @@ sync_doc() {
     filename=$(basename "$source")
     target_file="$target_dir/$filename"
     
-    # Check if files are different
+    # Already in sync?
+    if [ -f "$target_file" ] && diff -q "$source" "$target_file" >/dev/null 2>&1; then
+        echo -e "${GREEN}✓${NC} $app_name documentation already up to date"
+        return 0
+    fi
+
+    # Source and mirror differ (or the mirror is missing).
+    if [ "$CHECK_ONLY" = true ]; then
+        echo -e "${RED}✗${NC} OUT OF SYNC: $target_file (differs from $source)"
+        DRIFT=1
+        return 0
+    fi
+
     if [ -f "$target_file" ]; then
-        if diff -q "$source" "$target_file" >/dev/null 2>&1; then
-            echo -e "${GREEN}✓${NC} $app_name documentation already up to date"
-            return 0
-        else
-            echo -e "${YELLOW}⟳${NC} Updating $app_name documentation..."
-        fi
+        echo -e "${YELLOW}⟳${NC} Updating $app_name documentation..."
     else
         echo -e "${YELLOW}+${NC} Creating $app_name documentation..."
     fi
-    
+
     # Copy with timestamp preservation
     cp -p "$source" "$target_file"
     
@@ -105,11 +118,12 @@ sync_tutorial() {
         filename=$(basename "$source_file")
         target_file="$target_dir/$filename"
 
-        if [ -f "$target_file" ]; then
-            if ! diff -q "$source_file" "$target_file" >/dev/null 2>&1; then
-                cp -p "$source_file" "$target_file"
-                updated=$((updated + 1))
-            fi
+        if [ -f "$target_file" ] && diff -q "$source_file" "$target_file" >/dev/null 2>&1; then
+            continue  # already in sync
+        fi
+        if [ "$CHECK_ONLY" = true ]; then
+            echo -e "${RED}✗${NC} OUT OF SYNC: $target_file"
+            DRIFT=1
         else
             cp -p "$source_file" "$target_file"
             updated=$((updated + 1))
@@ -149,18 +163,19 @@ sync_images() {
         filename=$(basename "$source_file")
         target_file="$target_dir/$filename"
         
-        # Check if files are different
-        if [ -f "$target_file" ]; then
-            if ! diff -q "$source_file" "$target_file" >/dev/null 2>&1; then
-                cp -p "$source_file" "$target_file"
-                updated=$((updated + 1))
-            fi
+        # Already in sync?
+        if [ -f "$target_file" ] && diff -q "$source_file" "$target_file" >/dev/null 2>&1; then
+            continue
+        fi
+        if [ "$CHECK_ONLY" = true ]; then
+            echo -e "${RED}✗${NC} OUT OF SYNC: $target_file"
+            DRIFT=1
         else
             cp -p "$source_file" "$target_file"
             updated=$((updated + 1))
         fi
     done
-    
+
     if [ $count -eq 0 ]; then
         echo -e "${YELLOW}⚠${NC}  $app_name: No images matching pattern $pattern"
         return 0
@@ -200,8 +215,21 @@ sync_tutorial "corn"
 sync_tutorial "swiss_roll"
 sync_tutorial "eye_state" "eeg_eye_state"
 sync_tutorial "CSTR" "cstr"
+# Note: the Body Measures tutorial (cmd/gopca-desktop/frontend/public/tutorials/body_measures)
+# is authored directly in the frontend, not sourced from testdata/, so it has no
+# sync_tutorial entry and is intentionally not managed here (see #730).
 
 echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+
+# In --check mode, report drift and exit without the "sync complete" messaging.
+if [ "$CHECK_ONLY" = true ]; then
+    if [ "$DRIFT" -ne 0 ]; then
+        echo -e "${RED}✗${NC} Documentation mirrors are OUT OF SYNC — run 'make sync-docs' and commit the result."
+        exit 1
+    fi
+    echo -e "${GREEN}✓${NC} Documentation mirrors are in sync"
+    exit 0
+fi
 
 # Check overall result
 if [ $gopca_result -eq 0 ] && [ $gocsv_result -eq 0 ] && [ $gopca_images_result -eq 0 ] && [ $gocsv_images_result -eq 0 ]; then
