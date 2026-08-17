@@ -22,7 +22,8 @@ echo "Running tests (excluding desktop package)..."
 # Method 1: Explicitly list packages to test
 # This is the most reliable method as it doesn't require Go to parse the desktop package
 # We only test packages that have test files to avoid Windows CI issues
-# Note: GoCSV app tests require Wails context and should be run separately
+# Note: cmd/gocsv is a separate Go module whose full test suite runs in CI (#751);
+# its tests are headless (httptest + pure logic, no live Wails context).
 
 # Create minimal frontend/dist for GoPCA Desktop tests (avoids embed errors)
 mkdir -p cmd/gopca-desktop/frontend/dist
@@ -47,14 +48,14 @@ if [ -d "testdata/validation/reference_results" ]; then
     fi
 fi
 
-# Then run GoCSV tests that don't require Wails context
+# Then run the full GoCSV module suite (separate module; headless tests — #751)
 cd cmd/gocsv
 
 # Create minimal frontend/dist for GoCSV tests (avoids embed errors)
 mkdir -p frontend/dist
 echo '<!DOCTYPE html><html><body>Test</body></html>' > frontend/dist/index.html
 
-if ! go test -v -cover -run "TestMultiStepUndoRedo|TestUndoRedoState|TestUnsavedChanges" .; then
+if ! go test -v -cover .; then
     echo "✗ GoCSV tests failed"
     cd ../..
     exit 1
