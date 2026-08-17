@@ -45,7 +45,7 @@ export function useGoCSVContext(): GoCSVIntegrationResult {
 export const GoCSVProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
     const {
         goCSVStatus, isCheckingGoCSV, showGoCSVDownloadDialog,
-        setShowGoCSVDownloadDialog, handleGoCSVAction, handleGoCSVDownload,
+        setShowGoCSVDownloadDialog, handleGoCSVAction, handleGoCSVDownload
     } = useGoCSVIntegration();
 
     // Memoize the context value to avoid creating a new object reference on
@@ -55,7 +55,7 @@ export const GoCSVProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     // does not support per-field subscriptions without context splitting.
     const value = useMemo<GoCSVIntegrationResult>(() => ({
         goCSVStatus, isCheckingGoCSV, showGoCSVDownloadDialog,
-        setShowGoCSVDownloadDialog, handleGoCSVAction, handleGoCSVDownload,
+        setShowGoCSVDownloadDialog, handleGoCSVAction, handleGoCSVDownload
     }), [goCSVStatus, isCheckingGoCSV, showGoCSVDownloadDialog,
         setShowGoCSVDownloadDialog, handleGoCSVAction, handleGoCSVDownload]);
 

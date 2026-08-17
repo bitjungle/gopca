@@ -49,7 +49,7 @@ const PLOT_PALETTE_CONFIG: Record<string, { hasPalette: boolean; paletteType: Pa
     'temporal-loadings':            { hasPalette: true,  paletteType: 'categorical' },
     'temporal-variable-importance': { hasPalette: true,  paletteType: 'continuous' },
     'kernel-matrix':                { hasPalette: false, paletteType: 'continuous' },
-    'sample-contributions':         { hasPalette: true,  paletteType: 'categorical' },
+    'sample-contributions':         { hasPalette: true,  paletteType: 'categorical' }
 };
 
 export interface VisualizationResult {
@@ -162,7 +162,7 @@ export function useVisualization(
             const numSamples = pcaResponse?.result?.scores?.length || fileData.data.length;
             return {
                 values: Array.from({ length: numSamples }, (_, i) => i + 1),
-                type: 'continuous',
+                type: 'continuous'
             };
         }
 
@@ -232,6 +232,6 @@ export function useVisualization(
         getColumnData,
         handlePlotSelectionChange,
         resetVisualizationSelections,
-        plotPaletteConfig: PLOT_PALETTE_CONFIG,
+        plotPaletteConfig: PLOT_PALETTE_CONFIG
     };
 }

@@ -65,9 +65,9 @@ interface ResultsSectionProps {
 export function ResultsSection({ guiConfig }: ResultsSectionProps) {
     const {
         pcaResponse, pcaError, pcaResultsRef, pcaErrorRef,
-        pcaHasExclusions, excludedRows, config, loading,
+        pcaHasExclusions, excludedRows, config,
         selectedGroupColumn, setSelectedGroupColumn,
-        clearPcaError, handleExportModel,
+        clearPcaError, handleExportModel
     } = usePCAContext();
     const { fileData } = useFileDataContext();
     const {
@@ -82,7 +82,7 @@ export function ResultsSection({ guiConfig }: ResultsSectionProps) {
         maxLabelsToShow, setMaxLabelsToShow,
         loadingsPlotType, setLoadingsPlotType,
         plotFontScale, setPlotFontScale,
-        getColumnData, handlePlotSelectionChange,
+        getColumnData, handlePlotSelectionChange
     } = useVisualizationContext();
     const { setMode } = usePalette();
 
@@ -106,7 +106,7 @@ export function ResultsSection({ guiConfig }: ResultsSectionProps) {
             ...(method === 'kernel' ? [
                 { value: 'kernel-matrix', label: 'Kernel Matrix Heatmap' },
                 { value: 'sample-contributions', label: 'Sample Contributions' }
-            ] : []),
+            ] : [])
         ];
     }, [pcaResponse?.result]);
 
@@ -118,16 +118,16 @@ export function ResultsSection({ guiConfig }: ResultsSectionProps) {
             ? Object.keys(fileData.categoricalColumns).map((colName) => ({
                 value: colName,
                 label: `🏷️ ${colName}`,
-                group: 'Categorical',
+                group: 'Categorical'
             }))
             : []),
         ...(fileData?.numericTargetColumns && Object.keys(fileData.numericTargetColumns).length > 0
             ? Object.keys(fileData.numericTargetColumns).map((colName) => ({
                 value: colName,
                 label: `📊 ${colName}`,
-                group: 'Continuous',
+                group: 'Continuous'
             }))
-            : []),
+            : [])
     ], [fileData?.categoricalColumns, fileData?.numericTargetColumns]);
 
     return (

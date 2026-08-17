@@ -317,7 +317,7 @@ export const SelectionTable: React.FC<SelectionTableProps> = ({
                       </td>
                       {row.map((value, colIdx) => (
                         <td key={colIdx} className="px-2 py-1 text-right text-gray-700 dark:text-gray-300">
-                          {value != null && !isNaN(value) ? value.toFixed(2) : 'NaN'}
+                          {value !== null && value !== undefined && !isNaN(value) ? value.toFixed(2) : 'NaN'}
                         </td>
                       ))}
                       {headers.length > 10 && (

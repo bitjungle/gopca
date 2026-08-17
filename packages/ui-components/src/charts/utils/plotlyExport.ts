@@ -119,7 +119,7 @@ export async function downloadPlot(
  */
 function escapeCSVField(field: any): string {
   // Convert to string, handle null/undefined
-  const value = field == null ? '' : String(field);
+  const value = field === null || field === undefined ? '' : String(field);
 
   // Check if field needs quoting (comma, quote, newline, or carriage return)
   const needsQuoting = value.includes(',') ||
@@ -324,6 +324,9 @@ export function setupPlotlyWailsIntegration(): void {
   // Intercept anchor element clicks to catch downloads
   const originalAnchorClick = HTMLAnchorElement.prototype.click;
   HTMLAnchorElement.prototype.click = function() {
+    // Patching a prototype method requires the dynamic `this` (the clicked
+    // anchor); aliasing it is intentional here.
+    // eslint-disable-next-line @typescript-eslint/no-this-alias
     const anchor = this;
 
     // Check if this is a download link
@@ -416,13 +419,12 @@ export function setupPlotlyWailsIntegration(): void {
           // Check if we're in Wails environment and have SaveFile available
           let saveFileFunc = null;
 
-          // Method 1: Direct window.go access
           if ((window as any).go?.main?.App?.SaveFile) {
+            // Method 1: Direct window.go access
             saveFileFunc = (window as any).go.main.App.SaveFile;
             console.info('Found SaveFile via window.go.main.App');
-          }
-          // Method 2: Check if SaveFile was injected globally
-          else if ((window as any).SaveFile) {
+          } else if ((window as any).SaveFile) {
+            // Method 2: SaveFile injected globally
             saveFileFunc = (window as any).SaveFile;
             console.info('Found SaveFile via window.SaveFile');
           }

@@ -45,7 +45,7 @@ function Consumer() {
     const {
         config, excludedRows, excludedColumns,
         selectedGroupColumn, pcaResponse, pcaError,
-        pcaLoading, loading, pcaHasExclusions,
+        pcaLoading, loading, pcaHasExclusions
     } = usePCAContext();
     return (
         <div>

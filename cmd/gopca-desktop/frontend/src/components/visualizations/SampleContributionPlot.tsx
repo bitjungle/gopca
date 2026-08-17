@@ -55,28 +55,15 @@ export const SampleContributionPlot: React.FC<SampleContributionPlotProps> = ({
   // State for component selection
   const [currentComponent, setCurrentComponent] = useState(selectedComponent);
 
-  // Check if eigenvectors are available
-  if (!pcaResult.kernel_eigenvectors || pcaResult.kernel_eigenvectors.length === 0) {
-    return (
-      <div className="flex items-center justify-center h-full">
-        <div className={`text-center p-8 ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>
-          <p className="text-lg mb-2">Sample contributions not available</p>
-          <p className="text-sm">
-            Eigenvector data is required to display sample contributions.
-          </p>
-        </div>
-      </div>
-    );
-  }
-
-  // Calculate contributions for the selected component
+  // Calculate contributions for the selected component.
+  // Declared before the early return below so hooks are always called in the
+  // same order (react-hooks/rules-of-hooks); it guards the empty case itself.
   const contributions = useMemo(() => {
     const eigenvectors = pcaResult.kernel_eigenvectors;
     if (!eigenvectors || eigenvectors.length === 0) {
       return [];
     }
     const eigenvalue = pcaResult.explained_variance[currentComponent] || 1;
-    const n = eigenvectors.length;
 
     // Calculate absolute contributions (normalized by eigenvalue)
     const contribData = eigenvectors.map((row, i) => {
@@ -96,6 +83,20 @@ export const SampleContributionPlot: React.FC<SampleContributionPlotProps> = ({
     // Return top N or all samples
     return showAllSamples ? contribData : contribData.slice(0, topN);
   }, [pcaResult.kernel_eigenvectors, pcaResult.explained_variance, currentComponent, rowNames, topN, showAllSamples]);
+
+  // Check if eigenvectors are available
+  if (!pcaResult.kernel_eigenvectors || pcaResult.kernel_eigenvectors.length === 0) {
+    return (
+      <div className="flex items-center justify-center h-full">
+        <div className={`text-center p-8 ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>
+          <p className="text-lg mb-2">Sample contributions not available</p>
+          <p className="text-sm">
+            Eigenvector data is required to display sample contributions.
+          </p>
+        </div>
+      </div>
+    );
+  }
 
   // Prepare data for bar chart
   const trace = {

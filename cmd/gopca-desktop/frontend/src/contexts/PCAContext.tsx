@@ -93,7 +93,7 @@ export function usePCAContext(): PCAContextType {
 export const PCAProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
     const {
         fileData, fileName, filePath, loading: fileLoading,
-        loadDataset, handleNativeFileSelect, setFileDataDirect,
+        loadDataset, handleNativeFileSelect, setFileDataDirect
     } = useFileDataContext();
     const { setMode } = usePalette();
 
@@ -101,7 +101,7 @@ export const PCAProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         config, setConfig,
         excludedRows, excludedColumns,
         setExcludedRows, setExcludedColumns,
-        updateGammaForData, resetExclusions,
+        updateGammaForData, resetExclusions
     } = usePCAConfig();
 
     const [selectedGroupColumn, setSelectedGroupColumn] = useState<string | null>(null);
@@ -109,7 +109,7 @@ export const PCAProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     const {
         pcaResponse, pcaError, loading: pcaLoading,
         pcaHasExclusions, pcaResultsRef, pcaErrorRef,
-        runPCA, clearPcaError, clearPcaResponse,
+        runPCA, clearPcaError, clearPcaResponse
     } = usePCARunner(fileData, config, excludedRows, excludedColumns, selectedGroupColumn);
 
     const loading = fileLoading || pcaLoading;
@@ -166,7 +166,7 @@ export const PCAProvider: React.FC<{ children: React.ReactNode }> = ({ children 
                 config,
                 excludedRows,
                 excludedColumns,
-                filename: fileName,
+                filename: fileName
             });
             await ExportPCAModel(request);
         } catch (err) {
@@ -194,7 +194,7 @@ export const PCAProvider: React.FC<{ children: React.ReactNode }> = ({ children 
             scaleOnly: config.scaleOnly,
             missingStrategy: config.missingStrategy,
             excludedColumns,
-            excludedRows,
+            excludedRows
         });
     }, [fileName, filePath, config, excludedColumns, excludedRows]);
 
@@ -235,7 +235,7 @@ export const PCAProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         handleLoadDataset, handleNativeFileSelectWithReset,
         handleExportModel, generateCLICommand,
         handleRowSelectionChange, handleColumnSelectionChange,
-        handleStartupFile,
+        handleStartupFile
     }), [
         config, setConfig,
         excludedRows, excludedColumns,
@@ -248,7 +248,7 @@ export const PCAProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         handleLoadDataset, handleNativeFileSelectWithReset,
         handleExportModel, generateCLICommand,
         handleRowSelectionChange, handleColumnSelectionChange,
-        handleStartupFile,
+        handleStartupFile
     ]);
 
     return (
