@@ -46,7 +46,7 @@ export const UIProvider: React.FC<{ children: React.ReactNode }> = ({ children }
         showDocumentation, setShowDocumentation,
         showAboutDialog, setShowAboutDialog,
         showCopied, mainScrollRef,
-        handleLogoClick, copyToClipboard,
+        handleLogoClick, copyToClipboard
     } = useUIState();
 
     // Memoize the context value to avoid creating a new object reference on
@@ -58,7 +58,7 @@ export const UIProvider: React.FC<{ children: React.ReactNode }> = ({ children }
         showDocumentation, setShowDocumentation,
         showAboutDialog, setShowAboutDialog,
         showCopied, mainScrollRef,
-        handleLogoClick, copyToClipboard,
+        handleLogoClick, copyToClipboard
     }), [showDocumentation, setShowDocumentation,
         showAboutDialog, setShowAboutDialog,
         showCopied, mainScrollRef,

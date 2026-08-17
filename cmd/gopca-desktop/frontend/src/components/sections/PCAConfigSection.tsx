@@ -310,7 +310,7 @@ export function PCAConfigSection({ onRunPCA }: PCAConfigSectionProps) {
                                         meanCenter: value === 'center' || value === 'standard',
                                         standardScale: value === 'standard',
                                         robustScale: value === 'robust',
-                                        scaleOnly: value === 'scale-only',
+                                        scaleOnly: value === 'scale-only'
                                     };
                                 });
                             }}

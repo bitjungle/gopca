@@ -123,7 +123,7 @@ export const DocumentationViewer: React.FC<DocumentationViewerProps> = ({
         root,
         // Fire when a heading enters the upper quarter of the scroll area.
         rootMargin: '-10% 0px -75% 0px',
-        threshold: 0,
+        threshold: 0
       }
     );
 

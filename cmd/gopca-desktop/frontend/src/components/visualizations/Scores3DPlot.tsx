@@ -63,7 +63,7 @@ export const Scores3DPlot: React.FC<Scores3DPlotProps> = ({
   fontScale = 1.0
 }) => {
   const { theme } = useTheme();
-  const { qualitativePalette, sequentialPalette, mode } = usePalette();
+  const { qualitativePalette, sequentialPalette } = usePalette();
 
   // Get the appropriate color scheme based on palette mode
   const colorScheme = groupType === 'continuous'

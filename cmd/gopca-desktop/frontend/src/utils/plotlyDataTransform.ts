@@ -23,7 +23,7 @@
 
 // Utility functions to transform GoPCA data to Plotly component formats
 
-import { PCAResult, EllipseParams, SampleMetrics } from '../types';
+import { PCAResult } from '../types';
 import type {
   ScoresPlotData,
   ScoresPlotConfig,
@@ -114,8 +114,8 @@ export function transformToScoresPlotData(
  * Create ScoresPlot config from GoPCA props
  */
 export function createScoresPlotConfig(
-  xComponent: number = 0,
-  yComponent: number = 1,
+  _xComponent: number = 0,
+  _yComponent: number = 1,
   showEllipses?: boolean,
   confidenceLevel?: 0.90 | 0.95 | 0.99,
   showRowLabels?: boolean,
@@ -441,7 +441,6 @@ export function transformToEigencorrelationPlotData(
   // Backend format: {variable: [correlations per component]}
   // Frontend expects: [[correlations per component for all variables]]
   const numComponents = eigencorr.components.length;
-  const numVariables = eigencorr.variables.length;
 
   const correlationMatrix: number[][] = [];
 

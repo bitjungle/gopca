@@ -39,7 +39,7 @@ interface TableRowData {
 // Component for the select-all checkbox to avoid React Hooks in non-component functions
 const SelectAllCheckbox: React.FC<{ table: any }> = ({ table }) => {
   const checkboxRef = React.useRef<HTMLInputElement>(null);
-  
+
   React.useEffect(() => {
     if (checkboxRef.current) {
       checkboxRef.current.indeterminate = table.getIsSomeRowsSelected();

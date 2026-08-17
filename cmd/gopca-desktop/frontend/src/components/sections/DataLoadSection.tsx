@@ -39,12 +39,12 @@ import { OpenTutorial } from '../../../wailsjs/go/main/App';
  */
 export function DataLoadSection() {
     const {
-        fileData, fileError, datasetId, loading: fileLoading, clearFileError,
+        fileData, fileError, datasetId, loading: fileLoading, clearFileError
     } = useFileDataContext();
     const {
         loading, excludedRows,
         handleLoadDataset, handleNativeFileSelectWithReset,
-        handleRowSelectionChange, handleColumnSelectionChange,
+        handleRowSelectionChange, handleColumnSelectionChange
     } = usePCAContext();
     const { goCSVStatus, isCheckingGoCSV, handleGoCSVAction } = useGoCSVContext();
 

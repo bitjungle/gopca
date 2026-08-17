@@ -98,7 +98,7 @@ export const HelpProvider: React.FC<HelpProviderProps> = ({ content, children })
       // Store handlers for cleanup
       (element as HTMLElementWithHelpHandlers)._helpHandlers = {
         handleMouseEnter,
-        handleMouseLeave,
+        handleMouseLeave
       };
     },
     [helpElements, setHelpKey]
@@ -134,7 +134,7 @@ export const HelpProvider: React.FC<HelpProviderProps> = ({ content, children })
         currentHelpKey,
         setHelpKey,
         registerHelpElement,
-        unregisterHelpElement,
+        unregisterHelpElement
       }}
     >
       {children}

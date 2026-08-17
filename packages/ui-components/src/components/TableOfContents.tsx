@@ -24,7 +24,7 @@ export interface TableOfContentsProps {
 export const TableOfContents: React.FC<TableOfContentsProps> = ({
     entries,
     activeId,
-    onEntryClick,
+    onEntryClick
 }) => {
     if (entries.length < 2) return null;
 
@@ -57,7 +57,7 @@ export const TableOfContents: React.FC<TableOfContentsProps> = ({
                                             isH3 ? 'pl-6' : 'pl-3',
                                             isActive
                                                 ? 'border-blue-500 text-blue-600 dark:text-blue-400 font-medium'
-                                                : 'border-transparent text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-100 hover:border-gray-300 dark:hover:border-gray-500',
+                                                : 'border-transparent text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-100 hover:border-gray-300 dark:hover:border-gray-500'
                                         ].join(' ')}
                                         aria-current={isActive ? 'location' : undefined}
                                     >

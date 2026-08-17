@@ -52,9 +52,6 @@ export const createChartExportHandler = (
       const chartElement = chartRef.current;
       const bounds = chartElement.getBoundingClientRect();
 
-      // Clone the element to ensure all styles are computed
-      const clonedElement = chartElement.cloneNode(true) as HTMLElement;
-
       dataUrl = await toPng(chartElement, {
         backgroundColor: theme === 'dark' ? '#1F2937' : '#FFFFFF',
         width: bounds.width,

@@ -27,7 +27,7 @@ import {
     LoadCSV,
     DownloadAndInspectZip,
     LoadZipEntry,
-    CancelZipImport,
+    CancelZipImport
 } from '../../wailsjs/go/main/App';
 import { main } from '../../wailsjs/go/models';
 
@@ -52,7 +52,7 @@ const LARGE_FILE_THRESHOLD = 10 * 1024 * 1024; // 10 MB
 export const LoadFromUrlDialog: React.FC<LoadFromUrlDialogProps> = ({
     isOpen,
     onClose,
-    onDataLoaded,
+    onDataLoaded
 }) => {
     const [url, setUrl] = useState('');
     const [peekResult, setPeekResult] = useState<URLPeekResult | null>(null);
@@ -99,13 +99,15 @@ export const LoadFromUrlDialog: React.FC<LoadFromUrlDialogProps> = ({
             const result = await PeekRemoteURL(trimmed);
             if (!cancelled) setPeekResult(result);
         } catch (e) {
-            if (!cancelled) setPeekResult({
+            if (!cancelled) {
+setPeekResult({
                 url: trimmed,
                 fileFormat: '',
                 fileSizeBytes: -1,
                 accessible: false,
-                error: `Unexpected error: ${e}`,
+                error: `Unexpected error: ${e}`
             });
+}
         } finally {
             if (!cancelled) setIsPeeking(false);
             cancelPeekRef.current = null;
@@ -130,7 +132,7 @@ export const LoadFromUrlDialog: React.FC<LoadFromUrlDialogProps> = ({
             onClose();
         } catch (e) {
             setPeekResult(prev => prev ? {
-                ...prev, accessible: false, error: `Import failed: ${e}`,
+                ...prev, accessible: false, error: `Import failed: ${e}`
             } : null);
             setZipEntries(null);
         } finally {
@@ -148,7 +150,7 @@ export const LoadFromUrlDialog: React.FC<LoadFromUrlDialogProps> = ({
                 const result = await DownloadAndInspectZip(peekResult.url);
                 if (result.error) {
                     setPeekResult(prev => prev ? {
-                        ...prev, accessible: false, error: result.error,
+                        ...prev, accessible: false, error: result.error
                     } : null);
                     return;
                 }
@@ -162,7 +164,7 @@ export const LoadFromUrlDialog: React.FC<LoadFromUrlDialogProps> = ({
                 }
             } catch (e) {
                 setPeekResult(prev => prev ? {
-                    ...prev, accessible: false, error: `Download failed: ${e}`,
+                    ...prev, accessible: false, error: `Download failed: ${e}`
                 } : null);
             } finally {
                 setIsDownloading(false);
@@ -177,7 +179,7 @@ export const LoadFromUrlDialog: React.FC<LoadFromUrlDialogProps> = ({
                 onClose();
             } catch (e) {
                 setPeekResult(prev => prev ? {
-                    ...prev, accessible: false, error: `Download failed: ${e}`,
+                    ...prev, accessible: false, error: `Download failed: ${e}`
                 } : null);
             } finally {
                 setIsDownloading(false);

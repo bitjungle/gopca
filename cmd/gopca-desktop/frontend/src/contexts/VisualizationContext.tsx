@@ -61,7 +61,7 @@ export const VisualizationProvider: React.FC<{ children: React.ReactNode }> = ({
         loadingsPlotType, setLoadingsPlotType,
         plotFontScale, setPlotFontScale,
         getColumnData, handlePlotSelectionChange,
-        resetVisualizationSelections, plotPaletteConfig,
+        resetVisualizationSelections, plotPaletteConfig
     } = useVisualization(pcaResponse, fileData, loading, selectedGroupColumn, setExcludedRows);
 
     // Memoize the context value to avoid creating a new object reference on
@@ -82,7 +82,7 @@ export const VisualizationProvider: React.FC<{ children: React.ReactNode }> = ({
         loadingsPlotType, setLoadingsPlotType,
         plotFontScale, setPlotFontScale,
         getColumnData, handlePlotSelectionChange,
-        resetVisualizationSelections, plotPaletteConfig,
+        resetVisualizationSelections, plotPaletteConfig
     }), [
         selectedPlot, setSelectedPlot,
         selectedXComponent, setSelectedXComponent,
@@ -96,7 +96,7 @@ export const VisualizationProvider: React.FC<{ children: React.ReactNode }> = ({
         loadingsPlotType, setLoadingsPlotType,
         plotFontScale, setPlotFontScale,
         getColumnData, handlePlotSelectionChange,
-        resetVisualizationSelections, plotPaletteConfig,
+        resetVisualizationSelections, plotPaletteConfig
     ]);
 
     return (

@@ -50,7 +50,7 @@ function Consumer() {
         selectedLoadingComponent,
         showEllipses, confidenceLevel,
         showRowLabels, maxLabelsToShow,
-        loadingsPlotType, plotFontScale,
+        loadingsPlotType, plotFontScale
     } = useVisualizationContext();
     return (
         <div>

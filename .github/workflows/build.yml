@@ -196,6 +196,35 @@ jobs:
       env:
         GOPCA_TEST_TIMEOUT: 60
 
+  frontend-lint:
+    name: Frontend Lint
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Set up Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: '24'
+        cache: 'npm'
+
+    - name: Install dependencies (monorepo)
+      run: npm ci
+
+    - name: Build shared UI components (provides types for lint)
+      run: npm run build-ui
+
+    - name: Lint shared UI components
+      run: npm run lint -w @gopca/ui-components
+
+    - name: Lint GoPCA Desktop frontend
+      run: npm run lint -w frontend
+
+    - name: Lint GoCSV frontend
+      run: npm run lint -w gocsv-frontend
+
   build-cli:
     name: Build pca CLI
     needs: test

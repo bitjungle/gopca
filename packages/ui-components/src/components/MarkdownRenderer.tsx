@@ -49,7 +49,7 @@ export interface MarkdownRendererProps {
 export const MarkdownRenderer: React.FC<MarkdownRendererProps> = ({
   content,
   className = '',
-  onExternalLink,
+  onExternalLink
 }) => {
   // Mutable counter map captured by the heading component overrides below.
   // Declared inside the render function so it resets to empty on every render,
