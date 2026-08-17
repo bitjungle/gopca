@@ -561,7 +561,7 @@ func runAnalyze(opts *AnalyzeOptions, inputFile string) error {
 		outputScores := opts.OutputScores || opts.OutputAll
 		outputLoadings := opts.OutputLoadings || opts.OutputAll
 		outputVariance := opts.OutputVariance || opts.OutputAll
-		return outputTableFormat(result, data, preprocessedData,
+		return outputTableFormat(result, data,
 			outputScores, outputLoadings, outputVariance, opts.IncludeMetrics, opts.VarianceExplained)
 	}
 }

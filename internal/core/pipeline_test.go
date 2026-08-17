@@ -68,12 +68,14 @@ func TestIssue716_PreprocessedDataMatchesEngineSpace(t *testing.T) {
 	assertMatrixClose(t, result.PreprocessedData, want, 1e-9, "PreprocessedData vs reference preprocessing")
 }
 
-// TestIssue716_NativeMissingMetricsUseCenteredSpace locks in the divergence fix:
-// for NIPALS with native missing values + mean-centering, diagnostics must be
-// computed in the mean-centered space (the reconstruction space), not against
-// the raw data. Previously the Desktop app centered while the CLI used raw,
-// producing different metrics for identical input.
-func TestIssue716_NativeMissingMetricsUseCenteredSpace(t *testing.T) {
+// TestIssue716_NativeMissingSkipsDiagnostics verifies that NIPALS with genuine
+// missing values skips per-sample diagnostics (PreprocessedData nil, Metrics
+// empty). Reconstruction diagnostics (Q/T²) are ill-defined when entries are
+// missing, and the generic Preprocessor cannot reproduce NIPALS' NaN-aware
+// centering (it would yield NaN column means, corrupting the whole matrix). So
+// rather than centering with the generic preprocessor, diagnostics are skipped —
+// and, crucially, PreprocessedData must never contain NaN-filled columns.
+func TestIssue716_NativeMissingSkipsDiagnostics(t *testing.T) {
 	data := wellConditionedData()
 	data[3][1] = math.NaN() // introduce a genuine missing value
 
@@ -88,37 +90,19 @@ func TestIssue716_NativeMissingMetricsUseCenteredSpace(t *testing.T) {
 	if err != nil {
 		t.Fatalf("RunPCAWithDiagnostics failed: %v", err)
 	}
-	if result.PreprocessedData == nil {
-		t.Fatal("expected PreprocessedData for native-missing NIPALS")
+	if result.PreprocessedData != nil {
+		t.Errorf("expected PreprocessedData nil for native-missing NIPALS (diagnostics skipped), got %d rows", len(result.PreprocessedData))
 	}
-
-	// The exposed matrix must be mean-centered (column means ≈ 0, ignoring NaN),
-	// not the raw data.
-	nRows := len(result.PreprocessedData)
-	nCols := len(result.PreprocessedData[0])
-	for j := 0; j < nCols; j++ {
-		sum, count := 0.0, 0
-		for i := 0; i < nRows; i++ {
-			v := result.PreprocessedData[i][j]
-			if !math.IsNaN(v) {
-				sum += v
-				count++
-			}
-		}
-		mean := sum / float64(count)
-		if math.Abs(mean) > 1e-9 {
-			t.Errorf("column %d not centered: mean=%g (expected ~0)", j, mean)
-		}
-	}
-
-	// And it must differ from the raw data (a raw column mean is clearly non-zero).
-	if math.Abs(result.PreprocessedData[0][0]-data[0][0]) < 1e-12 {
-		t.Error("PreprocessedData appears to equal raw data; expected mean-centering")
+	if len(result.Metrics) != 0 {
+		t.Errorf("expected no diagnostic metrics for native-missing NIPALS, got %d", len(result.Metrics))
 	}
 }
 
-// TestRunPCAWithDiagnostics_SkipsNonlinearMethods verifies kernel/temporal PCA
-// leave PreprocessedData nil so per-sample reconstruction metrics are skipped.
+// TestRunPCAWithDiagnostics_SkipsNonlinearMethods verifies kernel and temporal
+// PCA leave PreprocessedData nil so per-sample reconstruction metrics are
+// skipped (their reconstructions don't correspond to residuals in the original
+// data space). Temporal in particular must not leave callers with a nil matrix
+// that later panics when metrics are requested.
 func TestRunPCAWithDiagnostics_SkipsKernelDiagnostics(t *testing.T) {
 	data := wellConditionedData()
 	config := types.PCAConfig{Method: "kernel", Components: 2, MeanCenter: true, KernelType: "rbf", KernelGamma: 0.5}
@@ -129,6 +113,30 @@ func TestRunPCAWithDiagnostics_SkipsKernelDiagnostics(t *testing.T) {
 	}
 	if result.PreprocessedData != nil {
 		t.Error("expected kernel PCA to leave PreprocessedData nil (diagnostics skipped)")
+	}
+	if len(result.Metrics) != 0 {
+		t.Errorf("expected no diagnostic metrics for kernel PCA, got %d", len(result.Metrics))
+	}
+}
+
+// TestRunPCAWithDiagnostics_SkipsTemporalDiagnostics guards the CLI regression
+// from #716: temporal PCA reduces the sample count, so per-sample diagnostics
+// against the original data don't apply. PreprocessedData must be nil (and
+// Metrics empty) so the table/JSON output paths never attempt to recompute
+// metrics against a nil matrix.
+func TestRunPCAWithDiagnostics_SkipsTemporalDiagnostics(t *testing.T) {
+	data := wellConditionedData()
+	config := types.PCAConfig{Method: "temporal", Components: 2, MeanCenter: true, TemporalLags: 2}
+
+	result, err := RunPCAWithDiagnostics(data, config)
+	if err != nil {
+		t.Fatalf("RunPCAWithDiagnostics (temporal) failed: %v", err)
+	}
+	if result.PreprocessedData != nil {
+		t.Error("expected temporal PCA to leave PreprocessedData nil (diagnostics skipped)")
+	}
+	if len(result.Metrics) != 0 {
+		t.Errorf("expected no diagnostic metrics for temporal PCA, got %d", len(result.Metrics))
 	}
 }
 
