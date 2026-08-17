@@ -26,6 +26,7 @@ package cobra
 import (
 	"fmt"
 	"math"
+	"os"
 	"strings"
 
 	"github.com/bitjungle/gopca/internal/core"
@@ -514,6 +515,14 @@ func runAnalyze(opts *AnalyzeOptions, inputFile string) error {
 		return fmt.Errorf("PCA analysis failed: %w", err)
 	}
 
+	// Distinguish "diagnostics don't apply" (PreprocessedData nil for
+	// kernel/temporal/native-missing) from "diagnostics failed" (PreprocessedData
+	// present but no metrics attached). In the latter case the table would print
+	// zero-valued placeholders; warn so they aren't mistaken for real Q/T² values.
+	if opts.IncludeMetrics && result.PreprocessedData != nil && len(result.Metrics) == 0 {
+		fmt.Fprintln(os.Stderr, "Warning: diagnostic metrics (Q/T²) could not be computed; reported values are placeholders.")
+	}
+
 	// Reuse the engine's preprocessed matrix for output so downstream metrics stay
 	// consistent with the attached diagnostics.
 	preprocessedData := result.PreprocessedData
@@ -561,7 +570,7 @@ func runAnalyze(opts *AnalyzeOptions, inputFile string) error {
 		outputScores := opts.OutputScores || opts.OutputAll
 		outputLoadings := opts.OutputLoadings || opts.OutputAll
 		outputVariance := opts.OutputVariance || opts.OutputAll
-		return outputTableFormat(result, data, preprocessedData,
+		return outputTableFormat(result, data,
 			outputScores, outputLoadings, outputVariance, opts.IncludeMetrics, opts.VarianceExplained)
 	}
 }

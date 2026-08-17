@@ -98,12 +98,26 @@ func (p *PCAImpl) Fit(data types.Matrix, config types.PCAConfig) (*types.PCAResu
 	// against. Fit exposes it via PCAResult.PreprocessedData so callers never have
 	// to re-derive it — this recovery was previously duplicated, and divergent,
 	// across the CLI and Desktop entry points (see #716). Defaults to the raw data
-	// (the correct reference when no preprocessing is applied).
+	// (the correct reference when no preprocessing is applied); nil disables
+	// diagnostics (methods where per-sample reconstruction does not apply).
 	preprocessedForMetrics := data
 
 	// Preprocessing using the Preprocessor class (skip only if using native missing value handling with actual missing values)
 	// Note: For NIPALS with missing values, mean centering is handled within the algorithm
-	if !usingNativeMissing && (config.MeanCenter || config.StandardScale || config.RobustScale || config.ScaleOnly || config.SNV || config.VectorNorm) {
+	if usingNativeMissing {
+		if config.StandardScale || config.RobustScale || config.ScaleOnly || config.SNV || config.VectorNorm {
+			// Log warning: preprocessing (except mean centering) is not supported with native missing value handling
+			// Mean centering is handled internally by the NIPALS algorithm for missing data
+			fmt.Printf("Warning: Preprocessing options (except mean centering) are not supported with NIPALS native missing value handling. These options were ignored.\n")
+		}
+		// Per-sample reconstruction diagnostics are ill-defined here: missing
+		// entries have no ground truth, and NIPALS centers with NaN-aware means
+		// (computeColumnMeansWithMissing) that the generic Preprocessor cannot
+		// reproduce — it would compute NaN column means and turn whole columns
+		// into NaN. Skip diagnostics entirely (as for kernel/temporal) rather than
+		// emit garbage; leave PreprocessedData nil.
+		preprocessedForMetrics = nil
+	} else if config.MeanCenter || config.StandardScale || config.RobustScale || config.ScaleOnly || config.SNV || config.VectorNorm {
 		// Create preprocessor with the appropriate settings
 		p.preprocessor = NewPreprocessorWithScaleOnly(config.MeanCenter, config.StandardScale, config.RobustScale, config.ScaleOnly, config.SNV, config.VectorNorm)
 
@@ -119,22 +133,6 @@ func (p *PCAImpl) Fit(data types.Matrix, config types.PCAConfig) (*types.PCAResu
 		// Convert back to mat.Dense
 		X = utils.MatrixToDense(processedData)
 		preprocessedForMetrics = processedData
-	} else if usingNativeMissing {
-		if config.StandardScale || config.RobustScale || config.ScaleOnly || config.SNV || config.VectorNorm {
-			// Log warning: preprocessing (except mean centering) is not supported with native missing value handling
-			// Mean centering is handled internally by the NIPALS algorithm for missing data
-			fmt.Printf("Warning: Preprocessing options (except mean centering) are not supported with NIPALS native missing value handling. These options were ignored.\n")
-		}
-		// NIPALS mean-centers internally, so diagnostics must be computed in the
-		// mean-centered space; the raw data would not match the reconstruction.
-		// Mean-centering tolerates the NaNs (column means ignore missing values).
-		if config.MeanCenter {
-			centeredForMetrics, err := NewPreprocessorWithScaleOnly(true, false, false, false, false, false).FitTransform(utils.DenseToMatrix(X))
-			if err != nil {
-				return nil, fmt.Errorf("mean-centering for diagnostics failed: %w", err)
-			}
-			preprocessedForMetrics = centeredForMetrics
-		}
 	}
 
 	// Select PCA method
