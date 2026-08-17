@@ -65,7 +65,15 @@ else
 fi
 echo ""
 
-# 3. Check for external URLs in source code
+# 3. Check for external URLs in source code.
+# Notes on the exclusions/allowlist below:
+#   --exclude="*_test.go": test fixtures legitimately carry example URLs (e.g.
+#     raw.githubusercontent.com in cmd/gocsv/fetch_test.go) and are never
+#     compiled into shipped binaries, so they are not a user-facing privacy risk.
+#   HasPrefix.*https://: matches GoCSV's user-initiated remote-file feature, where
+#     the app inspects a user-supplied path for a URL scheme (cmd/gocsv/app.go) —
+#     this is not an embedded external endpoint. The fetch only runs on a URL the
+#     user explicitly provides (see cmd/gocsv/fetch.go).
 echo "3. Checking for external URLs in source code..."
 EXTERNAL_URLS=$(grep -r "https://" \
     --include="*.go" \
@@ -73,6 +81,7 @@ EXTERNAL_URLS=$(grep -r "https://" \
     --include="*.tsx" \
     --include="*.js" \
     --include="*.jsx" \
+    --exclude="*_test.go" \
     --exclude-dir="dist" \
     --exclude-dir="build" \
     --exclude-dir="vendor" \
@@ -80,7 +89,7 @@ EXTERNAL_URLS=$(grep -r "https://" \
     --exclude-dir=".venv" \
     --exclude-dir="testdata" \
     "$PROJECT_ROOT" 2>/dev/null | \
-    grep -vE "github\.com|json-schema\.org|doi\.org|arxiv\.org|npmjs\.com|timestamp\.digicert\.com|wails\.io/docs|reactjs\.org/docs|localhost|127\.0\.0\.1|example\.com|cdn\.jsdelivr\.net/npm/ag-grid|bitjungle\.github\.io/gopca|heroicons\.com|vitejs\.dev/config" | \
+    grep -vE "github\.com|json-schema\.org|doi\.org|arxiv\.org|npmjs\.com|timestamp\.digicert\.com|wails\.io/docs|reactjs\.org/docs|localhost|127\.0\.0\.1|example\.com|cdn\.jsdelivr\.net/npm/ag-grid|bitjungle\.github\.io/gopca|heroicons\.com|vitejs\.dev/config|HasPrefix.*https://" | \
     grep -vE "^\s*//" || true)
 
 if [ -n "$EXTERNAL_URLS" ]; then
@@ -109,6 +118,13 @@ echo ""
 
 # 5. Check for fetch/XMLHttpRequest in JavaScript/TypeScript
 echo "5. Checking for network calls in JavaScript/TypeScript..."
+# The trailing grep -v filters out call sites that are known to fetch only
+# app-local, bundled resources (relative/absolute paths served from the
+# embedded frontend/dist/), not external URLs. Add a new entry here whenever a
+# new local fetch is introduced, so each site is explicitly acknowledged:
+#   fetch(dataUrl)       - CSV/data preview loaded from a blob/local path
+#   fetch(markdownPath)  - in-app help/docs markdown
+#   fetch(tutorialPath)  - bundled tutorial markdown (/tutorials/*, see TutorialViewer.tsx)
 FETCH_USAGE=$(grep -r "fetch\|XMLHttpRequest\|axios\|WebSocket" \
     --include="*.ts" \
     --include="*.tsx" \
@@ -120,7 +136,7 @@ FETCH_USAGE=$(grep -r "fetch\|XMLHttpRequest\|axios\|WebSocket" \
     --exclude-dir=".venv" \
     --exclude-dir="testdata" \
     "$PROJECT_ROOT" 2>/dev/null | \
-    grep -v "// \|/\* \| \* \|fetchMetrics\|fetch(dataUrl)\|fetch(markdownPath)\|blobToDataURL\|fetchError\|fetchedBlob" || true)
+    grep -v "// \|/\* \| \* \|fetchMetrics\|fetch(dataUrl)\|fetch(markdownPath)\|fetch(tutorialPath)\|blobToDataURL\|fetchError\|fetchedBlob" || true)
 
 if [ -n "$FETCH_USAGE" ]; then
     print_status 1 "Found potential network calls in frontend code:"
