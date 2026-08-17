@@ -110,6 +110,7 @@ sync_tutorial() {
 
     local updated=0
     local count=0
+    local drifted=0
 
     # Sync .md files and image files (.png, .jpg, .jpeg, .svg)
     for source_file in "$source_dir"/*.md "$source_dir"/*.png "$source_dir"/*.jpg "$source_dir"/*.jpeg "$source_dir"/*.svg; do
@@ -124,6 +125,7 @@ sync_tutorial() {
         if [ "$CHECK_ONLY" = true ]; then
             echo -e "${RED}✗${NC} OUT OF SYNC: $target_file"
             DRIFT=1
+            drifted=$((drifted + 1))
         else
             cp -p "$source_file" "$target_file"
             updated=$((updated + 1))
@@ -132,6 +134,8 @@ sync_tutorial() {
 
     if [ $count -eq 0 ]; then
         echo -e "${YELLOW}⚠${NC}  Tutorial '$dataset': no files found in $source_dir"
+    elif [ "$CHECK_ONLY" = true ] && [ $drifted -gt 0 ]; then
+        echo -e "${RED}✗${NC} Tutorial '$dataset': $drifted of $count file(s) out of sync"
     elif [ $updated -eq 0 ]; then
         echo -e "${GREEN}✓${NC} Tutorial '$dataset' already up to date ($count files)"
     else
@@ -151,7 +155,8 @@ sync_images() {
     # Count matching files
     local count=0
     local updated=0
-    
+    local drifted=0
+
     # Find and copy matching image files
     for source_file in $IMAGES_DIR/$pattern; do
         # Check if pattern matched any files
@@ -170,6 +175,7 @@ sync_images() {
         if [ "$CHECK_ONLY" = true ]; then
             echo -e "${RED}✗${NC} OUT OF SYNC: $target_file"
             DRIFT=1
+            drifted=$((drifted + 1))
         else
             cp -p "$source_file" "$target_file"
             updated=$((updated + 1))
@@ -178,6 +184,9 @@ sync_images() {
 
     if [ $count -eq 0 ]; then
         echo -e "${YELLOW}⚠${NC}  $app_name: No images matching pattern $pattern"
+        return 0
+    elif [ "$CHECK_ONLY" = true ] && [ $drifted -gt 0 ]; then
+        echo -e "${RED}✗${NC} $app_name: $drifted of $count image(s) out of sync"
         return 0
     elif [ $updated -eq 0 ]; then
         echo -e "${GREEN}✓${NC} $app_name images already up to date ($count files)"

@@ -94,12 +94,16 @@ if git diff --cached --name-only | grep -q 'go\.mod\|go\.sum'; then
     echo "✓ go.mod is tidy"
 fi
 
-# Check documentation sync if docs, tutorial sources, or their mirrors are committed
+# Check documentation sync if docs, tutorial sources, or their mirrors are staged.
+# Note: this checks the working tree as a fast heads-up; the CI "Check Documentation
+# Sync" job is the authoritative gate on the actual pushed state.
 if git diff --cached --name-only | grep -qE '^(docs/|testdata/|cmd/[^/]+/frontend/public/(docs|tutorials)/|scripts/sync-docs\.sh)'; then
     echo ""
     echo "→ Checking documentation sync..."
     if ! SYNC_OUT=$(bash scripts/sync-docs.sh --check 2>&1); then
-        echo "$SYNC_OUT" | grep -E "OUT OF SYNC"
+        # Show the offending files; fall back to full output. The '|| echo' keeps a
+        # grep no-match from aborting the hook under 'set -e'.
+        echo "$SYNC_OUT" | grep -E "OUT OF SYNC" || echo "$SYNC_OUT"
         echo "❌ Documentation mirrors are out of sync with their sources."
         echo "   Run 'make sync-docs' and stage the changes."
         exit 1
