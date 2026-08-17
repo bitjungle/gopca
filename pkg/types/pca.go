@@ -84,6 +84,13 @@ type PCAResult struct {
 	// Preprocessing statistics
 	Means   []float64 `json:"means,omitempty"`   // Original feature means
 	StdDevs []float64 `json:"stddevs,omitempty"` // Original feature std devs
+	// PreprocessedData is the exact matrix the engine operated on internally —
+	// the data preprocessed with the same settings used for fitting, in the same
+	// space as the reconstruction (scores·loadingsᵀ). Diagnostic metrics (Q/T²)
+	// must be computed against this matrix. It is populated by Fit for linear PCA
+	// (svd/nipals) and left nil for kernel/temporal PCA, where per-sample
+	// reconstruction metrics do not apply. In-memory only; never serialized.
+	PreprocessedData Matrix `json:"-"`
 	// Diagnostic metrics
 	Metrics []SampleMetrics `json:"metrics,omitempty"` // Per-sample diagnostic metrics
 	// Confidence limits for diagnostics
