@@ -136,7 +136,7 @@ jobs:
           fi
           go test -v -race -timeout 10m -skip "TestValidateOutputPath" ./internal/utils
           # Run the full GoCSV module suite (separate module; headless tests — #751)
-          cd cmd/gocsv && go test -v -race -timeout 10m . && cd ../..
+          cd cmd/gocsv && go test -v -race -timeout 10m ./... && cd ../..
         else
           make ci-test
         fi

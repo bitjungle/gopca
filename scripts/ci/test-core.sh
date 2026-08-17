@@ -55,7 +55,7 @@ cd cmd/gocsv
 mkdir -p frontend/dist
 echo '<!DOCTYPE html><html><body>Test</body></html>' > frontend/dist/index.html
 
-if ! go test -v -cover .; then
+if ! go test -v -cover ./...; then
     echo "✗ GoCSV tests failed"
     cd ../..
     exit 1
