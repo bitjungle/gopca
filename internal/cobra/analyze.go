@@ -506,17 +506,17 @@ func runAnalyze(opts *AnalyzeOptions, inputFile string) error {
 		}
 	}
 
-	// Create and run PCA (preprocessing is handled inside pca.Fit())
-	pca := core.NewPCAEngineForMethod(config.Method)
-	result, err := pca.Fit(data.Matrix, config)
+	// Fit PCA and attach diagnostics (Q/T² + confidence limits) via the shared
+	// core pipeline, so the CLI and Desktop compute identical metrics against the
+	// exact matrix the engine used (result.PreprocessedData) — see #716.
+	result, err := core.RunPCAWithDiagnostics(data.Matrix, config)
 	if err != nil {
 		return fmt.Errorf("PCA analysis failed: %w", err)
 	}
 
-	// Recreate preprocessed data for metrics calculation
-	// This ensures metrics are calculated on the same preprocessed data that was used for PCA
-	var preprocessedData types.Matrix
-	var preprocessor *core.Preprocessor
+	// Reuse the engine's preprocessed matrix for output so downstream metrics stay
+	// consistent with the attached diagnostics.
+	preprocessedData := result.PreprocessedData
 
 	// Check if we need to handle NIPALS with native missing values specially
 	hasMissing := false
@@ -531,16 +531,14 @@ func runAnalyze(opts *AnalyzeOptions, inputFile string) error {
 			break
 		}
 	}
-
 	usingNativeMissing := config.Method == "nipals" && config.MissingStrategy == types.MissingNative && hasMissing
 
-	if usingNativeMissing {
-		// For NIPALS with native missing values, only mean centering is applied (handled internally)
-		// We don't preprocess for metrics in this case
-		preprocessedData = data.Matrix
-		preprocessor = nil
-	} else if config.MeanCenter || config.StandardScale || config.RobustScale || config.ScaleOnly || config.SNV || config.VectorNorm {
-		// Re-create preprocessor with the same settings used by pca.Fit()
+	// The JSON exporter needs the fitted preprocessor for extended parameters
+	// (feature medians/MADs, row means/std devs) that the result does not carry.
+	// Re-fit it only when full preprocessing was applied; native NIPALS missing-
+	// value handling centers internally and exposes no such preprocessor.
+	var preprocessor *core.Preprocessor
+	if !usingNativeMissing && (config.MeanCenter || config.StandardScale || config.RobustScale || config.ScaleOnly || config.SNV || config.VectorNorm) {
 		preprocessor = core.NewPreprocessorWithScaleOnly(
 			config.MeanCenter,
 			config.StandardScale,
@@ -549,14 +547,9 @@ func runAnalyze(opts *AnalyzeOptions, inputFile string) error {
 			config.SNV,
 			config.VectorNorm,
 		)
-		preprocessedData, err = preprocessor.FitTransform(data.Matrix)
-		if err != nil {
-			return fmt.Errorf("preprocessing for metrics failed: %w", err)
+		if _, err := preprocessor.FitTransform(data.Matrix); err != nil {
+			return fmt.Errorf("preprocessing for output metadata failed: %w", err)
 		}
-	} else {
-		// No preprocessing
-		preprocessedData = data.Matrix
-		preprocessor = nil
 	}
 
 	// Output results based on format

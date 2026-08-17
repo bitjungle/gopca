@@ -93,6 +93,14 @@ func (p *PCAImpl) Fit(data types.Matrix, config types.PCAConfig) (*types.PCAResu
 	// For complete datasets, always apply preprocessing regardless of missing strategy
 	usingNativeMissing := config.Method == "nipals" && config.MissingStrategy == types.MissingNative && hasMissing
 
+	// preprocessedForMetrics is the matrix in the SAME space as the reconstruction
+	// (scores·loadingsᵀ), which downstream diagnostics (Q/T²) must be computed
+	// against. Fit exposes it via PCAResult.PreprocessedData so callers never have
+	// to re-derive it — this recovery was previously duplicated, and divergent,
+	// across the CLI and Desktop entry points (see #716). Defaults to the raw data
+	// (the correct reference when no preprocessing is applied).
+	preprocessedForMetrics := data
+
 	// Preprocessing using the Preprocessor class (skip only if using native missing value handling with actual missing values)
 	// Note: For NIPALS with missing values, mean centering is handled within the algorithm
 	if !usingNativeMissing && (config.MeanCenter || config.StandardScale || config.RobustScale || config.ScaleOnly || config.SNV || config.VectorNorm) {
@@ -110,10 +118,23 @@ func (p *PCAImpl) Fit(data types.Matrix, config types.PCAConfig) (*types.PCAResu
 
 		// Convert back to mat.Dense
 		X = utils.MatrixToDense(processedData)
-	} else if usingNativeMissing && (config.StandardScale || config.RobustScale || config.ScaleOnly || config.SNV || config.VectorNorm) {
-		// Log warning: preprocessing (except mean centering) is not supported with native missing value handling
-		// Mean centering is handled internally by the NIPALS algorithm for missing data
-		fmt.Printf("Warning: Preprocessing options (except mean centering) are not supported with NIPALS native missing value handling. These options were ignored.\n")
+		preprocessedForMetrics = processedData
+	} else if usingNativeMissing {
+		if config.StandardScale || config.RobustScale || config.ScaleOnly || config.SNV || config.VectorNorm {
+			// Log warning: preprocessing (except mean centering) is not supported with native missing value handling
+			// Mean centering is handled internally by the NIPALS algorithm for missing data
+			fmt.Printf("Warning: Preprocessing options (except mean centering) are not supported with NIPALS native missing value handling. These options were ignored.\n")
+		}
+		// NIPALS mean-centers internally, so diagnostics must be computed in the
+		// mean-centered space; the raw data would not match the reconstruction.
+		// Mean-centering tolerates the NaNs (column means ignore missing values).
+		if config.MeanCenter {
+			centeredForMetrics, err := NewPreprocessorWithScaleOnly(true, false, false, false, false, false).FitTransform(utils.DenseToMatrix(X))
+			if err != nil {
+				return nil, fmt.Errorf("mean-centering for diagnostics failed: %w", err)
+			}
+			preprocessedForMetrics = centeredForMetrics
+		}
 	}
 
 	// Select PCA method
@@ -231,6 +252,7 @@ func (p *PCAImpl) Fit(data types.Matrix, config types.PCAConfig) (*types.PCAResu
 		Means:                means,
 		StdDevs:              stddevs,
 		AllEigenvalues:       allEigenvalues,
+		PreprocessedData:     preprocessedForMetrics,
 	}, nil
 }
 

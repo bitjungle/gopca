@@ -570,9 +570,11 @@ func (a *App) RunPCA(request PCARequest) (response PCAResponse) {
 		config.VarianceExplained = request.VarianceExplained
 	}
 
-	// Perform PCA
-	engine := core.NewPCAEngineForMethod(config.Method)
-	result, err := engine.Fit(dataToAnalyze, config)
+	// Perform PCA and attach diagnostic metrics (Q/T² + confidence limits) for
+	// linear methods. Diagnostics are computed inside the shared core pipeline
+	// against the exact preprocessed matrix the engine used, so the CLI and
+	// Desktop produce identical metrics for identical input (see #716).
+	result, err := core.RunPCAWithDiagnostics(dataToAnalyze, config)
 	if err != nil {
 		return PCAResponse{
 			Success: false,
@@ -635,70 +637,6 @@ func (a *App) RunPCA(request PCARequest) (response PCAResponse) {
 		}
 	}
 	result.VariableLabels = filteredHeaders
-
-	// Calculate diagnostic metrics (not applicable for Kernel PCA or Temporal PCA)
-	// Kernel PCA works in a different feature space, so RSS calculation is not directly applicable
-	// Temporal PCA has different dimensions (n-lags+1 samples) that don't match original data (n samples)
-	if strings.ToLower(request.Method) != "kernel" && strings.ToLower(request.Method) != "temporal" {
-		// For RSS calculation, we need to use data preprocessed exactly as it was for PCA fitting
-		// This ensures the data and reconstruction are in the same space
-		preprocessedData := dataToAnalyze
-
-		// Check if we're using NIPALS with native missing value handling
-		usingNIPALSNativeMissing := strings.ToLower(request.Method) == "nipals" && request.MissingStrategy == "native"
-
-		// Apply the same preprocessing that was used for PCA
-		// IMPORTANT: For NIPALS with native missing values, only mean centering is applied internally
-		// Other preprocessing options are ignored
-		if usingNIPALSNativeMissing {
-			// For NIPALS with native missing values, only mean center (handled internally by NIPALS)
-			// We need to apply the same mean centering here for RSS calculation
-			if config.MeanCenter {
-				preprocessor := core.NewPreprocessorWithScaleOnly(true, false, false, false, false, false)
-				var err error
-				preprocessedData, err = preprocessor.FitTransform(dataToAnalyze)
-				if err != nil {
-					fmt.Printf("Warning: failed to preprocess data for metrics: %v\n", err)
-					preprocessedData = dataToAnalyze
-				}
-			}
-		} else if config.MeanCenter || config.StandardScale || config.RobustScale || config.ScaleOnly || config.SNV || config.VectorNorm {
-			// For other methods, apply full preprocessing
-			preprocessor := core.NewPreprocessorWithScaleOnly(config.MeanCenter, config.StandardScale, config.RobustScale, config.ScaleOnly, config.SNV, config.VectorNorm)
-			var err error
-			preprocessedData, err = preprocessor.FitTransform(dataToAnalyze)
-			if err != nil {
-				fmt.Printf("Warning: failed to preprocess data for metrics: %v\n", err)
-				preprocessedData = dataToAnalyze // Fallback to original data
-			}
-		}
-
-		// Calculate metrics using the appropriately preprocessed data
-		metrics, err := core.CalculateMetricsFromPCAResult(result, preprocessedData)
-		if err != nil {
-			// Don't fail the whole PCA, just log the error
-			fmt.Printf("Warning: failed to calculate diagnostic metrics: %v\n", err)
-		} else {
-			result.Metrics = metrics
-
-			// Calculate confidence limits
-			scores := utils.MatrixToDense(result.Scores)
-			loadings := utils.MatrixToDense(result.Loadings)
-			calculator := core.NewPCAMetricsCalculator(scores, loadings, result.Means, result.StdDevs)
-
-			// Calculate T² limits
-			result.T2Limit95, result.T2Limit99 = calculator.CalculateT2Limits()
-
-			// Calculate Q limits using all eigenvalues
-			if result.AllEigenvalues != nil && len(result.AllEigenvalues) > result.ComponentsComputed {
-				result.QLimit95, result.QLimit99 = calculator.CalculateQLimits(result.AllEigenvalues, len(result.AllEigenvalues))
-			} else {
-				// If we don't have all eigenvalues, set to 0
-				result.QLimit95 = 0.0
-				result.QLimit99 = 0.0
-			}
-		}
-	}
 
 	// Calculate eigencorrelations if requested
 	if request.CalculateEigencorrelations && (len(request.MetadataNumeric) > 0 || len(request.MetadataCategorical) > 0) {
