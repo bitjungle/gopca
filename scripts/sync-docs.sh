@@ -224,9 +224,7 @@ sync_tutorial "corn"
 sync_tutorial "swiss_roll"
 sync_tutorial "eye_state" "eeg_eye_state"
 sync_tutorial "CSTR" "cstr"
-# Note: the Body Measures tutorial (cmd/gopca-desktop/frontend/public/tutorials/body_measures)
-# is authored directly in the frontend, not sourced from testdata/, so it has no
-# sync_tutorial entry and is intentionally not managed here (see #730).
+sync_tutorial "nhanes" "body_measures"
 
 echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
 
