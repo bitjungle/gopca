@@ -38,7 +38,7 @@ PCA does something remarkably similar with your data. When you have many variabl
 
 Principal Component Analysis is a **dimensionality reduction** technique that transforms your original variables into a new set of uncorrelated variables called principal components. These components are special because:
 
-* **They're ordered by importance:** The first principal component (PC1) captures the most variation in your data, PC2 captures the second-most (while being completely independent of PC1), and so on.
+* **They're ordered by importance:** The first principal component (PC1) captures the most variation in your data, PC2 captures the second-most (while being completely uncorrelated with PC1), and so on.
 
 * **They're efficient:** Often, just 2–3 principal components can capture 80–90% of the information contained in dozens of original variables.
 
@@ -84,7 +84,7 @@ GoPCA Desktop ships with seven carefully selected sample datasets. Together they
 
 ### Dataset 1: Iris — Learning to See Clusters
 
-**The data:** 150 flower measurements from three species of iris (*Setosa*, *Versicolor*, and *Virginica*). Four variables: sepal length, sepal width, petal length, and petal width. Collected by Ronald Fisher in 1936 and still one of the most widely used teaching datasets in statistics.
+**The data:** 150 flower measurements from three species of iris (*Setosa*, *Versicolor*, and *Virginica*). Four variables: sepal length, sepal width, petal length, and petal width. Measured by the botanist Edgar Anderson and made famous by Ronald Fisher's 1936 paper on discriminant analysis — still one of the most widely used teaching datasets in statistics.
 
 **Why it is special:** The dataset is clean, well-behaved, and small enough to understand completely. The three species form partially overlapping groups that become clearly separated in PCA space — making it a perfect first experience of PCA doing something useful.
 
@@ -116,7 +116,7 @@ GoPCA Desktop ships with seven carefully selected sample datasets. Together they
 - What it means when a loading is near zero vs. near ±1
 - How PCA supports authentication: wines with unusual chemical profiles appear as outliers
 
-**Preprocessing:** Standard scaling (zero mean, unit variance) is essential here — proline ranges from 278 to 1680 mg/L while pH ranges from 2.74 to 4.01. Without scaling, proline dominates purely because of its larger numbers.
+**Preprocessing:** Standard scaling (zero mean, unit variance) is essential here — proline ranges from 278 to 1680 mg/L while nonflavanoid phenols range from 0.13 to 0.66. Their standard deviations differ by a factor of roughly 2,500. Without scaling, proline dominates purely because of its larger numbers.
 
 **PCA method:** Standard SVD. A clean example of correlation PCA at work.
 
@@ -272,11 +272,11 @@ Raw data rarely tells the full story. Variables measured in different units (mg/
 PCA requires **centered** data. By subtracting a reference value from each variable, you shift your data cloud to the origin — this ensures PCA finds the directions of genuine variation rather than being pulled toward arbitrary baseline levels. The standard approach subtracts each variable's **mean**. When your data contains outliers, the **median** is a more reliable choice, since a single extreme value can shift the mean substantially without changing the median at all.
 
 **Scaling (Often Critical):**  
-When variables have different units or ranges, **scaling** prevents variables with larger numbers from dominating. Consider:
-- Proline in wine: ranges from 278 to 1680 mg/L
-- pH in wine: ranges from 2.74 to 4.01
+When variables have different units or ranges, **scaling** prevents variables with larger numbers from dominating. Consider two of the wine dataset's 13 measurements:
+- Proline: ranges from 278 to 1680 mg/L
+- Nonflavanoid phenols: ranges from 0.13 to 0.66
 
-Without scaling, proline would dominate the analysis simply due to its larger numbers!
+Without scaling, proline would dominate the analysis simply due to its larger numbers — it contributes about six million times more variance than nonflavanoid phenols, purely as an accident of the units each was reported in.
 
 > **Decision Guide:**
 > - **Always center** your data (PCA will not work properly without it)
@@ -297,7 +297,7 @@ Beyond basic centering and scaling, GoPCA Suite offers specialized preprocessing
    - **SNV (Standard Normal Variate)**: Row-wise normalization that removes multiplicative scatter effects in spectroscopic data
    - **Vector Normalization**: Normalizes each sample to unit length, useful for compositional data
 
-**In GoPCA Suite:** Both the pca CLI and GoPCA Desktop provide simple options for all preprocessing methods. GoPCA Desktop offers intuitive checkboxes, while the pca CLI uses flags like `--no-mean-centering`, `--scale` (with options: none, standard, or robust), `--snv`, and `--vector-norm`.
+**In GoPCA Suite:** Both the pca CLI and GoPCA Desktop provide simple options for all preprocessing methods. GoPCA Desktop offers intuitive checkboxes, while the pca CLI uses flags like `--no-mean-centering`, `--scale` (with options: none, standard, or robust), `--scale-only` (variance scaling without centering), `--snv`, and `--vector-norm`.
 
 ![Center and scale](images/intro_to_pca_fig_05-03.jpg)
 
@@ -329,7 +329,10 @@ Imagine your data cloud as a swarm of points in space. PCA finds:
 3. And so on, each perpendicular to all previous directions
 
 **In Practice:**
-GoPCA Suite uses either eigendecomposition or Singular Value Decomposition (SVD) depending on your data size and chosen algorithm. Both give equivalent results, but SVD is often more numerically stable and efficient.
+GoPCA Suite computes standard PCA with **Singular Value Decomposition (SVD)**, which reaches the same answer as eigendecomposition but is more numerically stable — it never has to form the covariance matrix explicitly. Kernel PCA does use eigendecomposition, applied to the kernel matrix rather than the covariance matrix.
+
+**A third option: NIPALS.**
+GoPCA also offers **NIPALS** (Nonlinear Iterative Partial Least Squares), which extracts components one at a time instead of all at once. Two situations make it worth choosing. First, when you need only the first few components of a very wide dataset, computing them one by one is cheaper than a full decomposition. Second — and this is the more useful property — NIPALS can work **directly on data containing missing values**, without discarding rows or filling gaps with invented numbers. In the pca CLI this is `--method nipals --missing-strategy native`; GoPCA Desktop offers the same choice when it detects missing values in your file.
 
 ![Find the Principal Direction](images/intro_to_pca_fig_05-05.jpg)
 
@@ -419,7 +422,7 @@ PCA assumes linear geometry, but real data might have:
 - **Circular patterns:** Periodic or cyclic relationships
 - **Temporal structure:** Where the order of observations carries information
 
-When you see curved or horseshoe-shaped patterns in PCA scores plots, it is a sign that nonlinear methods (like Kernel PCA) might reveal additional structure.
+When you see curved or horseshoe-shaped patterns in PCA scores plots, it is a sign that nonlinear methods (like Kernel PCA) might reveal additional structure. One caution about the horseshoe in particular: it very often arises when a *single* strong gradient runs through the data nonlinearly, and PCA is forced to bend it across two components. The second component is then an artifact of the first rather than a separate finding — so resist the temptation to interpret it as one.
 
 ---
 
@@ -498,11 +501,11 @@ Like any analytical tool, PCA excels in certain situations and struggles in othe
 
 PCA works best under certain conditions:
 
-**Linearity:** PCA assumes that relationships between variables are linear. This works well in cases like height vs weight, but fails for curved patterns (like enzyme activity vs pH, where the relationship is bell-shaped).
+**Linearity:** PCA assumes that relationships between variables are linear. This holds well in many measurement settings — absorbance rises in proportion to concentration under the Beer–Lambert law, which is a large part of why PCA works so well on the Corn NIR spectra. It fails for genuinely curved patterns, such as enzyme activity against pH, where the relationship is bell-shaped.
 
 **Variance equals importance:** PCA assumes that the directions with the most spread contain the most meaningful signal. This is often true in measurement data, but can fail when subtle, low-variance signals matter more than broad fluctuations.
 
-**Orthogonality:** Each principal component must be perpendicular to the others. This works well if the true underlying factors are independent, but if those factors are correlated, PCA may split them awkwardly across components.
+**Orthogonality:** Each principal component must be perpendicular to the others. That is a constraint you impose, not one nature is obliged to respect. It works well when the true underlying factors really are uncorrelated, but if those factors overlap, PCA has no choice but to split them awkwardly across several components.
 
 **Continuous, quantitative data:** PCA handles measurements, concentrations, and intensities naturally, but struggles with categorical, binary, or purely count-based variables.
 
@@ -544,7 +547,7 @@ PCA works best under certain conditions:
 
 ### Data Preparation Essentials
 
-Before running PCA, ensure your data is clean and properly formatted. This involves handling missing values (remove or impute), investigating outliers (genuine extremes or errors?), and selecting relevant variables (avoid constants and near-duplicates).
+Before running PCA, ensure your data is clean and properly formatted. This involves handling missing values (remove, impute, or let NIPALS work around them natively), investigating outliers (genuine extremes or errors?), and selecting relevant variables (avoid constants and near-duplicates).
 
 **The Preprocessing Decision Tree:**
 - **Always center** your data
