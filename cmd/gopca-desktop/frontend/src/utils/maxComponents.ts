@@ -71,3 +71,25 @@ export function maxComponentsFor(
 
     return Math.max(1, max);
 }
+
+/**
+ * Clamp a component count typed into the spinner to a valid range.
+ *
+ * The `max` attribute on a number input constrains only the stepper arrows —
+ * a typed value passes straight through — so the value has to be clamped here
+ * or the backend rejects the analysis. Clearing the field yields NaN, in which
+ * case the previous value is kept rather than substituting a constant that may
+ * itself exceed the ceiling (e.g. defaulting to 5 on the 4-variable Iris set).
+ *
+ * @param raw       the raw input string
+ * @param previous  the current component count, retained when input is empty
+ * @param max       ceiling from maxComponentsFor() for the active method
+ * @returns a component count within [1, max]
+ */
+export function clampComponentCount(raw: string, previous: number, max: number): number {
+    const parsed = parseInt(raw, 10);
+    if (!Number.isFinite(parsed)) {
+        return previous;
+    }
+    return Math.min(Math.max(1, parsed), max);
+}

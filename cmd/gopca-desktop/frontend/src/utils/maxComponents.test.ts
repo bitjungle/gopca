@@ -22,7 +22,7 @@
 // See LICENSE for the full license terms.
 
 import { describe, it, expect } from 'vitest';
-import { maxComponentsFor } from './maxComponents';
+import { maxComponentsFor, clampComponentCount } from './maxComponents';
 
 describe('maxComponentsFor', () => {
     describe('SVD and NIPALS', () => {
@@ -89,5 +89,44 @@ describe('maxComponentsFor', () => {
         it('treats an unknown method like SVD', () => {
             expect(maxComponentsFor('something-else', 3, 1000)).toBe(3);
         });
+    });
+});
+
+describe('clampComponentCount', () => {
+    // Regression test for the review finding on #768: the old handler used
+    // `parseInt(value) || 5`, so clearing the field set the count to 5 — which
+    // exceeds the ceiling on any dataset with fewer than 5 variables. On the
+    // shipped Iris set (4 variables) the backend then rejects the run with
+    // "too many components requested: maximum 4, got 5".
+    it('keeps the previous value when the field is cleared', () => {
+        expect(clampComponentCount('', 3, 4)).toBe(3);
+    });
+
+    it('keeps the previous value for non-numeric input', () => {
+        expect(clampComponentCount('abc', 2, 4)).toBe(2);
+    });
+
+    it('does not substitute a default that exceeds the ceiling', () => {
+        // Iris: 4 variables, so max = 4. Clearing must not yield 5.
+        expect(clampComponentCount('', 4, 4)).toBeLessThanOrEqual(4);
+    });
+
+    it('clamps a typed value above the ceiling', () => {
+        // `max` on a number input only constrains the stepper arrows.
+        expect(clampComponentCount('999', 2, 4)).toBe(4);
+    });
+
+    it('clamps zero and negatives up to 1', () => {
+        expect(clampComponentCount('0', 2, 4)).toBe(1);
+        expect(clampComponentCount('-3', 2, 4)).toBe(1);
+    });
+
+    it('passes through a valid value unchanged', () => {
+        expect(clampComponentCount('3', 1, 10)).toBe(3);
+    });
+
+    it('allows the large ceilings Kernel PCA permits', () => {
+        const max = maxComponentsFor('kernel', 3, 1000);
+        expect(clampComponentCount('250', 5, max)).toBe(250);
     });
 });

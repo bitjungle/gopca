@@ -28,7 +28,7 @@ import { HelpWrapper } from '../index';
 import { useFileDataContext } from '../../contexts/FileDataContext';
 import { usePCAContext } from '../../contexts/PCAContext';
 import { useUIContext } from '../../contexts/UIContext';
-import { maxComponentsFor } from '../../utils/maxComponents';
+import { maxComponentsFor, clampComponentCount } from '../../utils/maxComponents';
 
 interface PCAConfigSectionProps {
     /** Called after runPCA() to reset PC component selectors to 0,1. */
@@ -69,7 +69,14 @@ export function PCAConfigSection({ onRunPCA }: PCAConfigSectionProps) {
                                 min="1"
                                 max={maxComponentsFor(config.method, fileData.headers.length, fileData.data.length, config.temporalLags)}
                                 value={config.components}
-                                onChange={(e) => setConfig(prev => ({ ...prev, components: parseInt(e.target.value) || 5 }))}
+                                onChange={(e) => setConfig(prev => ({
+                                    ...prev,
+                                    components: clampComponentCount(
+                                        e.target.value,
+                                        prev.components,
+                                        maxComponentsFor(prev.method, fileData.headers.length, fileData.data.length, prev.temporalLags)
+                                    )
+                                }))}
                                 className="w-full px-3 py-2 bg-gray-100 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg text-gray-900 dark:text-white"
                             />
                         </HelpWrapper>
