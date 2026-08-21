@@ -126,13 +126,14 @@ Open the **Biplot** (color by `regime`).
 
 ## Step 2: Switch to Temporal PCA
 
-Keep **Preprocessing → Standard Scale** from Step 1, and change:
+Change:
 
-* **Lags (L)** → **10**
+* **PCA Method** → **Temporal PCA** — do this first; the lag control only appears once Temporal PCA is selected
+* **Number of Time Lags (L)** → **10**
 * **Number of Components** → **8**
-* **Preprocessing** → **Standard Scale**
+* **Preprocessing** → **Standard Scale** (unchanged from Step 1)
 
-Click **Go Temporal PCA**.
+Click **Go PCA!**.
 
 > **Why keep Standard Scale?** GoPCA applies column-wise preprocessing to the original 12 variables *before* constructing the lag-embedded trajectory matrix. This means each lagged copy of a variable (e.g. `T_K` at lag 0, lag 1, …, lag 10) inherits the same scale as the original — which is exactly what you want. A change in `T_K` one minute ago should carry the same weight as a change right now. The mixed-unit argument from Step 1 applies equally here: without Standard Scale, the high-magnitude variables would dominate the trajectory matrix just as they would a standard PCA.
 >
@@ -140,16 +141,18 @@ Click **Go Temporal PCA**.
 
 ### What GoPCA is doing under the hood
 
-Instead of describing each minute as a single vector of 12 sensor values, Temporal PCA describes it as a short **sequence** of L+1 consecutive time points — a sliding window of length L+1. Each window is represented as one row in a larger **trajectory matrix**, to which SVD is then applied.
+Instead of describing each minute as a single vector of 12 sensor values, Temporal PCA describes it as a short **sequence** of L consecutive time points — a sliding window L minutes long. Each window becomes one row of a larger **trajectory matrix**, to which SVD is then applied.
+
+> **What L counts.** In GoPCA, L is the **window length**: the number of consecutive time points in each window, not the number of steps taken into the past on top of the current one. L = 10 therefore means a 10-minute window — the current minute plus the nine before it. This is the standard convention in singular spectrum analysis, where L is the embedding dimension (Vautard & Ghil, 1989).
 
 For this dataset with L = 10:
 
 | | SVD PCA (Step 1) | Temporal PCA (Step 2) |
 |---|---|---|
-| Rows | 801 (one per minute) | 791 (one per window position) |
-| Columns | 12 (sensor variables) | 132 (12 variables × 11 time steps) |
+| Rows | 801 (one per minute) | 792 (one per window position, = 801 − L + 1) |
+| Columns | 12 (sensor variables) | 120 (12 variables × 10 time steps) |
 
-Each column in the trajectory matrix represents a specific variable at a specific lag — for example, column 13 is `T_K` at lag 1 (one minute ago), column 25 is `T_K` at lag 2, and so on. SVD on this wider matrix finds directions of variance that capture not just *which variables correlate at any instant*, but *how those correlations evolve across the 10-minute window*.
+The columns are grouped by time step: the first 12 columns hold all 12 variables at the **earliest** minute of the window, the next 12 hold them one minute later, and so on. Column 13 is therefore `T_K` at the second time step of the window, column 25 is `T_K` at the third, and the final block holds the most recent minute. SVD on this wider matrix finds directions of variance that capture not just *which variables correlate at any instant*, but *how those correlations evolve across the 10-minute window*.
 
 **Why L = 10?** Looking at the process time constants table at the top of this tutorial: the PI integral time τ_I = 8 minutes is the dominant controller dynamics. L = 10 covers slightly more than one full controller action — enough to see the transient response shape, but compact enough to keep the trajectory matrix manageable. At L = 10 the 40-minute flow oscillation covers only 25% of one period, so it will not appear as a clean oscillatory pair (we address that in Step 6).
 
@@ -228,7 +231,9 @@ Open the **Temporal Variable Importance** plot. This heatmap shows the RMS loadi
 
 Open the **Temporal Loadings Plot**. Display at least 8 components.
 
-Each curve shows how one component's loading evolves across lags 0 to L. The x-axis is lag (minutes into the past); the y-axis shows the loading magnitude at that lag. The Variable Importance plot told you *which variables matter*; this plot tells you *when in the past* they matter most.
+Each curve shows how one component's loading evolves across the window, from lag 0 to lag L − 1 (ten points for L = 10). The x-axis is **position within the window**: lag 0 is the *oldest* minute in the window and lag L − 1 is the most recent, so time runs left to right. The y-axis shows the loading magnitude at that position.
+
+The Variable Importance plot told you *which variables matter*; this plot tells you *when within the window* they matter most. Each curve is the loading profile of that component's dominant variable, which is why cross-referencing the two plots is worthwhile.
 
 **Three patterns to look for:**
 
@@ -247,7 +252,7 @@ Each curve shows how one component's loading evolves across lags 0 to L. The x-a
 
 > **Delayed thermal coupling — a closer look:** The reactor has thermal inertia: a change in coolant temperature (`Tc_out_K`) takes several minutes to propagate into a change in reactor temperature (`T_K`). This coupling is physically real, but at L = 10 it is subtle — both variables load broadly across many components at this lag length. To make the delay clearly visible, a longer window (L = 20–30) is needed so that the cause (`Tc_out_K` changing) and the effect (`T_K` responding) are separated by enough lags to be distinguishable. Keep this in mind when you compare lag settings in Step 8.
 
-> **Hint:** A sinusoidal temporal loading pattern means that component is tracking a variable that oscillates in time. The period of the oscillation can be estimated from the zero-crossings: if you count k zero-crossings over L lags, the oscillation period ≈ 2L/k minutes. For a 40-minute oscillation with L = 10 lags, you will see only about **one quarter of a cycle** (10/40 = 0.25) — far too little to recognise a clean sinusoid. Try L = 40 to resolve the full period.
+> **Hint:** A sinusoidal temporal loading pattern means that component is tracking a variable that oscillates in time. The period can be estimated from the zero-crossings: if you count *k* zero-crossings across a window of L minutes, the oscillation period ≈ 2L/k minutes. For a 40-minute oscillation seen through a 10-minute window, you have only **one quarter of a cycle** (10/40 = 0.25) — far too little to recognise a clean sinusoid. Try L = 40 to resolve the full period.
 
 ---
 
@@ -311,20 +316,27 @@ Return to the Scores Plot.
 
 ---
 
-## Step 8: Compare lag settings — L = 0, L = 5, L = 10, L = 20
+## Step 8: Compare lag settings — no lags, L = 5, L = 10, L = 20
 
-Run Temporal PCA four times: **L = 0** (ordinary PCA), **L = 5**, **L = 10**, **L = 20** (keep 8 components, Standard Scale). Compare the Scree Plots, Temporal Loadings, and Scores Plots across all four.
+Run the analysis four times and compare the Scree Plots, Temporal Loadings and Scores Plots across all four (keep 8 components and Standard Scale throughout):
+
+1. **PCA Method → SVD** — this is the no-lag baseline you already produced in Step 1
+2. **Temporal PCA, L = 5**
+3. **Temporal PCA, L = 10**
+4. **Temporal PCA, L = 20**
+
+> **Why not "L = 0"?** A window has to contain at least two time points before there is any temporal structure to find, so GoPCA requires **L ≥ 2**. The no-lag case is not a Temporal PCA setting at all — it is ordinary PCA, which you reach by selecting the SVD method. Setting L = 1 would be the same thing written a longer way: a one-minute window is just the original data matrix.
 
 #### Questions:
 
-* At L = 0, how does the scores plot compare to what you saw in Step 1? (It should be identical — L = 0 is exactly ordinary PCA.)
+* Take the SVD run as your baseline. What does Temporal PCA at L = 5 show that ordinary PCA could not?
 * Does increasing L reveal more temporal structure (more sinusoidal components)?
 * At L = 5, does the Scree Plot still show a clear elbow?
 * At L = 20, how many components do you need to explain 80% of the variance? Why does the number increase with L?
 * Which lag setting gives you the most useful separation between normal operation and the cooling fault in the scores plot?
-* Look at which variables dominate the early PCs across all four settings. At L = 0, fast variables (feed flow, coolant temperature) and slow variables (reactor temperature, concentrations) appear mixed together. As L increases, do you notice any separation of **fast dynamic modes** from **slow process modes** in the component structure? Fast variables (feed flow, coolant control) evolve on the timescale of the residence time (≈1 min); slow variables (reactor temperature, concentrations) evolve on the timescale of the PI integral time (8 min) and thermal inertia. Temporal PCA can separate these time scales into different components.
+* Look at which variables dominate the early PCs across all four settings. In the SVD baseline, fast variables (feed flow, coolant temperature) and slow variables (reactor temperature, concentrations) appear mixed together. As L increases, do you notice any separation of **fast dynamic modes** from **slow process modes** in the component structure? Fast variables (feed flow, coolant control) evolve on the timescale of the residence time (≈1 min); slow variables (reactor temperature, concentrations) evolve on the timescale of the PI integral time (8 min) and thermal inertia. Temporal PCA can separate these time scales into different components.
 
-> **Rule of thumb:** L should be at least as large as the longest process time constant you want to capture. For controller dynamics (τ_I = 8 min), L ≥ 10 is sensible. For the full flow oscillation (40 min), you need L ≥ 40. Larger L improves frequency resolution but increases the size of the trajectory matrix — for 801 observations and L = 40, each "augmented observation" spans 41 time steps, leaving 761 usable rows.
+> **Rule of thumb:** L should be at least as large as the longest process time constant you want to capture. For controller dynamics (τ_I = 8 min), L ≥ 10 is sensible. For the full flow oscillation (40 min), you need L ≥ 40. Larger L improves frequency resolution but increases the size of the trajectory matrix — for 801 observations and L = 40, each window spans 40 time steps and covers 480 columns (12 × 40), leaving 762 usable rows (801 − 40 + 1).
 
 ---
 
@@ -351,7 +363,7 @@ If you have worked through the other GoPCA tutorials, you have now seen PCA appl
 |---|---|
 | **Iris / Wine** | Geometric and chemical structure — clusters and correlations among static samples |
 | **Corn (NIR)** | Correlated wavelength structure — hundreds of channels carrying the same compositional signal |
-| **Swiss Roll** | Nonlinear manifold geometry — Kernel PCA unrolling a curved surface that linear PCA cannot separate |
+| **Swiss Roll** | Nonlinear manifold geometry — a curved surface that linear PCA flattens, and a lesson in why a nonlinear method is not automatically the fix |
 | **CSTR (time series)** | Dynamic process modes — time-dependent structure, delayed coupling, oscillations, fault propagation |
 
 Each dataset required a different analytical lens. The CSTR dataset shows that by embedding lagged process history into the data matrix, PCA gains the ability to *see time* — revealing not just which variables are related, but how they influence each other across minutes and hours. That conceptual bridge connects standard PCA to the full toolkit of dynamic process monitoring used in industrial practice.

@@ -173,7 +173,7 @@ GoPCA Desktop ships with seven carefully selected sample datasets. Together they
 **Why it is special:** Process data from a reactor is fundamentally different from independent samples like Iris or Wine — every measurement is connected to the previous one through the physics of the reactor. The energy and mass balances couple the variables to each other with time delays (thermal inertia, residence time, controller response), and the dataset contains both slow trends and a periodic oscillation designed to be identified by Temporal PCA. The cooling fault scenario makes the dataset directly relevant to industrial process monitoring and fault detection.
 
 **What you will learn:**
-- How to compare ordinary PCA (L = 0) to Temporal PCA, and what the lag parameter adds
+- How to compare ordinary PCA to Temporal PCA, and what the lag window adds
 - How to read PCA scores as a **process trajectory**: stable clusters, step jumps, loops from oscillations, and drift from faults
 - How temporal loading curves reveal **delayed coupling** between variables (e.g. coolant temperature changes before reactor temperature responds)
 - How to identify an SSA **oscillatory pair** from the shape of temporal loading curves — sinusoidal and ~90° phase-shifted — and why similar explained variance alone is not a reliable criterion
@@ -182,7 +182,7 @@ GoPCA Desktop ships with seven carefully selected sample datasets. Together they
 
 **Preprocessing:** Standard scaling is essential — temperatures, concentrations, and flow rates have completely different units and magnitudes. The tutorial starts with unscaled results so you can see the distortion directly.
 
-**PCA method:** Temporal PCA. The tutorial compares L = 0, 5, 10, and 40 to show how the lag window controls which dynamics become visible. L = 40 is needed to resolve the 40-minute flow oscillation as a recognisable sine/cosine pair.
+**PCA method:** Temporal PCA. The tutorial compares an ordinary SVD baseline against L = 5, 10 and 40 to show how the lag window controls which dynamics become visible. L = 40 is needed to resolve the 40-minute flow oscillation as a recognisable sine/cosine pair.
 
 > **→ Open the CSTR tutorial in GoPCA Desktop** to explore process dynamics and fault detection with Temporal PCA.
 
