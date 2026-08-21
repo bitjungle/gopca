@@ -9,6 +9,6 @@ In this work, a Swiss Roll dataset was generated consisting of 1,000 samples. Ea
 * z=t⋅sin(t)​
 
 
-Here, _t_ is a randomly sampled parameter that controls the "length" along the roll, and _h_ is a random height offset (typically sampled uniformly to add thickness to the roll). This construction ensures that the data forms a continuous, twisted two-dimensional surface embedded within three dimensions.
+Here, _t_ is a randomly sampled parameter that controls the "length" along the roll, and _h_ is a random height offset (sampled uniformly to add thickness to the roll). A small amount of Gaussian noise (standard deviation ≈ 0.1, against coordinates spanning more than 20 units) is added to the _x_ and _z_ coordinates, so the points lie very near — but not exactly on — the ideal surface. This construction produces a continuous, twisted two-dimensional surface embedded within three dimensions.
 
 This algorithm for generating the Swiss Roll dataset follows the method described by S. Marsland in "Machine Learning: An Algorithmic Perspective," 2nd edition, Chapter 6 (2014).
