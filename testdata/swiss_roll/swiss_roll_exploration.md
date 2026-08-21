@@ -240,7 +240,11 @@ Now look at the Scree Plot, and set **Number of Components** to something like 1
 
 What you will find is revealing: PC1 ≈ 14.8%, PC2 ≈ 14.1%, PC3 ≈ 12.3%. Compare that with linear PCA's 41% / 30%. The variance has been spread thinly across many components instead of concentrating in the first few, and the top three are nearly **tied**. When eigenvalues sit that close together, the split between the components is close to arbitrary — there is no strong reason for the manifold coordinate to land in PC1 and PC2 rather than somewhere further down the list.
 
-And in fact it does not. If you are curious, set the scores plot axes to **PC3 vs PC5**: some of the roll's ordering reappears there. The structure was never destroyed — the leading pair simply was not where it went. This is a habit worth carrying into your own kernel analyses: the first two components are the conventional view, not a guarantee.
+Because the components are so evenly matched, you may be tempted to go hunting: change the scores plot axes, try PC1 vs PC3, PC2 vs PC4, and so on, until some pair looks better organised. It is worth understanding why that is a trap.
+
+You can indeed find pairs that look tidier — PC3 vs PC5 is the best-looking of the 45 pairs available among the first ten components. But two things should stop you using it. First, the improvement is largely cosmetic: in that view, 68% of each point's ten nearest neighbours are genuinely close along the roll, against 69% for PC1 vs PC2 — the mistakes are no less frequent, merely less extreme. Compare either with linear PCA's 100%. Second, and more important: the only reason anyone could identify PC3 vs PC5 as the best pair is by checking all 45 against the `color #target` column — the answer key. **On your own data you will not have one.** Searching component pairs until the picture pleases you is not analysis; it is choosing the result you wanted.
+
+The honest reading of the near-tie is simpler, and more useful: when eigenvalues sit this close together, no pair of components carries a privileged meaning. That is information about the analysis, and it is telling you the kernel is not organising this data well.
 
 ### Why the RBF kernel cannot unroll this particular sheet
 
