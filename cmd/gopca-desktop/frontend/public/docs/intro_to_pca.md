@@ -153,15 +153,16 @@ GoPCA Desktop ships with seven carefully selected sample datasets. Together they
 
 **What you will learn:**
 - What "nonlinear structure" means geometrically, and why linear PCA cannot see it
-- How **Kernel PCA** maps the data into a higher-dimensional space where the curved structure becomes flat
+- How **Kernel PCA** maps the data into a higher-dimensional space where curved structure can become flat
 - What the RBF (Radial Basis Function) kernel does and how the gamma parameter controls it
-- That the choice of PCA *method* (not just preprocessing) can make the difference between seeing structure and missing it entirely
+- Why a nonlinear method is not automatically an improvement: the kernel encodes an assumption about what "similar" means, and the Swiss Roll is built to violate it
+- That a tidy, orderly scores plot can still be the wrong answer — one of the most useful habits this suite can teach you
 
 **Preprocessing:** No centering or scaling — Kernel PCA handles the geometry internally.
 
-**PCA method:** Kernel PCA with the RBF kernel. The tutorial compares standard SVD PCA (which fails) with Kernel PCA (which succeeds), making the difference tangible.
+**PCA method:** Kernel PCA with the RBF kernel. The tutorial has you compare it against standard SVD directly. Be warned that the result is not the tidy victory you might expect: the RBF kernel measures straight-line distance, which is precisely the misleading quantity on a rolled-up sheet, so no setting of gamma unrolls it. Working out *why* is the point of the exercise.
 
-> **→ Open the Swiss Roll tutorial in GoPCA Desktop** to see standard PCA fail — and Kernel PCA succeed.
+> **→ Open the Swiss Roll tutorial in GoPCA Desktop** to see standard PCA fail — and to find out why reaching for a more powerful method does not always fix it.
 
 ---
 
@@ -527,7 +528,7 @@ PCA works best under certain conditions:
 
 ### Limitations: Where PCA Struggles
 
-**Nonlinear relationships:** If your data contains important nonlinear patterns (like a Swiss Roll), linear PCA will miss them. This is why GoPCA Suite includes Kernel PCA for nonlinear patterns.
+**Nonlinear relationships:** If your data contains important nonlinear patterns, linear PCA will miss them. This is why GoPCA Suite includes Kernel PCA. Note that Kernel PCA is not a universal remedy — it works when closeness in the original space genuinely reflects closeness on the underlying structure, and the Swiss Roll tutorial explores a case where that assumption breaks down.
 
 **Interpretability:** Each PC is a weighted combination of all original variables, sometimes mixing conceptually different measurements in ways that are hard to interpret.
 
