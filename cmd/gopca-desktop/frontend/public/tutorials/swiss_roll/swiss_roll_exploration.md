@@ -57,7 +57,7 @@ For Corn, the dominant variation was a physical baseline artefact: a monotone ti
 
 The Swiss Roll is synthetic — designed to make the geometric problem as clear as possible. But curved, nonlinear structure appears in genuine scientific and industrial data, and it poses exactly the same challenge.
 
-**Face recognition.** Images of a face change dramatically with pose and lighting, even though the underlying identity stays constant. The relationship between pixel values and the factors that matter — who the person is — is highly nonlinear. Linear PCA (historically called "Eigenfaces") groups faces by their dominant pixel variation, which is often lighting rather than identity. A kernel with an RBF or polynomial function can capture the nonlinear pixel correlations that define a specific person's features and is more robust to these confounding factors (Thompson, 2014).
+**Face recognition.** Images of a face change dramatically with pose and lighting, even though the underlying identity stays constant. The relationship between pixel values and the factors that matter — who the person is — is highly nonlinear. Linear PCA (historically called "Eigenfaces") groups faces by their dominant pixel variation, which is often lighting rather than identity. A [radial basis function (RBF)](https://en.wikipedia.org/wiki/Radial_basis_function_kernel) or polynomial kernel can capture the nonlinear pixel correlations that define a specific person's features and is more robust to these confounding factors (Thompson, 2014).
 
 **Image denoising.** When an image is corrupted by noise, the underlying clean image typically lives on a low-dimensional nonlinear manifold in pixel space. Linear PCA cannot cleanly separate noise from high-frequency image features because it treats the two as equally linear. Kernel PCA maps the noisy image into a feature space where the clean structure becomes more linearly accessible; projecting onto the leading kernel components and mapping back removes noise while better preserving fine detail (Mika et al., 1998).
 
@@ -118,7 +118,6 @@ Do not run PCA yet. Familiarise yourself with what is shown in the data panel.
 #### Questions:
 
 * How many rows (samples) and columns (variables) does the data table show?
-* Only three numeric columns appear — `X`, `Y`, and `Z`. Why is `color #target` not visible in the table?
 * Study the 3D figure above: what will "low colour values" (inner edge of the roll) and "high colour values" (outer edge) look like in the scores plot if PCA correctly unrolls the manifold?
 
 👉 There are 1,000 samples and 3 numeric variables — a tiny dataset by modern standards. This makes the subsequent failure of linear PCA all the more striking.
