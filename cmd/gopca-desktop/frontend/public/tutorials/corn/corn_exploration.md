@@ -44,7 +44,7 @@ This has two immediate consequences that make Corn unlike anything you have seen
 
 Below is a plot showing all 80 spectra overlaid on a single graph.
 
-![Corn NIR spectra](./corn_spectra.png)
+![Corn NIR spectra](./corn_spectra.jpg)
 
 Take a few minutes to study this figure carefully.
 
