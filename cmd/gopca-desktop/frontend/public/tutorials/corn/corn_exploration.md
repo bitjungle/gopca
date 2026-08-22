@@ -180,7 +180,7 @@ Nothing to change — open the **Loadings Plot** on the analysis you just ran.
 
 👉 Look first at the sharpest feature in the curve. Around **1900–1930 nm** the PC1 loading plunges from about +0.027 to −0.035, crossing zero — by some margin the steepest gradient anywhere in the spectrum, with its maximum slope right at **1908 nm**.
 
-That is not an accident of the data. It sits squarely inside one of the two strong **water absorption bands** (roughly 1400–1450 nm and 1900–1960 nm) that dominate any NIR spectrum of a biological material. Water is present in every sample, it absorbs powerfully, and small differences in moisture therefore produce large spectral swings exactly there. You will return to these bands in Step 6 and get the chance to remove them.
+That is not an accident of the data. It sits squarely inside one of the two strong **water absorption bands** (roughly 1400–1450 nm and 1900–1960 nm) that dominate any NIR spectrum of a biological material. Water is present in every sample, it absorbs powerfully, and small differences in moisture therefore produce large spectral swings exactly there. Step 6 comes back to what a spectroscopist does about them.
 
 More generally: peaks and valleys in the loading curve mark wavelength regions that drive that component. The smoothness is not cosmetic — it is a direct consequence of the collinearity described earlier: adjacent wavelengths correlate at about **0.999998** in this dataset, so a loading curve physically cannot jump from one channel to the next. Any sharp spike you ever see in a spectral loading plot is far more likely to be a bad channel or a dead detector pixel than a chemical feature.
 
@@ -263,9 +263,21 @@ Three explorations, in increasing order of effort.
 
 * **Explore the 3D Scores Plot.** With three components covering 95% of the variance, does the third add structure you could not see in 2D, or is it mostly noise?
 
-* **Exclude the water absorption regions.** Water absorbs strongly around **1400–1450 nm** and **1900–1960 nm**, and those bands can dominate a spectrum. Open the dataset in **GoCSV**, delete the wavelength columns in those two ranges (select the columns, then **Delete Column** from the right-click menu — that is 57 of the 700 channels), save, and load the result into GoPCA.
+* **Compare the two row-wise corrections.** SNV is not the only option under **Step 1: Row-wise Preprocessing** — there is also **L2 Vector Normalization**, which divides each spectrum by its length instead of standardising it. Run all three and compare:
 
-  Before you run it, predict what will happen. Then check: does moisture become harder to see? What happens to **oil**, which was hiding down in PC5? This is the most rewarding of the three, and the result is a genuine chemometric lesson about which parts of a spectrum carry which information.
+  | Row-wise | PC1 | PC1–PC3 |
+  |---|---|---|
+  | None | 99.1% | 99.9% |
+  | L2 Vector Normalization | 90.4% | 97.5% |
+  | SNV | 84.0% | 95.1% |
+
+  Vector normalisation lands between the two: it removes part of the scatter but leaves more of it than SNV does. Correlate PC1 with what you know of the artefact and you will find the same ordering. Two corrections can both be defensible and still not be equally good for your data — which is exactly why the comparison is worth making rather than reaching for a default.
+
+### What a spectroscopist would do next
+
+The natural next move is to **exclude the water bands** — the 1400–1450 nm and 1900–1960 nm regions from Step 3 — and see what emerges once the strongest absorber in the spectrum is out of the way. It is a revealing exercise: removing those 57 of 700 channels leaves moisture and starch almost unchanged, but lifts **oil** out of PC5 and into PC2, where it becomes far easier to see.
+
+Selecting a wavelength range is not yet possible in GoPCA Desktop, so this one is for reference rather than something to try now. In the `pca` command-line tool it is a single `--exclude-columns` argument listing the wavelengths to drop.
 
 ---
 
