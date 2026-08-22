@@ -21,6 +21,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   computed over the observed values of each column. The row-wise methods (SNV, vector normalization)
   remain unsupported with missing data and are now rejected with an explanatory error rather than
   ignored.
+- **`Transform` now reproduces the fit after NIPALS with native missing-value handling.** Because
+  preprocessing on that path happens inside the NIPALS routine, no preprocessing parameters were
+  recorded, so applying the fitted model to new data projected *raw* values onto loadings learned in
+  centered and scaled space — returning scores wrong by an order of magnitude when the columns
+  differed in scale, with no error. The NaN-aware column statistics are now retained and reapplied.
 
 ## [1.5.0] - 2026-06-02
 

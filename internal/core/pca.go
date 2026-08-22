@@ -443,6 +443,25 @@ func (p *PCAImpl) nipalsAlgorithm(X *mat.Dense, nComponents int) (*mat.Dense, *m
 	return T, P, allEigenvalues, nil
 }
 
+// storeMissingPreprocessor records the NaN-aware column statistics that
+// nipalsAlgorithmWithMissing applied, so that Transform() reproduces exactly the
+// same preprocessing on new data. The generic Preprocessor cannot compute these
+// itself — its Fit would see NaNs and return NaN means — but it can apply them
+// once they are supplied.
+func (p *PCAImpl) storeMissingPreprocessor(means, stdDevs, medians, mads []float64) error {
+	if means == nil && stdDevs == nil && medians == nil && mads == nil {
+		return nil // no column-wise preprocessing was requested
+	}
+	pre := NewPreprocessorWithScaleOnly(
+		p.config.MeanCenter, p.config.StandardScale, p.config.RobustScale,
+		p.config.ScaleOnly, false, false)
+	if err := pre.SetFittedParameters(means, stdDevs, medians, mads, nil, nil); err != nil {
+		return fmt.Errorf("recording preprocessing parameters for transform: %w", err)
+	}
+	p.preprocessor = pre
+	return nil
+}
+
 // nipalsAlgorithmWithMissing implements NIPALS with native missing value handling
 func (p *PCAImpl) nipalsAlgorithmWithMissing(X *mat.Dense, nComponents int) (*mat.Dense, *mat.Dense, []float64, error) {
 	n, m := X.Dims()
@@ -458,30 +477,43 @@ func (p *PCAImpl) nipalsAlgorithmWithMissing(X *mat.Dense, nComponents int) (*ma
 	// branch, so that NIPALS on data with gaps answers the same question as
 	// NIPALS on data without them. Row-wise methods are rejected earlier in
 	// Fit — a row mean or norm changes meaning when entries are absent.
+	//
+	// The statistics are handed to a Preprocessor afterwards so that Transform()
+	// reapplies them to new data. Without that, Transform would project raw data
+	// onto loadings learned in preprocessed space and return scores off by the
+	// centering and scaling — silently, and by an order of magnitude when the
+	// columns differ in scale.
+	var means, stdDevs, medians, mads []float64
 	switch {
 	case p.config.RobustScale:
 		// Robust scaling: (x - median) / MAD
-		medians := computeColumnMediansWithMissing(Xwork)
-		mads := computeColumnMADsWithMissing(Xwork, medians)
+		medians = computeColumnMediansWithMissing(Xwork)
+		mads = computeColumnMADsWithMissing(Xwork, medians)
 		centerMatrixWithMissing(Xwork, medians)
 		scaleMatrixWithMissing(Xwork, mads)
 	case p.config.ScaleOnly:
 		// Variance scaling without centering. Deviations are still measured
 		// about the column mean, matching Preprocessor's originalStd.
-		means := computeColumnMeansWithMissing(Xwork)
-		scaleMatrixWithMissing(Xwork, computeColumnStdDevsWithMissing(Xwork, means))
-	default:
-		means := computeColumnMeansWithMissing(Xwork)
-		if p.config.StandardScale {
-			// Compute the divisor before centering, as the mean is needed for both.
-			stdDevs := computeColumnStdDevsWithMissing(Xwork, means)
-			if p.config.MeanCenter {
-				centerMatrixWithMissing(Xwork, means)
-			}
-			scaleMatrixWithMissing(Xwork, stdDevs)
-		} else if p.config.MeanCenter {
+		colMeans := computeColumnMeansWithMissing(Xwork)
+		stdDevs = computeColumnStdDevsWithMissing(Xwork, colMeans)
+		scaleMatrixWithMissing(Xwork, stdDevs)
+	case p.config.StandardScale:
+		// Compute the divisor before centering, as the mean is needed for both.
+		means = computeColumnMeansWithMissing(Xwork)
+		stdDevs = computeColumnStdDevsWithMissing(Xwork, means)
+		if p.config.MeanCenter {
 			centerMatrixWithMissing(Xwork, means)
+		} else {
+			means = nil
 		}
+		scaleMatrixWithMissing(Xwork, stdDevs)
+	case p.config.MeanCenter:
+		means = computeColumnMeansWithMissing(Xwork)
+		centerMatrixWithMissing(Xwork, means)
+	}
+
+	if err := p.storeMissingPreprocessor(means, stdDevs, medians, mads); err != nil {
+		return nil, nil, nil, err
 	}
 
 	// Convergence parameters from centralized algorithm config.

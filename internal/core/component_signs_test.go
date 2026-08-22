@@ -157,6 +157,73 @@ func TestIssue779_NativeMissingRejectsRowWisePreprocessing(t *testing.T) {
 	}
 }
 
+// TestIssue779_TransformReappliesPreprocessingAfterNativeMissing covers a defect
+// that predates this change and that the scaling fix would otherwise have made
+// worse. Preprocessing on the native-missing path happens inside the NIPALS
+// routine, so p.preprocessor was left nil and Transform() projected *raw* data
+// onto loadings learned in preprocessed space. On a matrix whose first column is
+// 40x the others that returned scores an order of magnitude wrong — silently.
+func TestIssue779_TransformReappliesPreprocessingAfterNativeMissing(t *testing.T) {
+	data := syntheticCorrelatedData(60, 5)
+	for i := range data {
+		data[i][0] *= 40 // make the omission of scaling impossible to miss
+	}
+	complete := make(types.Matrix, len(data))
+	for i := range data {
+		complete[i] = append([]float64(nil), data[i]...)
+	}
+	data[7][2] = math.NaN()
+
+	engine := NewPCAEngine()
+	res, err := engine.Fit(data, types.PCAConfig{
+		Method: "nipals", Components: 3, MeanCenter: true, StandardScale: true,
+		MissingStrategy: types.MissingNative,
+	})
+	if err != nil {
+		t.Fatalf("fit failed: %v", err)
+	}
+	got, err := engine.Transform(complete)
+	if err != nil {
+		t.Fatalf("transform failed: %v", err)
+	}
+
+	// Contract: Transform must equal the projection of *preprocessed* data onto
+	// the loadings. Compare against the raw projection too — that is what the
+	// bug produced, and the two must not coincide, or the test proves nothing.
+	impl, ok := engine.(*PCAImpl)
+	if !ok || impl.preprocessor == nil {
+		t.Fatal("no preprocessor recorded: Transform cannot reproduce the fit")
+	}
+	pre, err := impl.preprocessor.Transform(complete)
+	if err != nil {
+		t.Fatalf("preprocessor transform failed: %v", err)
+	}
+
+	worstPre, worstRaw := 0.0, 0.0
+	for i := range complete {
+		for k := 0; k < 3; k++ {
+			viaPre, viaRaw := 0.0, 0.0
+			for j := range complete[i] {
+				viaPre += pre[i][j] * res.Loadings[j][k]
+				viaRaw += complete[i][j] * res.Loadings[j][k]
+			}
+			if d := math.Abs(viaPre - got[i][k]); d > worstPre {
+				worstPre = d
+			}
+			if d := math.Abs(viaRaw - got[i][k]); d > worstRaw {
+				worstRaw = d
+			}
+		}
+	}
+	if worstPre > 1e-9 {
+		t.Errorf("Transform does not match the projection of preprocessed data: max diff %.3e", worstPre)
+	}
+	if worstRaw < 1.0 {
+		t.Fatalf("raw and preprocessed projections are too close (%.3e) for this test to "+
+			"distinguish them; the fixture no longer exercises the bug", worstRaw)
+	}
+}
+
 // syntheticCorrelatedData builds a well-conditioned matrix whose columns share
 // two latent factors, so that the leading components are stable and the sign
 // question is well posed.
