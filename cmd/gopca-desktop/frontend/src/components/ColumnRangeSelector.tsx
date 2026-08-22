@@ -78,8 +78,21 @@ export const ColumnRangeSelector: React.FC<ColumnRangeSelectorProps> = ({
     // changes, not on every drag frame.
     const profile = useMemo(() => {
         const means = columnMeans(data, n);
-        const lo = Math.min(...means);
-        const hi = Math.max(...means);
+        // One pass rather than Math.min(...means): spreading a per-column array
+        // into an argument list costs two throwaway argument lists, and stakes the
+        // panel on staying under the engine's argument limit — a limit this code
+        // has no way to see, currently kept out of reach only by the 10,000-column
+        // ceiling that pkg/csv enforces on load.
+        let lo = Infinity;
+        let hi = -Infinity;
+        for (const m of means) {
+            if (m < lo) lo = m;
+            if (m > hi) hi = m;
+        }
+        if (!Number.isFinite(lo) || !Number.isFinite(hi)) {
+            lo = 0;
+            hi = 0;
+        }
         const span = hi - lo || 1;
         const top = 8;
         const base = VIEW_H - 8;

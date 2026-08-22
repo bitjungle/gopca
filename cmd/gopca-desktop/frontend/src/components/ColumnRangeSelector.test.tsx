@@ -158,3 +158,30 @@ describe('ColumnRangeSelector profile rendering', () => {
         expect(plot().querySelector('path')).toBeTruthy();
     });
 });
+
+describe('ColumnRangeSelector profile scale', () => {
+    it('renders a flat profile without dividing by a zero span', () => {
+        const h = ['1', '2', '3', '4'];
+        const { container } = render(
+            <ColumnRangeSelector headers={h} data={[[7, 7, 7, 7]]} excludedColumns={[]} onChange={() => {}} />);
+        const pts = container.querySelector('polyline')!.getAttribute('points') || '';
+        expect(pts).not.toMatch(/NaN|Infinity/);
+    });
+
+    it('survives columns whose values are all non-finite', () => {
+        const h = ['1', '2', '3'];
+        const { container } = render(
+            <ColumnRangeSelector headers={h} data={[[NaN, NaN, NaN]]} excludedColumns={[]} onChange={() => {}} />);
+        const pts = container.querySelector('polyline')!.getAttribute('points') || '';
+        expect(pts).not.toMatch(/NaN|Infinity/);
+    });
+
+    it('finds the extremes without spreading the column array into arguments', () => {
+        // 10,000 columns is the ceiling pkg/csv enforces; the panel must render it.
+        const wide = Array.from({ length: 10000 }, (_, i) => String(i + 1));
+        const data = [wide.map((_, i) => i)];
+        const { container } = render(
+            <ColumnRangeSelector headers={wide} data={data} excludedColumns={[]} onChange={() => {}} />);
+        expect(container.querySelector('polyline')).toBeTruthy();
+    });
+});
