@@ -333,8 +333,9 @@ Enable **Confidence Ellipses** (95%) to make the shift visible.
 👉 This is where the plot will mislead you if you let it, and the correction is
 worth the detour.
 
-Open the **Eigencorrelation Plot** and find the `Gender#target_Male` row. You are
-looking for how strongly each component tracks sex:
+Open the **Eigencorrelation Plot** and find the `Gender#target_Male` row — third
+from the top, since the rows are sorted by their PC1 correlation. Now read along
+it, watching the **colours** rather than the numbers:
 
 | | PC1 | PC2 | PC3 | PC4 | PC5 |
 |---|---|---|---|---|---|
@@ -345,8 +346,15 @@ looking for how strongly each component tracks sex:
 whether a correlation reads + or − is a convention, not a finding. The size is the
 finding.)
 
-Look at the last column. **PC5 carries 2.3% of the variance and tracks sex almost
-as strongly as PC1, which carries 59.5%.** A component you would discard without
+The cell under PC5 is warm — very nearly the same shade as the cell under PC1 —
+while the two cells between them are washed out. That is the whole lesson in one
+row: **PC5 carries 2.3% of the variance and tracks sex about as strongly as PC1,
+which carries 59.5%.**
+
+> **Why that cell has no number in it.** GoPCA prints the value only when a
+> correlation reaches 0.3, to keep the heat map readable. This one is 0.2975 —
+> under the line by a whisker — so you get the colour without the figure. Judge it
+> against the PC1 cell in the same row, which is labelled 0.35. A component you would discard without
 a second thought on the evidence of the scree plot holds nearly as much of this
 particular signal as the dominant one.
 
