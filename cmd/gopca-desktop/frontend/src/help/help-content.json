@@ -382,7 +382,7 @@
     },
     "exclude-columns": {
       "title": "Exclude Columns",
-      "text": "Select columns to exclude from PCA. Useful for removing ID columns or problematic variables.",
+      "text": "Select columns to exclude from PCA. Useful for removing ID columns or problematic variables. On datasets with more than 20 columns, the Variables panel above the table lets you drag across a region of the axis, or type a range such as 1400-1450.",
       "category": "configuration"
     },
     "exclude-rows": {

@@ -375,6 +375,39 @@ func TestParseExcludeColumns(t *testing.T) {
 			headers:  []string{"1100", "1400", "1402", "1404", "2498"},
 			expected: []int{1, 2, 3},
 		},
+		// A range between two column names (#775). GoPCA Desktop's variable
+		// selector resolves ranges this way, and the two must agree: typing
+		// the same range in either place has to exclude the same columns.
+		{
+			name:     "range between two column names",
+			input:    "1400-1404",
+			headers:  []string{"1100", "1400", "1402", "1404", "2498"},
+			expected: []int{1, 2, 3},
+		},
+		{
+			name:     "reversed name range is accepted",
+			input:    "1404-1400",
+			headers:  []string{"1100", "1400", "1402", "1404", "2498"},
+			expected: []int{1, 2, 3},
+		},
+		{
+			name:     "name range wins over index range when both ends are column names",
+			input:    "2-4",
+			headers:  []string{"1", "2", "3", "4", "5"},
+			expected: []int{1, 2, 3}, // the columns named 2,3,4
+		},
+		{
+			name:     "index range still used when the ends are not column names",
+			input:    "2-4",
+			headers:  []string{"a", "b", "c", "d", "e"},
+			expected: []int{1, 2, 3},
+		},
+		{
+			name:      "half-resolvable name range falls through and is rejected",
+			input:     "1400-9999",
+			headers:   []string{"1100", "1400", "1402", "1404", "2498"},
+			expectErr: true,
+		},
 	}
 
 	for _, tt := range tests {

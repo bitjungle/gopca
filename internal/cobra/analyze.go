@@ -657,6 +657,16 @@ func parseExcludeIndices(excludeStr string) ([]int, error) {
 // Every token that resolves to nothing is reported. Silently dropping an
 // unmatched name would let a typo produce an analysis of the full data while the
 // user believed a region had been excluded.
+// indexOfHeader returns the position of an exact column-name match.
+func indexOfHeader(headers []string, name string) (int, bool) {
+	for i, header := range headers {
+		if header == name {
+			return i, true
+		}
+	}
+	return 0, false
+}
+
 func parseExcludeColumns(excludeStr string, headers []string) ([]int, error) {
 	indexSet := make(map[int]bool)
 	var unmatched []string
@@ -680,7 +690,26 @@ func parseExcludeColumns(excludeStr string, headers []string) ([]int, error) {
 			continue
 		}
 
-		// 2. Inclusive 1-based index range "start-end".
+		// 2. Inclusive range "start-end", by column name at both ends.
+		// Checked before the index interpretation so that a spectral axis
+		// reads naturally: on a dataset whose columns are named 1100..2498,
+		// "1400-1450" is the wavelength band, not columns 1400 through 1450.
+		// GoPCA Desktop's variable selector resolves ranges the same way.
+		if idx := strings.Index(part, "-"); idx > 0 {
+			lo, okLo := indexOfHeader(headers, strings.TrimSpace(part[:idx]))
+			hi, okHi := indexOfHeader(headers, strings.TrimSpace(part[idx+1:]))
+			if okLo && okHi {
+				if lo > hi {
+					lo, hi = hi, lo
+				}
+				for i := lo; i <= hi; i++ {
+					indexSet[i] = true
+				}
+				continue
+			}
+		}
+
+		// 3. Inclusive 1-based index range "start-end".
 		if idx := strings.Index(part, "-"); idx > 0 {
 			var start, end int
 			if _, err1 := fmt.Sscanf(part[:idx], "%d", &start); err1 == nil {
@@ -698,7 +727,7 @@ func parseExcludeColumns(excludeStr string, headers []string) ([]int, error) {
 			}
 		}
 
-		// 3. Single 1-based index.
+		// 4. Single 1-based index.
 		var single int
 		if _, err := fmt.Sscanf(part, "%d", &single); err == nil {
 			if single < 1 || single > len(headers) {
@@ -715,7 +744,8 @@ func parseExcludeColumns(excludeStr string, headers []string) ([]int, error) {
 
 	if len(unmatched) > 0 {
 		return nil, fmt.Errorf("--exclude-columns: could not resolve %s; "+
-			"columns may be given by name, by 1-based index, or as an index range such as 3-7",
+			"columns may be given by name, by 1-based index, as an index range such as 3-7, "+
+			"or as a range between two column names such as 1400-1450",
 			strings.Join(unmatched, ", "))
 	}
 

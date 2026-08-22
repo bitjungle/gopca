@@ -302,7 +302,7 @@ Beyond basic centering and scaling, GoPCA Suite offers specialized preprocessing
 
 ![Center and scale](images/intro_to_pca_fig_05-03.jpg)
 
-> **Important:** These mathematical preprocessing steps (centering and scaling) are handled by GoPCA Suite during the analysis. Data cleaning tasks like handling missing values, removing outliers, and selecting variables should be done beforehand using appropriate data preparation tools like GoCSV Desktop.
+> **Important:** These mathematical preprocessing steps (centering and scaling) are handled by GoPCA Suite during the analysis. Larger data cleaning tasks — handling missing values, reshaping, merging files — should be done beforehand with a data preparation tool like GoCSV Desktop. Excluding individual rows and variables, however, is part of the analysis itself and belongs inside GoPCA Desktop, where you can take a variable out, re-run, and see immediately what changed.
 
 ### Step 3: Calculate the Covariance Matrix
 
@@ -549,6 +549,10 @@ PCA works best under certain conditions:
 ### Data Preparation Essentials
 
 Before running PCA, ensure your data is clean and properly formatted. This involves handling missing values (remove, impute, or let NIPALS work around them natively), investigating outliers (genuine extremes or errors?), and selecting relevant variables (avoid constants and near-duplicates).
+
+**Selecting variables is rarely a one-off decision.** You usually discover which variables to drop *from* a PCA — a variable that turns out to be an identifier, a region of a spectrum swamped by a single strong absorber, a sensor that was offline. GoPCA Desktop is built for that loop: exclude a variable or a region, click **Go PCA!** again, and compare. For datasets with more than about twenty columns the **Variables** panel above the data table shows the variables as an axis you can drag across, so a whole region is one gesture rather than hundreds of checkboxes; below that, the per-column checkboxes in the data table are the more precise tool, since every variable name is visible at once. The `pca` CLI does the same job non-interactively with `--exclude-columns` and `--exclude-rows`.
+
+Be aware that excluding variables is never free. Removing a region removes whatever information it carried along with the interference you were aiming at — so a variable exclusion is a claim about your data that you should be able to justify, and record.
 
 **The Preprocessing Decision Tree:**
 - **Always center** your data

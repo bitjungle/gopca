@@ -24,6 +24,7 @@
 import React from 'react';
 import { ErrorBoundary, ErrorAlert } from '@gopca/ui-components';
 import { DataTable, SelectionTable, MatrixIllustration, HelpWrapper } from '../index';
+import { ColumnRangeSelector } from '../ColumnRangeSelector';
 import { useFileDataContext } from '../../contexts/FileDataContext';
 import { usePCAContext } from '../../contexts/PCAContext';
 import { useGoCSVContext } from '../../contexts/GoCSVContext';
@@ -37,12 +38,18 @@ import { OpenTutorial } from '../../../wailsjs/go/main/App';
  * All state comes from FileDataContext, PCAContext, and GoCSVContext.
  * No props needed.
  */
+// Above this many columns the per-column checkbox strip stops being usable — 700
+// spectral channels is a strip tens of thousands of pixels across — so the axis
+// view is offered instead, where a whole region is one drag. Below it the strip
+// fits on screen and is the more precise tool, because every column name is visible.
+const WIDE_DATASET_COLUMNS = 20;
+
 export function DataLoadSection() {
     const {
         fileData, fileError, datasetId, loading: fileLoading, clearFileError
     } = useFileDataContext();
     const {
-        loading, excludedRows,
+        loading, excludedRows, excludedColumns,
         handleLoadDataset, handleNativeFileSelectWithReset,
         handleRowSelectionChange, handleColumnSelectionChange
     } = usePCAContext();
@@ -193,6 +200,21 @@ export function DataLoadSection() {
             {fileData && (
                 <div className="bg-white dark:bg-gray-800 rounded-lg p-6 shadow-lg border border-gray-200 dark:border-gray-700">
                     <h2 className="text-xl font-semibold mb-4">Loaded Data</h2>
+                    {fileData.headers.length > WIDE_DATASET_COLUMNS && (
+                        <div className="mb-4">
+                            <ColumnRangeSelector
+                                headers={fileData.headers}
+                                data={fileData.data}
+                                excludedColumns={excludedColumns}
+                                onChange={(excluded) => {
+                                    const keep = fileData.headers
+                                        .map((_, i) => i)
+                                        .filter(i => !excluded.includes(i));
+                                    handleColumnSelectionChange(keep);
+                                }}
+                            />
+                        </div>
+                    )}
                     {fileData.data.length * fileData.headers.length > 10000 ? (
                         <SelectionTable
                             key={`dataset-${datasetId}`}
@@ -203,6 +225,7 @@ export function DataLoadSection() {
                             onRowSelectionChange={handleRowSelectionChange}
                             onColumnSelectionChange={handleColumnSelectionChange}
                             externalSelectedRows={fileData.data.map((_, i) => i).filter(i => !excludedRows.includes(i))}
+                            externalSelectedColumns={fileData.headers.map((_, i) => i).filter(i => !excludedColumns.includes(i))}
                             highlightExternalSelections={true}
                         />
                     ) : (
@@ -223,6 +246,7 @@ export function DataLoadSection() {
                                     onRowSelectionChange={handleRowSelectionChange}
                                     onColumnSelectionChange={handleColumnSelectionChange}
                                     externalSelectedRows={fileData.data.map((_, i) => i).filter(i => !excludedRows.includes(i))}
+                                    externalSelectedColumns={fileData.headers.map((_, i) => i).filter(i => !excludedColumns.includes(i))}
                                     highlightExternalSelections={true}
                                 />
                             </HelpWrapper>
