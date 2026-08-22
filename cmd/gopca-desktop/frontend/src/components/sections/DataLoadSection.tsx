@@ -24,6 +24,7 @@
 import React from 'react';
 import { ErrorBoundary, ErrorAlert } from '@gopca/ui-components';
 import { DataTable, SelectionTable, MatrixIllustration, HelpWrapper } from '../index';
+import { ColumnRangeSelector } from '../ColumnRangeSelector';
 import { useFileDataContext } from '../../contexts/FileDataContext';
 import { usePCAContext } from '../../contexts/PCAContext';
 import { useGoCSVContext } from '../../contexts/GoCSVContext';
@@ -193,6 +194,24 @@ export function DataLoadSection() {
             {fileData && (
                 <div className="bg-white dark:bg-gray-800 rounded-lg p-6 shadow-lg border border-gray-200 dark:border-gray-700">
                     <h2 className="text-xl font-semibold mb-4">Loaded Data</h2>
+                    {/* For wide datasets the per-column checkbox strip is impractical —
+                        700 channels is a strip tens of thousands of pixels across — so
+                        offer the axis view, where a region is one drag. */}
+                    {fileData.headers.length > 20 && (
+                        <div className="mb-4">
+                            <ColumnRangeSelector
+                                headers={fileData.headers}
+                                data={fileData.data}
+                                excludedColumns={excludedColumns}
+                                onChange={(excluded) => {
+                                    const keep = fileData.headers
+                                        .map((_, i) => i)
+                                        .filter(i => !excluded.includes(i));
+                                    handleColumnSelectionChange(keep);
+                                }}
+                            />
+                        </div>
+                    )}
                     {fileData.data.length * fileData.headers.length > 10000 ? (
                         <SelectionTable
                             key={`dataset-${datasetId}`}
