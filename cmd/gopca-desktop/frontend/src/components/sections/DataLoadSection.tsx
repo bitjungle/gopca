@@ -42,7 +42,7 @@ export function DataLoadSection() {
         fileData, fileError, datasetId, loading: fileLoading, clearFileError
     } = useFileDataContext();
     const {
-        loading, excludedRows,
+        loading, excludedRows, excludedColumns,
         handleLoadDataset, handleNativeFileSelectWithReset,
         handleRowSelectionChange, handleColumnSelectionChange
     } = usePCAContext();
@@ -203,6 +203,7 @@ export function DataLoadSection() {
                             onRowSelectionChange={handleRowSelectionChange}
                             onColumnSelectionChange={handleColumnSelectionChange}
                             externalSelectedRows={fileData.data.map((_, i) => i).filter(i => !excludedRows.includes(i))}
+                            externalSelectedColumns={fileData.headers.map((_, i) => i).filter(i => !excludedColumns.includes(i))}
                             highlightExternalSelections={true}
                         />
                     ) : (
@@ -223,6 +224,7 @@ export function DataLoadSection() {
                                     onRowSelectionChange={handleRowSelectionChange}
                                     onColumnSelectionChange={handleColumnSelectionChange}
                                     externalSelectedRows={fileData.data.map((_, i) => i).filter(i => !excludedRows.includes(i))}
+                                    externalSelectedColumns={fileData.headers.map((_, i) => i).filter(i => !excludedColumns.includes(i))}
                                     highlightExternalSelections={true}
                                 />
                             </HelpWrapper>

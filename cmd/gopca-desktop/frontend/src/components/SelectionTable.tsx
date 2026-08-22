@@ -22,6 +22,7 @@
 // See LICENSE for the full license terms.
 
 import React, { useRef, useMemo, useEffect } from 'react';
+import { applyColumnToggle } from '../utils/columnRange';
 import { useVirtualizer } from '@tanstack/react-virtual';
 
 interface SelectionTableProps {
@@ -32,6 +33,7 @@ interface SelectionTableProps {
   onRowSelectionChange?: (selectedRows: number[]) => void;
   onColumnSelectionChange?: (selectedColumns: number[]) => void;
   externalSelectedRows?: number[];
+  externalSelectedColumns?: number[];
   highlightExternalSelections?: boolean;
 }
 
@@ -43,6 +45,7 @@ export const SelectionTable: React.FC<SelectionTableProps> = ({
   onRowSelectionChange,
   onColumnSelectionChange,
   externalSelectedRows,
+  externalSelectedColumns,
   highlightExternalSelections
 }) => {
   // Selection states
@@ -78,6 +81,20 @@ export const SelectionTable: React.FC<SelectionTableProps> = ({
       setRowSelection(newSelection);
     }
   }, [externalSelectedRows?.length]); // Only watch length to avoid deep comparison
+
+  // Columns previously had no external sync at all, so the parent could push a
+  // selection in but never reset or restore one. Keyed on a membership
+  // signature: two different selections of equal size must still resync.
+  const externalColumnKey = externalSelectedColumns?.join(',');
+  useEffect(() => {
+    if (externalSelectedColumns === undefined) return;
+    const newSelection: Record<number, boolean> = {};
+    headers.forEach((_, index) => {
+      newSelection[index] = externalSelectedColumns.includes(index);
+    });
+    setColumnSelection(newSelection);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [externalColumnKey, headers.length]);
 
   // Notify parent of selection changes
   useEffect(() => {
@@ -130,6 +147,21 @@ export const SelectionTable: React.FC<SelectionTableProps> = ({
       newSelection[index] = !allSelected;
     });
     setRowSelection(newSelection);
+  };
+
+  // Anchor for shift-click range selection: the last column toggled on its own.
+  const lastToggledColumn = useRef<number | null>(null);
+
+  /**
+   * Toggle one column, or — with shift held — every column between it and the
+   * previously toggled one. Wide datasets are the motivating case: a 700-channel
+   * spectrum makes clicking each checkbox in a region impractical.
+   */
+  const handleColumnToggle = (index: number, checked: boolean, shiftKey: boolean) => {
+    setColumnSelection(prev => applyColumnToggle(
+      prev, index, checked, shiftKey ? lastToggledColumn.current : null, i => i
+    ));
+    lastToggledColumn.current = index;
   };
 
   // Toggle all columns
@@ -232,14 +264,26 @@ export const SelectionTable: React.FC<SelectionTableProps> = ({
         <div className="flex-1 flex flex-col min-w-0">
           {/* Top panel - Column selection */}
           <div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-300 dark:border-gray-600 p-4 mb-4 overflow-hidden">
-            <div className="flex items-center justify-between mb-3">
-              <h4 className="font-medium text-gray-900 dark:text-white">Columns</h4>
-              <button
-                onClick={toggleAllColumns}
-                className="text-xs px-2 py-1 bg-gray-200 dark:bg-gray-700 hover:bg-gray-300 dark:hover:bg-gray-600 rounded"
-              >
-                {selectedColCount === headers.length ? 'Deselect All' : 'Select All'}
-              </button>
+            <div className="flex items-center justify-between mb-3 gap-3">
+              <div className="flex items-baseline gap-2 min-w-0">
+                <h4 className="font-medium text-gray-900 dark:text-white">Columns</h4>
+                <span className="text-xs text-gray-500 dark:text-gray-400 whitespace-nowrap">
+                  {selectedColCount === headers.length
+                    ? `all ${headers.length} included`
+                    : `${selectedColCount} of ${headers.length} included · ${headers.length - selectedColCount} excluded`}
+                </span>
+              </div>
+              <div className="flex items-center gap-2 shrink-0">
+                <span className="hidden sm:inline text-xs text-gray-400 dark:text-gray-500">
+                  shift-click to select a range
+                </span>
+                <button
+                  onClick={toggleAllColumns}
+                  className="text-xs px-2 py-1 bg-gray-200 dark:bg-gray-700 hover:bg-gray-300 dark:hover:bg-gray-600 rounded"
+                >
+                  {selectedColCount === headers.length ? 'Deselect All' : 'Select All'}
+                </button>
+              </div>
             </div>
 
             <div
@@ -274,11 +318,10 @@ export const SelectionTable: React.FC<SelectionTableProps> = ({
                     <input
                       type="checkbox"
                       checked={columnSelection[virtualCol.index] ?? true}
+                      title={headers[virtualCol.index]}
                       onChange={(e) => {
-                        setColumnSelection(prev => ({
-                          ...prev,
-                          [virtualCol.index]: e.target.checked
-                        }));
+                        const shiftKey = (e.nativeEvent as MouseEvent).shiftKey === true;
+                        handleColumnToggle(virtualCol.index, e.target.checked, shiftKey);
                       }}
                       className="mb-1 w-4 h-4 text-blue-600 bg-white dark:bg-gray-700 border-gray-300 dark:border-gray-600 rounded focus:ring-blue-500"
                     />
