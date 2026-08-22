@@ -56,7 +56,7 @@ The dataset also includes three string columns that label the operating state at
 | `regime` | 4 values | Coarser grouping: `normal` (baseline + recovery), `feed_disturbance` (both feed steps combined), `oscillation`, `cooling_fault` |
 | `fault_active` | `yes` / `no` | Binary flag: `no` during normal operation and recovery, `yes` during all disturbance and fault periods |
 
-All three describe the same 800-minute timeline at different levels of detail — `event` is the most specific, `fault_active` the broadest. **Use `regime` as your color target**: four clearly named categories give the most useful visual separation in the scores plot, and the two feed disturbances are grouped together because they produce similar multivariate signatures.
+All three describe the same 800-minute timeline at different levels of detail — `event` is the most specific, `fault_active` the broadest. **Use `regime` as your color target**: four clearly named categories are easier to read than six, and both feed steps are disturbances of the same kind — a change on the feed side that the controller absorbs and recovers from. They do not, however, produce *identical* signatures: the concentration step displaces the process considerably further than the temperature step, and you will see them as two separate clumps of the same colour. Switch to `event` whenever you want them told apart.
 
 ### Operating scenarios
 
@@ -212,7 +212,8 @@ With Row Index coloring you can immediately see, for example, that the diagonal 
 #### Questions:
 
 * Can you identify which region of the plot corresponds to normal operation?
-* The feed disturbance period (orange) should form a clear trajectory away from the normal cluster and then return. How long does the transient last — how many minutes before the points begin returning toward the normal cluster?
+* The feed disturbance period (orange) forms **two** tight clumps rather than one, joined by a trail. Why two? *(Hint: the `regime` label groups two separate events — colour by `event` to confirm.)*
+* Each step shows the same pattern: a fast excursion away from the normal cluster, then a slower return as the controller compensates. How many minutes pass between the step and the furthest point of the excursion?
 * Where does the cooling fault period appear — close to normal operation or far from it? Is it more spread out along PC1 than it was in the SVD scores plot?
 * Does the flow oscillation period trace a recognisable loop? How large is it compared to the steady-state cluster?
 * Does the reactor return to the normal region during the recovery period?
