@@ -105,10 +105,27 @@ func (p *PCAImpl) Fit(data types.Matrix, config types.PCAConfig) (*types.PCAResu
 	// Preprocessing using the Preprocessor class (skip only if using native missing value handling with actual missing values)
 	// Note: For NIPALS with missing values, mean centering is handled within the algorithm
 	if usingNativeMissing {
-		if config.StandardScale || config.RobustScale || config.ScaleOnly || config.SNV || config.VectorNorm {
-			// Log warning: preprocessing (except mean centering) is not supported with native missing value handling
-			// Mean centering is handled internally by the NIPALS algorithm for missing data
-			fmt.Printf("Warning: Preprocessing options (except mean centering) are not supported with NIPALS native missing value handling. These options were ignored.\n")
+		// Column-wise centering and scaling ARE supported here — see
+		// nipalsAlgorithmWithMissing, which computes means, standard deviations,
+		// medians and MADs over the observed values of each column.
+		//
+		// The row-wise methods are not. SNV divides a spectrum by its own
+		// standard deviation and vector normalization by its own length; with
+		// entries missing, both quantities are computed over a different subset
+		// for every row, so the rows are no longer on a common scale and the
+		// result is not the correction the user asked for. Refusing is safer
+		// than returning an analysis that silently answers a different question.
+		if config.SNV || config.VectorNorm {
+			method := "SNV"
+			if config.VectorNorm && !config.SNV {
+				method = "vector normalization"
+			}
+			return nil, fmt.Errorf(
+				"%s cannot be combined with NIPALS native missing-value handling: "+
+					"a row's mean and norm are undefined when entries in that row are missing. "+
+					"Either impute the missing values first (--missing-strategy mean/median/zero), "+
+					"drop incomplete rows (--missing-strategy drop), or run without %s",
+				method, method)
 		}
 		// Per-sample reconstruction diagnostics are ill-defined here: missing
 		// entries have no ground truth, and NIPALS centers with NaN-aware means
@@ -159,6 +176,10 @@ func (p *PCAImpl) Fit(data types.Matrix, config types.PCAConfig) (*types.PCAResu
 	if err != nil {
 		return nil, fmt.Errorf("PCA computation failed: %w", err)
 	}
+
+	// Fix the arbitrary sign of each component so that SVD and NIPALS agree on
+	// the same data. See component_signs.go for the rule and why it is needed.
+	normalizeComponentSigns(scores, loadings)
 
 	// Store loadings for transform
 	p.loadings = loadings
@@ -432,10 +453,35 @@ func (p *PCAImpl) nipalsAlgorithmWithMissing(X *mat.Dense, nComponents int) (*ma
 	// Working copy of X for deflation
 	Xwork := CreateWorkingCopy(X)
 
-	// Calculate column means and center data (only for non-missing values)
-	if p.config.MeanCenter {
-		columnMeans := computeColumnMeansWithMissing(Xwork)
-		centerMatrixWithMissing(Xwork, columnMeans)
+	// Column-wise preprocessing, computed over observed values only. This
+	// mirrors the complete-data Preprocessor (see preprocessing.go) branch for
+	// branch, so that NIPALS on data with gaps answers the same question as
+	// NIPALS on data without them. Row-wise methods are rejected earlier in
+	// Fit — a row mean or norm changes meaning when entries are absent.
+	switch {
+	case p.config.RobustScale:
+		// Robust scaling: (x - median) / MAD
+		medians := computeColumnMediansWithMissing(Xwork)
+		mads := computeColumnMADsWithMissing(Xwork, medians)
+		centerMatrixWithMissing(Xwork, medians)
+		scaleMatrixWithMissing(Xwork, mads)
+	case p.config.ScaleOnly:
+		// Variance scaling without centering. Deviations are still measured
+		// about the column mean, matching Preprocessor's originalStd.
+		means := computeColumnMeansWithMissing(Xwork)
+		scaleMatrixWithMissing(Xwork, computeColumnStdDevsWithMissing(Xwork, means))
+	default:
+		means := computeColumnMeansWithMissing(Xwork)
+		if p.config.StandardScale {
+			// Compute the divisor before centering, as the mean is needed for both.
+			stdDevs := computeColumnStdDevsWithMissing(Xwork, means)
+			if p.config.MeanCenter {
+				centerMatrixWithMissing(Xwork, means)
+			}
+			scaleMatrixWithMissing(Xwork, stdDevs)
+		} else if p.config.MeanCenter {
+			centerMatrixWithMissing(Xwork, means)
+		}
 	}
 
 	// Convergence parameters from centralized algorithm config.
