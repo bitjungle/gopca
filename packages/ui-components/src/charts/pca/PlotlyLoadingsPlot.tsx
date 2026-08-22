@@ -119,7 +119,15 @@ export class PlotlyLoadingsPlot {
     } else if (this.config.mode === 'line') {
       // Line chart mode - use indices for x-axis
       const colors = this.config.colorScheme || ['#3b82f6', '#ef4444'];
-      const xValues = Array.from({ length: sortedVariableNames.length }, (_, i) => i);
+      // Spectroscopic datasets name their columns by wavelength ("1100", "1102", ...).
+      // When every variable name parses as a number, plot against those values so the
+      // axis carries physical meaning; otherwise fall back to the positional index.
+      const numericNames = sortedVariableNames.map(n => Number(n));
+      const namesAreNumeric = sortedVariableNames.length > 0 &&
+        numericNames.every(v => Number.isFinite(v));
+      const xValues = namesAreNumeric
+        ? numericNames
+        : Array.from({ length: sortedVariableNames.length }, (_, i) => i);
 
       const trace: any = {
         type: 'scatter',
@@ -228,7 +236,12 @@ export class PlotlyLoadingsPlot {
       },
       xaxis: {
         title: {
-          text: this.config.mode === 'line' ? 'Variable Index' : 'Variables'
+          text: this.config.mode === 'line'
+            ? (sortedVariableNames.length > 0 &&
+               sortedVariableNames.every(n => Number.isFinite(Number(n)))
+                ? 'Variable'
+                : 'Variable Index')
+            : 'Variables'
         },
         type: this.config.mode === 'line' ? 'linear' : 'category',
         tickangle: this.config.mode === 'bar' && sortedVariableNames.length > 10 ? -45 : 0

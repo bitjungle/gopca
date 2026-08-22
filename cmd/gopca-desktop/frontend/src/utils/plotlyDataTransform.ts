@@ -259,11 +259,23 @@ export function createLoadingsPlotConfig(
     showMarkers = numVariables <= variableThreshold;
   }
 
+  // Reference line for "a variable contributing more than its equal share".
+  // Loadings are unit-norm, so if every one of p variables contributed equally
+  // each would be 1/sqrt(p). A fixed 0.3 only suits mid-sized datasets: it is
+  // about right for Wine (13 variables -> 0.28) but meaningless for spectra,
+  // where 700 variables put the equal share at 0.038 — an order of magnitude
+  // below the line. Because the threshold is drawn as a Plotly shape on the y
+  // axis, an out-of-range value also forces the autorange and squashes the data
+  // into a sliver of the plot.
+  const equalShare = numVariables && numVariables > 0
+    ? 1 / Math.sqrt(numVariables)
+    : 0.3;
+
   return {
     mode: plotType,
     sortByMagnitude,
     showThreshold: true,
-    thresholdValue: 0.3,
+    thresholdValue: equalShare,
     showMarkers,
     // Don't set maxVariables - show all by default
     theme,
