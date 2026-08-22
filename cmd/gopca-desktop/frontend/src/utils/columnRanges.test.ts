@@ -22,7 +22,7 @@
 // See LICENSE for the full license terms.
 
 import { describe, it, expect } from 'vitest';
-import { toRuns, describeRun, runToIndices, parseRangeSpec, columnMeans } from './columnRanges';
+import { toRuns, describeRun, runToIndices, parseRangeSpec, columnMeans, namesFormOrderedAxis } from './columnRanges';
 
 // A 700-channel NIR axis, 1100–2498 nm at 2 nm steps, as in the Corn dataset.
 const NIR = Array.from({ length: 700 }, (_, i) => String(1100 + i * 2));
@@ -134,5 +134,44 @@ describe('columnMeans', () => {
     });
     it('returns zero for a column with no finite values', () => {
         expect(columnMeans([[NaN], [NaN]], 1)).toEqual([0]);
+    });
+});
+
+describe('namesFormOrderedAxis', () => {
+    it('accepts a spectrum sampled at regular intervals', () => {
+        expect(namesFormOrderedAxis(NIR)).toBe(true);
+    });
+
+    it('accepts a descending axis', () => {
+        expect(namesFormOrderedAxis(['2498', '2496', '2494'])).toBe(true);
+    });
+
+    it('accepts an unevenly sampled axis, which is still an axis', () => {
+        expect(namesFormOrderedAxis(['400', '410', '480', '1200'])).toBe(true);
+    });
+
+    it('rejects named variables — a line through them would invent continuity', () => {
+        expect(namesFormOrderedAxis(['alcohol', 'malic_acid', 'ash'])).toBe(false);
+    });
+
+    it('rejects numeric names that carry no order', () => {
+        expect(namesFormOrderedAxis(['1', '5', '3'])).toBe(false);
+    });
+
+    it('rejects a mix of numbers and names', () => {
+        expect(namesFormOrderedAxis(['1100', '1102', 'Moisture'])).toBe(false);
+    });
+
+    it('rejects repeated values, which are not a strict ordering', () => {
+        expect(namesFormOrderedAxis(['1100', '1100', '1102'])).toBe(false);
+    });
+
+    it('rejects blank names, since Number("") is 0', () => {
+        expect(namesFormOrderedAxis(['', '1', '2'])).toBe(false);
+    });
+
+    it('rejects fewer than two columns, where the question is meaningless', () => {
+        expect(namesFormOrderedAxis(['1100'])).toBe(false);
+        expect(namesFormOrderedAxis([])).toBe(false);
     });
 });

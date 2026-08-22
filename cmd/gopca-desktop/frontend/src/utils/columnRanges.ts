@@ -152,7 +152,33 @@ export function parseRangeSpec(spec: string, headers: string[]): ParsedSpec {
     return { indices: [...indices].sort((a, b) => a - b), errors };
 }
 
-/** Mean of each column, for the overview sparkline. Ignores non-finite values. */
+/**
+ * Do the column names describe an ordered axis, or are they just labels?
+ *
+ * This decides how the variable profile may honestly be drawn. A connected line
+ * asserts that neighbouring columns are neighbouring points on a continuum — true
+ * of a spectrum sampled at 1100, 1102, 1104 nm, and false of forty unrelated assay
+ * variables, where a line would invent a continuity the data does not have.
+ *
+ * The test is deliberately strict: every name must parse as a finite number *and*
+ * the sequence must be monotonic. Numeric names alone are not enough, since
+ * columns named "1", "5", "3" are numeric yet carry no order.
+ */
+export function namesFormOrderedAxis(headers: string[]): boolean {
+    if (headers.length < 2) return false;
+    if (headers.some(h => h.trim() === '')) return false; // Number('') is 0
+    const values = headers.map(h => Number(h));
+    if (!values.every(v => Number.isFinite(v))) return false;
+    let increasing = true;
+    let decreasing = true;
+    for (let i = 1; i < values.length; i++) {
+        if (values[i] <= values[i - 1]) increasing = false;
+        if (values[i] >= values[i - 1]) decreasing = false;
+    }
+    return increasing || decreasing;
+}
+
+/** Mean of each column, for the overview profile. Ignores non-finite values. */
 export function columnMeans(data: number[][], columnCount: number): number[] {
     const sums = new Array(columnCount).fill(0);
     const counts = new Array(columnCount).fill(0);

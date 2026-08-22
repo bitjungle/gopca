@@ -115,3 +115,46 @@ describe('ColumnRangeSelector', () => {
         expect(onChange.mock.calls[0][0]).toEqual([]);
     });
 });
+
+describe('ColumnRangeSelector profile rendering', () => {
+    // 40 unrelated variables: numeric column *names* are what make an axis, not
+    // numeric data. A line drawn through these would assert an order they lack.
+    const NAMED = Array.from({ length: 40 }, (_, i) => `assay_${i}`);
+    const NAMED_DATA = Array.from({ length: 5 }, () => NAMED.map((_, c) => c % 7));
+
+    it('draws a connected line for a wavelength axis', () => {
+        render(<ColumnRangeSelector headers={HEADERS} data={DATA} excludedColumns={[]} onChange={() => {}} />);
+        expect(plot().querySelector('polyline')).toBeTruthy();
+        expect(plot().querySelector('path')).toBeNull();
+    });
+
+    it('draws bars for unordered variables', () => {
+        render(<ColumnRangeSelector headers={NAMED} data={NAMED_DATA} excludedColumns={[]} onChange={() => {}} />);
+        expect(plot().querySelector('polyline')).toBeNull();
+        const bars = plot().querySelector('path');
+        expect(bars).toBeTruthy();
+        // One move-and-vertical-line per variable.
+        expect((bars!.getAttribute('d') || '').match(/M/g) || []).toHaveLength(NAMED.length);
+    });
+
+    it('drags identically in bar mode', () => {
+        const onChange = vi.fn();
+        render(<ColumnRangeSelector headers={NAMED} data={NAMED_DATA} excludedColumns={[]} onChange={onChange} />);
+        const svg = plot();
+        const xAt = (i: number) => (i / (NAMED.length - 1)) * 1000;
+        fireEvent.pointerDown(svg, { clientX: xAt(10) });
+        fireEvent.pointerMove(svg, { clientX: xAt(14) });
+        fireEvent.pointerUp(svg, { clientX: xAt(14) });
+
+        expect(onChange).toHaveBeenCalledTimes(1);
+        expect(onChange.mock.calls[0][0]).toEqual([10, 11, 12, 13, 14]);
+    });
+
+    it('treats numeric names that are out of order as unordered', () => {
+        const shuffled = ['30', '10', '20', '40'];
+        const data = [[1, 2, 3, 4], [2, 3, 4, 5]];
+        render(<ColumnRangeSelector headers={shuffled} data={data} excludedColumns={[]} onChange={() => {}} />);
+        expect(plot().querySelector('polyline')).toBeNull();
+        expect(plot().querySelector('path')).toBeTruthy();
+    });
+});

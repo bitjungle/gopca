@@ -24,7 +24,7 @@
 import React, { useCallback, useMemo, useRef, useState } from 'react';
 import { X } from 'lucide-react';
 import {
-    toRuns, describeRun, runToIndices, parseRangeSpec, columnMeans
+    toRuns, describeRun, runToIndices, parseRangeSpec, columnMeans, namesFormOrderedAxis
 } from '../utils/columnRanges';
 
 interface ColumnRangeSelectorProps {
@@ -50,6 +50,12 @@ const VIEW_H = 120;
  * The profile behind the axis is the mean of each column, which for spectroscopy
  * is the mean spectrum: the water bands appear as peaks, and the user drags over
  * the shape they can already see.
+ *
+ * How that profile is drawn depends on the columns. A connected line claims the
+ * columns are consecutive samples of something continuous, so it is used only
+ * when the column names say so — see namesFormOrderedAxis. Forty unrelated assay
+ * variables get bars instead, because a line through them would draw a curve
+ * where the data has none. The gesture is identical either way.
  */
 export const ColumnRangeSelector: React.FC<ColumnRangeSelectorProps> = ({
     headers, data, excludedColumns, onChange
@@ -63,6 +69,11 @@ export const ColumnRangeSelector: React.FC<ColumnRangeSelectorProps> = ({
     const excludedSet = useMemo(() => new Set(excludedColumns), [excludedColumns]);
     const runs = useMemo(() => toRuns(excludedColumns), [excludedColumns]);
 
+    // Whether the columns are an axis or an unordered set decides how the profile
+    // is drawn, but never how selection works: a column occupies the same slice of
+    // the width either way, so dragging behaves identically.
+    const orderedAxis = useMemo(() => namesFormOrderedAxis(headers), [headers]);
+
     // Mean profile, normalised into the viewBox. Recomputed only when the data
     // changes, not on every drag frame.
     const profile = useMemo(() => {
@@ -70,19 +81,40 @@ export const ColumnRangeSelector: React.FC<ColumnRangeSelectorProps> = ({
         const lo = Math.min(...means);
         const hi = Math.max(...means);
         const span = hi - lo || 1;
-        return means.map((m, i) => {
-            const x = n === 1 ? 0 : (i / (n - 1)) * VIEW_W;
-            const y = VIEW_H - 8 - ((m - lo) / span) * (VIEW_H - 24);
-            return `${x.toFixed(1)},${y.toFixed(1)}`;
-        }).join(' ');
-    }, [data, n]);
+        const top = 8;
+        const base = VIEW_H - 8;
+        const yOf = (m: number) => base - ((m - lo) / span) * (base - top);
+        const xAt = (i: number) => ((i + 0.5) * VIEW_W) / n;
+
+        if (orderedAxis) {
+            return {
+                line: means.map((m, i) => `${xAt(i).toFixed(1)},${yOf(m).toFixed(1)}`).join(' '),
+                bars: ''
+            };
+        }
+
+        // One bar per variable, emitted as a single path rather than n <rect>
+        // elements so that a few thousand columns stay cheap to render. Bars grow
+        // from zero when the means straddle it, otherwise from the floor.
+        const zero = lo <= 0 && hi >= 0 ? yOf(0) : base;
+        return {
+            line: '',
+            bars: means
+                .map((m, i) => `M${xAt(i).toFixed(1)},${zero.toFixed(1)}V${yOf(m).toFixed(1)}`)
+                .join('')
+        };
+    }, [data, n, orderedAxis]);
+
+    // Bars should fill most of the space each variable occupies, so their width is
+    // a share of the column pitch rather than a fixed number of pixels.
+    const barWidth = useMemo(() => Math.max(0.6, (VIEW_W / Math.max(1, n)) * 0.6), [n]);
 
     /** Map a pointer position to the column index under it. */
     const columnAt = useCallback((clientX: number): number => {
         const rect = svgRef.current?.getBoundingClientRect();
         if (!rect || rect.width === 0) return 0;
         const frac = (clientX - rect.left) / rect.width;
-        return Math.max(0, Math.min(n - 1, Math.round(frac * (n - 1))));
+        return Math.max(0, Math.min(n - 1, Math.floor(frac * n)));
     }, [n]);
 
     const commit = useCallback((from: number, to: number) => {
@@ -106,13 +138,19 @@ export const ColumnRangeSelector: React.FC<ColumnRangeSelectorProps> = ({
         }
     };
 
-    const xOf = (i: number) => (n === 1 ? 0 : (i / (n - 1)) * VIEW_W);
+    // Every column owns an equal band of the width, and the whole width is spoken
+    // for. Drawing on the band's centre keeps the end bars inside the frame, and
+    // measuring highlights from its edges makes an excluded region cover exactly
+    // the columns it names rather than stopping at the centre of the last one.
+    const pitch = VIEW_W / n;
+    const edgeOf = (i: number) => i * pitch;
+    const midOf = (i: number) => (i + 0.5) * pitch;
     // Ticks at even fractions, labelled with the real column names.
     const ticks = useMemo(() => {
         const count = Math.min(6, n);
         return Array.from({ length: count }, (_, k) => {
             const i = Math.round((k / Math.max(1, count - 1)) * (n - 1));
-            return { i, label: headers[i] ?? String(i + 1) };
+            return { i, label: headers[i] ?? String(i + 1), first: k === 0, last: k === count - 1 };
         });
     }, [headers, n]);
 
@@ -174,8 +212,8 @@ export const ColumnRangeSelector: React.FC<ColumnRangeSelectorProps> = ({
                 {runs.map((r, k) => (
                     <rect
                         key={`ex-${k}`}
-                        x={xOf(r.start)}
-                        width={Math.max(1.5, xOf(r.end) - xOf(r.start))}
+                        x={edgeOf(r.start)}
+                        width={Math.max(1.5, (r.end - r.start + 1) * pitch)}
                         y={0} height={VIEW_H}
                         className="fill-red-400/25 dark:fill-red-500/25"
                     />
@@ -184,25 +222,34 @@ export const ColumnRangeSelector: React.FC<ColumnRangeSelectorProps> = ({
                 {/* Live drag preview */}
                 {drag && (
                     <rect
-                        x={xOf(Math.min(drag.from, drag.to))}
-                        width={Math.max(1.5, xOf(Math.max(drag.from, drag.to)) - xOf(Math.min(drag.from, drag.to)))}
+                        x={edgeOf(Math.min(drag.from, drag.to))}
+                        width={Math.max(1.5, (Math.abs(drag.to - drag.from) + 1) * pitch)}
                         y={0} height={VIEW_H}
                         className="fill-blue-400/30 dark:fill-blue-400/25"
                     />
                 )}
 
-                <polyline
-                    points={profile}
-                    fill="none"
-                    vectorEffect="non-scaling-stroke"
-                    className="stroke-blue-600 dark:stroke-blue-400"
-                    strokeWidth={1.5}
-                />
+                {orderedAxis ? (
+                    <polyline
+                        points={profile.line}
+                        fill="none"
+                        vectorEffect="non-scaling-stroke"
+                        className="stroke-blue-600 dark:stroke-blue-400"
+                        strokeWidth={1.5}
+                    />
+                ) : (
+                    <path
+                        d={profile.bars}
+                        fill="none"
+                        className="stroke-blue-600 dark:stroke-blue-400"
+                        strokeWidth={barWidth}
+                    />
+                )}
 
                 {ticks.map(t => (
                     <line
                         key={`t-${t.i}`}
-                        x1={xOf(t.i)} x2={xOf(t.i)} y1={VIEW_H - 6} y2={VIEW_H}
+                        x1={midOf(t.i)} x2={midOf(t.i)} y1={VIEW_H - 6} y2={VIEW_H}
                         vectorEffect="non-scaling-stroke"
                         className="stroke-gray-400 dark:stroke-gray-500"
                         strokeWidth={1}
@@ -216,8 +263,15 @@ export const ColumnRangeSelector: React.FC<ColumnRangeSelectorProps> = ({
                 {ticks.map(t => (
                     <span
                         key={`l-${t.i}`}
-                        style={{ left: `${(xOf(t.i) / VIEW_W) * 100}%` }}
-                        className="absolute -translate-x-1/2 text-[10px] text-gray-500 dark:text-gray-400 whitespace-nowrap"
+                        style={t.first
+                            ? { left: 0 }
+                            : t.last
+                                ? { right: 0 }
+                                : { left: `${(midOf(t.i) / VIEW_W) * 100}%` }}
+                        title={t.label}
+                        className={`absolute text-[10px] text-gray-500 dark:text-gray-400 whitespace-nowrap max-w-[7rem] overflow-hidden text-ellipsis ${
+                            t.first || t.last ? '' : '-translate-x-1/2'
+                        }`}
                     >
                         {t.label}
                     </span>
