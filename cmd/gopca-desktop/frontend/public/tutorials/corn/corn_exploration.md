@@ -19,6 +19,9 @@ Here, we will approach the same data with **Principal Component Analysis (PCA)**
 
 The data originates from Cargill and was made publicly available through Eigenvector Research (https://eigenvector.com/data/Corn/). It has been used in food chemistry research, including Engel et al. (2022).
 
+![A mature maize ear on the stalk](./mature_maize_ear_on_a_stalk.jpg)
+*A mature maize ear on the stalk — the raw material behind all 80 spectra in this dataset. Photo: Silverije, [CC BY-SA 3.0](https://creativecommons.org/licenses/by-sa/3.0/)*
+
 ---
 
 ## From Wine to Corn: a completely different kind of data
