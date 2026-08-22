@@ -210,7 +210,13 @@ Look at the **Scores Plot**. Set **Color by** to `Moisture#target`.
 
 So the component holding ten times more variance holds much less of the chemistry. That is the same lesson the Swiss Roll tutorial teaches from the opposite direction: **variance measures how much a direction moves, not whether the movement means anything.** PC1 is big because residual scatter is big.
 
-Oil is the awkward one. It shows up best around PC5, and hardly at all in the first two components — which is why a real NIR calibration for oil would use many more components than you would guess from a scree plot.
+Oil is the awkward one. Its best single correlation is around PC5, so a real NIR calibration for oil would use many more components than a scree plot alone would suggest.
+
+**Three details worth noticing as you switch between the four colourings:**
+
+* **Moisture is the one that runs diagonally.** The other three form gradients essentially straight up and down the PC2 axis, but moisture also leans along PC1 (−0.38 against PC2's +0.58). That is the honest answer to the question above — it depends which constituent you picked.
+* **Protein and starch point in opposite directions.** Protein is high at the bottom of the plot, starch high at the top. That is not an accident of the analysis: in these 80 samples protein and starch are anticorrelated at **r = −0.80**, the classic compositional trade-off in grain — more protein means less starch. PC2 has found that trade-off on its own, from the spectra alone, without ever seeing a laboratory value.
+* **Two samples sit far out to the right in every colouring**, at PC1 ≈ +1.4 and +1.7, well clear of the rest. Keep them in mind; they are the subject of Step 5.
 
 > **Reality check on "2–3 components is enough".** It is enough to *display* this data — the first three components hold 95% of the variance. It is not enough to *predict* composition from it. Fit a regression of each laboratory value on the first few components and cross-validate: with three components, moisture and protein reach an R² of roughly 0.2, while oil and starch do worse than simply guessing the mean. Around ten components are needed before all four are predicted respectably. Compression and prediction are different jobs, and the scree plot only tells you about the first.
 
