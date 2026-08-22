@@ -303,87 +303,65 @@ Set **Color by → `Gender#target`** on the **Scores Plot**.
 * Do the sexes form **separate clusters**, or two **overlapping clouds** that are
   shifted relative to each other?
 
-👉 The sexes are offset along **both** components, and more strongly along **PC2**,
-the shape axis:
+👉 The sexes are offset along **both** components, and about twice as strongly
+along **PC2** (standardized gap *d* = 1.4) as along PC1 (*d* = 0.75). On average
+adult men and women differ in body proportions and in how fat is distributed —
+men toward a more central, waist distribution, women toward the hips, a
+well-documented difference (WHO, 2011) — and PC2 picks that up as a shift along
+the shape axis.
 
-| | men | women | standardized gap |
-|---|---|---|---|
-| PC1 (size) | +0.73 | −0.70 | *d* = 0.75 |
-| PC2 (shape) | +0.84 | −0.80 | *d* = 1.42 |
-
-But notice they **overlap heavily** — this is nothing like the clean species
-separation in Iris. You are looking at two broad, overlapping distributions whose
-*centers* differ, not two distinct groups.
-
-On average, adult men and women differ in body proportions and in how fat is
-distributed — men tend toward a more central (waist) distribution, women toward
-the hips — a well-documented difference (WHO, 2011). PC2 picks this up as a shift
-along the shape axis.
-
-Enable **Confidence Ellipses** (95%) to make the shift visible.
+But notice they **overlap heavily**. This is nothing like the clean species
+separation in Iris: two broad distributions whose *centers* differ, not two
+distinct groups. Enable **Confidence Ellipses** (95%) to make the shift visible.
 
 #### Questions:
 
 * The ellipse centers are clearly separated, yet the ellipses overlap
-  substantially. Roughly what fraction of people do you think could be classified
-  correctly from their position in this plot?
-* Would using all seven measurements — rather than these two components — do
-  better, or is the overlap you see the whole story?
+  substantially. Roughly what fraction of people could be classified correctly
+  from their position in this plot — and is that overlap the whole story?
 
-👉 This is where the plot will mislead you if you let it, and the correction is
-worth the detour.
+👉 This is where the plot will mislead you if you let it.
 
 Open the **Eigencorrelation Plot** and find the `Gender#target_Male` row — third
-from the top, since the rows are sorted by their PC1 correlation. Now read along
-it, watching the **colours** rather than the numbers:
+from the top, since rows are sorted by their PC1 correlation. Read along it,
+watching the **colours**:
 
 | | PC1 | PC2 | PC3 | PC4 | PC5 |
 |---|---|---|---|---|---|
 | share of variance | 59.5% | 29.0% | 4.6% | 2.7% | **2.3%** |
-| correlation with sex, ignoring sign | 0.35 | 0.58 | 0.13 | 0.13 | **0.30** |
+| correlation with sex | 0.35 | 0.58 | 0.13 | 0.13 | **0.30** |
 
-(Signs are omitted deliberately: PCA fixes each component only up to its sign, so
-whether a correlation reads + or − is a convention, not a finding. The size is the
-finding.)
+The cell under PC5 is warm — very nearly the shade of the PC1 cell — while the two
+between them are washed out. **PC5 carries 2.3% of the variance and tracks sex
+about as strongly as PC1, which carries 59.5%.** A component the scree plot would
+have you discard without a second thought holds nearly as much of this particular
+signal as the dominant one.
 
-The cell under PC5 is warm — very nearly the same shade as the cell under PC1 —
-while the two cells between them are washed out. That is the whole lesson in one
-row: **PC5 carries 2.3% of the variance and tracks sex about as strongly as PC1,
-which carries 59.5%.**
+That is the lesson in one row of a heat map: **principal components are chosen to
+maximise variance, not to separate groups.** Nothing requires the direction that
+best distinguishes two groups to be one of the directions along which the data
+spreads most — and when it is not, a scores plot shows heavy overlap even though
+the groups are highly distinguishable. It is the Swiss Roll lesson from the
+opposite side: there a tidy plot was the wrong answer, here an untidy one
+understates the difference. Both mistake *variance* for *meaning*.
 
-> **Why that cell has no number in it.** GoPCA prints the value only when a
-> correlation reaches 0.3, to keep the heat map readable. This one is 0.2975 —
-> under the line by a whisker — so you get the colour without the figure. Judge it
-> against the PC1 cell in the same row, which is labelled 0.35. A component you would discard without
-a second thought on the evidence of the scree plot holds nearly as much of this
-particular signal as the dominant one.
+How far does it go? Fitting a classifier — which GoPCA does not do, so take these
+as context rather than an exercise — position in the PC1–PC2 plane identifies sex
+correctly for about **82%** of these adults, and all seven measurements for about
+**93%**, against 51% for always guessing the more common sex. The single direction
+that best separates the sexes lies **88% outside** the PC1–PC2 plane.
 
-That is the whole lesson in one row of a heat map: **principal components are
-chosen to maximise variance, not to separate groups.** Nothing requires the
-direction that best distinguishes two groups to be one of the directions along
-which the data happens to spread most. When it is not, a scores plot of PC1
-against PC2 shows heavy overlap even though the groups are highly
-distinguishable — which is exactly what you are looking at.
-
-> **How far does that go?** Fitting a classifier — something GoPCA does not do, so
-> these figures are for context rather than an exercise you can repeat here —
-> position in the PC1–PC2 plane identifies sex correctly for about **82%** of
-> these adults, and the shape axis alone for about **76%**. Using all seven
-> measurements instead raises that to about **93%**, against 51% for always
-> guessing the more common sex. The single direction that best separates the sexes
-> turns out to lie **88% outside** the PC1–PC2 plane, in the components holding
-> the last 12% of the variance.
-
-This is the Swiss Roll lesson arriving from a new direction. There, a tidy scores
-plot was the wrong answer; here, an untidy one understates how different the
-groups are. In both cases the mistake is to read *variance* as *meaning*.
-
-The measurement doing most of that work is the one flagged back at the pair plot:
-**hip circumference**, the only one of the seven where women's average exceeds
-men's. On its own it is a weak discriminator. Held against weight and waist — a
-person with this much mass around the middle but *that* much hip — it becomes the
+The measurement doing most of that work is the one flagged at the pair plot: **hip
+circumference**, the only one of the seven where women's average exceeds men's.
+Alone it is a weak discriminator; held against weight and waist it becomes the
 strongest sex signal in the set. No single component isolates that comparison,
 which is why it is invisible here.
+
+> Two notes on reading this plot. Correlation signs are omitted above because PCA
+> fixes each component only up to its sign — whether a cell reads + or − is a
+> convention, not a finding. And the PC5 cell carries no printed number because
+> GoPCA labels a cell only from 0.3 upwards; this one is 0.2975, under the line by
+> a whisker. Compare its colour against the PC1 cell, labelled 0.35.
 
 > **A caution about interpretation.** That these measurements predict sex well in
 > aggregate says nothing about any individual: even the best of these models
