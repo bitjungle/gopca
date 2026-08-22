@@ -120,6 +120,8 @@ Now open the **Loadings Plot** for PC1.
 
 The sign is the giveaway. A component whose loadings are all the same sign says "every wavelength moves up and down together" — that is a description of the whole spectrum shifting bodily, not of one chemical constituent trading off against another. **This is not chemistry; it is a baseline artefact.**
 
+> **The orange dashed lines** are a reference level, not a significance test. Loadings are scaled so the squares across all variables sum to one, so if all 700 wavelengths contributed equally each would sit at 1/√700 ≈ 0.038. The line simply marks that equal share. Here the curve stays below it for most of the spectrum and rises above it from about 1890 nm — telling you the long-wavelength half of the spectrum carries more than its share of PC1.
+
 NIR spectra are affected by **multiplicative scatter**: differences in particle size, sample packing density, and optical path length between samples cause the entire baseline to shift up or down and tilt from left to right — even when the chemistry is identical. Without correcting for this, PCA finds the direction of maximum variance, which turns out to be the direction in which the baseline slopes vary most. PC1 at 99% is telling you how tilted each sample's baseline is. It is doing exactly what it is designed to do — but the dominant variation is a physical artefact, not a chemical signal.
 
 > Compare this to the Wine tutorial: without standardisation, proline's large numerical range dominated PC1. Here, baseline slope dominates for the same reason — it is the largest source of variance in the raw data. The fix follows the same logic.
@@ -176,7 +178,11 @@ Nothing to change — open the **Loadings Plot** on the analysis you just ran.
 * How does the PC2 loading curve differ from PC1?
 * Do the loading curves show any sharp features, or are they all broad and smooth?
 
-👉 Peaks and valleys in the loading curve mark wavelength regions that drive that component. The smoothness is not cosmetic — it is a direct consequence of the collinearity described earlier: adjacent wavelengths correlate at about **0.999998** in this dataset, so a loading curve physically cannot jump from one channel to the next. Any sharp spike you ever see in a spectral loading plot is far more likely to be a bad channel or a dead detector pixel than a chemical feature.
+👉 Look first at the sharpest feature in the curve. Around **1900–1930 nm** the PC1 loading plunges from about +0.027 to −0.035, crossing zero — by some margin the steepest gradient anywhere in the spectrum, with its maximum slope right at **1908 nm**.
+
+That is not an accident of the data. It sits squarely inside one of the two strong **water absorption bands** (roughly 1400–1450 nm and 1900–1960 nm) that dominate any NIR spectrum of a biological material. Water is present in every sample, it absorbs powerfully, and small differences in moisture therefore produce large spectral swings exactly there. You will return to these bands in Step 6 and get the chance to remove them.
+
+More generally: peaks and valleys in the loading curve mark wavelength regions that drive that component. The smoothness is not cosmetic — it is a direct consequence of the collinearity described earlier: adjacent wavelengths correlate at about **0.999998** in this dataset, so a loading curve physically cannot jump from one channel to the next. Any sharp spike you ever see in a spectral loading plot is far more likely to be a bad channel or a dead detector pixel than a chemical feature.
 
 This way of reading loadings — as a *loading spectrum* rather than as a set of arrows — is standard practice in chemometrics (Esbensen et al., 2002, Ch. 3).
 
