@@ -65,7 +65,7 @@ You will use **GoPCA** to explore the dataset. Work through the steps in order �
 
 ## Step 1: Run PCA *without* standardisation first
 
-Load the Wine dataset. Set:
+Load the dataset by clicking the **Wine** sample-dataset button — if you opened this tutorial from that button, the data is already loaded. Then set:
 
 * **Number of Components** → **5**  (default)
 * **Preprocessing** → **Mean Center Only** (default)

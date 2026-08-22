@@ -102,7 +102,7 @@ Before introducing time lags, run a standard SVD PCA first. This lets you see ex
 
 > **Settings** — Method: **SVD** · Components: **5** · Preprocessing: **Standard Scale**
 
-Load `cstr_temporal_pca.csv` into GoPCA and set:
+Load the dataset by clicking the **CSTR (time series)** sample-dataset button — if you opened this tutorial from that button, the data is already loaded, with `regime` pre-selected as the colour variable. Then set:
 
 * **PCA Method** → **SVD**
 * **Number of Components** → **5**
