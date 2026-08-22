@@ -84,7 +84,7 @@ Instead, **experiment, observe, and reflect**.
 
 ## Step 1: Run PCA with default settings — and diagnose the result
 
-Load the Corn dataset into GoPCA. Leave all settings at their defaults:
+Load the dataset by clicking the **Corn (NIR)** sample-dataset button — if you opened this tutorial from that button, the data is already loaded. Leave all settings at their defaults:
 
 * **Row Preprocessing** → None
 * **Column Preprocessing** → Mean Center Only

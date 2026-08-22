@@ -99,7 +99,7 @@ Instead, **experiment, observe, and reflect**.
 
 ## Step 1: Load the data and run PCA
 
-* Load the Iris dataset into GoPCA (if you pressed the "Iris" button to view this tutorial file, the data is already loaded)
+* Load the dataset by clicking the **Iris** sample-dataset button — if you opened this tutorial from that button, the data is already loaded
 * Run PCA with default settings
 
 ### Look at the **Scores Plot (PC1 vs PC2)**

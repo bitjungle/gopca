@@ -56,7 +56,7 @@ The dataset also includes three string columns that label the operating state at
 | `regime` | 4 values | Coarser grouping: `normal` (baseline + recovery), `feed_disturbance` (both feed steps combined), `oscillation`, `cooling_fault` |
 | `fault_active` | `yes` / `no` | Binary flag: `no` during normal operation and recovery, `yes` during all disturbance and fault periods |
 
-All three describe the same 800-minute timeline at different levels of detail — `event` is the most specific, `fault_active` the broadest. **Use `regime` as your color target**: four clearly named categories give the most useful visual separation in the scores plot, and the two feed disturbances are grouped together because they produce similar multivariate signatures.
+All three describe the same 800-minute timeline at different levels of detail — `event` is the most specific, `fault_active` the broadest. **Use `regime` as your color target**: four clearly named categories are easier to read than six, and both feed steps are disturbances of the same kind — a change on the feed side that the controller absorbs and recovers from. They do not, however, produce *identical* signatures: the concentration step displaces the process considerably further than the temperature step, and you will see them as two separate clumps of the same colour. Switch to `event` whenever you want them told apart.
 
 ### Operating scenarios
 
@@ -92,19 +92,23 @@ Start with **L = 10** to see the controller dynamics clearly. Then try L = 5 (fa
 
 Work through the steps in order. Each step builds on the previous one.
 
+> **Settings carry over.** Every step below opens with a **Settings** line giving the full configuration it expects. Where a step changes nothing, the line simply repeats the previous settings — so you never have to scroll back to work out what state the app should be in, and you can drop into any step directly. Anything a step actively changes is shown **in bold**.
+
 ---
 
 ## Step 1: Establish a baseline with SVD PCA
 
 Before introducing time lags, run a standard SVD PCA first. This lets you see exactly what Temporal PCA adds.
 
-Load `cstr_temporal_pca.csv` into GoPCA. Set:
+> **Settings** — Method: **SVD** · Components: **5** · Preprocessing: **Standard Scale**
 
-* **Number of Components** → **5**
+Load the dataset by clicking the **CSTR (time series)** sample-dataset button — if you opened this tutorial from that button, the data is already loaded, with `regime` pre-selected as the colour variable. Then set:
+
 * **PCA Method** → **SVD**
+* **Number of Components** → **5**
 * **Preprocessing** → **Standard Scale**
 
-Click **Go PCA**.
+Click **Go PCA!**.
 
 > **Why Standard Scale?** The 12 variables have completely different units and magnitudes — temperatures in the hundreds of Kelvin, flow rates in hundreds of L/min, concentrations below 1 mol/L, heat duty in thousands of kJ/min. Without scaling, PCA would be dominated by whichever variable has the largest numerical variance, not the most process-relevant variation.
 
@@ -126,13 +130,16 @@ Open the **Biplot** (color by `regime`).
 
 ## Step 2: Switch to Temporal PCA
 
-Keep **Preprocessing → Standard Scale** from Step 1, and change:
+> **Settings** — Method: **Temporal PCA** · Time Lags: **L = 10** · Components: **8** · Preprocessing: Standard Scale
 
-* **Lags (L)** → **10**
+Change:
+
+* **PCA Method** → **Temporal PCA** — do this first; the lag control only appears once Temporal PCA is selected
+* **Number of Time Lags (L)** → **10**
 * **Number of Components** → **8**
-* **Preprocessing** → **Standard Scale**
+* **Preprocessing** → **Standard Scale** (unchanged from Step 1)
 
-Click **Go Temporal PCA**.
+Click **Go PCA!**.
 
 > **Why keep Standard Scale?** GoPCA applies column-wise preprocessing to the original 12 variables *before* constructing the lag-embedded trajectory matrix. This means each lagged copy of a variable (e.g. `T_K` at lag 0, lag 1, …, lag 10) inherits the same scale as the original — which is exactly what you want. A change in `T_K` one minute ago should carry the same weight as a change right now. The mixed-unit argument from Step 1 applies equally here: without Standard Scale, the high-magnitude variables would dominate the trajectory matrix just as they would a standard PCA.
 >
@@ -140,16 +147,18 @@ Click **Go Temporal PCA**.
 
 ### What GoPCA is doing under the hood
 
-Instead of describing each minute as a single vector of 12 sensor values, Temporal PCA describes it as a short **sequence** of L+1 consecutive time points — a sliding window of length L+1. Each window is represented as one row in a larger **trajectory matrix**, to which SVD is then applied.
+Instead of describing each minute as a single vector of 12 sensor values, Temporal PCA describes it as a short **sequence** of L consecutive time points — a sliding window L minutes long. Each window becomes one row of a larger **trajectory matrix**, to which SVD is then applied.
+
+> **What L counts.** In GoPCA, L is the **window length**: the number of consecutive time points in each window, not the number of steps taken into the past on top of the current one. L = 10 therefore means a 10-minute window — the current minute plus the nine before it. This is the standard convention in singular spectrum analysis, where L is the embedding dimension (Vautard & Ghil, 1989).
 
 For this dataset with L = 10:
 
 | | SVD PCA (Step 1) | Temporal PCA (Step 2) |
 |---|---|---|
-| Rows | 801 (one per minute) | 791 (one per window position) |
-| Columns | 12 (sensor variables) | 132 (12 variables × 11 time steps) |
+| Rows | 801 (one per minute) | 792 (one per window position, = 801 − L + 1) |
+| Columns | 12 (sensor variables) | 120 (12 variables × 10 time steps) |
 
-Each column in the trajectory matrix represents a specific variable at a specific lag — for example, column 13 is `T_K` at lag 1 (one minute ago), column 25 is `T_K` at lag 2, and so on. SVD on this wider matrix finds directions of variance that capture not just *which variables correlate at any instant*, but *how those correlations evolve across the 10-minute window*.
+The columns are grouped by time step: the first 12 columns hold all 12 variables at the **earliest** minute of the window, the next 12 hold them one minute later, and so on. Column 13 is therefore `T_K` at the second time step of the window, column 25 is `T_K` at the third, and the final block holds the most recent minute. SVD on this wider matrix finds directions of variance that capture not just *which variables correlate at any instant*, but *how those correlations evolve across the 10-minute window*.
 
 **Why L = 10?** Looking at the process time constants table at the top of this tutorial: the PI integral time τ_I = 8 minutes is the dominant controller dynamics. L = 10 covers slightly more than one full controller action — enough to see the transient response shape, but compact enough to keep the trajectory matrix manageable. At L = 10 the 40-minute flow oscillation covers only 25% of one period, so it will not appear as a clean oscillatory pair (we address that in Step 6).
 
@@ -157,7 +166,9 @@ Each column in the trajectory matrix represents a specific variable at a specifi
 
 ## Step 3: Read the Scree Plot — how many components carry information?
 
-Open the **Scree Plot**.
+> **Settings** — Method: Temporal PCA · Time Lags: L = 10 · Components: 8 · Preprocessing: Standard Scale
+
+Nothing to change — this step reads a different plot from the same analysis you just ran. Open the **Scree Plot**.
 
 #### Questions:
 
@@ -171,7 +182,9 @@ Open the **Scree Plot**.
 
 ## Step 4: The scores plot — reading a process trajectory
 
-Open the **Scores Plot (PC1 vs PC2)** and color by `regime`.
+> **Settings** — Method: Temporal PCA · Time Lags: L = 10 · Components: 8 · Preprocessing: Standard Scale
+
+Still the same analysis. Open the **Scores Plot (PC1 vs PC2)** and color by `regime`.
 
 For time-series data, the scores form a **time-ordered trajectory** through PC space. This is different from a static dataset like Iris or Wine, where each point is an independent sample. Here, consecutive points are connected in time — the path the reactor traces through multivariate space.
 
@@ -199,7 +212,8 @@ With Row Index coloring you can immediately see, for example, that the diagonal 
 #### Questions:
 
 * Can you identify which region of the plot corresponds to normal operation?
-* The feed disturbance period (orange) should form a clear trajectory away from the normal cluster and then return. How long does the transient last — how many minutes before the points begin returning toward the normal cluster?
+* The feed disturbance period (orange) forms **two** tight clumps rather than one, joined by a trail. Why two? *(Hint: the `regime` label groups two separate events — colour by `event` to confirm.)*
+* Each step shows the same pattern: a fast excursion away from the normal cluster, then a slower return as the controller compensates. How many minutes pass between the step and the furthest point of the excursion?
 * Where does the cooling fault period appear — close to normal operation or far from it? Is it more spread out along PC1 than it was in the SVD scores plot?
 * Does the flow oscillation period trace a recognisable loop? How large is it compared to the steady-state cluster?
 * Does the reactor return to the normal region during the recovery period?
@@ -211,30 +225,34 @@ With Row Index coloring you can immediately see, for example, that the diagonal 
 
 ## Step 5: The Temporal Loadings — what dynamics are in each component?
 
-This step uses two complementary plots. Start with the **Temporal Variable Importance** plot to find out which variables drive which components, then switch to the **Temporal Loadings Plot** to read the lag structure of those components.
+> **Settings** — Method: Temporal PCA · Time Lags: L = 10 · Components: 8 · Preprocessing: Standard Scale
 
-### 5a: Identify dominant variables with Temporal Variable Importance
+Still the same analysis; this step uses two complementary plots. Start with the **Variable Importance** plot to find out which variables drive which components, then switch to the **Temporal Loadings** plot to read the lag structure of those components. (Both appear in the plot dropdown only when Temporal PCA is the selected method, which is why neither carries a "Temporal" prefix in the menu.)
 
-Open the **Temporal Variable Importance** plot. This heatmap shows the RMS loading of each variable aggregated across all lags, giving one importance value per (component, variable) cell. Bright cells identify the dominant variable(s) for each component.
+### 5a: Identify dominant variables with Variable Importance
+
+Open the **Variable Importance** plot. Its full title is *Variable Importance (RMS Aggregated Across Lags)*: the heatmap shows the root-mean-square loading of each variable across all lags, giving one importance value per (component, variable) cell. Bright cells identify the dominant variable(s) for each component.
 
 #### Questions:
 
 * Which component is most strongly driven by `Tf_K` (feed temperature)? This component captures the feed temperature step disturbance.
 * Which components are dominated by `F_L_min` (feed flow) and `residence_time_min`? These two variables are mathematically linked — τ = V/F — so they tend to appear together.
-* PC1 loads all variables at roughly equal importance. What does that tell you about what PC1 represents?
-* `cooling_duty_kJ_min` appears prominently in one or two components. Which ones? This variable carries the fault signature.
+* PC1 loads **seven** variables at almost identical importance (≈0.11 each) — reactor temperature, both concentrations, reaction rate, conversion, heat-transfer coefficient and coolant outlet temperature — while feed flow, residence time and feed composition sit near zero. What does that pattern tell you about what PC1 represents? *(Hint: which of these are reactor **states**, and which are **inputs** the operator or a disturbance sets?)*
+* Find `cooling_duty_kJ_min`. Its importance is modest everywhere and highest in the *lowest*-variance components. Does that mean the cooling fault is invisible? Hold the question until Step 7 — the answer is a useful surprise, and it is not the component you would guess from this heatmap alone.
 
 ### 5b: Read the lag structure with Temporal Loadings
 
-Open the **Temporal Loadings Plot**. Display at least 8 components.
+Open the **Temporal Loadings**. Display at least 8 components.
 
-Each curve shows how one component's loading evolves across lags 0 to L. The x-axis is lag (minutes into the past); the y-axis shows the loading magnitude at that lag. The Variable Importance plot told you *which variables matter*; this plot tells you *when in the past* they matter most.
+Each curve shows how one component's loading evolves across the window, from lag 0 to lag L − 1 (ten points for L = 10). The x-axis is **position within the window**: lag 0 is the *oldest* minute in the window and lag L − 1 is the most recent, so time runs left to right. The y-axis shows the loading magnitude at that position.
+
+The Variable Importance plot told you *which variables matter*; this plot tells you *when within the window* they matter most. Each curve is the loading profile of that component's dominant variable, which is why cross-referencing the two plots is worthwhile.
 
 **Three patterns to look for:**
 
 | Shape | Interpretation |
 |---|---|
-| **Flat / near-zero** | No temporal structure — component captures instantaneous variance |
+| **Flat at a constant level** | No temporal structure — the component weights every lag equally, so it captures variance that is present throughout the window rather than a pattern that develops across it |
 | **Monotone ramp** | Step-response or slow drift — controller or first-order process dynamics |
 | **Sinusoidal oscillation** | Periodic variation — oscillatory process behaviour |
 
@@ -247,11 +265,15 @@ Each curve shows how one component's loading evolves across lags 0 to L. The x-a
 
 > **Delayed thermal coupling — a closer look:** The reactor has thermal inertia: a change in coolant temperature (`Tc_out_K`) takes several minutes to propagate into a change in reactor temperature (`T_K`). This coupling is physically real, but at L = 10 it is subtle — both variables load broadly across many components at this lag length. To make the delay clearly visible, a longer window (L = 20–30) is needed so that the cause (`Tc_out_K` changing) and the effect (`T_K` responding) are separated by enough lags to be distinguishable. Keep this in mind when you compare lag settings in Step 8.
 
-> **Hint:** A sinusoidal temporal loading pattern means that component is tracking a variable that oscillates in time. The period of the oscillation can be estimated from the zero-crossings: if you count k zero-crossings over L lags, the oscillation period ≈ 2L/k minutes. For a 40-minute oscillation with L = 10 lags, you will see only about **one quarter of a cycle** (10/40 = 0.25) — far too little to recognise a clean sinusoid. Try L = 40 to resolve the full period.
+> **Hint:** A sinusoidal temporal loading pattern means that component is tracking a variable that oscillates in time. The period can be estimated from the zero-crossings: if you count *k* zero-crossings across a window of L minutes, the oscillation period ≈ 2L/k minutes. For a 40-minute oscillation seen through a 10-minute window, you have only **one quarter of a cycle** (10/40 = 0.25) — far too little to recognise a clean sinusoid. Try L = 40 to resolve the full period.
 
 ---
 
 ## Step 6: Identify the oscillatory pair
+
+> **Settings** — Method: Temporal PCA · Time Lags: L = 10 · Components: 8 · Preprocessing: Standard Scale
+>
+> This step starts on the settings you already have, so you can see what a *too-short* window looks like, then changes them partway through.
 
 Temporal PCA (SSA) represents a single oscillation as a **pair of components**. The correct way to identify such a pair is by the **shape of the temporal loading curves**:
 
@@ -266,12 +288,18 @@ This pairing occurs because a sine wave requires both a sine and a cosine compon
 
 **What you will actually see at L = 10:**
 
-- The top components (PC1–PC4) capture the dominant steady-state variance and step-response dynamics. Their temporal loading curves show monotone ramps or flat lines — no sinusoidal structure.
-- One or two lower-ranked components (low variance, <1%) with slightly curved or peaked loading curves — partial traces of the oscillation, but the window is too short to decompose it into a sine/cosine pair. Do not expect equal explained variance here: at L = 10 the oscillation is not fully resolved, so the equal-eigenvalue property of a pure sinusoidal SSA pair does not hold.
+- **PC1, PC3 and PC4 are flat lines**, each sitting at its own constant level rather than at zero. Between them they carry about 78% of the variance. A flat curve means the component weights every lag in the window identically — it has found variation that is simply *present* across the whole window, with no pattern developing through it.
+- **PC2 is a shallow arc**, barely curved. Not yet structure worth interpreting.
+- **PC5, PC6 and PC7 are clean monotone ramps**, sweeping from one extreme to the other across the ten lags. These are the transient responses — something changing steadily over the window.
+- **PC8 is the only curved, peaked one**, rising to a maximum near the middle of the window and falling away again. This is your partial trace of the oscillation, and it carries just 0.2% of the variance.
+
+Notice the pattern in that list, because it is the real lesson of this step: at L = 10 the components carrying almost all the variance are **flat**, and everything with genuine temporal shape has been pushed down into components worth a fraction of a percent. A ten-minute window is simply too short to see a forty-minute cycle, so the oscillation cannot compete for variance — and no sine/cosine pair can form. Do not expect equal explained variance here either: the equal-eigenvalue property of a pure sinusoidal SSA pair only holds once the oscillation is actually resolved.
 
 **To actually find the oscillatory pair, switch to L = 40:**
 
-Run Temporal PCA with **L = 40** and **10 components**. Now the lag window spans one full oscillation period. Open the **Temporal Loadings Plot**. The oscillatory pair should become clearly visible as two adjacent components whose loading curves are both sinusoidal and approximately 90° phase-shifted from each other:
+> **Settings** — Method: Temporal PCA · Time Lags: **L = 40** · Components: **10** · Preprocessing: Standard Scale
+
+Run the analysis again with the new settings. Now the lag window spans one full oscillation period. Open the **Temporal Loadings**. The oscillatory pair should become clearly visible as two adjacent components whose loading curves are both sinusoidal and approximately 90° phase-shifted from each other:
 
 * Two adjacent components with nearly equal explained variance
 * One with a cosine-shaped temporal loading — one full wave across the 40-lag window, peaking near the centre
@@ -279,7 +307,7 @@ Run Temporal PCA with **L = 40** and **10 components**. Now the lag window spans
 
 > **Sign convention:** SSA eigenvectors have arbitrary sign — GoPCA may flip the sign of a loading curve relative to what you expect. A cosine that "starts high, passes through zero, and goes negative" and one that "starts low, rises to a peak, and returns to low" are the same component with opposite sign. Focus on the *shape* (one full sinusoidal wave) and the *phase offset between the two curves*, not on whether a curve starts positive or negative.
 
-To identify which process variable drives this pair, cross-reference with the **Temporal Variable Importance** heatmap from Step 5a. The Temporal Loadings plot shows one aggregated curve per component with no variable labels — it cannot tell you which variable dominates on its own.
+To identify which process variable drives this pair, cross-reference with the **Variable Importance** heatmap from Step 5a. The Temporal Loadings plot shows one aggregated curve per component with no variable labels — it cannot tell you which variable dominates on its own.
 
 #### Questions (at L = 40):
 
@@ -293,17 +321,34 @@ To identify which process variable drives this pair, cross-reference with the **
 
 ## Step 7: Fault detection — does Temporal PCA see the cooling fault?
 
+> **Settings** — Method: Temporal PCA · Time Lags: L = 40 · Components: 10 · Preprocessing: Standard Scale
+>
+> Keep the settings from the end of Step 6. The fault is just as visible at L = 10 if you prefer to switch back — this step works at either window length.
+
 The cooling fault (minutes 520–680) reduces the heat-transfer coefficient by 28 %. The controller tries to compensate by lowering T_c, but eventually saturates at its minimum value.
 
-Return to the Scores Plot.
+Return to the **Scores Plot** and colour by `regime`.
 
 #### Questions:
 
-* Is the cooling fault period clearly separated from the normal operation cluster in PC1–PC2 space?
-* If not, try PC1 vs PC3, or PC2 vs PC3 — the fault may project most strongly onto a higher component
-* Open the Loadings Plot for the component(s) that best separate the fault period. Which variables have the largest loadings? Do they include `cooling_duty_kJ_min`, `heat_transfer_UA_kJ_min_K`, or `T_K`?
+* Is the cooling fault period clearly separated from the normal operation cluster in PC1–PC2 space? Along which axis does the separation mostly run?
+* Switch **Color by** to **Row Index**. Can you see the moment the fault begins, and how quickly the trajectory leaves the normal region?
+* Now go back to the **Variable Importance** heatmap from Step 5a and look at the row for the component that does the separating. Which variables load on it?
 
-👉 A 28 % drop in UA is a significant fault. In a real plant, this would appear gradually over hours or days. The key question is: which combination of variables carries the fault signature, and how early in the fault period does it become visible in the scores plot?
+> Note that the **Loadings Plot** and **Diagnostic Plot** are not available for Temporal PCA — a component here is a pattern spread across variables *and* lags, so there is no single loading per variable to plot. **Variable Importance** is the temporal replacement for the Loadings Plot, and **Temporal Loadings** shows the lag structure.
+
+👉 Here is the surprise promised in Step 5a. The cooling fault is separated almost completely by **PC1** — the largest component, not some obscure high-numbered one. Everything you need was in the very first component all along.
+
+That is worth pausing on, because it contradicts a natural expectation. Looking at the Variable Importance heatmap you would have picked `cooling_duty_kJ_min` as the fault variable — it is the one whose name matches the fault. But its importance is modest, and highest in components carrying a fraction of a percent of the variance. Meanwhile PC1 loads `heat_transfer_UA_kJ_min_K` — the quantity the fault actually changes — at almost the same weight as reactor temperature, both concentrations, reaction rate and conversion.
+
+That is the physics showing through. A drop in UA does not stay local: less heat leaves the reactor, so the temperature rises, which accelerates the Arrhenius rate, which converts more A into B and releases more heat still. The whole coupled reactor state moves together, and PC1 *is* that coupled state. The fault is legible in the dominant component precisely because it disturbs everything at once.
+
+The lesson generalises beyond this dataset: **do not look for a fault in the variable whose name matches it.** Look for the component that moves, then read the heatmap to find out what moved with it. A tightly coupled process rarely fails in one variable alone.
+
+#### Questions to take further:
+
+* How early in the fault period does the trajectory leave the normal region — within minutes, or only after the controller saturates?
+* The controller fights the fault until it saturates. Would the fault have been *easier* to detect with no controller at all?
 
 #### Extension:
 
@@ -311,20 +356,29 @@ Return to the Scores Plot.
 
 ---
 
-## Step 8: Compare lag settings — L = 0, L = 5, L = 10, L = 20
+## Step 8: Compare lag settings — no lags, L = 5, L = 10, L = 20
 
-Run Temporal PCA four times: **L = 0** (ordinary PCA), **L = 5**, **L = 10**, **L = 20** (keep 8 components, Standard Scale). Compare the Scree Plots, Temporal Loadings, and Scores Plots across all four.
+> **Settings** — this step deliberately changes the settings four times; each run is listed below. Keep Components at 8 and Preprocessing at Standard Scale throughout.
+
+Run the analysis four times and compare the Scree Plots, Temporal Loadings and Scores Plots across all four (keep 8 components and Standard Scale throughout):
+
+1. **PCA Method → SVD** — this is the no-lag baseline you already produced in Step 1
+2. **Temporal PCA, L = 5**
+3. **Temporal PCA, L = 10**
+4. **Temporal PCA, L = 20**
+
+> **Why not "L = 0"?** A window has to contain at least two time points before there is any temporal structure to find, so GoPCA requires **L ≥ 2**. The no-lag case is not a Temporal PCA setting at all — it is ordinary PCA, which you reach by selecting the SVD method. Setting L = 1 would be the same thing written a longer way: a one-minute window is just the original data matrix.
 
 #### Questions:
 
-* At L = 0, how does the scores plot compare to what you saw in Step 1? (It should be identical — L = 0 is exactly ordinary PCA.)
+* Take the SVD run as your baseline. What does Temporal PCA at L = 5 show that ordinary PCA could not?
 * Does increasing L reveal more temporal structure (more sinusoidal components)?
 * At L = 5, does the Scree Plot still show a clear elbow?
 * At L = 20, how many components do you need to explain 80% of the variance? Why does the number increase with L?
 * Which lag setting gives you the most useful separation between normal operation and the cooling fault in the scores plot?
-* Look at which variables dominate the early PCs across all four settings. At L = 0, fast variables (feed flow, coolant temperature) and slow variables (reactor temperature, concentrations) appear mixed together. As L increases, do you notice any separation of **fast dynamic modes** from **slow process modes** in the component structure? Fast variables (feed flow, coolant control) evolve on the timescale of the residence time (≈1 min); slow variables (reactor temperature, concentrations) evolve on the timescale of the PI integral time (8 min) and thermal inertia. Temporal PCA can separate these time scales into different components.
+* Look at which variables dominate the early PCs across all four settings. In the SVD baseline, fast variables (feed flow, coolant temperature) and slow variables (reactor temperature, concentrations) appear mixed together. As L increases, do you notice any separation of **fast dynamic modes** from **slow process modes** in the component structure? Fast variables (feed flow, coolant control) evolve on the timescale of the residence time (≈1 min); slow variables (reactor temperature, concentrations) evolve on the timescale of the PI integral time (8 min) and thermal inertia. Temporal PCA can separate these time scales into different components.
 
-> **Rule of thumb:** L should be at least as large as the longest process time constant you want to capture. For controller dynamics (τ_I = 8 min), L ≥ 10 is sensible. For the full flow oscillation (40 min), you need L ≥ 40. Larger L improves frequency resolution but increases the size of the trajectory matrix — for 801 observations and L = 40, each "augmented observation" spans 41 time steps, leaving 761 usable rows.
+> **Rule of thumb:** L should be at least as large as the longest process time constant you want to capture. For controller dynamics (τ_I = 8 min), L ≥ 10 is sensible. For the full flow oscillation (40 min), you need L ≥ 40. Larger L improves frequency resolution but increases the size of the trajectory matrix — for 801 observations and L = 40, each window spans 40 time steps and covers 480 columns (12 × 40), leaving 762 usable rows (801 − 40 + 1).
 
 ---
 
@@ -351,7 +405,7 @@ If you have worked through the other GoPCA tutorials, you have now seen PCA appl
 |---|---|
 | **Iris / Wine** | Geometric and chemical structure — clusters and correlations among static samples |
 | **Corn (NIR)** | Correlated wavelength structure — hundreds of channels carrying the same compositional signal |
-| **Swiss Roll** | Nonlinear manifold geometry — Kernel PCA unrolling a curved surface that linear PCA cannot separate |
+| **Swiss Roll** | Nonlinear manifold geometry — a curved surface that linear PCA flattens, and a lesson in why a nonlinear method is not automatically the fix |
 | **CSTR (time series)** | Dynamic process modes — time-dependent structure, delayed coupling, oscillations, fault propagation |
 
 Each dataset required a different analytical lens. The CSTR dataset shows that by embedding lagged process history into the data matrix, PCA gains the ability to *see time* — revealing not just which variables are related, but how they influence each other across minutes and hours. That conceptual bridge connects standard PCA to the full toolkit of dynamic process monitoring used in industrial practice.
