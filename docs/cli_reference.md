@@ -119,7 +119,7 @@ pca analyze [OPTIONS] <input.csv>
 
 ##### Data Selection
 - `--exclude-rows <string>` - Row indices to exclude (1-based). Supports individual indices and ranges: `1,3,5` or `1-5,8-10`
-- `--exclude-columns <string>` - Column indices/names to exclude. Supports ranges for indices: `1-3,5` or `col1,col2`
+- `--exclude-columns <string>` - Columns to exclude, as names, 1-based indices, or ranges of either: `col1,col2`, `1-3,5`, or `1400-1450`. Each entry is resolved in that order — an exact column name first, then a range between two column names, then an index range, then a single index — so on a spectrum whose columns are named by wavelength, `1400-1450` means the wavelength band. An entry that resolves to nothing is an error, never silently ignored.
 - `--target-columns <string>` - Comma-separated list of target columns to exclude
 
 ##### Group and Correlation Analysis
@@ -193,8 +193,11 @@ When verbose mode is enabled, the CLI will report:
 
 ##### Data Selection Examples
 ```bash
-# Exclude specific columns
+# Exclude specific columns by name
 pca analyze --exclude-columns "id,timestamp" data.csv
+
+# Exclude a wavelength region from a spectrum whose columns are named by wavelength
+pca analyze --exclude-columns "1400-1450,1900-1960" --snv corn.csv
 
 # Exclude specific rows (individual and ranges)
 pca analyze --exclude-rows "1,5,10-15" data.csv

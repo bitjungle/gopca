@@ -257,7 +257,7 @@ Outlier detection is one of the most practical uses of PCA in spectroscopy. A sa
 
 > **Settings** — Row-wise: SNV · Column-wise: Mean Center Only · Method: SVD, except where noted
 
-Three explorations, in increasing order of effort.
+Four explorations, in increasing order of effort. The first three vary the preprocessing; the fourth changes which data goes into the model at all.
 
 * **Compare preprocessing choices directly.** Run the analysis three ways — Mean Center Only, then Standard Scale without SNV, then SNV + Mean Center Only — and note PC1's variance each time. Which correction actually addresses the artefact, and which one barely moves it? (The "Why SNV rather than standard scaling?" section below gives the reasoning; this lets you see it.)
 
@@ -273,11 +273,42 @@ Three explorations, in increasing order of effort.
 
   Vector normalisation lands between the two: it removes part of the scatter but leaves more of it than SNV does. Correlate PC1 with what you know of the artefact and you will find the same ordering. Two corrections can both be defensible and still not be equally good for your data — which is exactly why the comparison is worth making rather than reaching for a default.
 
-### What a spectroscopist would do next
+### What a spectroscopist would do next: exclude the water bands
 
-The natural next move is to **exclude the water bands** — the 1400–1450 nm and 1900–1960 nm regions from Step 3 — and see what emerges once the strongest absorber in the spectrum is out of the way. It is a revealing exercise: removing those 57 of 700 channels leaves moisture and starch almost unchanged, but lifts **oil** out of PC5 and into PC2, where it becomes far easier to see.
+The last exploration is the one a spectroscopist reaches for first. **Exclude the water bands** — the 1400–1450 nm and 1900–1960 nm regions you met in Step 3 — and see what emerges once the strongest absorber in the spectrum is out of the way.
 
-Selecting a wavelength range is not yet possible in GoPCA Desktop, so this one is for reference rather than something to try now. In the `pca` command-line tool it is a single `--exclude-columns` argument listing the wavelengths to drop.
+Above the data table you will find the **Variables** panel, showing the mean spectrum as a small plot. There are two ways to remove a region:
+
+* **Drag across the plot.** Press on 1400, drag to 1450, release. The region greys out. Dragging back across an excluded region puts it back.
+* **Type the ranges.** In the field below the plot, enter the two bands and click **Exclude**:
+
+  ```
+  1400-1450, 1900-1960
+  ```
+
+Either way you should see *643 of 700 included · 57 excluded*, and two chips reading `1400–1450` and `1900–1960`. Click a chip to restore that band; **Include all** restores everything.
+
+Now run the analysis again with **SNV + Mean Center Only** and compare against Step 4:
+
+| | All 700 channels | Water bands excluded |
+|---|---|---|
+| PC1 variance | 84.0% | 86.1% |
+| Moisture — best component | PC2, *r* = 0.58 | PC2, *r* = 0.52 |
+| Oil | **PC5**, *r* = 0.54 | **PC2**, *r* = 0.56 |
+| Protein | PC2, *r* = 0.67 | PC2, *r* = 0.66 |
+| Starch | PC2, *r* = 0.38 | PC2, *r* = 0.38 |
+
+Two things to take from this.
+
+**Oil no longer needs a fifth component.** With the water bands gone, PC2 is its best single component — all four constituents now sit on the same axis, and the awkward exception noted in Step 4 disappears. This is what excluding an interfering region is supposed to buy you.
+
+**Moisture gets slightly worse, and that is not a bug.** You deleted the wavelengths where water absorbs most strongly, so some of the moisture signal went with them. The exclusion is not free: it removes information about whatever absorbs in that region along with the interference. Whether the trade is worth making depends on which constituent you care about — which is a decision about chemistry, not about statistics.
+
+> **The same thing from the command line:**
+> ```
+> pca analyze --exclude-columns 1400-1450,1900-1960 --snv corn.csv
+> ```
+> Both the desktop app and the CLI drop the columns *before* any preprocessing runs, so SNV is computed on the 643 surviving channels either way, and the two produce identical results. Because the columns of this dataset are named by wavelength, `1400-1450` is read as the wavelength band rather than as column positions 1400 through 1450.
 
 ---
 

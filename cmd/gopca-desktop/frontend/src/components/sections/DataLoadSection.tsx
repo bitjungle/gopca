@@ -38,6 +38,12 @@ import { OpenTutorial } from '../../../wailsjs/go/main/App';
  * All state comes from FileDataContext, PCAContext, and GoCSVContext.
  * No props needed.
  */
+// Above this many columns the per-column checkbox strip stops being usable — 700
+// spectral channels is a strip tens of thousands of pixels across — so the axis
+// view is offered instead, where a whole region is one drag. Below it the strip
+// fits on screen and is the more precise tool, because every column name is visible.
+const WIDE_DATASET_COLUMNS = 20;
+
 export function DataLoadSection() {
     const {
         fileData, fileError, datasetId, loading: fileLoading, clearFileError
@@ -194,10 +200,7 @@ export function DataLoadSection() {
             {fileData && (
                 <div className="bg-white dark:bg-gray-800 rounded-lg p-6 shadow-lg border border-gray-200 dark:border-gray-700">
                     <h2 className="text-xl font-semibold mb-4">Loaded Data</h2>
-                    {/* For wide datasets the per-column checkbox strip is impractical —
-                        700 channels is a strip tens of thousands of pixels across — so
-                        offer the axis view, where a region is one drag. */}
-                    {fileData.headers.length > 20 && (
+                    {fileData.headers.length > WIDE_DATASET_COLUMNS && (
                         <div className="mb-4">
                             <ColumnRangeSelector
                                 headers={fileData.headers}
