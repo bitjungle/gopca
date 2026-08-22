@@ -214,22 +214,22 @@ With Row Index coloring you can immediately see, for example, that the diagonal 
 
 ## Step 5: The Temporal Loadings — what dynamics are in each component?
 
-This step uses two complementary plots. Start with the **Temporal Variable Importance** plot to find out which variables drive which components, then switch to the **Temporal Loadings Plot** to read the lag structure of those components.
+This step uses two complementary plots. Start with the **Variable Importance** plot to find out which variables drive which components, then switch to the **Temporal Loadings** plot to read the lag structure of those components. (Both appear in the plot dropdown only when Temporal PCA is the selected method, which is why neither carries a "Temporal" prefix in the menu.)
 
-### 5a: Identify dominant variables with Temporal Variable Importance
+### 5a: Identify dominant variables with Variable Importance
 
-Open the **Temporal Variable Importance** plot. This heatmap shows the RMS loading of each variable aggregated across all lags, giving one importance value per (component, variable) cell. Bright cells identify the dominant variable(s) for each component.
+Open the **Variable Importance** plot. Its full title is *Variable Importance (RMS Aggregated Across Lags)*: the heatmap shows the root-mean-square loading of each variable across all lags, giving one importance value per (component, variable) cell. Bright cells identify the dominant variable(s) for each component.
 
 #### Questions:
 
 * Which component is most strongly driven by `Tf_K` (feed temperature)? This component captures the feed temperature step disturbance.
 * Which components are dominated by `F_L_min` (feed flow) and `residence_time_min`? These two variables are mathematically linked — τ = V/F — so they tend to appear together.
-* PC1 loads all variables at roughly equal importance. What does that tell you about what PC1 represents?
-* `cooling_duty_kJ_min` appears prominently in one or two components. Which ones? This variable carries the fault signature.
+* PC1 loads **seven** variables at almost identical importance (≈0.11 each) — reactor temperature, both concentrations, reaction rate, conversion, heat-transfer coefficient and coolant outlet temperature — while feed flow, residence time and feed composition sit near zero. What does that pattern tell you about what PC1 represents? *(Hint: which of these are reactor **states**, and which are **inputs** the operator or a disturbance sets?)*
+* Find `cooling_duty_kJ_min`. Its importance is modest everywhere and highest in the *lowest*-variance components. Does that mean the cooling fault is invisible? Hold the question until Step 7 — the answer is a useful surprise, and it is not the component you would guess from this heatmap alone.
 
 ### 5b: Read the lag structure with Temporal Loadings
 
-Open the **Temporal Loadings Plot**. Display at least 8 components.
+Open the **Temporal Loadings**. Display at least 8 components.
 
 Each curve shows how one component's loading evolves across the window, from lag 0 to lag L − 1 (ten points for L = 10). The x-axis is **position within the window**: lag 0 is the *oldest* minute in the window and lag L − 1 is the most recent, so time runs left to right. The y-axis shows the loading magnitude at that position.
 
@@ -239,7 +239,7 @@ The Variable Importance plot told you *which variables matter*; this plot tells 
 
 | Shape | Interpretation |
 |---|---|
-| **Flat / near-zero** | No temporal structure — component captures instantaneous variance |
+| **Flat at a constant level** | No temporal structure — the component weights every lag equally, so it captures variance that is present throughout the window rather than a pattern that develops across it |
 | **Monotone ramp** | Step-response or slow drift — controller or first-order process dynamics |
 | **Sinusoidal oscillation** | Periodic variation — oscillatory process behaviour |
 
@@ -276,7 +276,7 @@ This pairing occurs because a sine wave requires both a sine and a cosine compon
 
 **To actually find the oscillatory pair, switch to L = 40:**
 
-Run Temporal PCA with **L = 40** and **10 components**. Now the lag window spans one full oscillation period. Open the **Temporal Loadings Plot**. The oscillatory pair should become clearly visible as two adjacent components whose loading curves are both sinusoidal and approximately 90° phase-shifted from each other:
+Run Temporal PCA with **L = 40** and **10 components**. Now the lag window spans one full oscillation period. Open the **Temporal Loadings**. The oscillatory pair should become clearly visible as two adjacent components whose loading curves are both sinusoidal and approximately 90° phase-shifted from each other:
 
 * Two adjacent components with nearly equal explained variance
 * One with a cosine-shaped temporal loading — one full wave across the 40-lag window, peaking near the centre
@@ -284,7 +284,7 @@ Run Temporal PCA with **L = 40** and **10 components**. Now the lag window spans
 
 > **Sign convention:** SSA eigenvectors have arbitrary sign — GoPCA may flip the sign of a loading curve relative to what you expect. A cosine that "starts high, passes through zero, and goes negative" and one that "starts low, rises to a peak, and returns to low" are the same component with opposite sign. Focus on the *shape* (one full sinusoidal wave) and the *phase offset between the two curves*, not on whether a curve starts positive or negative.
 
-To identify which process variable drives this pair, cross-reference with the **Temporal Variable Importance** heatmap from Step 5a. The Temporal Loadings plot shows one aggregated curve per component with no variable labels — it cannot tell you which variable dominates on its own.
+To identify which process variable drives this pair, cross-reference with the **Variable Importance** heatmap from Step 5a. The Temporal Loadings plot shows one aggregated curve per component with no variable labels — it cannot tell you which variable dominates on its own.
 
 #### Questions (at L = 40):
 
@@ -304,11 +304,24 @@ Return to the Scores Plot.
 
 #### Questions:
 
-* Is the cooling fault period clearly separated from the normal operation cluster in PC1–PC2 space?
-* If not, try PC1 vs PC3, or PC2 vs PC3 — the fault may project most strongly onto a higher component
-* Open the Loadings Plot for the component(s) that best separate the fault period. Which variables have the largest loadings? Do they include `cooling_duty_kJ_min`, `heat_transfer_UA_kJ_min_K`, or `T_K`?
+* Is the cooling fault period clearly separated from the normal operation cluster in PC1–PC2 space? Along which axis does the separation mostly run?
+* Switch **Color by** to **Row Index**. Can you see the moment the fault begins, and how quickly the trajectory leaves the normal region?
+* Now go back to the **Variable Importance** heatmap from Step 5a and look at the row for the component that does the separating. Which variables load on it?
 
-👉 A 28 % drop in UA is a significant fault. In a real plant, this would appear gradually over hours or days. The key question is: which combination of variables carries the fault signature, and how early in the fault period does it become visible in the scores plot?
+> Note that the **Loadings Plot** and **Diagnostic Plot** are not available for Temporal PCA — a component here is a pattern spread across variables *and* lags, so there is no single loading per variable to plot. **Variable Importance** is the temporal replacement for the Loadings Plot, and **Temporal Loadings** shows the lag structure.
+
+👉 Here is the surprise promised in Step 5a. The cooling fault is separated almost completely by **PC1** — the largest component, not some obscure high-numbered one. Everything you need was in the very first component all along.
+
+That is worth pausing on, because it contradicts a natural expectation. Looking at the Variable Importance heatmap you would have picked `cooling_duty_kJ_min` as the fault variable — it is the one whose name matches the fault. But its importance is modest, and highest in components carrying a fraction of a percent of the variance. Meanwhile PC1 loads `heat_transfer_UA_kJ_min_K` — the quantity the fault actually changes — at almost the same weight as reactor temperature, both concentrations, reaction rate and conversion.
+
+That is the physics showing through. A drop in UA does not stay local: less heat leaves the reactor, so the temperature rises, which accelerates the Arrhenius rate, which converts more A into B and releases more heat still. The whole coupled reactor state moves together, and PC1 *is* that coupled state. The fault is legible in the dominant component precisely because it disturbs everything at once.
+
+The lesson generalises beyond this dataset: **do not look for a fault in the variable whose name matches it.** Look for the component that moves, then read the heatmap to find out what moved with it. A tightly coupled process rarely fails in one variable alone.
+
+#### Questions to take further:
+
+* How early in the fault period does the trajectory leave the normal region — within minutes, or only after the controller saturates?
+* The controller fights the fault until it saturates. Would the fault have been *easier* to detect with no controller at all?
 
 #### Extension:
 
