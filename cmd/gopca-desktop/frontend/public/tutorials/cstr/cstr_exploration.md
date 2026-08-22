@@ -92,19 +92,23 @@ Start with **L = 10** to see the controller dynamics clearly. Then try L = 5 (fa
 
 Work through the steps in order. Each step builds on the previous one.
 
+> **Settings carry over.** Every step below opens with a **Settings** line giving the full configuration it expects. Where a step changes nothing, the line simply repeats the previous settings — so you never have to scroll back to work out what state the app should be in, and you can drop into any step directly. Anything a step actively changes is shown **in bold**.
+
 ---
 
 ## Step 1: Establish a baseline with SVD PCA
 
 Before introducing time lags, run a standard SVD PCA first. This lets you see exactly what Temporal PCA adds.
 
-Load `cstr_temporal_pca.csv` into GoPCA. Set:
+> **Settings** — Method: **SVD** · Components: **5** · Preprocessing: **Standard Scale**
 
-* **Number of Components** → **5**
+Load `cstr_temporal_pca.csv` into GoPCA and set:
+
 * **PCA Method** → **SVD**
+* **Number of Components** → **5**
 * **Preprocessing** → **Standard Scale**
 
-Click **Go PCA**.
+Click **Go PCA!**.
 
 > **Why Standard Scale?** The 12 variables have completely different units and magnitudes — temperatures in the hundreds of Kelvin, flow rates in hundreds of L/min, concentrations below 1 mol/L, heat duty in thousands of kJ/min. Without scaling, PCA would be dominated by whichever variable has the largest numerical variance, not the most process-relevant variation.
 
@@ -125,6 +129,8 @@ Open the **Biplot** (color by `regime`).
 ---
 
 ## Step 2: Switch to Temporal PCA
+
+> **Settings** — Method: **Temporal PCA** · Time Lags: **L = 10** · Components: **8** · Preprocessing: Standard Scale
 
 Change:
 
@@ -160,7 +166,9 @@ The columns are grouped by time step: the first 12 columns hold all 12 variables
 
 ## Step 3: Read the Scree Plot — how many components carry information?
 
-Open the **Scree Plot**.
+> **Settings** — Method: Temporal PCA · Time Lags: L = 10 · Components: 8 · Preprocessing: Standard Scale
+
+Nothing to change — this step reads a different plot from the same analysis you just ran. Open the **Scree Plot**.
 
 #### Questions:
 
@@ -174,7 +182,9 @@ Open the **Scree Plot**.
 
 ## Step 4: The scores plot — reading a process trajectory
 
-Open the **Scores Plot (PC1 vs PC2)** and color by `regime`.
+> **Settings** — Method: Temporal PCA · Time Lags: L = 10 · Components: 8 · Preprocessing: Standard Scale
+
+Still the same analysis. Open the **Scores Plot (PC1 vs PC2)** and color by `regime`.
 
 For time-series data, the scores form a **time-ordered trajectory** through PC space. This is different from a static dataset like Iris or Wine, where each point is an independent sample. Here, consecutive points are connected in time — the path the reactor traces through multivariate space.
 
@@ -214,7 +224,9 @@ With Row Index coloring you can immediately see, for example, that the diagonal 
 
 ## Step 5: The Temporal Loadings — what dynamics are in each component?
 
-This step uses two complementary plots. Start with the **Variable Importance** plot to find out which variables drive which components, then switch to the **Temporal Loadings** plot to read the lag structure of those components. (Both appear in the plot dropdown only when Temporal PCA is the selected method, which is why neither carries a "Temporal" prefix in the menu.)
+> **Settings** — Method: Temporal PCA · Time Lags: L = 10 · Components: 8 · Preprocessing: Standard Scale
+
+Still the same analysis; this step uses two complementary plots. Start with the **Variable Importance** plot to find out which variables drive which components, then switch to the **Temporal Loadings** plot to read the lag structure of those components. (Both appear in the plot dropdown only when Temporal PCA is the selected method, which is why neither carries a "Temporal" prefix in the menu.)
 
 ### 5a: Identify dominant variables with Variable Importance
 
@@ -258,6 +270,10 @@ The Variable Importance plot told you *which variables matter*; this plot tells 
 
 ## Step 6: Identify the oscillatory pair
 
+> **Settings** — Method: Temporal PCA · Time Lags: L = 10 · Components: 8 · Preprocessing: Standard Scale
+>
+> This step starts on the settings you already have, so you can see what a *too-short* window looks like, then changes them partway through.
+
 Temporal PCA (SSA) represents a single oscillation as a **pair of components**. The correct way to identify such a pair is by the **shape of the temporal loading curves**:
 
 1. Both curves are sinusoidal at the same frequency
@@ -276,7 +292,9 @@ This pairing occurs because a sine wave requires both a sine and a cosine compon
 
 **To actually find the oscillatory pair, switch to L = 40:**
 
-Run Temporal PCA with **L = 40** and **10 components**. Now the lag window spans one full oscillation period. Open the **Temporal Loadings**. The oscillatory pair should become clearly visible as two adjacent components whose loading curves are both sinusoidal and approximately 90° phase-shifted from each other:
+> **Settings** — Method: Temporal PCA · Time Lags: **L = 40** · Components: **10** · Preprocessing: Standard Scale
+
+Run the analysis again with the new settings. Now the lag window spans one full oscillation period. Open the **Temporal Loadings**. The oscillatory pair should become clearly visible as two adjacent components whose loading curves are both sinusoidal and approximately 90° phase-shifted from each other:
 
 * Two adjacent components with nearly equal explained variance
 * One with a cosine-shaped temporal loading — one full wave across the 40-lag window, peaking near the centre
@@ -298,9 +316,13 @@ To identify which process variable drives this pair, cross-reference with the **
 
 ## Step 7: Fault detection — does Temporal PCA see the cooling fault?
 
+> **Settings** — Method: Temporal PCA · Time Lags: L = 40 · Components: 10 · Preprocessing: Standard Scale
+>
+> Keep the settings from the end of Step 6. The fault is just as visible at L = 10 if you prefer to switch back — this step works at either window length.
+
 The cooling fault (minutes 520–680) reduces the heat-transfer coefficient by 28 %. The controller tries to compensate by lowering T_c, but eventually saturates at its minimum value.
 
-Return to the Scores Plot.
+Return to the **Scores Plot** and colour by `regime`.
 
 #### Questions:
 
@@ -330,6 +352,8 @@ The lesson generalises beyond this dataset: **do not look for a fault in the var
 ---
 
 ## Step 8: Compare lag settings — no lags, L = 5, L = 10, L = 20
+
+> **Settings** — this step deliberately changes the settings four times; each run is listed below. Keep Components at 8 and Preprocessing at Standard Scale throughout.
 
 Run the analysis four times and compare the Scree Plots, Temporal Loadings and Scores Plots across all four (keep 8 components and Standard Scale throughout):
 
