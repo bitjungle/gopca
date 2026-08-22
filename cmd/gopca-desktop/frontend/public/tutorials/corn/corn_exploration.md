@@ -160,7 +160,7 @@ But be careful about how much credit to give SNV here, because this is where a l
 
 That is not a failure of SNV, and it is not a mistake on your part. SNV is a *first-order* scatter correction: it removes the additive offset and the overall scale of each spectrum, but real scatter is wavelength-dependent, so a residual survives. This is precisely why chemometricians also reach for MSC, EMSC and derivative preprocessing. The chemistry is in this data — you will find it in Step 4 — but it is not in PC1.
 
-> Keep **SNV + Mean Center Only** active for all remaining steps. This is the standard starting point for NIR PCA.
+> Keep **SNV + Mean Center Only** active through Steps 3 to 5. This is the standard starting point for NIR PCA. Step 6 deliberately changes it again, to compare against the alternatives.
 
 ---
 

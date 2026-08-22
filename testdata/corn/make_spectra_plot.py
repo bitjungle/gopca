@@ -28,7 +28,9 @@ plt.ylabel("Absorbance")
 plt.title("NIR Spectra of Corn Samples")
 
 plt.tight_layout()
-# JPEG at dpi=150 keeps the figure well under the 500 KB guideline in
-# docs/CLAUDE.md; a 300 dpi PNG of this plot was 1.3 MB and ships in the binary.
-plt.savefig("corn_spectra.jpg", dpi=150, quality=90)
+# JPEG at dpi=150 keeps this figure to a few hundred KB. It is bundled into the
+# desktop binary, so size matters; a 300 dpi PNG of the same plot was 1.3 MB.
+# JPEG quality goes through pil_kwargs: the older savefig(quality=...) argument
+# was deprecated in Matplotlib 3.3 and removed in 3.5.
+plt.savefig("corn_spectra.jpg", dpi=150, pil_kwargs={"quality": 90})
 plt.show()

@@ -4,5 +4,22 @@ This dataset consists of 80 samples of corn measured on 3 different NIR spectrom
 
 * [Data source](https://eigenvector.com/data/Corn/)
 * Research article: Fatemi, Singh & Kamruzzaman (2022), *Identification of informative spectral ranges for predicting major chemical constituents in corn using NIR spectroscopy*, Food Chemistry 383:132442. https://doi.org/10.1016/j.foodchem.2022.132442
-* The bundled `corn.csv` is built from `corn_m5spec.csv` (the m5 instrument) by `make_dataset.py`
 * License: Unknown
+
+## Regenerating the data
+
+The full Eigenvector dataset holds the same 80 samples measured on three instruments.
+The `corn.csv` bundled with GoPCA uses the **m5** instrument only. It is built by
+[`make_dataset.py`](make_dataset.py) from two files in this directory,
+`corn_m5spec.csv` (the spectra) and `corn_propvals.csv` (the laboratory values):
+
+```bash
+cd testdata/corn
+python make_dataset.py            # writes corn.csv
+```
+
+The script also derives the categorical `Low`/`Mid`/`High` columns from the
+laboratory values, alongside the continuous `#target` columns.
+
+The spectra figure used by the tutorial is regenerated with
+[`make_spectra_plot.py`](make_spectra_plot.py).
