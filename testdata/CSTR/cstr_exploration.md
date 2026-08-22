@@ -287,8 +287,12 @@ This pairing occurs because a sine wave requires both a sine and a cosine compon
 
 **What you will actually see at L = 10:**
 
-- The top components (PC1–PC4) capture the dominant steady-state variance and step-response dynamics. Their temporal loading curves show monotone ramps or flat lines — no sinusoidal structure.
-- One or two lower-ranked components (low variance, <1%) with slightly curved or peaked loading curves — partial traces of the oscillation, but the window is too short to decompose it into a sine/cosine pair. Do not expect equal explained variance here: at L = 10 the oscillation is not fully resolved, so the equal-eigenvalue property of a pure sinusoidal SSA pair does not hold.
+- **PC1, PC3 and PC4 are flat lines**, each sitting at its own constant level rather than at zero. Between them they carry about 78% of the variance. A flat curve means the component weights every lag in the window identically — it has found variation that is simply *present* across the whole window, with no pattern developing through it.
+- **PC2 is a shallow arc**, barely curved. Not yet structure worth interpreting.
+- **PC5, PC6 and PC7 are clean monotone ramps**, sweeping from one extreme to the other across the ten lags. These are the transient responses — something changing steadily over the window.
+- **PC8 is the only curved, peaked one**, rising to a maximum near the middle of the window and falling away again. This is your partial trace of the oscillation, and it carries just 0.2% of the variance.
+
+Notice the pattern in that list, because it is the real lesson of this step: at L = 10 the components carrying almost all the variance are **flat**, and everything with genuine temporal shape has been pushed down into components worth a fraction of a percent. A ten-minute window is simply too short to see a forty-minute cycle, so the oscillation cannot compete for variance — and no sine/cosine pair can form. Do not expect equal explained variance here either: the equal-eigenvalue property of a pure sinusoidal SSA pair only holds once the oscillation is actually resolved.
 
 **To actually find the oscillatory pair, switch to L = 40:**
 
