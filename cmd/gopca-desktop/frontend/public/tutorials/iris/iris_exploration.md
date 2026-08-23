@@ -99,7 +99,7 @@ Instead, **experiment, observe, and reflect**.
 
 ## Step 1: Load the data and run PCA
 
-> **Settings** — Column-wise: **Mean Center Only** (the default) · Method: **SVD** · Components: **4**
+> **Settings** — Column-wise: **Mean Center Only** (the default) · Method: **SVD** · Components: **3** (the default for a 4-variable dataset)
 
 * Load the dataset by clicking the **Iris** sample-dataset button — if you opened this tutorial from that button, the data is already loaded
 * Leave the preprocessing at its default, **Mean Center Only**, and click **Go PCA!**
@@ -122,7 +122,7 @@ That pattern — one group cleanly apart, two graded into each other — is wort
 
 ## Step 2: Explore explained structure
 
-> **Settings** — Column-wise: Mean Center Only · Method: SVD · Components: 4
+> **Settings** — Column-wise: Mean Center Only · Method: SVD · Components: 3
 
 Open the **Scree Plot**. This is the standard tool for deciding how many principal components to keep. Each bar shows how much of the total variance in the dataset is explained by one component. The bars are ranked — PC1 always explains the most, PC2 the second most, and so on.
 
@@ -145,7 +145,7 @@ Try switching to a **3D Scores Plot** and compare with your Scree Plot reading:
 * Does the 3D plot reveal additional structure that the 2D plot misses?
 * Does PC3's contribution in the Scree Plot justify the added complexity?
 
-> **Something to think about:** Set the number of components to 4 and re-run. What is the cumulative explained variance now? Why does a 4-component model explain *exactly* 100% of the variance — and how does the number of variables in this dataset relate to that?
+> **Something to think about:** GoPCA defaults to **3** components here, one fewer than the dataset has variables. Raise **Components** to **4** and re-run. What is the cumulative explained variance now? Why does a 4-component model explain *exactly* 100% of the variance — and how does the number of variables in this dataset relate to that?
 >
 > 👉 PCA cannot create more independent directions than there are variables. With 4 variables, the data lives in at most 4-dimensional space, so 4 components account for all of it. There is nothing left to explain. This is why the Scree Plot always has at most as many bars as your dataset has variables — and why adding a fifth component here would be meaningless.
 
@@ -153,7 +153,7 @@ Try switching to a **3D Scores Plot** and compare with your Scree Plot reading:
 
 ## Step 3: Understand *why* the separation happens
 
-> **Settings** — Column-wise: Mean Center Only · Method: SVD · Components: 4
+> **Settings** — Column-wise: Mean Center Only · Method: SVD · Components: 3
 
 Now open the **Loadings Plot**.
 
@@ -181,7 +181,7 @@ The correlations behind this are strong: petal length and petal width move toget
 
 ## Step 4: Combine both views (Biplot)
 
-> **Settings** — Column-wise: Mean Center Only · Method: SVD · Components: 4
+> **Settings** — Column-wise: Mean Center Only · Method: SVD · Components: 3
 
 Open the **Biplot**, which shows:
 
@@ -204,7 +204,7 @@ in the same plot.
 
 ## Step 5: Use color and grouping
 
-> **Settings** — Column-wise: Mean Center Only · Method: SVD · Components: 4
+> **Settings** — Column-wise: Mean Center Only · Method: SVD · Components: 3
 
 In GoPCA, set **Color By → `species`** and enable **Confidence Ellipses**.
 
@@ -228,7 +228,7 @@ Try adjusting the confidence level (90%, 95%, 99%):
 
 ## Step 6: Investigate preprocessing (very important!)
 
-> **Settings** — Column-wise: **Mean Center Only**, then **Standard Scale (Mean + Std Dev)** · Method: SVD · Components: 4
+> **Settings** — Column-wise: **Mean Center Only**, then **Standard Scale (Mean + Std Dev)** · Method: SVD · Components: 3
 
 Now repeat the analysis with different preprocessing settings.
 
@@ -254,7 +254,7 @@ In GoPCA, try switching between:
 
 It is not petals against sepals — petal *width* is actually the second **smallest** of the four, below sepal length. It is **petal length alone**, with roughly five times the spread of anything else. That is what PC1 was reporting in Step 3 when it gave petal length a loading of 0.857 against 0.36 or less for everything else.
 
-Standardising removes that advantage by giving every variable unit variance, and the result changes visibly:
+Standardizing removes that advantage by giving every variable unit variance, and the result changes visibly:
 
 | | PC1 | PC2 | PC1 + PC2 |
 |---|---|---|---|
