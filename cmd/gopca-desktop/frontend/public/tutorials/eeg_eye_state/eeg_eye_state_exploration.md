@@ -365,18 +365,25 @@ After each change, click **Go PCA** and look at the **Scores Plot** and the **Ex
 
 **What to expect as L increases:**
 
-* **Scores plot**: the trajectory becomes richer and more structured. At L=8 the plot looks like a diffuse cloud with sparse arms — barely trajectory-like. At L=16 loops begin to appear. At L=32 the recommended looping structure is clear. At L=64 the oscillatory loops in the closed-eye cluster become very prominent and complex — the plot looks almost like a dragonfly.
+* **Scores plot**: the trajectory becomes visually richer as *L* grows — but read the richness carefully. At L=8 the plot is a diffuse cloud with sparse arms, barely trajectory-like. At L=16 loops begin to appear. At L=32 the looping structure is clear. At L=64 the plot develops a striking fan of long thin blades radiating from a dense core, insect-like at a glance.
+
+  **Those blades are Step 5's lesson magnified.** At L=64 the outermost 0.1% of points come *entirely* from t ≈ 83 s, and the outermost 1% is dominated by two short intervals — roughly 83–84 s and 91–92 s. A longer window keeps each disturbance inside the sliding frame for more consecutive positions, so **growing *L* makes artifacts more prominent, not less**: the same excursion is drawn 64 windows long instead of 32. The 14,913 ordinary windows are all in the dense core.
 * **PC1 explained variance**: decreases as L grows (roughly 56% → 55% → 53% → 50%). Longer windows capture more oscillatory variance in later components, so PC1's share of the total decreases.
 * **Trajectory matrix**: grows wider with L (14 × L columns). The Scores Plot does not become harder to read, but the **Temporal Loadings** plot becomes more crowded and harder to interpret at high L values.
 
 #### Questions:
 
 * At L=8, does the scores plot look like a clear trajectory, or more like a diffuse cloud?
-* At L=16, can you see the beginning of looping structure in the closed-eye cluster?
-* Compare L=32 and L=64: the L=64 plot is richer, but is it more or less interpretable than L=32 for the purpose of understanding eye-state dynamics?
+* At L=16, can you see the beginning of looping structure in the dense cluster?
+* At L=64, hover over the tips of the longest blades. How many *distinct* moments in the recording do they come from?
+* Compare L=32 and L=64: the L=64 plot is richer, but is it more or less interpretable than L=32 for understanding eye-state dynamics?
 * How does PC1's explained variance change as L increases? What does this tell you about how variance is redistributed across components?
 
-👉 A short window cannot see a full oscillation cycle — components reflect adjacent-sample correlations rather than meaningful rhythms. A longer window gives PCA more temporal context and the scores plot becomes richer — but the trajectory matrix grows wider and the Temporal Loadings plot becomes harder to read. The scores plot itself remains informative even at L=64; the practical limit is interpretability of the loadings, not the scores.
+👉 A short window cannot see a full oscillation cycle — components reflect adjacent-sample correlations rather than meaningful rhythms. A longer window gives PCA more temporal context, and both plots change in ways worth separating.
+
+The **Temporal Loadings** plot simply gets more crowded: more components, each drawn across more lags. That is a legibility problem and no more.
+
+The **Scores Plot** changes in a way that is easy to misread. Its most eye-catching features grow with *L* — but so does the smearing, and the two are the same thing. A handful of brief disturbances end up drawn as long, elaborate blades, while the 14,913 ordinary windows stay packed in the core. A richer-looking plot is not necessarily a more informative one, and here the extra richness is mostly a few seconds of bad recording, stretched.
 
 ---
 
