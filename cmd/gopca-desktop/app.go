@@ -1347,29 +1347,17 @@ func (a *App) ExportPCAModel(request ExportPCAModelRequest) error {
 		KernelCoef0:     request.Config.KernelCoef0,
 	}
 
-	// Create preprocessor to get the preprocessing parameters
-	preprocessor := core.NewPreprocessorWithScaleOnly(
-		pcaConfig.MeanCenter,
-		pcaConfig.StandardScale,
-		pcaConfig.RobustScale,
-		pcaConfig.ScaleOnly,
-		pcaConfig.SNV,
-		pcaConfig.VectorNorm,
-	)
-
-	// Preprocess the data for metrics calculation
-	// This ensures metrics are calculated on the same preprocessed data that was used for PCA
-	var preprocessedData types.Matrix
-	if pcaConfig.MeanCenter || pcaConfig.StandardScale || pcaConfig.RobustScale ||
-		pcaConfig.ScaleOnly || pcaConfig.SNV || pcaConfig.VectorNorm {
-		var err error
-		preprocessedData, err = preprocessor.FitTransform(request.Data)
-		if err != nil {
-			return fmt.Errorf("failed to preprocess data for export: %v", err)
-		}
-	} else {
-		// No preprocessing needed
-		preprocessedData = request.Data
+	// Re-fit the preprocessor so the exported model carries the parameters that
+	// were applied, and so metrics are computed against the same matrix the
+	// engine used. This must not be a plain FitTransform: with NIPALS native
+	// missing-value handling the data still contains NaNs, and Preprocessor
+	// would silently return NaN means and standard deviations, which cannot even
+	// be marshalled to JSON. FitPreprocessorForExport handles that case with
+	// NaN-aware column statistics and returns a nil matrix, suppressing
+	// diagnostics exactly as the engine does.
+	preprocessor, preprocessedData, err := core.FitPreprocessorForExport(request.Data, pcaConfig)
+	if err != nil {
+		return fmt.Errorf("failed to preprocess data for export: %v", err)
 	}
 
 	// Create a mock CSVData structure for the output conversion
