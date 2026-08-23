@@ -5,6 +5,28 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Fixed
+- **PCA component signs are now consistent between methods.** A principal component is defined only
+  up to its sign, and SVD and NIPALS previously resolved that ambiguity differently — on the Wine
+  dataset, switching method mirrored the scores plot on both axes for otherwise identical components.
+  Both methods now make the largest-magnitude loading of each component positive, the rule scikit-learn
+  and MATLAB use. Signs may still differ from software that applies no convention, such as R's
+  `prcomp`; see "A note on the sign of a component" in the PCA introduction.
+- **NIPALS with native missing-value handling now honours column-wise preprocessing.** Requests for
+  standard, robust or scale-only preprocessing were accepted and silently ignored on this path,
+  returning an unscaled analysis — in GoPCA Desktop with no warning of any kind, since the warning
+  went to a terminal no desktop user sees. Means, standard deviations, medians and MADs are now
+  computed over the observed values of each column. The row-wise methods (SNV, vector normalization)
+  remain unsupported with missing data and are now rejected with an explanatory error rather than
+  ignored.
+- **`Transform` now reproduces the fit after NIPALS with native missing-value handling.** Because
+  preprocessing on that path happens inside the NIPALS routine, no preprocessing parameters were
+  recorded, so applying the fitted model to new data projected *raw* values onto loadings learned in
+  centered and scaled space — returning scores wrong by an order of magnitude when the columns
+  differed in scale, with no error. The NaN-aware column statistics are now retained and reapplied.
+
 ## [1.5.0] - 2026-06-02
 
 ### Added

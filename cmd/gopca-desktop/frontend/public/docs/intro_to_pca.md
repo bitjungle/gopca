@@ -482,6 +482,23 @@ $$
 
 The connection: loadings are the columns of **V**; scores are **U × Σ**; eigenvalues are the squared singular values divided by (*n*−1).
 
+### A note on the sign of a component
+
+A principal component is defined only up to its sign. If **a** is a unit-length direction of maximum variance, so is **−a**: it describes the same line through the data, traversed the other way, with the same eigenvalue. Flipping a component's loadings and its scores together leaves the reconstruction of your data exactly as good. Nothing in the mathematics prefers one direction over the other.
+
+The practical consequence is that **the same data can produce mirror-image plots in different software**, and this is not an error in either. Different packages resolve the ambiguity differently, and there is no agreed standard:
+
+- **GoPCA** makes the largest-magnitude loading of each component positive. This is the rule scikit-learn and MATLAB also use, and it guarantees that GoPCA's own methods — SVD and NIPALS — always agree with each other on the same data.
+- **R's `prcomp`** applies no rule at all. Its documentation states that the signs "are arbitrary, and so may differ between different programs for PCA, and even between different builds of R."
+
+So if your GoPCA scores plot is a mirror image of one you produced elsewhere, nothing is wrong. What you should compare instead is what the signs mean *relative to one another*:
+
+- Which variables load with the **same** sign as each other, and which oppose them
+- Whether a group of samples sits on the same side as a given variable
+- The **magnitude** of each loading
+
+All of these are unchanged by a flip. A statement like "PC2 contrasts the length measurements against the girth measurements" is reproducible anywhere; "height loads +0.53 on PC2" is only reproducible in software that happens to share your sign convention.
+
 ### The Optimization at the Heart of PCA
 
 PCA solves a beautiful optimization problem: find the direction that captures the most variance in the data. For PC1:
@@ -730,6 +747,11 @@ The window length *L* should cover at least 1–2 full periods of the oscillatio
 - **Problem:** Forgetting whether data was scaled, leading to misinterpretation
 - **Reality:** Scaled and unscaled PCA can give opposite conclusions
 - **Solution:** Always document and report your preprocessing choices
+
+**Pitfall 5: Reading Meaning into a Component's Sign**
+- **Problem:** Concluding that results disagree because a plot is mirrored, or that "positive PC2" means something in itself
+- **Reality:** Components are defined only up to sign, and software packages resolve that ambiguity differently — see Section 7. A flipped component is the same component.
+- **Solution:** Compare *relative* signs (which variables oppose which) and magnitudes, not absolute direction. If you quote a signed loading in a report, say which software produced it.
 
 ### Domain-Specific Best Practices
 

@@ -221,7 +221,6 @@ export function DataLoadSection() {
                             headers={fileData.headers}
                             rowNames={fileData.rowNames}
                             data={fileData.data}
-                            title="Input Data"
                             onRowSelectionChange={handleRowSelectionChange}
                             onColumnSelectionChange={handleColumnSelectionChange}
                             externalSelectedRows={fileData.data.map((_, i) => i).filter(i => !excludedRows.includes(i))}
@@ -240,7 +239,6 @@ export function DataLoadSection() {
                                     headers={fileData.headers}
                                     rowNames={fileData.rowNames}
                                     data={fileData.data}
-                                    title="Input Data"
                                     enableRowSelection={true}
                                     enableColumnSelection={true}
                                     onRowSelectionChange={handleRowSelectionChange}
