@@ -368,8 +368,9 @@ which is why it is invisible here.
 > Two notes on reading this plot. Correlation signs are omitted above because PCA
 > fixes each component only up to its sign — whether a cell reads + or − is a
 > convention, not a finding. And the PC5 cell carries no printed number because
-> GoPCA labels a cell only from 0.3 upwards; this one is 0.2975, under the line by
-> a whisker. Compare its colour against the PC1 cell, labelled 0.35.
+> GoPCA labels a cell only when |*r*| ≥ 0.3 — the test is on magnitude, so −0.58 is
+> labelled just as +0.58 is. This one is 0.2975, under the line by a whisker.
+> Compare its colour against the PC1 cell, labelled 0.35.
 
 > **A caution about interpretation.** That these measurements predict sex well in
 > aggregate says nothing about any individual: even the best of these models
@@ -421,9 +422,9 @@ measurements — has no reason to produce an "age axis."
 
 Open the **Eigencorrelation Plot** again and read across the `Age#target` row.
 The interesting entry is not under PC1 or PC2 but under **PC3**, where it reaches
-**0.43** in magnitude — the limb-proportion axis worth only 4.6% of the variance. Check the PC3 loadings
-to see which way it runs: leg length and arm length carry opposite signs, and age
-follows the arm-length end. Older adults in this sample have shorter upper legs
+**0.43** in magnitude — the limb-proportion axis worth only 4.6% of the variance.
+Check the PC3 loadings to see which way it runs: leg length and arm length carry
+opposite signs, and age follows the arm-length end. Older adults in this sample have shorter upper legs
 relative to their arms. It is the same point Step 4 made about sex: a signal you
 care about can sit in a small component, and reading only the first two would
 have missed it entirely.
