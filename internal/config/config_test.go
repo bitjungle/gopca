@@ -23,7 +23,10 @@
 
 package config
 
-import "testing"
+import (
+	"encoding/json"
+	"testing"
+)
 
 func TestDefaultConfig(t *testing.T) {
 	cfg := DefaultConfig()
@@ -59,13 +62,45 @@ func TestDefaultAlgorithmConfig(t *testing.T) {
 
 func TestDefaultGUIConfig(t *testing.T) {
 	cfg := DefaultGUIConfig()
-	if cfg.Visualization.DefaultConfidenceLevel != 0.95 {
-		t.Errorf("DefaultConfidenceLevel = %g, want 0.95", cfg.Visualization.DefaultConfidenceLevel)
+	if cfg.Visualization.LoadingsVariableThreshold != 100 {
+		t.Errorf("LoadingsVariableThreshold = %d, want 100", cfg.Visualization.LoadingsVariableThreshold)
 	}
 	if cfg.Visualization.BiplotMaxVariables != 100 {
 		t.Errorf("BiplotMaxVariables = %d, want 100", cfg.Visualization.BiplotMaxVariables)
 	}
-	if cfg.UI.DataPreviewMaxRows != 10 {
-		t.Errorf("DataPreviewMaxRows = %d, want 10", cfg.UI.DataPreviewMaxRows)
+}
+
+// TestIssue778_GUIConfigExposesOnlyWhatIsRead guards against the struct
+// re-accumulating fields nothing consumes. Ten of its twelve were dead: asserting
+// their default values here gave the appearance of coverage while the values
+// actually in force were hardcoded in the frontend, so editing this file changed
+// nothing. A field belongs here only when the frontend reads its JSON key —
+// verify with a grep for the key under cmd/gopca-desktop/frontend/src before
+// adding one.
+func TestIssue778_GUIConfigExposesOnlyWhatIsRead(t *testing.T) {
+	data, err := json.Marshal(DefaultGUIConfig())
+	if err != nil {
+		t.Fatalf("marshal failed: %v", err)
+	}
+	var decoded map[string]map[string]any
+	if err := json.Unmarshal(data, &decoded); err != nil {
+		t.Fatalf("unmarshal failed: %v", err)
+	}
+
+	// Every key the frontend is known to read, and nothing else.
+	want := map[string]bool{
+		"loadings_variable_threshold": true,
+		"biplot_max_variables":        true,
+	}
+	for section, fields := range decoded {
+		for key := range fields {
+			if !want[key] {
+				t.Errorf("%s.%s is exposed but read by nothing; wire it up or remove it (#778)", section, key)
+			}
+			delete(want, key)
+		}
+	}
+	for key := range want {
+		t.Errorf("%s is read by the frontend but no longer exposed", key)
 	}
 }
