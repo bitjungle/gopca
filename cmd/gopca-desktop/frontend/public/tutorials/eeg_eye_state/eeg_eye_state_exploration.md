@@ -21,7 +21,13 @@ The sampling rate is **128 Hz** — one measurement every 7.8 ms, giving approxi
 * `eye_state = open` — eyes open
 * `eye_state = closed` — eyes closed
 
-> **Note on data quality**: the dataset contains four isolated time points with extreme values — at approximately t = 7 s, 81 s, 90 s, and 103 s — where one or more channels reach values 70–150× the normal signal range (almost certainly brief electrode artifacts). These will appear as isolated extreme points far from the main cluster in the scores plot. Keep them in mind when interpreting unexpected structure.
+> **Note on data quality**: the recording carries electrode artifacts, and they come in two kinds — which matters, because only the first kind is easy to see.
+>
+> **Four isolated single-sample excursions**, at approximately t = 7 s, 81 s, 90 s and 103 s. Three are enormous positive spikes: AF4 reaches 715,897 against a channel median of 4,355 (164×), FC5 156×, AF3 72×. The fourth is the opposite — at 103 s, F8 **drops** to 86.7 from a median of 4,603, roughly one fiftieth of normal. An artifact can be a dropout as easily as a spike; both are extreme, and both distort a PCA.
+>
+> **Short runs of much milder disturbance**, which are far harder to spot. There is one at t ≈ 1.4 s on F8, and a more consequential one at **t ≈ 83.3–83.8 s on P7**, lasting 56 consecutive samples. These are about a thousand times closer to normal than the four spikes, so they survive a scan that catches the obvious ones — and Step 5 shows what one of them does to a Temporal PCA if you let it through.
+>
+> Keep both kinds in mind when interpreting unexpected structure.
 
 The original research motivation was classification: can EEG alone predict eye state? Here we use PCA — an *unsupervised* method that ignores the labels entirely — to ask: what structure does PCA find on its own, and does it relate to eye state?
 
@@ -208,20 +214,38 @@ In standard PCA, each point is an **independent sample** — you look for cluste
 **How to read a phase-space trajectory:**
 
 1. **Tight loops** — the trajectory traces small repeated loops: these are oscillations
-2. **Long sweeping arms** — the trajectory moves far from the central cluster: these are state transitions
+2. **Long sweeping arms** — the trajectory moves far from the central cluster: a state transition, *or* a stretch of bad recording. The two look alike, and the next section shows why
 3. **Dense regions** — where the trajectory spends most time: stable states
 
 **What to expect in this scores plot:**
 
-* A **dense central cluster** — mostly closed-eye periods (the resting state)
-* **Long sweeping arms** extending to very negative PC1 — eyes-open periods. When the eyes open, alpha-band activity drops sharply across the scalp (**alpha suppression**), which appears as a large negative PC1 score
-* The arm shape shows the brain taking several hundred milliseconds to transition fully into and out of the eyes-open state
+* A **dense central cluster** holding the great majority of the 14,945 windows
+* **One long arm** reaching much further along PC1 than anything else in the plot. PC1 spans roughly −104 to +35, and almost all of that range is taken up by this single excursion
+* Small repeated loops inside the dense cluster
 
 #### Questions:
 
-* Can you identify the dense central cluster (eyes closed) and the sweeping arms (eyes open)?
-* Inside the dense cluster, can you find small repeated loops? Those are oscillations — the brain's idle rhythms while the eyes are closed.
-* Which eye state produces more negative PC1 scores?
+* Can you find the long arm? Roughly how many points does it hold, against the central cluster?
+* Hover over the points at the very tip of the arm. What **time labels** do they carry?
+* Now colour by `eye_state`. Does the arm belong to one eye state and the cluster to the other?
+
+👉 **The arm is not brain activity.** Hover along it and every point at the tip carries a time between **83.5 s and 84.0 s** — 71 windows drawn from the same half-second. That is the P7 disturbance described in the data-quality note at the top of this tutorial. It survived the Step 2 cleanup because it is roughly a thousand times milder than the four spikes you removed there, and the trajectory matrix then *smeared* it. A single bad sample sits inside the sliding window for **32** consecutive window positions; this run of 56 samples keeps one inside for 87. A disturbance lasting less than half a second becomes a long, smooth, convincing-looking excursion.
+
+That smearing is worth understanding, because it is specific to Temporal PCA. In standard PCA one bad sample makes one outlying point, which looks like what it is. In Temporal PCA it makes *L* consecutive outlying points that trace a graceful arc — precisely the shape you have been told to read as a state transition.
+
+> **The habit to take from this step**: before reading any story into a dramatic excursion in a Temporal PCA scores plot, hover over it and check *when* it happened. If the points come from one narrow stretch of time, suspect the recording before the brain.
+
+**Where the eye state actually is.** Colour by `eye_state` and the two states are thoroughly mixed. Measuring the separation between their means along each component, in units of the pooled standard deviation:
+
+| | PC1 | PC2 | PC3 | PC14 |
+|---|---|---|---|---|
+| eye-state separation (*d*) | 0.23 | **0.44** | 0.35 | 0.32 |
+
+PC2 does best, and even there *d* = 0.44 leaves the two distributions overlapping across most of their range. PC1 — which holds 53% of the variance — is among the weaker ones.
+
+That is worth sitting with rather than glossing over. Eye state is a real and substantial physiological difference, and Temporal PCA has genuinely found structure here: Steps 6 to 8 will identify a true 10 Hz alpha rhythm and locate it on the scalp. But components are ordered by **variance**, and the variance in this recording is dominated by slow drift and amplitude changes that have little to do with whether the eyes are open. It is the same lesson the Body Measures tutorial teaches with sex: a group difference can be entirely real and still not be what the leading components are about.
+
+> **On alpha suppression.** Opening the eyes really does suppress alpha-band activity across the scalp — that is well-established physiology, and this recording contains it. What it does *not* do is dominate PC1. Look for it where it lives: in the oscillatory pair you will find in Step 7, whose strongest channels are P8, T8 and O2 — the parietal and occipital sites nearest the visual cortex.
 
 > **Note on available plots**: the **Loadings Plot**, **Biplot**, **Circle of Correlations**, and **Diagnostic Plot** are not available for Temporal PCA — they require loadings in the original variable space, which Temporal PCA does not produce directly. The dedicated plots are **Temporal Loadings** and **Variable Importance**.
 
@@ -320,7 +344,11 @@ This heatmap shows the RMS loading of each EEG channel aggregated across all lag
 * For the oscillatory pair you identified in Step 7: do the two paired components show the **same spatial pattern** of channel importance? (They should — they represent the same oscillation, just phase-shifted in time, so the same channels must drive both.)
 * Is there a clear difference between the channel patterns of the slow-structure components (PC2–PC10) and any oscillatory components?
 
-👉 PC1's nearly uniform row confirms it is a global component — all channels contribute equally, so no single brain region is specifically responsible. Contrast this with components where one or two channels are dramatically brighter — those components originate from a specific scalp region.
+👉 PC1's nearly uniform row confirms it is a global component — its brightest channel (F4) is only **1.9×** its dimmest, so no single brain region is specifically responsible.
+
+The isolated bright cell is on **PC4, at `O1`**, which outweighs the next channel by **3.9×** — the most single-channel-dominated component in the set by a wide margin. `O1` is an occipital electrode, sitting over the visual cortex, which is exactly where you would expect a component that no other site shares.
+
+For the Step 7 pair, the two rows should look like copies of each other, and they do: `P8` brightest in both, then `T8`, then `O2`, with a correlation of **0.99** between the two channel-importance profiles. Those are the parietal and occipital sites nearest the visual cortex — the right place for an alpha rhythm to originate. Two components that share a spatial pattern this closely while differing by a quarter-cycle in time are the same oscillation seen twice, which is the SSA signature you were looking for.
 
 ---
 
@@ -358,8 +386,9 @@ After this exploration, you should be able to:
 
 * Explain why EEG is a multivariate time series and why rows are not independent samples
 * Diagnose a scale problem from the GoPCA warning and fix it with Standard Scaling
-* Identify and remove extreme outliers using the Diagnostic Plot and lasso tool
+* Identify and remove extreme outliers using the Diagnostic Plot and lasso tool — and recognise that milder artifacts survive a cleanup aimed at the obvious ones
 * Explain the SSA embedding step: sliding windows, trajectory matrix, window length *L*
+* **Recognise a smeared artifact in a Temporal PCA scores plot** — a brief disturbance is stretched across *L* consecutive windows and arrives looking like a smooth state transition, so check *when* a dramatic excursion happened before deciding what it means
 * Interpret the Temporal Loadings plot: one curve per component showing the dominant channel's signed temporal eigenvector — not one curve per channel
 * Recognise the three curve types: flat (global), monotone (slow trend), sinusoidal (oscillation)
 * Estimate oscillation frequency from the number of zero-crossings
