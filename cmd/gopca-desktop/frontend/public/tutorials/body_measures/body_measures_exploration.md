@@ -412,8 +412,8 @@ body size is not strongly tied to age, so PCA — which only knows about the sev
 measurements — has no reason to produce an "age axis."
 
 Open the **Eigencorrelation Plot** again and read across the `Age#target` row.
-The interesting entry is not under PC1 or PC2 but under **PC3**, at **0.43** —
-the limb-proportion axis worth only 4.6% of the variance. Check the PC3 loadings
+The interesting entry is not under PC1 or PC2 but under **PC3**, where it reaches
+**0.43** in magnitude — the limb-proportion axis worth only 4.6% of the variance. Check the PC3 loadings
 to see which way it runs: leg length and arm length carry opposite signs, and age
 follows the arm-length end. Older adults in this sample have shorter upper legs
 relative to their arms. It is the same point Step 4 made about sex: a signal you
