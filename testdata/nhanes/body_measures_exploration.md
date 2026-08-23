@@ -197,21 +197,29 @@ is doing, it is measuring overall size.
 ### A tempting confirmation that does not survive inspection
 
 BMI is the obvious external check, so let us make it. Set
-**Color by → `BMI#target`** on the **Scores Plot**.
+**Color by → `BMI_class#target`** on the **Scores Plot**. The file carries BMI
+twice — as a continuous value and binned into the four WHO categories — and the
+categories show the pattern far more plainly, because discrete bands have visible
+edges where a smooth colour ramp does not.
 
 #### Questions:
 
-* Does BMI increase from one side of the plot to the other?
-* Is that increase along the PC1 axis, or does it run at an angle?
+* The four classes form bands across the plot. Do the boundaries between them run
+  **vertically**, or are they **slanted**?
+* If BMI were simply another name for PC1, which of the two would you expect?
 
-👉 BMI does rise steadily across the plot, and its correlation with PC1 is
-**+0.79**. Reported on its own, that number reads as clean confirmation. Look at
-the *direction* of the colour gradient, though, and you will see it does not run
-along PC1 at all — it runs **diagonally**, at roughly 45° to the axis, toward the
-corner where the waist and hip arrows point in the biplot of Step 5. (PCA fixes
-each component only up to its sign, so if your plot is flipped vertically
-relative to the description here, read the girth arrows rather than "up" and
-"down" — they are the reliable anchor.)
+👉 The bands are unmistakably **diagonal**. Underweight sits at the upper left and
+the classes march down and to the right — Normal, Overweight, Obese — with the
+boundaries between them slanting up to the right rather than standing vertical.
+
+Had BMI been a PC1 quantity, those boundaries would be vertical stripes: every
+person at a given PC1 would share a BMI class regardless of their PC2. They
+plainly do not. Now switch to **Color by → `BMI#target`** and you will see the
+same thing as a continuous ramp — dark at the upper left, light at the lower
+right — which is the same finding, just harder to see.
+
+Its correlation with PC1 is **+0.79**, and reported on its own that number reads
+as clean confirmation. It is not the whole story.
 
 | | correlation with BMI |
 |---|---|
