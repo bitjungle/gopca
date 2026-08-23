@@ -26,8 +26,10 @@ package core
 import (
 	"fmt"
 	"math"
+	"sort"
 
 	"gonum.org/v1/gonum/mat"
+	"gonum.org/v1/gonum/stat"
 )
 
 // NIPALS (Nonlinear Iterative Partial Least Squares) Algorithm Helpers
@@ -392,4 +394,106 @@ func extractVectorData(v *mat.VecDense) []float64 {
 		data[i] = v.AtVec(i)
 	}
 	return data
+}
+
+// computeColumnStdDevsWithMissing calculates per-column sample standard
+// deviations, excluding NaN entries. Columns with fewer than two observed
+// values, or with variance below MinVarianceThreshold, get a divisor of 1 so
+// that scaling leaves them unchanged rather than dividing by ~0 — the same
+// guard the complete-data Preprocessor applies.
+//
+// Algorithm complexity: O(n*m) where n is rows, m is columns
+func computeColumnStdDevsWithMissing(X *mat.Dense, means []float64) []float64 {
+	n, m := X.Dims()
+	stdDevs := make([]float64, m)
+
+	for j := 0; j < m; j++ {
+		sumSq := 0.0
+		count := 0
+		for i := 0; i < n; i++ {
+			val := X.At(i, j)
+			if !math.IsNaN(val) {
+				d := val - means[j]
+				sumSq += d * d
+				count++
+			}
+		}
+		stdDevs[j] = 1.0
+		if count > 1 {
+			if sd := math.Sqrt(sumSq / float64(count-1)); sd >= MinVarianceThreshold {
+				stdDevs[j] = sd
+			}
+		}
+	}
+	return stdDevs
+}
+
+// computeColumnMediansWithMissing calculates per-column medians, excluding NaN
+// entries. Columns with no observed value get a median of 0.
+//
+// Algorithm complexity: O(n*m*log n) where n is rows, m is columns
+func computeColumnMediansWithMissing(X *mat.Dense) []float64 {
+	n, m := X.Dims()
+	medians := make([]float64, m)
+	buf := make([]float64, 0, n)
+
+	for j := 0; j < m; j++ {
+		buf = buf[:0]
+		for i := 0; i < n; i++ {
+			if val := X.At(i, j); !math.IsNaN(val) {
+				buf = append(buf, val)
+			}
+		}
+		if len(buf) == 0 {
+			continue
+		}
+		sort.Float64s(buf)
+		medians[j] = stat.Quantile(0.5, stat.Empirical, buf, nil)
+	}
+	return medians
+}
+
+// computeColumnMADsWithMissing calculates per-column median absolute deviations,
+// excluding NaN entries and scaled by 1.4826 so that MAD ≈ σ for normally
+// distributed data — matching medianAbsoluteDeviation on complete data.
+// Degenerate columns get a divisor of 1.
+//
+// Algorithm complexity: O(n*m*log n) where n is rows, m is columns
+func computeColumnMADsWithMissing(X *mat.Dense, medians []float64) []float64 {
+	n, m := X.Dims()
+	mads := make([]float64, m)
+	buf := make([]float64, 0, n)
+
+	for j := 0; j < m; j++ {
+		buf = buf[:0]
+		for i := 0; i < n; i++ {
+			if val := X.At(i, j); !math.IsNaN(val) {
+				buf = append(buf, math.Abs(val-medians[j]))
+			}
+		}
+		mads[j] = 1.0
+		if len(buf) == 0 {
+			continue
+		}
+		sort.Float64s(buf)
+		if mad := stat.Quantile(0.5, stat.Empirical, buf, nil) * 1.4826; mad >= MinVarianceThreshold {
+			mads[j] = mad
+		}
+	}
+	return mads
+}
+
+// scaleMatrixWithMissing divides each column by its divisor, leaving missing
+// entries missing.
+//
+// Algorithm complexity: O(n*m) where n is rows, m is columns
+func scaleMatrixWithMissing(X *mat.Dense, divisors []float64) {
+	n, m := X.Dims()
+	for i := 0; i < n; i++ {
+		for j := 0; j < m; j++ {
+			if val := X.At(i, j); !math.IsNaN(val) {
+				X.Set(i, j, val/divisors[j])
+			}
+		}
+	}
 }
