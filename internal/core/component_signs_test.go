@@ -224,6 +224,49 @@ func TestIssue779_TransformReappliesPreprocessingAfterNativeMissing(t *testing.T
 	}
 }
 
+// TestIssue783_NativeMissingAcceptsEveryColumnwiseCombination guards a
+// regression introduced by #780 and shipped: recording the preprocessing
+// parameters constructed a Preprocessor with MeanCenter set even for robust and
+// scale-only configurations, which supply medians or standard deviations rather
+// than means. SetFittedParameters rejected that, so
+//
+//	pca analyze --method nipals --missing-strategy native --scale robust data.csv
+//
+// failed outright with "means required when mean centering is enabled" — on data
+// it had analysed successfully before. Mean centering is the CLI default, so the
+// combination needed no unusual flags to reach.
+func TestIssue783_NativeMissingAcceptsEveryColumnwiseCombination(t *testing.T) {
+	data := syntheticCorrelatedData(40, 4)
+	data[5][2] = math.NaN()
+
+	for _, tc := range []struct {
+		name string
+		cfg  types.PCAConfig
+	}{
+		{"mean centre only", types.PCAConfig{MeanCenter: true}},
+		{"standard scale", types.PCAConfig{MeanCenter: true, StandardScale: true}},
+		{"robust scale with centring", types.PCAConfig{MeanCenter: true, RobustScale: true}},
+		{"robust scale alone", types.PCAConfig{RobustScale: true}},
+		{"scale only with centring", types.PCAConfig{MeanCenter: true, ScaleOnly: true}},
+		{"scale only alone", types.PCAConfig{ScaleOnly: true}},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			cfg := tc.cfg
+			cfg.Method, cfg.Components = "nipals", 2
+			cfg.MissingStrategy = types.MissingNative
+
+			engine := NewPCAEngine()
+			if _, err := engine.Fit(data, cfg); err != nil {
+				t.Fatalf("Fit failed: %v", err)
+			}
+			// Whatever was applied must also be reproducible on new data.
+			if _, err := engine.Transform(syntheticCorrelatedData(5, 4)); err != nil {
+				t.Errorf("Transform failed after a successful fit: %v", err)
+			}
+		})
+	}
+}
+
 // syntheticCorrelatedData builds a well-conditioned matrix whose columns share
 // two latent factors, so that the leading components are stable and the sign
 // question is well posed.

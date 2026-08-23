@@ -449,8 +449,13 @@ func (p *PCAImpl) nipalsAlgorithm(X *mat.Dense, nComponents int) (*mat.Dense, *m
 // itself — its Fit would see NaNs and return NaN means — but it can apply them
 // once they are supplied.
 func (p *PCAImpl) storeMissingPreprocessor(means, stdDevs, medians, mads []float64) error {
-	if means == nil && stdDevs == nil && medians == nil && mads == nil {
-		return nil // no column-wise preprocessing was requested
+	// The statistics are computed unconditionally, so they cannot indicate whether
+	// preprocessing was wanted; ask the configuration. Recording a preprocessor
+	// here regardless would make PCAResult.PreprocessingApplied report true for an
+	// analysis that preprocessed nothing.
+	if !p.config.MeanCenter && !p.config.StandardScale &&
+		!p.config.RobustScale && !p.config.ScaleOnly {
+		return nil
 	}
 	pre := NewPreprocessorWithScaleOnly(
 		p.config.MeanCenter, p.config.StandardScale, p.config.RobustScale,
@@ -483,32 +488,32 @@ func (p *PCAImpl) nipalsAlgorithmWithMissing(X *mat.Dense, nComponents int) (*ma
 	// onto loadings learned in preprocessed space and return scores off by the
 	// centering and scaling — silently, and by an order of magnitude when the
 	// columns differ in scale.
-	var means, stdDevs, medians, mads []float64
-	switch {
-	case p.config.RobustScale:
-		// Robust scaling: (x - median) / MAD
+	// Every statistic is computed before anything is applied, and all of them are
+	// recorded, mirroring the complete-data Preprocessor.Fit — which also derives
+	// means and standard deviations for every column whichever scaling is chosen.
+	// Only the branch below decides what is actually applied.
+	means := computeColumnMeansWithMissing(Xwork)
+	stdDevs := computeColumnStdDevsWithMissing(Xwork, means)
+	var medians, mads []float64
+	if p.config.RobustScale {
 		medians = computeColumnMediansWithMissing(Xwork)
 		mads = computeColumnMADsWithMissing(Xwork, medians)
+	}
+	switch {
+	case p.config.RobustScale:
+		// Robust scaling: (x - median) / MAD. Centring is by median, so
+		// MeanCenter plays no part — matching Preprocessor.Transform.
 		centerMatrixWithMissing(Xwork, medians)
 		scaleMatrixWithMissing(Xwork, mads)
 	case p.config.ScaleOnly:
-		// Variance scaling without centering. Deviations are still measured
-		// about the column mean, matching Preprocessor's originalStd.
-		colMeans := computeColumnMeansWithMissing(Xwork)
-		stdDevs = computeColumnStdDevsWithMissing(Xwork, colMeans)
+		// Variance scaling without centring.
 		scaleMatrixWithMissing(Xwork, stdDevs)
 	case p.config.StandardScale:
-		// Compute the divisor before centering, as the mean is needed for both.
-		means = computeColumnMeansWithMissing(Xwork)
-		stdDevs = computeColumnStdDevsWithMissing(Xwork, means)
 		if p.config.MeanCenter {
 			centerMatrixWithMissing(Xwork, means)
-		} else {
-			means = nil
 		}
 		scaleMatrixWithMissing(Xwork, stdDevs)
 	case p.config.MeanCenter:
-		means = computeColumnMeansWithMissing(Xwork)
 		centerMatrixWithMissing(Xwork, means)
 	}
 

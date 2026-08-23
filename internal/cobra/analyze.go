@@ -25,7 +25,6 @@ package cobra
 
 import (
 	"fmt"
-	"math"
 	"os"
 	"sort"
 	"strings"
@@ -537,37 +536,13 @@ func runAnalyze(opts *AnalyzeOptions, inputFile string) error {
 	preprocessedData := result.PreprocessedData
 
 	// Check if we need to handle NIPALS with native missing values specially
-	hasMissing := false
-	for i := range data.Matrix {
-		for j := range data.Matrix[i] {
-			if math.IsNaN(data.Matrix[i][j]) {
-				hasMissing = true
-				break
-			}
-		}
-		if hasMissing {
-			break
-		}
-	}
-	usingNativeMissing := config.Method == "nipals" && config.MissingStrategy == types.MissingNative && hasMissing
-
-	// The JSON exporter needs the fitted preprocessor for extended parameters
+	// The JSON exporter needs the fitted preprocessor for the extended parameters
 	// (feature medians/MADs, row means/std devs) that the result does not carry.
-	// Re-fit it only when full preprocessing was applied; native NIPALS missing-
-	// value handling centers internally and exposes no such preprocessor.
-	var preprocessor *core.Preprocessor
-	if !usingNativeMissing && (config.MeanCenter || config.StandardScale || config.RobustScale || config.ScaleOnly || config.SNV || config.VectorNorm) {
-		preprocessor = core.NewPreprocessorWithScaleOnly(
-			config.MeanCenter,
-			config.StandardScale,
-			config.RobustScale,
-			config.ScaleOnly,
-			config.SNV,
-			config.VectorNorm,
-		)
-		if _, err := preprocessor.FitTransform(data.Matrix); err != nil {
-			return fmt.Errorf("preprocessing for output metadata failed: %w", err)
-		}
+	// FitPreprocessorForExport re-fits it, including for native NIPALS missing-
+	// value handling, where the statistics have to skip the absent entries.
+	preprocessor, _, err := core.FitPreprocessorForExport(data.Matrix, config)
+	if err != nil {
+		return fmt.Errorf("preprocessing for output metadata failed: %w", err)
 	}
 
 	// Output results based on format
