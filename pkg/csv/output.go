@@ -150,10 +150,22 @@ func ConvertToPCAOutputDataWithMetadata(result *types.PCAResult, data *Data, pre
 		FeatureLabels:          featureLabels,
 	}
 
-	// Create results data
+	// Create results data.
+	//
+	// Temporal PCA produces one score row per sliding window, T-L+1 of them,
+	// while RowNames still has one entry per input row. Window i begins at input
+	// row i, so the first len(Scores) names are the right labels and the last
+	// L-1 are surplus. Trim them: an exported model that claims 14,976 sample
+	// names for 14,945 score rows is internally inconsistent, and a downstream
+	// consumer zipping the two arrays has no way to know which end to drop.
+	sampleNames := data.RowNames
+	if len(sampleNames) > len(result.Scores) {
+		sampleNames = sampleNames[:len(result.Scores)]
+	}
+
 	resultsData := types.ResultsData{
 		Samples: types.SamplesResults{
-			Names:  data.RowNames,
+			Names:  sampleNames,
 			Scores: result.Scores,
 		},
 	}
