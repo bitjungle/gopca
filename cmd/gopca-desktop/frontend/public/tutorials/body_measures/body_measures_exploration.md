@@ -75,6 +75,16 @@ Take a few minutes to study it.
 This shared "everyone-grows-together" tendency is the signature of a single
 dominant factor — overall body size — and it is what PC1 will capture.
 
+👉 On the last question, the answer is **the lengths, by a wide margin**. Measured
+as a standardized difference between the sexes, height separates them most
+(*d* = 1.9), then arm length (1.4) and leg length (1.3). The girth measurements
+barely separate them at all: waist 0.2, arm circumference 0.3.
+
+One measurement runs the other way. **Hip circumference is the only one of the
+seven where women's average exceeds men's** (*d* = −0.3). Hold on to that — it
+turns out to matter far more than its size suggests, and Step 4 comes back to
+it.
+
 ---
 
 ## Why all these positive correlations matter
@@ -116,6 +126,8 @@ and reflect**.
 
 ## Step 1: Standardize first, then run PCA
 
+> **Settings** — Row-wise: **None** · Column-wise: **Mean Center Only**, then **Standard Scale** · Method: **SVD** · Components: **5**
+
 The seven measurements are on very different scales. Weight is tens of kilograms
 with a large spread; arm length is tens of centimetres with a small spread. In
 fact the numerical variance of weight is roughly **60 times** that of arm length.
@@ -126,10 +138,10 @@ weight — and ignore the rest.
 
 Try it both ways.
 
-* First set **Preprocessing → Mean Center Only** and click **Go PCA**. Open the
-  **Loadings Plot** for PC1.
-* Then set **Preprocessing → Standard Scale** and click **Go PCA** again. Compare
-  the PC1 loadings.
+* First set **Step 2: Column-wise Preprocessing → Mean Center Only** and click
+  **Go PCA!**. Open the **Loadings Plot** for PC1.
+* Then set it to **Standard Scale (Mean + Std Dev)** and click **Go PCA!** again.
+  Compare the PC1 loadings.
 
 #### Questions:
 
@@ -137,16 +149,20 @@ Try it both ways.
   length variables contribute anything?
 * With **Standard Scale**, do all seven variables now contribute?
 
-👉 Without standardization, PC1 is essentially "weight + waist + hip" — the
-high-variance columns drown everything else out, and the lengths barely appear.
+👉 Without standardization, PC1 is essentially "weight + waist + hip" — those
+three carry loadings of 0.71, 0.53 and 0.42, while the three length measurements
+manage only 0.03 to 0.12. The high-variance columns drown everything else out.
 **Standard Scale** divides each variable by its standard deviation, giving all
 seven equal footing. Only then does the full size-and-shape structure emerge.
 
-> Keep **Standard Scale** active for all remaining steps.
+> Keep **Standard Scale (Mean + Std Dev)** active for every remaining step, with
+> **Components: 5** — Steps 6 and 7 need the third component.
 
 ---
 
 ## Step 2: The first component is *size*
+
+> **Settings** — Column-wise: **Standard Scale** · Method: SVD · Components: 5
 
 With Standard Scale active, open the **Scree Plot**.
 
@@ -172,21 +188,73 @@ the fingerprint of a **general size factor**: moving along PC1 means getting
 larger (or smaller) in *all seven measurements at once*. A person high on PC1 is
 simply a bigger person — taller, heavier, wider all around.
 
-We can confirm this reading directly. Set **Color by → `BMI`** on the **Scores
-Plot**.
+We can put a number on that reading. If PC1 really is "everything at once", it
+should agree with the crudest possible size score: standardize all seven
+measurements and simply average them, weighting each equally. It does —
+**r = 0.99**. PC1 is, to within one percent, that plain average. Whatever else it
+is doing, it is measuring overall size.
+
+### A tempting confirmation that does not survive inspection
+
+BMI is the obvious external check, so let us make it. Set
+**Color by → `BMI_class#target`** on the **Scores Plot**. The file carries BMI
+twice — as a continuous value and binned into the four WHO categories — and the
+categories show the pattern far more plainly, because discrete bands have visible
+edges where a smooth colour ramp does not.
 
 #### Questions:
 
-* Does BMI vary smoothly along the PC1 axis — low BMI at one end, high BMI at the
-  other?
+* The four classes form bands across the plot. Do the boundaries between them run
+  **vertically**, or are they **slanted**?
+* If BMI were simply another name for PC1, which of the two would you expect?
 
-👉 BMI tracks PC1 closely (their correlation is about 0.8). This is strong
-confirmation that PC1 is an overall body-size/mass axis: the more "body" a
-person has, the further along PC1 they sit.
+👉 The bands are unmistakably **diagonal**. Underweight sits at the upper left and
+the classes march down and to the right — Normal, Overweight, Obese — with the
+boundaries between them slanting up to the right rather than standing vertical.
+
+Had BMI been a PC1 quantity, those boundaries would be vertical stripes: every
+person at a given PC1 would share a BMI class regardless of their PC2. They
+plainly do not. Now switch to **Color by → `BMI#target`** and you will see the
+same thing as a continuous ramp — dark at the upper left, light at the lower
+right — which is the same finding, just harder to see.
+
+Its correlation with PC1 is **+0.79**, and reported on its own that number reads
+as clean confirmation. It is not the whole story.
+
+| | correlation with BMI |
+|---|---|
+| PC1 | **+0.79** |
+| PC2 | **−0.58** |
+
+PC1 alone accounts for 63% of the variation in BMI; PC1 and PC2 together account
+for **96%**. BMI is very nearly half size and half shape.
+
+That is not a defect in the analysis — it is what BMI *is*. BMI = weight ÷ height²
+is deliberately **size-adjusted**: it asks how heavy you are *for your height*.
+Being heavy for your height is exactly the girth-versus-length contrast that PC2
+encodes, so a large PC2 component is precisely what BMI ought to have. A quantity
+built to divide out size cannot be a pure measure of size.
+
+> **A habit worth forming.** The +0.79 is correct, and on its own it would have
+> let us believe the gradient runs along PC1. It does not. "Is PC1 a size axis?"
+> and "does BMI align with PC1?" are different questions, and only the first one
+> is answered by that number. Whenever a single statistic is carrying a
+> conclusion, ask what else that statistic is equally consistent with.
+
+### Seeing all of this at once
+
+Rather than colouring by one target at a time and squinting at gradients, open
+the **Eigencorrelation Plot**. It shows the correlation between every component
+and every `#target` column in the file as a heat map — so the BMI row displays
++0.79 under PC1 and −0.58 under PC2 side by side, and the diagonal is obvious
+without any inference from the scores plot. Keep it in mind for Steps 4 and 6,
+where the same question comes up about sex and about age.
 
 ---
 
 ## Step 3: The second component is *shape*
+
+> **Settings** — Column-wise: Standard Scale · Method: SVD · Components: 5
 
 If PC1 is size, what is left for PC2 to describe? Once you know how *big* someone
 is, the remaining question is how they are *proportioned* — and that is exactly
@@ -201,11 +269,15 @@ Open the **Loadings Plot** and switch to **PC2**.
 * Which variables load **negatively**? (Look at waist, hip, arm circumference.)
 * So PC2 sets one group *against* another. Which two groups?
 
-👉 On PC2 the **length** variables point one way and the **girth** variables
-point the opposite way. PC2 is a **shape contrast**: at one end sit people who
-are long-limbed and tall relative to their girth (a lean, linear build); at the
-other end, people who are wide relative to their height (a rounder, stockier
-build). Crucially, two people can share the same **size** (same PC1) yet sit at
+👉 On PC2 the **length** variables point one way (height +0.53, leg +0.54, arm
+length +0.39) and the **girth** variables point the opposite way (hip −0.36,
+waist −0.30, arm circumference −0.22). Weight sits almost on the fence at −0.12,
+for reasons the Circle of Correlations below will make clear. Take the average of
+the three lengths minus the average of the three girths and you get a contrast
+that correlates **0.97** with PC2 — the component is that contrast, near enough.
+PC2 is a **shape contrast**: at one end sit people who are long-limbed and tall
+relative to their girth (a lean, linear build); at the other end, people who are
+wide relative to their height (a rounder, stockier build). Crucially, two people can share the same **size** (same PC1) yet sit at
 opposite ends of PC2 — same "amount" of body, different proportions.
 
 > This is the size-and-shape decomposition that Jolicoeur and Mosimann described
@@ -229,7 +301,9 @@ measurement that belongs partly to size and partly to both shape groups.
 
 ## Step 4: Sex and the shape axis
 
-Set **Color by → `Gender`** on the **Scores Plot**.
+> **Settings** — Column-wise: Standard Scale · Method: SVD · Components: 5
+
+Set **Color by → `Gender#target`** on the **Scores Plot**.
 
 #### Questions:
 
@@ -237,33 +311,79 @@ Set **Color by → `Gender`** on the **Scores Plot**.
 * Do the sexes form **separate clusters**, or two **overlapping clouds** that are
   shifted relative to each other?
 
-👉 The two sexes are offset most clearly along **PC2**, the shape axis (they also
-differ somewhat on size). But notice they **overlap heavily** — this is nothing
-like the clean species separation in Iris. You are looking at two broad,
-overlapping distributions whose *centers* differ, not two distinct groups.
+👉 The sexes are offset along **both** components, and about twice as strongly
+along **PC2** (standardized gap *d* = 1.4) as along PC1 (*d* = 0.75). On average
+adult men and women differ in body proportions and in how fat is distributed —
+men toward a more central, waist distribution, women toward the hips, a
+well-documented difference (WHO, 2011) — and PC2 picks that up as a shift along
+the shape axis.
 
-Enable **Confidence Ellipses** (95%) to make the shift visible.
+But notice they **overlap heavily**. This is nothing like the clean species
+separation in Iris: two broad distributions whose *centers* differ, not two
+distinct groups. Enable **Confidence Ellipses** (95%) to make the shift visible.
 
 #### Questions:
 
-* The ellipse centers are clearly separated along PC2, yet the ellipses overlap.
-  What does that tell you about predicting an individual's sex from body shape
-  alone?
+* The ellipse centers are clearly separated, yet the ellipses overlap
+  substantially. Roughly what fraction of people could be classified correctly
+  from their position in this plot — and is that overlap the whole story?
 
-👉 On average, adult men and women differ in body proportions and in how fat is
-distributed — men tend toward a more central (waist) distribution, women toward
-the hips — a well-documented difference (WHO, 2011). PC2 picks this up as a shift
-along the shape axis. But the large overlap is the honest and important part:
-population averages differ, while individuals span the whole range.
+👉 This is where the plot will mislead you if you let it.
 
-> **A caution about interpretation.** PCA reports *statistical* axes of variation.
-> That the sexes' averages differ along PC2 is a description of this sample, not a
-> boundary between two kinds of people. The overlapping ellipses are the visual
-> reminder: a shift in averages is not a separation of individuals.
+Open the **Eigencorrelation Plot** and find the `Gender#target_Male` row — third
+from the top, since rows are sorted by their PC1 correlation. Read along it,
+watching the **colours**:
+
+| | PC1 | PC2 | PC3 | PC4 | PC5 |
+|---|---|---|---|---|---|
+| share of variance | 59.5% | 29.0% | 4.6% | 2.7% | **2.3%** |
+| correlation with sex | 0.35 | 0.58 | 0.13 | 0.13 | **0.30** |
+
+The cell under PC5 is warm — very nearly the shade of the PC1 cell — while the two
+between them are washed out. **PC5 carries 2.3% of the variance and tracks sex
+about as strongly as PC1, which carries 59.5%.** A component the scree plot would
+have you discard without a second thought holds nearly as much of this particular
+signal as the dominant one.
+
+That is the lesson in one row of a heat map: **principal components are chosen to
+maximise variance, not to separate groups.** Nothing requires the direction that
+best distinguishes two groups to be one of the directions along which the data
+spreads most — and when it is not, a scores plot shows heavy overlap even though
+the groups are highly distinguishable. It is the Swiss Roll lesson from the
+opposite side: there a tidy plot was the wrong answer, here an untidy one
+understates the difference. Both mistake *variance* for *meaning*.
+
+How far does it go? Fitting a classifier — which GoPCA does not do, so take these
+as context rather than an exercise — position in the PC1–PC2 plane identifies sex
+correctly for about **82%** of these adults, and all seven measurements for about
+**93%**, against 51% for always guessing the more common sex. The single direction
+that best separates the sexes lies **88% outside** the PC1–PC2 plane.
+
+The measurement doing most of that work is the one flagged at the pair plot: **hip
+circumference**, the only one of the seven where women's average exceeds men's.
+Alone it is a weak discriminator; held against weight and waist it becomes the
+strongest sex signal in the set. No single component isolates that comparison,
+which is why it is invisible here.
+
+> Two notes on reading this plot. Correlation signs are omitted above because PCA
+> fixes each component only up to its sign — whether a cell reads + or − is a
+> convention, not a finding. And the PC5 cell carries no printed number because
+> GoPCA labels a cell only when |*r*| ≥ 0.3 — the test is on magnitude, so −0.58 is
+> labelled just as +0.58 is. This one is 0.2975, under the line by a whisker.
+> Compare its colour against the PC1 cell, labelled 0.35.
+
+> **A caution about interpretation.** That these measurements predict sex well in
+> aggregate says nothing about any individual: even the best of these models
+> misclassifies roughly one person in fourteen, and the two distributions overlap
+> across their entire range. PCA reports *statistical* axes of variation in this
+> sample — a description of a population, not a boundary between two kinds of
+> people.
 
 ---
 
 ## Step 5: Put size and shape together — the Biplot
+
+> **Settings** — Column-wise: Standard Scale · Method: SVD · Components: 5
 
 Open the **Biplot**, which shows samples (scores) and variables (loading arrows)
 in the same plot.
@@ -285,23 +405,33 @@ are and *how they are proportioned*.
 
 ## Step 6: What PCA does *not* show — color by Age
 
+> **Settings** — Column-wise: Standard Scale · Method: SVD · Components: 5
+
 It is tempting to assume that principal components will line up with whatever
-metadata you have. Let us test that. Set **Color by → `Age`**.
+metadata you have. Let us test that. Set **Color by → `Age#target`**.
 
 #### Questions:
 
-* Does age form a smooth gradient along PC1 or PC2, the way BMI did along PC1?
-* Or are the colors mixed throughout, with no clear direction?
+* Does age form a gradient in any direction across the plot, the way BMI did?
+* Or are the colors mixed throughout, with no direction at all?
 
-👉 Age shows **almost no alignment** with either component (its correlation with
-both PC1 and PC2 is weak). Among adults, overall body size is not strongly tied
-to age, so PCA — which only knows about the seven measurements — has no reason to
-produce an "age axis." (Look closer, though, and age *does* correlate with the minor **third**
-component — a limb-proportion axis worth only about 5% of the variance — a
-reminder that a signal you care about can hide in a small component rather than a
-large one.) This is an important lesson: **PCA finds the directions of
-greatest variance in the data you give it, and those need not correspond to any
-particular variable you care about.** If you want to study age specifically, PCA
+👉 Age shows **almost no alignment** with either component: its correlation with
+PC1 is −0.02, essentially nothing, and with PC2 only −0.19. Among adults, overall
+body size is not strongly tied to age, so PCA — which only knows about the seven
+measurements — has no reason to produce an "age axis."
+
+Open the **Eigencorrelation Plot** again and read across the `Age#target` row.
+The interesting entry is not under PC1 or PC2 but under **PC3**, where it reaches
+**0.43** in magnitude — the limb-proportion axis worth only 4.6% of the variance.
+Check the PC3 loadings to see which way it runs: leg length and arm length carry
+opposite signs, and age follows the arm-length end. Older adults in this sample have shorter upper legs
+relative to their arms. It is the same point Step 4 made about sex: a signal you
+care about can sit in a small component, and reading only the first two would
+have missed it entirely.
+
+This is an important lesson: **PCA finds the directions of greatest variance in
+the data you give it, and those need not correspond to any particular variable
+you care about.** If you want to study age specifically, PCA
 of body measurements is the wrong tool; a method that uses age directly would be
 better.
 
@@ -309,14 +439,22 @@ better.
 
 ## Step 7: Push your understanding further
 
+> **Settings** — Column-wise: Standard Scale · Method: SVD · Components: 5, except where noted
+
 Try these explorations:
 
-* **Why isn't BMI one of the input features?** BMI is defined as
-  weight ÷ height², so it is an exact function of two variables already in the
-  dataset. Including it would add no new information and would distort the
-  loadings by double-counting weight and height. That is why BMI is provided only
-  as a coloring target, not as a measurement. (Try adding it back as a feature in
-  GoCSV and see how the loadings change.)
+* **Why isn't BMI one of the input features?** BMI = weight ÷ height² is an exact
+  function of two variables already in the dataset — but not a *linear* one, and
+  PCA is a linear method, so dropping it in is not the harmless no-op you might
+  expect. Add it as an eighth feature and the structure shifts: PC1 rises from
+  59% to 61%, while height's PC1 loading falls from 0.29 to 0.20 and leg length's
+  from 0.23 to 0.15. The extra column double-weights the weight-and-girth signal
+  and pushes the lengths down. Tellingly, the eighth component ends up carrying
+  just **0.07%** of the variance — the signature of a variable that is *almost*
+  redundant without being exactly so. If BMI were a linear combination of two
+  columns, that figure would be zero. Leaving it out keeps the seven measurements
+  on an equal footing, which is why BMI is supplied as a colouring target instead.
+  (Try adding it back in GoCSV and compare the loadings.)
 
 * **Look at PC3.** Switch to the **3D Scores Plot** (PC1 vs PC2 vs PC3), or select
   PC3 in the Loadings Plot. PC3 explains only about 5% of the variance and
@@ -325,7 +463,12 @@ Try these explorations:
 
 * **Split the sexes.** In GoCSV, filter to only males or only females before
   loading into GoPCA. Does the size-and-shape structure still appear within a
-  single sex? (It should — size and shape are not *created* by mixing sexes.)
+  single sex? It does: PC1 keeps all-positive loadings and about 60% of the
+  variance in each group, and PC2 keeps the same lengths-against-girths contrast.
+  Size and shape are not *created* by mixing sexes. Watch what PC2 gives up,
+  though — it drops from 29% to roughly 25–27%, because part of what it was
+  carrying across the whole sample was the shift between the two groups from
+  Step 4.
 
 ---
 
@@ -339,7 +482,12 @@ After completing this exploration, you should be able to:
   component with all-same-sign loadings (a general size factor)
 * Distinguish a **shift between overlapping distributions** (the sexes here) from
   a **clean separation into clusters** (the species in Iris)
-* Confirm the meaning of a component using an external variable (BMI along PC1)
+* Check the meaning of a component against an external variable — and check it
+  with more than one number, since BMI's +0.79 with PC1 concealed a −0.58 with PC2
+* Read an **Eigencorrelation Plot** to see every component against every external
+  variable at once
+* Recognize that a group difference can be **highly predictable yet invisible** in
+  a scores plot, because components maximise variance rather than separation
 * Accept that PCA need **not** align with every variable you have (age here) —
   and know when that means PCA is the wrong tool for a question
 
@@ -350,18 +498,22 @@ After completing this exploration, you should be able to:
 > You began with seven body measurements and no labels. PCA reduced them to two
 > axes that together explain about 88% of the variation — and those two axes
 > turned out to *mean* something: how big a person is, and how they are shaped.
+> You also found the limit of that summary: the sharpest difference between two
+> groups in the data was hiding in the 12% those two axes left behind.
 
 Think about these questions:
 
 * PC1 explained ~60% of the variance with all-positive loadings. If you measured
   ten more body dimensions (finger length, foot width, …), do you expect PC1
   would still be a size factor? Why?
-* BMI correlated ~0.8 with PC1, yet we deliberately excluded BMI from the inputs.
-  What does it mean that PCA "rediscovered" a size/mass axis without ever being
-  shown BMI?
-* The sexes overlapped heavily along the shape axis. If someone claimed they
-  could determine a person's sex from these seven measurements, what would the
-  confidence ellipses lead you to say?
+* BMI correlated +0.79 with PC1 *and* −0.58 with PC2, yet we never gave PCA the
+  BMI column. What does it mean that PCA "rediscovered" a size axis and a
+  girth-versus-length axis on its own — and why should a size-adjusted index like
+  BMI have landed across both of them rather than on one?
+* The sexes overlapped heavily in the scores plot, yet all seven measurements
+  classify sex correctly about 93% of the time. Explain how both facts can be
+  true at once. What does that tell you about using a scores plot to judge
+  whether two groups are distinguishable?
 * Jolicoeur and Mosimann found the same size-then-shape structure in turtles in
   1960. Why might this pattern appear across such different organisms?
 
