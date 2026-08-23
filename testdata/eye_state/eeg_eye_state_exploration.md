@@ -253,7 +253,7 @@ That is worth sitting with rather than glossing over. Eye state is a real and su
 
 ## Step 6: The Temporal Loadings Plot
 
-Open the **Temporal Loadings** plot with **5 components** first, then increase to **15–20**.
+Open the **Temporal Loadings** plot with **5 components** first, then increase to **20**. Twenty rather than fifteen matters here: the oscillatory pair you will look for in Step 7 sits at PC15 and PC16, and asking for only 15 computes the first of the pair without its partner.
 
 Each curve corresponds to one principal component. The horizontal axis is lag (0 to *L*−1); the vertical axis shows the loading of the most influential channel for that component across the window.
 
@@ -275,7 +275,7 @@ Each curve corresponds to one principal component. The horizontal axis is lag (0
 
 > **Why does slow structure dominate?** The eye-state shift lasts several seconds and affects all 14 channels simultaneously — this generates large variance. Alpha oscillations at 10 Hz are faster, more localised, and lower in variance. They are present, but outranked.
 
-Increase **Components** to **15 or 20** and click **Go PCA** again.
+Increase **Components** to **20** and click **Go PCA!** again.
 
 #### Frequency from zero-crossings
 
@@ -306,13 +306,13 @@ Below PC6, many components have nearly equal variance, far too many to identify 
 
 **Use the Temporal Loadings and Explained Variance panel, in this order:**
 
-1. **Temporal Loadings (primary)**: open the plot with 15–20 components. Scan the curves for **sinusoidal shapes** — curves that cross zero multiple times and look like a sine wave. A monotone ramp or arch is *not* an oscillatory component, regardless of its variance.
+1. **Temporal Loadings (primary)**: open the plot with 20 components. Scan the curves for **sinusoidal shapes** — curves that cross zero multiple times and look like a sine wave. A monotone ramp or arch is *not* an oscillatory component, regardless of its variance.
 2. **Explained Variance panel (supporting check)**: once you find a sinusoidal curve, read off its % variance from the panel (or the legend). Check whether the immediately adjacent component (the one above or below it in the ranking) has nearly the same % variance.
 3. **Confirm with 90° phase shift**: in the Temporal Loadings, isolate the two candidate curves (double-click to show one, then single-click the other). A true pair shows the **same frequency** but with one curve shifted approximately one quarter-cycle — one peaks where the other crosses zero.
 
 > Equal variance alone is not sufficient. Two unrelated components can share the same variance by coincidence. The definitive test is always the shape of the temporal loading curves.
 
-**What to look for with 15–20 components:**
+**What to look for with 20 components:**
 
 * **PC1** (~53%): flat — global mean
 * **PC2–PC14** (declining from ~12% to ~0.6%): slow structure — ramps, arches, bowls, and S-shapes with no or very few zero-crossings
