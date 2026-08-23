@@ -169,6 +169,30 @@ func TestIssue783_CompleteDataIsUnchanged(t *testing.T) {
 	}
 }
 
+// TestIssue783_NativeMissingWithheldEvenWithoutPreprocessing covers the case
+// raised by Copilot on #785. The early return for "no preprocessing requested"
+// handed back the caller's own matrix, which on the native-missing path still
+// contains NaN. GoPCA Desktop offers "None (Raw Data)" as a column-wise option
+// alongside native NIPALS handling, and passes the returned matrix straight to
+// the exporter with includeMetrics=true; the only gate there is a nil check, so
+// the export computed NaN metrics and then failed on json.Marshal —
+// "json: unsupported value: NaN".
+func TestIssue783_NativeMissingWithheldEvenWithoutPreprocessing(t *testing.T) {
+	data := missingFixture()
+	cfg := types.PCAConfig{Method: "nipals", Components: 2, MissingStrategy: types.MissingNative}
+
+	pre, processed, err := FitPreprocessorForExport(data, cfg)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if pre != nil {
+		t.Error("expected no preprocessor when none was configured")
+	}
+	if processed != nil {
+		t.Fatal("matrix returned for a native-missing fit; diagnostics would run on NaN")
+	}
+}
+
 // TestIssue783_NoPreprocessingRequested covers the pass-through case.
 func TestIssue783_NoPreprocessingRequested(t *testing.T) {
 	data := syntheticCorrelatedData(10, 3)

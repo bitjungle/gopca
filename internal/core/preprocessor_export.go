@@ -59,12 +59,23 @@ import (
 // Algorithm complexity: O(n*m) for centering and scaling, O(n*m*log n) when
 // robust scaling requires per-column medians.
 func FitPreprocessorForExport(data types.Matrix, config types.PCAConfig) (*Preprocessor, types.Matrix, error) {
+	native := usesNativeMissingHandling(data, config)
+
 	if !config.MeanCenter && !config.StandardScale && !config.RobustScale &&
 		!config.ScaleOnly && !config.SNV && !config.VectorNorm {
+		if native {
+			// No preprocessing to record, but the data still carries the missing
+			// entries, so the matrix must be withheld all the same. Handing it
+			// back would let the caller compute diagnostics from NaN — and the
+			// only gate downstream is a nil check (pkg/csv/output.go), so a
+			// non-nil NaN-bearing matrix produces NaN metrics and an export that
+			// cannot be marshalled.
+			return nil, nil, nil
+		}
 		return nil, data, nil
 	}
 
-	if !usesNativeMissingHandling(data, config) {
+	if !native {
 		preprocessor := NewPreprocessorWithScaleOnly(
 			config.MeanCenter, config.StandardScale, config.RobustScale,
 			config.ScaleOnly, config.SNV, config.VectorNorm)
