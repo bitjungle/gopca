@@ -206,15 +206,65 @@ func (a *App) loadExcel(filePath string) (*FileData, error) {
 		return nil, fmt.Errorf("no data found in sheet %s", selectedSheet)
 	}
 
-	// Convert Excel data to CSV format for parsing
-	var csvContent strings.Builder
+	// Convert Excel data to CSV format for parsing.
+	//
+	// GetRows trims trailing empty cells, so it returns rows of differing
+	// lengths: a sheet with a narrow title block above a wide table comes back
+	// ragged. encoding/csv fixes its expected field count from the first record
+	// and rejects every row that disagrees, so normalise to the widest row
+	// before serialising (#799).
+	width := 0
 	for _, row := range rows {
-		writeCSVRow(&csvContent, row)
+		if len(row) > width {
+			width = len(row)
+		}
+	}
+	if width == 0 {
+		return nil, fmt.Errorf("no data found in sheet %s", selectedSheet)
+	}
+
+	var csvContent strings.Builder
+	padded := make([]string, width)
+	for _, row := range rows {
+		copy(padded, row)
+		for i := len(row); i < width; i++ {
+			padded[i] = ""
+		}
+		writeCSVRow(&csvContent, padded)
 	}
 
 	// Parse the CSV content using GoPCA's parser
 	a.logInfo(fmt.Sprintf("Excel data converted to CSV, %d bytes", csvContent.Len()))
-	return a.parseCSVContent(csvContent.String(), ".csv")
+	fileData, err := a.parseCSVContent(csvContent.String(), ".csv")
+	if err != nil {
+		// A sheet whose table sits below a title block parses into nothing
+		// usable: the preamble becomes the header and the first data rows, so
+		// no column reads as a consistent type. Deciding where the real table
+		// starts is the import wizard's job — it has SkipRows and HeaderRow,
+		// and guessing here risks silently discarding a genuine header row
+		// that happens to be narrower than the data. Say what was found and
+		// point at the tool that can express the answer (#799).
+		if preamble := leadingNarrowRows(rows, width); preamble > 0 {
+			return nil, fmt.Errorf("this sheet has %d row(s) above the table, so the data appears to start at row %d; "+
+				"open it with Import with Wizard to set the header row and rows to skip: %w", preamble, preamble+1, err)
+		}
+		return nil, err
+	}
+	return fileData, nil
+}
+
+// leadingNarrowRows counts the rows at the top of a sheet that are narrower than
+// the widest row. A title block above a table produces a run of such rows, which
+// is what makes the sheet unreadable without telling the parser where the table
+// begins. Returns 0 when the first row is already full width, i.e. the ordinary
+// case of a sheet that is nothing but its table.
+func leadingNarrowRows(rows [][]string, width int) int {
+	for i, row := range rows {
+		if len(row) == width {
+			return i
+		}
+	}
+	return 0
 }
 
 // loadParquet loads data from a Parquet file and converts it to a FileData struct.
