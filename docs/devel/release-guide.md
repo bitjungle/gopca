@@ -265,9 +265,10 @@ The workflow will:
 2. Build Desktop apps (3 platforms + Linux AppImage)
 3. Build GoCSV apps (3 platforms + Linux AppImage)
 4. Sign and notarize macOS applications (fully automated, no Gatekeeper issues)
+5. Bundle the binaries into the per-platform archives
 6. Generate SHA-256 checksums
 7. Create GitHub release with all artifacts
-8. Generate release notes from merged PRs
+8. Generate release notes from CHANGELOG.md
 
 **Expected duration:** 15-25 minutes
 
@@ -279,7 +280,7 @@ open https://github.com/bitjungle/gopca/releases/tag/vX.X.X
 ```
 
 Check that:
-- [ ] All binaries are attached (14 files + checksums: 5 CLI, 4 Desktop, 4 GoCSV, 1 MSIX)
+- [ ] All eight assets are attached (three platform bundles, two AppImages, installer, MSIX, checksums)
 - [ ] Release notes are accurate
 - [ ] Download links work
 - [ ] Checksums file is present
@@ -302,26 +303,25 @@ This ensures users see all changes between releases, regardless of which branch 
 
 ## Artifacts Produced
 
-Each release includes:
+Artifacts are bundled **per platform**, not shipped as individual binaries. A release produces
+eight assets:
 
-### CLI Binaries (5 files)
-- `pca-darwin-amd64` - macOS Intel
-- `pca-darwin-arm64` - macOS Apple Silicon
-- `pca-linux-amd64` - Linux x64
-- `pca-linux-arm64` - Linux ARM64
-- `pca-windows-amd64.exe` - Windows x64
+| Artifact | Contents |
+|----------|----------|
+| `gopca-macos-universal.zip` | `GoPCA.app` + `GoCSV.app` (signed & notarized) + `pca-intel` + `pca-arm64` |
+| `gopca-windows-x64.zip` | `GoPCA.exe` + `GoCSV.exe` + `pca.exe` |
+| `gopca-linux-x64.tar.gz` | `GoPCA` + `GoCSV` + `pca-x64` + `pca-arm64` |
+| `GoPCA-x86_64.AppImage` | GoPCA Desktop standalone (all Linux distributions) |
+| `GoCSV-x86_64.AppImage` | GoCSV Desktop standalone (all Linux distributions) |
+| `GoPCA-Setup-vX.X.X.exe` | Windows installer (unsigned — SmartScreen warning expected) |
+| `GoPCA_X.X.X.0_x64.msix` | Windows Store package |
+| `checksums.txt` | SHA-256 for all artifacts |
 
-### Desktop Applications (4 files)
-- `GoPCA-macos.zip` - macOS app (fully signed & notarized, no Gatekeeper warnings)
-- `GoPCA-windows.exe` - Windows executable
-- `GoPCA-linux` - Linux executable
-- `GoPCA-linux.AppImage` - Linux AppImage (portable, works across distributions)
+To confirm what a past release actually shipped:
 
-### GoCSV Editor (4 files)
-- `GoCSV-macos.zip` - macOS app (fully signed & notarized, no Gatekeeper warnings)
-- `GoCSV-windows.exe` - Windows executable
-- `GoCSV-linux` - Linux executable
-- `GoCSV-linux.AppImage` - Linux AppImage (portable, works across distributions)
+```bash
+gh release view vX.X.X --json assets --jq '.assets[].name'
+```
 
 ### Windows Installer
 - `GoPCA-Setup-vX.X.X.exe` - Windows installer containing all components
@@ -659,7 +659,7 @@ pca version    # Shows detailed version information
 Example output:
 ```
 $ pca version
-GoPCA 1.0.2 (abc123) built on 2025-01-01T00:00:00Z with go1.24.5 for darwin/arm64
+GoPCA 1.6.0 (abc123) built on 2026-01-01T00:00:00Z with go1.26.0 for darwin/arm64
 ```
 
 ### Desktop Applications
