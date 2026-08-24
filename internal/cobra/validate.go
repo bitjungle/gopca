@@ -28,6 +28,7 @@ import (
 	"math"
 	"strings"
 
+	"github.com/bitjungle/gopca/internal/core"
 	pkgcsv "github.com/bitjungle/gopca/pkg/csv"
 	"github.com/spf13/cobra"
 )
@@ -132,6 +133,20 @@ func runValidate(opts *ValidateOptions, inputFile string) error {
 
 	// Basic validation
 	if err := validateCSVData(data); err != nil {
+		return fmt.Errorf("data validation failed: %w", err)
+	}
+
+	// validateCSVData only checks the file's shape. Whether PCA can run at all
+	// is the engine's question, and analyze reaches it by starting the analysis
+	// -- which is why validate used to pass files analyze then refused, most
+	// visibly one with no numeric columns at all (#810). Ask the engine the same
+	// question here, using the same function, so the two cannot drift apart.
+	//
+	// Only the configuration-independent checks belong here: validate takes no
+	// --method or --components, so ValidateNaNValues (whose answer depends on
+	// the missing-value strategy) and ValidateComponentCount are deliberately
+	// left to analyze. Missing values are already reported below as warnings.
+	if err := core.ValidateDataMatrix(data.Matrix); err != nil {
 		return fmt.Errorf("data validation failed: %w", err)
 	}
 
