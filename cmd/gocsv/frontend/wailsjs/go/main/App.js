@@ -134,6 +134,10 @@ export function SelectFileForImport() {
   return window['go']['main']['App']['SelectFileForImport']();
 }
 
+export function SuggestImportForFailedLoad() {
+  return window['go']['main']['App']['SuggestImportForFailedLoad']();
+}
+
 export function Undo(arg1) {
   return window['go']['main']['App']['Undo'](arg1);
 }

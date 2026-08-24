@@ -343,6 +343,28 @@ export namespace dataquality {
 
 export namespace main {
 	
+	export class ExcelImportSuggestion {
+	    needsWizard: boolean;
+	    skipRows: number;
+	    headerRow: number;
+	    sheet?: string;
+	    dataRow: number;
+	    filePath: string;
+	
+	    static createFrom(source: any = {}) {
+	        return new ExcelImportSuggestion(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.needsWizard = source["needsWizard"];
+	        this.skipRows = source["skipRows"];
+	        this.headerRow = source["headerRow"];
+	        this.sheet = source["sheet"];
+	        this.dataRow = source["dataRow"];
+	        this.filePath = source["filePath"];
+	    }
+	}
 	export class FileData {
 	    headers: string[];
 	    rowNames?: string[];

@@ -27,7 +27,7 @@ import { CSVGrid, ValidationResults, MissingValueSummary, MissingValueDialog, Da
 import { ConfirmDialog, ErrorBoundary, ErrorAlert, ThemeProvider, ThemeToggle, HelpProvider, HelpDisplay, HelpWrapper, useHelp } from '@gopca/ui-components';
 import logo from './assets/images/GoCSV-logo-1024-transp.png';
 import helpContent from './help/help-content.json';
-import { LoadCSV, SaveCSV, SaveExcel, ValidateForGoPCA, AnalyzeMissingValues, FillMissingValues, AnalyzeDataQuality, CheckGoPCAStatus, OpenInGoPCA, DownloadGoPCA, ExecuteCellEdit, ExecuteHeaderEdit, ClearHistory, GetVersion } from '../wailsjs/go/main/App';
+import { LoadCSV, SuggestImportForFailedLoad, SaveCSV, SaveExcel, ValidateForGoPCA, AnalyzeMissingValues, FillMissingValues, AnalyzeDataQuality, CheckGoPCAStatus, OpenInGoPCA, DownloadGoPCA, ExecuteCellEdit, ExecuteHeaderEdit, ClearHistory, GetVersion } from '../wailsjs/go/main/App';
 import { EventsOn, OnFileDrop, OnFileDropOff } from '../wailsjs/runtime/runtime';
 import { main, dataquality } from '../wailsjs/go/models';
 
@@ -50,6 +50,10 @@ function AppContent() {
     const [gopcaStatus, setGopcaStatus] = useState<main.GoPCAStatus | null>(null);
     const [isCheckingGoPCA, setIsCheckingGoPCA] = useState(false);
     const [showImportWizard, setShowImportWizard] = useState(false);
+    // Set when a failed load can be rescued by the wizard, so it opens on that
+    // file with the rows-to-skip the backend worked out (#799).
+    const [wizardInitialFile, setWizardInitialFile] = useState<string | null>(null);
+    const [wizardInitialSkipRows, setWizardInitialSkipRows] = useState<number | undefined>(undefined);
     const [showTransformDialog, setShowTransformDialog] = useState(false);
     const [showDocumentation, setShowDocumentation] = useState(false);
     const [showAboutDialog, setShowAboutDialog] = useState(false);
@@ -140,6 +144,29 @@ function AppContent() {
         }
     };
 
+    // A load can fail because the sheet has a title block above the table: the
+    // plain path cannot read that, but the wizard can be told where the table
+    // starts. Offer the handoff, and otherwise report the error (#799).
+    const handleLoadFailure = async (errorMsg: string) => {
+        try {
+            const suggestion = await SuggestImportForFailedLoad();
+            if (suggestion?.needsWizard && suggestion.filePath) {
+                setWizardInitialFile(suggestion.filePath);
+                setWizardInitialSkipRows(suggestion.skipRows);
+                setShowImportWizard(true);
+                setErrorMessage(null);
+                setFileLoaded(false);
+                setFileName(null);
+                return;
+            }
+        } catch (suggestErr) {
+            console.error('Import suggestion failed:', suggestErr);
+        }
+        setErrorMessage('Could not load file — ' + errorMsg);
+        setFileLoaded(false);
+        setFileName(null);
+    };
+
     // Handle file selection
     // Handle files dropped via Wails drag and drop
     const handleDroppedFile = async (filePath: string) => {
@@ -158,8 +185,9 @@ function AppContent() {
             } else {
                 setErrorMessage('Could not load file — the file appears to be empty or invalid. Is it a valid CSV, TSV, or Excel file?');
             }
-        } catch (error) {
+        } catch (error: any) {
             console.error('Error loading dropped file:', error);
+            await handleLoadFailure(error?.message || error?.toString() || 'Unknown error');
         } finally {
             setIsLoading(false);
         }
@@ -182,10 +210,7 @@ function AppContent() {
             }
         } catch (error: any) {
             console.error('Error loading file:', error);
-            const errorMsg = error?.message || error?.toString() || 'Unknown error';
-            setErrorMessage('Could not load file — ' + errorMsg);
-            setFileLoaded(false);
-            setFileName(null);
+            await handleLoadFailure(error?.message || error?.toString() || 'Unknown error');
         } finally {
             setIsLoading(false);
         }
@@ -742,8 +767,14 @@ return;
             {/* Import Wizard */}
             <ImportWizard
                 isOpen={showImportWizard}
-                onClose={() => setShowImportWizard(false)}
+                onClose={() => {
+                    setShowImportWizard(false);
+                    setWizardInitialFile(null);
+                    setWizardInitialSkipRows(undefined);
+                }}
                 onImportComplete={handleImportComplete}
+                initialFilePath={wizardInitialFile}
+                initialSkipRows={wizardInitialSkipRows}
             />
 
             {/* Load from URL */}
