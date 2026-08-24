@@ -141,6 +141,7 @@ type PCAResultJSON struct {
 	T2Limit99                  types.JSONFloat64           `json:"t2_limit_99,omitempty"`
 	QLimit95                   types.JSONFloat64           `json:"q_limit_95,omitempty"`
 	QLimit99                   types.JSONFloat64           `json:"q_limit_99,omitempty"`
+	VariableCorrelations       [][]types.JSONFloat64       `json:"variable_correlations,omitempty"`
 	Eigencorrelations          *EigencorrelationResultJSON `json:"eigencorrelations,omitempty"`
 	AllEigenvalues             []types.JSONFloat64         `json:"all_eigenvalues,omitempty"`
 	TemporalEigenvectors       [][]types.JSONFloat64       `json:"temporal_eigenvectors,omitempty"`
@@ -188,6 +189,11 @@ func ConvertPCAResultToJSON(result *types.PCAResult) *PCAResultJSON {
 		PreprocessingApplied: result.PreprocessingApplied,
 		Means:                types.ConvertFloat64SliceToJSON(result.Means),
 		StdDevs:              types.ConvertFloat64SliceToJSON(result.StdDevs),
+		// Needed by the Circle of Correlations, which must not fall back to
+		// loadings (#793). Forgetting it here is why the plot vanished from the
+		// menu: the engine produced the correlations, but this struct -- not
+		// types.PCAResult -- is what the desktop frontend actually receives.
+		VariableCorrelations: types.ConvertFloat64MatrixToJSON(result.VariableCorrelations),
 	}
 
 	// Convert metrics if present
