@@ -156,7 +156,7 @@ The dashed threshold lines mark **±1/√p**, which for Wine's 13 variables is *
 Now open the **Circle of Correlations**. This plot shows all 13 variables simultaneously as arrows (vectors) in the PC1–PC2 plane. Two things to read:
 
 * **Direction**: variables pointing in the same direction are positively correlated with each other; variables pointing in opposite directions are negatively correlated. Arrows pointing at 90° are uncorrelated.
-* **Length**: the distance from the origin is the **correlation** between that variable and the two components together. Because the two axes are uncorrelated, squaring it gives something useful: the fraction of that variable's variance this plane captures, its *communality*. An arrow reaching 0.92 has 84% of its variation described by PC1 and PC2; one reaching 0.50 has just 25%. The dotted inner circle sits at √½ ≈ 0.707, which is exactly the halfway mark — arrows past it have more than half their variance in this plane, arrows inside have less.
+* **Length**: an arrow's two coordinates are the variable's correlations with PC1 and PC2 *separately*, so its distance from the origin is their combined magnitude, √(r₁² + r₂²). Because the two axes are uncorrelated, squaring that distance gives the fraction of the variable's variance this plane captures — its *communality*. An arrow reaching 0.92 has 84% of its variation described by PC1 and PC2; one reaching 0.50 has just 25%. The dotted inner circle sits at √½ ≈ 0.707, which is exactly the halfway mark — arrows past it have more than half their variance in this plane, arrows inside have less.
 
 #### Questions:
 
