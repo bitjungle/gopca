@@ -110,8 +110,12 @@ func (a *App) LoadCSV(filePath string) (*FileData, error) {
 		var err error
 		fileData, err = a.loadExcel(filePath)
 		if err != nil {
+			// Remember the path so the frontend can ask whether the import
+			// wizard could read this sheet (#799).
+			a.lastFailedLoad = filePath
 			return nil, fmt.Errorf("error loading Excel file: %w", err)
 		}
+		a.lastFailedLoad = ""
 	case ".parquet":
 		// Handle Parquet files
 		var err error
@@ -245,12 +249,90 @@ func (a *App) loadExcel(filePath string) (*FileData, error) {
 		// that happens to be narrower than the data. Say what was found and
 		// point at the tool that can express the answer (#799).
 		if preamble := leadingNarrowRows(rows, width); preamble > 0 {
-			return nil, fmt.Errorf("this sheet has %d row(s) above the table, so the data appears to start at row %d; "+
-				"open it with Import with Wizard to set the header row and rows to skip: %w", preamble, preamble+1, err)
+			return nil, fmt.Errorf("this sheet has %d row(s) above the table, so the data starts at row %d; "+
+				"use Import with Wizard to set the rows to skip", preamble, preamble+1)
 		}
 		return nil, err
 	}
 	return fileData, nil
+}
+
+// ExcelImportSuggestion describes a spreadsheet the plain open path cannot read
+// on its own, together with the wizard settings that make it readable. It exists
+// so the frontend can offer the handoff from structured data rather than by
+// matching on an error string.
+type ExcelImportSuggestion struct {
+	NeedsWizard bool   `json:"needsWizard"`
+	SkipRows    int    `json:"skipRows"`
+	HeaderRow   int    `json:"headerRow"`
+	Sheet       string `json:"sheet,omitempty"`
+	DataRow     int    `json:"dataRow"`  // 1-based sheet row the table starts on
+	FilePath    string `json:"filePath"` // the file the suggestion is about
+}
+
+// suggestExcelImport inspects a spreadsheet that failed to open and reports
+// whether the import wizard could read it, and with what settings. A title block
+// above the table is the case it detects: those rows are narrower than the table,
+// so the number of leading narrow rows is exactly the number the wizard must skip.
+//
+// Returns NeedsWizard false when the sheet has no such preamble, in which case
+// the load failed for some other reason and the wizard would not help.
+// SuggestImportForFailedLoad reports whether the import wizard could read the
+// file whose load just failed. The frontend cannot pass the path because LoadCSV
+// opens the file dialog in the backend, so the path is recorded at the point of
+// failure and consulted here.
+func (a *App) SuggestImportForFailedLoad() (*ExcelImportSuggestion, error) {
+	if a.lastFailedLoad == "" {
+		return &ExcelImportSuggestion{}, nil
+	}
+	suggestion, err := suggestExcelImport(a.lastFailedLoad)
+	if err != nil {
+		return nil, err
+	}
+	if suggestion.NeedsWizard {
+		suggestion.FilePath = a.lastFailedLoad
+	}
+	return suggestion, nil
+}
+
+func suggestExcelImport(filePath string) (*ExcelImportSuggestion, error) {
+	f, err := excelize.OpenFile(filePath)
+	if err != nil {
+		return nil, fmt.Errorf("failed to open Excel file: %w", err)
+	}
+	defer func() { _ = f.Close() }()
+
+	sheets := f.GetSheetList()
+	if len(sheets) == 0 {
+		return nil, fmt.Errorf("no sheets found in Excel file")
+	}
+	sheet := sheets[0]
+
+	rows, err := f.GetRows(sheet)
+	if err != nil {
+		return nil, fmt.Errorf("failed to read sheet %s: %w", sheet, err)
+	}
+
+	width := 0
+	for _, row := range rows {
+		if len(row) > width {
+			width = len(row)
+		}
+	}
+	preamble := 0
+	if width > 0 {
+		preamble = leadingNarrowRows(rows, width)
+	}
+	if preamble == 0 {
+		return &ExcelImportSuggestion{}, nil
+	}
+	return &ExcelImportSuggestion{
+		NeedsWizard: true,
+		SkipRows:    preamble,
+		HeaderRow:   0,
+		Sheet:       sheet,
+		DataRow:     preamble + 1,
+	}, nil
 }
 
 // leadingNarrowRows counts the rows at the top of a sheet that are narrower than

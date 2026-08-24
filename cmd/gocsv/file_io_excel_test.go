@@ -24,6 +24,7 @@
 package main
 
 import (
+	"encoding/json"
 	"fmt"
 	"path/filepath"
 	"strings"
@@ -160,5 +161,158 @@ func TestIssue799_EmptySheetIsRejected(t *testing.T) {
 
 	if _, err := NewApp().loadExcel(path); err == nil {
 		t.Error("an empty sheet loaded without error; expected a no-data failure")
+	}
+}
+
+// TestIssue799_SuggestExcelImportLocatesTheTable checks the structured signal the
+// frontend uses to offer the wizard handoff. It must name the exact number of
+// rows to skip, since that value is pre-filled into the wizard and a wrong count
+// would silently import the wrong header row.
+func TestIssue799_SuggestExcelImportLocatesTheTable(t *testing.T) {
+	path := filepath.Join(t.TempDir(), "titleblock.xlsx")
+	setCells(t, path, [][]string{
+		{},
+		{"", "Excel Sample Data"},
+		{},
+		{"", "Inventory Records Data"},
+		{},
+		{"", "Product ID", "Name", "Stock", "Sold"},
+		{"", "P101", "Widget", "50", "10"},
+	})
+
+	got, err := suggestExcelImport(path)
+	if err != nil {
+		t.Fatalf("SuggestExcelImport: %v", err)
+	}
+	if !got.NeedsWizard {
+		t.Fatal("NeedsWizard is false; the handoff would never be offered")
+	}
+	if got.SkipRows != 5 {
+		t.Errorf("SkipRows = %d, want 5 — the wizard would start on the wrong row", got.SkipRows)
+	}
+	if got.DataRow != 6 {
+		t.Errorf("DataRow = %d, want 6", got.DataRow)
+	}
+	if got.Sheet == "" {
+		t.Error("Sheet is empty; the wizard needs to know which sheet to read")
+	}
+}
+
+// TestIssue799_OrdinarySheetNeedsNoWizard is the other half: a sheet that is
+// nothing but its table must not trigger the handoff, or every failed load would
+// send the user into the wizard for no reason.
+func TestIssue799_OrdinarySheetNeedsNoWizard(t *testing.T) {
+	path := filepath.Join(t.TempDir(), "plain.xlsx")
+	setCells(t, path, [][]string{
+		{"Sample", "A", "B"},
+		{"S1", "1", "2"},
+		{"S2", "3", ""}, // still ragged, but the table starts at row 1
+	})
+
+	got, err := suggestExcelImport(path)
+	if err != nil {
+		t.Fatalf("SuggestExcelImport: %v", err)
+	}
+	if got.NeedsWizard {
+		t.Errorf("NeedsWizard is true for a sheet with no preamble (SkipRows=%d)", got.SkipRows)
+	}
+}
+
+// TestIssue799_SuggestionFollowsTheFailedLoad covers the path the frontend
+// actually uses. LoadCSV opens the file dialog in the backend, so the frontend
+// never learns the path; the suggestion has to follow the recorded failure.
+// A stale or empty record must not send the user into the wizard.
+func TestIssue799_SuggestionFollowsTheFailedLoad(t *testing.T) {
+	path := filepath.Join(t.TempDir(), "titleblock.xlsx")
+	setCells(t, path, [][]string{
+		{},
+		{"", "Excel Sample Data"},
+		{},
+		{"", "Inventory Records Data"},
+		{},
+		{"", "Product ID", "Name", "Stock"},
+		{"", "P101", "Widget", "50"},
+	})
+
+	app := NewApp()
+
+	// Nothing has failed yet, so nothing should be suggested.
+	if got, err := app.SuggestImportForFailedLoad(); err != nil {
+		t.Fatalf("SuggestImportForFailedLoad on a fresh app: %v", err)
+	} else if got.NeedsWizard {
+		t.Error("a fresh app suggested the wizard; the user would be sent there unprompted")
+	}
+
+	if _, err := app.LoadCSV(path); err == nil {
+		t.Fatal("the title-block sheet loaded; this test needs the failure it follows")
+	}
+
+	got, err := app.SuggestImportForFailedLoad()
+	if err != nil {
+		t.Fatalf("SuggestImportForFailedLoad: %v", err)
+	}
+	if !got.NeedsWizard {
+		t.Fatal("no wizard suggested after the load that should trigger it")
+	}
+	if got.SkipRows != 5 {
+		t.Errorf("SkipRows = %d, want 5", got.SkipRows)
+	}
+
+	// A subsequent successful load must clear the record.
+	plain := filepath.Join(t.TempDir(), "plain.xlsx")
+	setCells(t, plain, [][]string{
+		{"Sample", "A", "B"},
+		{"S1", "1", "2"},
+		{"S2", "3", "4"},
+	})
+	if _, err := app.LoadCSV(plain); err != nil {
+		t.Fatalf("plain sheet failed to load: %v", err)
+	}
+	if got, err := app.SuggestImportForFailedLoad(); err != nil {
+		t.Fatalf("SuggestImportForFailedLoad after success: %v", err)
+	} else if got.NeedsWizard {
+		t.Error("a stale failure still suggests the wizard after a successful load")
+	}
+}
+
+// TestIssue799_SuggestionCarriesThePath guards the value the frontend needs most:
+// without FilePath the wizard cannot be opened on the file, and the handoff
+// silently does nothing. It crosses the Go/JSON boundary, so check it there too.
+func TestIssue799_SuggestionCarriesThePath(t *testing.T) {
+	path := filepath.Join(t.TempDir(), "titleblock.xlsx")
+	setCells(t, path, [][]string{
+		{},
+		{"", "Title"},
+		{"", "Product ID", "Name", "Stock"},
+		{"", "P101", "Widget", "50"},
+	})
+
+	app := NewApp()
+	if _, err := app.LoadCSV(path); err == nil {
+		t.Fatal("the title-block sheet loaded; this test needs the failure it follows")
+	}
+	got, err := app.SuggestImportForFailedLoad()
+	if err != nil {
+		t.Fatalf("SuggestImportForFailedLoad: %v", err)
+	}
+	if got.FilePath != path {
+		t.Errorf("FilePath = %q, want %q — the wizard could not be opened on the file", got.FilePath, path)
+	}
+
+	encoded, err := json.Marshal(got)
+	if err != nil {
+		t.Fatalf("marshal: %v", err)
+	}
+	var decoded struct {
+		FilePath string `json:"filePath"`
+		SkipRows int    `json:"skipRows"`
+		Needs    bool   `json:"needsWizard"`
+	}
+	if err := json.Unmarshal(encoded, &decoded); err != nil {
+		t.Fatalf("unmarshal: %v", err)
+	}
+	if decoded.FilePath != path || decoded.SkipRows != got.SkipRows || !decoded.Needs {
+		t.Errorf("the frontend would receive %+v, want path=%q skipRows=%d needsWizard=true",
+			decoded, path, got.SkipRows)
 	}
 }

@@ -37,6 +37,7 @@ type App struct {
 	currentData       *FileData
 	hasUnsavedChanges bool
 	pendingZipPath    string // path to a downloaded ZIP awaiting entry selection
+	lastFailedLoad    string // path of the last file that failed to open, for import suggestions
 }
 
 func (a *App) logInfo(msg string) {

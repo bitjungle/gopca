@@ -37,11 +37,18 @@ interface ImportWizardProps {
     isOpen: boolean;
     onClose: () => void;
     onImportComplete: (data: FileData) => void;
+    /**
+     * Open straight onto this file instead of the file-selection step. Used when
+     * a plain load failed and the wizard is the tool that can read the sheet.
+     */
+    initialFilePath?: string | null;
+    /** Rows to skip, pre-filled from the backend's inspection of the sheet. */
+    initialSkipRows?: number;
 }
 
 type WizardStep = 'file-selection' | 'format-options' | 'data-preview' | 'importing';
 
-export const ImportWizard: React.FC<ImportWizardProps> = ({ isOpen, onClose, onImportComplete }) => {
+export const ImportWizard: React.FC<ImportWizardProps> = ({ isOpen, onClose, onImportComplete, initialFilePath, initialSkipRows }) => {
     const [currentStep, setCurrentStep] = useState<WizardStep>('file-selection');
     const [selectedFile, setSelectedFile] = useState<string | null>(null);
     const [fileInfo, setFileInfo] = useState<ImportFileInfo | null>(null);
@@ -74,7 +81,17 @@ export const ImportWizard: React.FC<ImportWizardProps> = ({ isOpen, onClose, onI
         }
     }, [isOpen]);
 
-    const handleFileSelect = async (filePath: string) => {
+    // When opened on a specific file, skip the file-selection step and go straight
+    // to the options with the suggested rows-to-skip already filled in. The user
+    // still confirms in the preview before anything is imported.
+    useEffect(() => {
+        if (isOpen && initialFilePath) {
+            void handleFileSelect(initialFilePath, initialSkipRows);
+        }
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [isOpen, initialFilePath, initialSkipRows]);
+
+    const handleFileSelect = async (filePath: string, presetSkipRows?: number) => {
         setIsLoading(true);
         setError(null);
         try {
@@ -86,7 +103,10 @@ export const ImportWizard: React.FC<ImportWizardProps> = ({ isOpen, onClose, onI
             setImportOptions(prev => ({
                 ...prev,
                 format: info.fileFormat,
-                delimiter: info.fileFormat === 'tsv' ? '\t' : ','
+                delimiter: info.fileFormat === 'tsv' ? '\t' : ',',
+                // Only override when a value was supplied, so a user who reopens
+                // the wizard by hand keeps whatever they had set.
+                ...(presetSkipRows !== undefined ? { skipRows: presetSkipRows } : {})
             }));
 
             setCurrentStep('format-options');
