@@ -14,7 +14,7 @@ GoCSV can open and save the following formats:
 |--------|-----------|-------|
 | CSV | `.csv` | Comma-separated; auto-detects delimiter and decimal separator |
 | TSV | `.tsv` | Tab-separated |
-| Excel | `.xlsx`, `.xls` | First sheet loaded; multi-sheet files use the first sheet |
+| Excel | `.xlsx`, `.xls` | The first sheet opens directly; use the Import Wizard to choose another sheet, or when the table does not start at the first row |
 | Parquet | `.parquet` | Columnar format used by Kaggle, Hugging Face, OWID, and similar data sources |
 
 **Parquet import details:**
@@ -24,6 +24,31 @@ GoCSV can open and save the following formats:
 - Null values become empty cells
 
 **Export formats:** CSV, Excel (.xlsx), TSV
+
+---
+
+## Opening Files: Direct Open and the Import Wizard
+
+Most files open directly — choose **Open**, and GoCSV reads the whole file. Two situations call for more control, and the **Import Wizard** handles both.
+
+**The table does not start at the first row.** Spreadsheets are often written for people rather than programs: a report title, a date, a blank row or two, and only then the real column headers. GoCSV detects this layout and opens the Import Wizard for you, with the right number of rows already skipped. Check the preview and import.
+
+**You want to choose what comes in.** The wizard lets you pick the sheet, say which row holds the headers, and select the columns you actually need.
+
+| Option | Applies to | What it does |
+|--------|-----------|--------------|
+| Sheet | Excel | Choose which sheet to read; every sheet in the file is listed |
+| Delimiter | CSV / TSV | Comma, semicolon, tab, or pipe |
+| First row contains headers | All | Uncheck for files with no header row |
+| Header Row | All | Which row holds the column names (0-based) |
+| Skip Rows from Top | All | Discard rows above the table — pre-filled when a title block is detected |
+| Maximum Rows | All | Read only the first N rows; 0 reads them all |
+| Row Names Column | All | Which column holds sample names (−1 for none) |
+| Column selection | All | Tick the columns to import, in the preview step |
+
+The final step shows exactly what will be imported, so you can confirm the headers and the first rows before committing to them.
+
+> **Tip:** If a spreadsheet refuses to open, the usual cause is that the data does not begin at the first row. The Import Wizard, with **Skip Rows from Top**, is almost always the answer.
 
 ---
 
