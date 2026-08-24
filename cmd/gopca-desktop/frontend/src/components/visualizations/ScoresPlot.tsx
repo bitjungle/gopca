@@ -71,7 +71,7 @@ export const ScoresPlot: React.FC<ScoresPlotProps> = ({
   excludedRows = []
 }) => {
   const { theme } = useTheme();
-  const { qualitativePalette, sequentialPalette, mode } = usePalette();
+  const { qualitativePalette, sequentialPalette } = usePalette();
 
   // Get the appropriate color scheme based on palette mode
   const colorScheme = groupType === 'continuous'

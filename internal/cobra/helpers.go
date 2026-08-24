@@ -32,12 +32,43 @@ import (
 	"gonum.org/v1/gonum/mat"
 )
 
-// ProjectData projects data onto principal components using loadings
-func ProjectData(data, loadings [][]float64) [][]float64 {
-	// Convert to matrices for computation
+// ProjectData projects data onto principal components using loadings.
+//
+// The loadings must be a dense [nFeatures][nComponents] matrix matching the
+// width of the data. A model file can fail that — kernel PCA stores no loadings
+// at all, and temporal PCA stores them over the lagged embedding rather than the
+// original variables — so the shape is checked rather than assumed. Model files
+// can also be hand-edited or produced elsewhere, and a panic is never the right
+// answer to one that is malformed (#809).
+func ProjectData(data, loadings [][]float64) ([][]float64, error) {
 	nSamples := len(data)
+	if nSamples == 0 {
+		return nil, fmt.Errorf("no data rows to project")
+	}
 	nFeatures := len(data[0])
+	if nFeatures == 0 {
+		return nil, fmt.Errorf("data rows have no columns")
+	}
+	if len(loadings) == 0 {
+		return nil, fmt.Errorf("the model contains no loadings, so data cannot be projected onto its components")
+	}
+	if len(loadings) != nFeatures {
+		return nil, fmt.Errorf("the model expects %d variables but the data has %d", len(loadings), nFeatures)
+	}
 	nComponents := len(loadings[0])
+	if nComponents == 0 {
+		return nil, fmt.Errorf("the model contains no components")
+	}
+	for i, row := range loadings {
+		if len(row) != nComponents {
+			return nil, fmt.Errorf("loadings row %d has %d components, expected %d", i, len(row), nComponents)
+		}
+	}
+	for i, row := range data {
+		if len(row) != nFeatures {
+			return nil, fmt.Errorf("data row %d has %d columns, expected %d", i, len(row), nFeatures)
+		}
+	}
 
 	// Create data matrix
 	dataFlat := make([]float64, nSamples*nFeatures)
@@ -70,7 +101,7 @@ func ProjectData(data, loadings [][]float64) [][]float64 {
 		}
 	}
 
-	return result
+	return result, nil
 }
 
 // validateCSVData performs basic validation on parsed CSV data
@@ -123,9 +154,9 @@ func getDataSummary(data *pkgcsv.Data) string {
 	fmt.Fprintf(&sb, "Data dimensions: %d rows × %d columns\n", data.Rows, data.Columns)
 
 	if len(data.Headers) > 0 {
-		fmt.Fprintf(&sb, "Column names: %s", strings.Join(data.Headers, ", "))
+		fmt.Fprintf(&sb, "Column names: %s", strings.Join(data.Headers[:min(5, len(data.Headers))], ", "))
 		if len(data.Headers) > 5 {
-			fmt.Fprintf(&sb, " (showing first 5 of %d)\n", len(data.Headers))
+			fmt.Fprintf(&sb, " ... (showing first 5 of %d)\n", len(data.Headers))
 		} else {
 			sb.WriteString("\n")
 		}

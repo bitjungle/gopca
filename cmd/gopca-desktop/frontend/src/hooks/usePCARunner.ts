@@ -77,13 +77,13 @@ export function usePCARunner(
                 excludedColumns,
                 ...(selectedGroupColumn && fileData.categoricalColumns && {
                     groupColumn: selectedGroupColumn,
-                    groupLabels: fileData.categoricalColumns[selectedGroupColumn],
+                    groupLabels: fileData.categoricalColumns[selectedGroupColumn]
                 }),
                 metadataNumeric: fileData.numericTargetColumns || {},
                 metadataCategorical: fileData.categoricalColumns || {},
                 calculateEigencorrelations:
                     (fileData.numericTargetColumns && Object.keys(fileData.numericTargetColumns).length > 0) ||
-                    (fileData.categoricalColumns && Object.keys(fileData.categoricalColumns).length > 0),
+                    (fileData.categoricalColumns && Object.keys(fileData.categoricalColumns).length > 0)
             };
 
             const result = await RunPCA(request);
@@ -121,6 +121,6 @@ export function usePCARunner(
         pcaErrorRef,
         runPCA,
         clearPcaError,
-        clearPcaResponse,
+        clearPcaResponse
     };
 }

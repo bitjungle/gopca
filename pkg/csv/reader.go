@@ -107,16 +107,13 @@ func (r *Reader) Read(input io.Reader) (*Data, error) {
 		return nil, fmt.Errorf("empty CSV file")
 	}
 
-	// Validate record count
-	if err := r.validateRecordCount(len(records)); err != nil {
+	// Validate dimensions. security.ValidateDataDimensions checks rows and
+	// columns against the same limits this file used to test inline, and adds a
+	// guard the inline checks lacked: those limits individually admit a
+	// 1,000,000 x 10,000 file, which is 80GB of float64. Only their product
+	// catches it.
+	if err := security.ValidateDataDimensions(len(records), len(records[0])); err != nil {
 		return nil, err
-	}
-
-	// Validate column count
-	if len(records) > 0 && len(records[0]) > 0 {
-		if err := r.validateColumnCount(len(records[0])); err != nil {
-			return nil, err
-		}
 	}
 
 	// Validate field lengths
@@ -509,18 +506,5 @@ func (r *Reader) validateField(field string) error {
 	return nil
 }
 
-// validateRecordCount validates the number of records
-func (r *Reader) validateRecordCount(count int) error {
-	if count > security.MaxCSVRows {
-		return fmt.Errorf("too many rows: %d (max %d)", count, security.MaxCSVRows)
-	}
-	return nil
-}
-
-// validateColumnCount validates the number of columns
-func (r *Reader) validateColumnCount(count int) error {
-	if count > security.MaxCSVColumns {
-		return fmt.Errorf("too many columns: %d (max %d)", count, security.MaxCSVColumns)
-	}
-	return nil
-}
+// Row and column limits are enforced by security.ValidateDataDimensions where
+// the file is read, rather than by local helpers restating the same constants.

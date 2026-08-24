@@ -41,7 +41,7 @@ interface TemporalVariableImportancePlotProps {
 
 export const TemporalVariableImportancePlot: React.FC<TemporalVariableImportancePlotProps> = ({
   pcaResult,
-  maxComponents = 10,
+  maxComponents,
   fontScale = 1.0
 }) => {
   const { theme } = useTheme();
@@ -62,9 +62,15 @@ export const TemporalVariableImportancePlot: React.FC<TemporalVariableImportance
     );
   }
 
+  // Show all computed components unless the caller explicitly limits the count.
+  // A fixed default silently truncated the heatmap at 10 rows while the sibling
+  // Temporal Loadings plot showed every component, so a reader asked to compare
+  // the two plots found components in one that were missing from the other.
+  const componentCount = maxComponents ?? (pcaResult.component_labels?.length ?? 10);
+
   // Create config for Plotly component
   const plotlyConfig = createTemporalVariableImportancePlotConfig(
-    maxComponents,
+    componentCount,
     theme,
     paletteColors,
     fontScale

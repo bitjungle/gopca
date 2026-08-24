@@ -1421,10 +1421,14 @@ func TestNIPALSMissingValueFitThenTransformClean(t *testing.T) {
 // TestNIPALSMissingValueTransformPreservesParameterFreezing verifies that even
 // when NIPALS fits with native missing handling, the preprocessor parameters
 // (if any column-wise preprocessing is applied alongside) are correctly frozen.
-func TestNIPALSMissingNativeSuppressesOtherPreprocessing(t *testing.T) {
-	// When MissingNative is used with NIPALS and data has NaNs, other preprocessing
-	// options (StandardScale, RobustScale) are suppressed with a warning.
-	// Mean centering is handled internally by the NIPALS algorithm.
+func TestNIPALSMissingNativeAppliesColumnPreprocessing(t *testing.T) {
+	// This test previously asserted the opposite — that StandardScale is
+	// "suppressed" and the preprocessor left nil — which pinned the defect
+	// reported in #779 rather than the intended behaviour. NIPALS with native
+	// missing-value handling now computes column statistics over the observed
+	// values and records them, so a scaling request is honoured and Transform()
+	// can reproduce the fit. Row-wise methods remain unsupported and are
+	// rejected outright; see TestIssue779_NativeMissingRejectsRowWisePreprocessing.
 	trainData := types.Matrix{
 		{1.0, 2.0, math.NaN()},
 		{4.0, math.NaN(), 6.0},
@@ -1436,20 +1440,33 @@ func TestNIPALSMissingNativeSuppressesOtherPreprocessing(t *testing.T) {
 	config := types.PCAConfig{
 		Components:      2,
 		MeanCenter:      true,
-		StandardScale:   true, // Will be suppressed because of NaN + MissingNative
+		StandardScale:   true,
 		Method:          "nipals",
 		MissingStrategy: types.MissingNative,
 	}
 
 	engine := NewPCAEngine()
 	_, err := engine.Fit(trainData, config)
-	require.NoError(t, err, "Fit must succeed even with suppressed preprocessing")
+	require.NoError(t, err, "Fit must succeed with missing values present")
 
 	impl := engine.(*PCAImpl)
-	// With NaN data and MissingNative, preprocessor should be nil
-	// (mean centering handled internally by NIPALS algorithm)
-	assert.Nil(t, impl.preprocessor,
-		"preprocessor must be nil for NIPALS with NaN data and MissingNative strategy")
+	require.NotNil(t, impl.preprocessor,
+		"preprocessing parameters must be recorded so Transform can reproduce the fit")
+
+	// Means are taken over observed values only: column 1 averages 2, 8, 3, 6
+	// (skipping the NaN), not over four entries one of which is missing.
+	assert.InDeltaSlice(t, []float64{3.8, 4.75, 6.5}, impl.preprocessor.GetMeans(), 1e-12,
+		"column means must skip missing entries")
+
+	// And the scaling must actually have been applied, not merely recorded.
+	unscaled := NewPCAEngine()
+	cfgNoScale := config
+	cfgNoScale.StandardScale = false
+	_, err = unscaled.Fit(trainData, cfgNoScale)
+	require.NoError(t, err)
+	if math.Abs(unscaled.(*PCAImpl).loadings.At(0, 0)-impl.loadings.At(0, 0)) < 1e-9 {
+		t.Error("StandardScale changed nothing; the request is being ignored")
+	}
 }
 
 // ─────────────────────────────────────────────────────────────────────────────

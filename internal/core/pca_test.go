@@ -293,6 +293,76 @@ func TestNIPALSvsSVD(t *testing.T) {
 	}
 }
 
+// TestIssue738_NIPALSNativeExplainedVarianceOnCompleteData verifies that running
+// NIPALS with MissingStrategy=native on a COMPLETE dataset (no missing values)
+// computes explained-variance ratios against the total variance — matching SVD —
+// rather than normalizing over the retained components only (which would force the
+// ratios to sum to 100%). Regression test for #738.
+func TestIssue738_NIPALSNativeExplainedVarianceOnCompleteData(t *testing.T) {
+	// 4 columns so that 2 retained components leave residual variance; complete data.
+	data := types.Matrix{
+		{2.5, 2.4, 1.1, 0.8},
+		{0.5, 0.7, 2.2, 1.9},
+		{2.2, 2.9, 0.6, 1.2},
+		{1.9, 2.2, 1.8, 0.5},
+		{3.1, 3.0, 0.9, 2.1},
+		{2.3, 2.7, 1.5, 1.0},
+		{2.0, 1.6, 2.4, 0.7},
+		{1.0, 1.1, 1.2, 2.3},
+	}
+	engine := NewPCAEngine()
+
+	nipalsNative, err := engine.Fit(data, types.PCAConfig{
+		Components:      2,
+		MeanCenter:      true,
+		Method:          "nipals",
+		MissingStrategy: types.MissingNative,
+	})
+	if err != nil {
+		t.Fatalf("NIPALS-native fit failed: %v", err)
+	}
+	svd, err := engine.Fit(data, types.PCAConfig{
+		Components: 2,
+		MeanCenter: true,
+		Method:     "svd",
+	})
+	if err != nil {
+		t.Fatalf("SVD fit failed: %v", err)
+	}
+
+	// NIPALS-native and SVD must agree on the total variance explained by the
+	// retained components (both should use the total-variance denominator). Before
+	// the fix, NIPALS-native normalized over the retained components only, forcing
+	// its ratio sum toward ~100% while SVD's stayed lower. Comparing the two sums —
+	// rather than testing against a fixed threshold — is robust regardless of how
+	// much variance the retained components happen to explain.
+	sumOf := func(rs []float64) float64 {
+		s := 0.0
+		for _, r := range rs {
+			s += r
+		}
+		return s
+	}
+	nipalsSum, svdSum := sumOf(nipalsNative.ExplainedVarRatio), sumOf(svd.ExplainedVarRatio)
+	if math.Abs(nipalsSum-svdSum) > 0.5 {
+		t.Errorf("explained-variance ratio sums differ: NIPALS-native=%.2f%%, SVD=%.2f%% "+
+			"(bug #738 forces NIPALS-native toward ~100%%)", nipalsSum, svdSum)
+	}
+
+	// Component counts must match before comparing element-wise (NIPALS can early-stop).
+	if len(nipalsNative.ExplainedVarRatio) != len(svd.ExplainedVarRatio) {
+		t.Fatalf("component-count mismatch: NIPALS-native=%d, SVD=%d",
+			len(nipalsNative.ExplainedVarRatio), len(svd.ExplainedVarRatio))
+	}
+	for i := range svd.ExplainedVarRatio {
+		diff := math.Abs(nipalsNative.ExplainedVarRatio[i] - svd.ExplainedVarRatio[i])
+		if diff > 0.5 {
+			t.Errorf("ExplainedVarRatio[%d] mismatch: NIPALS-native=%.2f%%, SVD=%.2f%% (diff %.2f)",
+				i, nipalsNative.ExplainedVarRatio[i], svd.ExplainedVarRatio[i], diff)
+		}
+	}
+}
+
 // Test error cases
 func TestPCAErrors(t *testing.T) {
 	engine := NewPCAEngine()

@@ -95,7 +95,7 @@ All plots support PNG export, interactive tooltips, full-screen mode, and option
 ![GoPCA Scoreplot Example](docs/images/GoPCA_scoreplot_example.png)
 
 ### Built for Real Work
-- **Example datasets included**: Six datasets with guided tutorials for immediate exploration
+- **Example datasets included**: Seven datasets with guided tutorials for immediate exploration
 - **Handles real-world data**: Robust to missing values, mixed scales, and outliers
 - **Smart defaults**: Automatic parameter selection based on your data
 - **Cross-platform**: Native performance on Windows, macOS, and Linux
@@ -126,7 +126,7 @@ See [PRIVACY.md](PRIVACY.md) for detailed privacy documentation and verification
 
 1. **Download** the latest release for your platform from [GitHub Releases](https://github.com/bitjungle/gopca/releases)
 2. **Launch** GoPCA Desktop
-3. **Try an example** - Select one of the six example datasets (Iris, Wine, Corn NIR, Swiss Roll, Eye State EEG, or CSTR)
+3. **Try an example** - Select one of the seven example datasets (Iris, Wine, Corn NIR, Swiss Roll, Eye State EEG, CSTR, or Body Measures)
 4. **Or load your data** - Click "Open CSV" to load your own file
 5. **Configure preprocessing** - Choose centering, scaling, and other options
 6. **Click "Go PCA!"** - Explore results interactively

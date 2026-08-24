@@ -42,14 +42,15 @@ Suggested GoPCA Temporal PCA settings:
     Preprocessing : Standard Scaling
     Lags          : start with L = 10 (10 min ≈ 1.25 × τ_I)
                     try L = 5 (≈ 5 residence times) and L = 20 for comparison
-                    Note: the 40-min flow oscillation needs L ≈ 80 to be fully resolved;
+                    Note: the 40-min flow oscillation is cleanly resolved at L = 40 (one full
+                    window per period; verified sine/cosine pair, R^2 = 1.00);
                     at L = 10–20 it will appear as low-frequency paired components
     Components    : 5–10 to see both slow trends and the oscillatory pair
 
 Process time constants (for lag selection):
     Residence time τ = V/F = 1 min  (nominal; varies during flow oscillation)
     PI integral time τ_I = 8 min    → L = 8–16 captures one controller action
-    Flow oscillation period = 40 min → L = 40–80 to resolve fully
+    Flow oscillation period = 40 min → L = 40 resolves it (L up to 80 also works)
 
 CSV format and column names (matching P&ID diagram — cstr_diagram_v2.png):
     time_min     — observation identifier / time axis (not a PCA variable)

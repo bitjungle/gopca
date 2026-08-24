@@ -7,6 +7,9 @@
     "cmd/gopca-desktop/frontend",
     "cmd/gocsv/frontend"
   ],
+  "engines": {
+    "node": ">=24.0.0"
+  },
   "scripts": {
     "install-all": "npm install",
     "build-ui": "npm run build -w @gopca/ui-components",
@@ -30,9 +33,11 @@
     "picomatch@<2.3.2": "2.3.2",
     "minimatch@>=3.0.0 <4.0.0": "3.1.5",
     "minimatch@>=9.0.0 <10.0.0": "9.0.9",
-    "brace-expansion@<1.1.13": "1.1.14",
-    "brace-expansion@>=2.0.0 <2.0.3": "2.1.0",
-    "glob@>=10.2.0 <10.5.0": "10.5.0"
+    "brace-expansion@>=1.0.0 <2.0.0": "1.1.18",
+    "brace-expansion@>=2.0.0 <3.0.0": "2.1.4",
+    "glob@>=10.2.0 <10.5.0": "10.5.0",
+    "nanoid@<3.3.18": "3.3.18",
+    "postcss@<8.5.23": "8.5.26"
   },
   "devDependencies": {
     "@typescript-eslint/eslint-plugin": "^8.43.0",

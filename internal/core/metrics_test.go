@@ -540,6 +540,17 @@ func TestCalculateQLimits(t *testing.T) {
 
 	t.Logf("Q limits calculated: 95%%=%f, 99%%=%f", limit95, limit99)
 
+	// Numeric check against the Jackson & Mudholkar reference formula (#737).
+	// Non-retained eigenvalues {0.8, 0.5, 0.3, 0.1, 0.05} give θ₁=1.75, θ₂=0.9925,
+	// θ₃=0.665125, h₀≈0.2123, and therefore Q95≈4.59, Q99≈7.03. The pre-fix formula
+	// (√(2θ₂h₀) instead of √(2θ₂h₀²)) produced Q95≈14.0, so this assertion pins the bug.
+	if math.Abs(limit95-4.59) > 0.1 {
+		t.Errorf("Q95 limit = %.3f, expected ≈4.59 (Jackson & Mudholkar); the pre-fix h₀ bug gives ≈14.0", limit95)
+	}
+	if math.Abs(limit99-7.03) > 0.15 {
+		t.Errorf("Q99 limit = %.3f, expected ≈7.03 (Jackson & Mudholkar)", limit99)
+	}
+
 	// Test edge case: all variance in retained components
 	eigenvaluesNoResidual := []float64{5.0, 3.0, 1.5, 0.0, 0.0, 0.0}
 	limit95Zero, limit99Zero := calc.CalculateQLimits(eigenvaluesNoResidual, 6)

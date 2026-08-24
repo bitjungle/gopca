@@ -28,6 +28,7 @@ import { HelpWrapper } from '../index';
 import { useFileDataContext } from '../../contexts/FileDataContext';
 import { usePCAContext } from '../../contexts/PCAContext';
 import { useUIContext } from '../../contexts/UIContext';
+import { maxComponentsFor, clampComponentCount } from '../../utils/maxComponents';
 
 interface PCAConfigSectionProps {
     /** Called after runPCA() to reset PC component selectors to 0,1. */
@@ -66,9 +67,16 @@ export function PCAConfigSection({ onRunPCA }: PCAConfigSectionProps) {
                             <input
                                 type="number"
                                 min="1"
-                                max={Math.min(fileData.headers.length, fileData.data.length)}
+                                max={maxComponentsFor(config.method, fileData.headers.length, fileData.data.length, config.temporalLags)}
                                 value={config.components}
-                                onChange={(e) => setConfig(prev => ({ ...prev, components: parseInt(e.target.value) || 5 }))}
+                                onChange={(e) => setConfig(prev => ({
+                                    ...prev,
+                                    components: clampComponentCount(
+                                        e.target.value,
+                                        prev.components,
+                                        maxComponentsFor(prev.method, fileData.headers.length, fileData.data.length, prev.temporalLags)
+                                    )
+                                }))}
                                 className="w-full px-3 py-2 bg-gray-100 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg text-gray-900 dark:text-white"
                             />
                         </HelpWrapper>
@@ -96,6 +104,13 @@ export function PCAConfigSection({ onRunPCA }: PCAConfigSectionProps) {
                                             next.robustScale = false;
                                             next.scaleOnly = false;
                                         }
+                                        // Methods have different component ceilings (Kernel PCA is
+                                        // bounded by samples, the others by variables), so a count
+                                        // that was valid before the switch may not be after it.
+                                        next.components = Math.min(
+                                            next.components,
+                                            maxComponentsFor(newMethod, fileData.headers.length, fileData.data.length, next.temporalLags)
+                                        );
                                         return next;
                                     });
                                 }}
@@ -233,7 +248,17 @@ export function PCAConfigSection({ onRunPCA }: PCAConfigSectionProps) {
                                         max="100"
                                         onChange={(e) => {
                                             const value = parseInt(e.target.value);
-                                            setConfig(prev => ({ ...prev, temporalLags: isNaN(value) || value < 2 ? 2 : value }));
+                                            setConfig(prev => {
+                                                const lags = isNaN(value) || value < 2 ? 2 : value;
+                                                return {
+                                                    ...prev,
+                                                    temporalLags: lags,
+                                                    components: Math.min(
+                                                        prev.components,
+                                                        maxComponentsFor(prev.method, fileData.headers.length, fileData.data.length, lags)
+                                                    )
+                                                };
+                                            });
                                         }}
                                         className="w-full px-3 py-2 bg-gray-100 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg text-gray-900 dark:text-white"
                                     />
@@ -310,7 +335,7 @@ export function PCAConfigSection({ onRunPCA }: PCAConfigSectionProps) {
                                         meanCenter: value === 'center' || value === 'standard',
                                         standardScale: value === 'standard',
                                         robustScale: value === 'robust',
-                                        scaleOnly: value === 'scale-only',
+                                        scaleOnly: value === 'scale-only'
                                     };
                                 });
                             }}

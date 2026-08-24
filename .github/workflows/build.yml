@@ -22,7 +22,7 @@ on:
   workflow_dispatch:  # Allow manual triggering
 
 env:
-  GO_VERSION: '1.24'
+  GO_VERSION: '1.26'
 
 # Restrict all jobs to read-only repository access by default.
 permissions:
@@ -127,7 +127,7 @@ jobs:
           # Run tests for all packages with test files
           # Note: Use explicit list to avoid Windows issues with packages without tests
           # Skip TestValidateOutputPath on Windows as it uses Unix-specific paths
-          go test -v -race -timeout 10m ./internal/cli ./internal/core ./pkg/types ./cmd/gopca-desktop
+          go test -v -race -timeout 10m ./internal/cli ./internal/cobra ./internal/core ./pkg/types ./cmd/gopca-desktop
           
           # Run sklearn validation tests if reference files exist
           if [ -d "testdata/validation/reference_results" ]; then
@@ -135,8 +135,8 @@ jobs:
             go test -v -timeout 10m ./internal/core -run "TestValidate|TestNIPALS|TestMath"
           fi
           go test -v -race -timeout 10m -skip "TestValidateOutputPath" ./internal/utils
-          # Test GoCSV commands separately (skip app tests that require Wails context)
-          cd cmd/gocsv && go test -v -race -timeout 10m -run "TestMultiStepUndoRedo|TestUndoRedoState" . && cd ../..
+          # Run the full GoCSV module suite (separate module; headless tests — #751)
+          cd cmd/gocsv && go test -v -race -timeout 10m ./... && cd ../..
         else
           make ci-test
         fi
@@ -195,6 +195,35 @@ jobs:
       shell: bash
       env:
         GOPCA_TEST_TIMEOUT: 60
+
+  frontend-lint:
+    name: Frontend Lint
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Set up Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: '24'
+        cache: 'npm'
+
+    - name: Install dependencies (monorepo)
+      run: npm ci
+
+    - name: Build shared UI components (provides types for lint)
+      run: npm run build-ui
+
+    - name: Lint shared UI components
+      run: npm run lint -w @gopca/ui-components
+
+    - name: Lint GoPCA Desktop frontend
+      run: npm run lint -w frontend
+
+    - name: Lint GoCSV frontend
+      run: npm run lint -w gocsv-frontend
 
   build-cli:
     name: Build pca CLI
@@ -268,7 +297,7 @@ jobs:
     - name: Set up Node.js
       uses: actions/setup-node@v4
       with:
-        node-version: '20'
+        node-version: '24'
         cache: 'npm'
         cache-dependency-path: package-lock.json
     
@@ -356,7 +385,7 @@ jobs:
     - name: Set up Node.js
       uses: actions/setup-node@v4
       with:
-        node-version: '20'
+        node-version: '24'
         cache: 'npm'
         cache-dependency-path: package-lock.json
     

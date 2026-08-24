@@ -47,7 +47,7 @@ export function useFileDataContext(): FileDataResult {
 export const FileDataProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
     const {
         fileData, fileName, filePath, fileError, datasetId, loading,
-        setFileError, loadDataset, handleNativeFileSelect, setFileDataDirect, clearFileError,
+        setFileError, loadDataset, handleNativeFileSelect, setFileDataDirect, clearFileError
     } = useFileData();
 
     // Memoize the context value to avoid creating a new object reference on
@@ -57,7 +57,7 @@ export const FileDataProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     // does not support per-field subscriptions without context splitting.
     const value = useMemo<FileDataResult>(() => ({
         fileData, fileName, filePath, fileError, datasetId, loading,
-        setFileError, loadDataset, handleNativeFileSelect, setFileDataDirect, clearFileError,
+        setFileError, loadDataset, handleNativeFileSelect, setFileDataDirect, clearFileError
     }), [fileData, fileName, filePath, fileError, datasetId, loading,
         setFileError, loadDataset, handleNativeFileSelect, setFileDataDirect, clearFileError]);
 

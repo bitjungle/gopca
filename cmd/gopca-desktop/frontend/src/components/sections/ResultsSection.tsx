@@ -65,9 +65,9 @@ interface ResultsSectionProps {
 export function ResultsSection({ guiConfig }: ResultsSectionProps) {
     const {
         pcaResponse, pcaError, pcaResultsRef, pcaErrorRef,
-        pcaHasExclusions, excludedRows, config, loading,
+        pcaHasExclusions, excludedRows, config,
         selectedGroupColumn, setSelectedGroupColumn,
-        clearPcaError, handleExportModel,
+        clearPcaError, handleExportModel
     } = usePCAContext();
     const { fileData } = useFileDataContext();
     const {
@@ -82,7 +82,7 @@ export function ResultsSection({ guiConfig }: ResultsSectionProps) {
         maxLabelsToShow, setMaxLabelsToShow,
         loadingsPlotType, setLoadingsPlotType,
         plotFontScale, setPlotFontScale,
-        getColumnData, handlePlotSelectionChange,
+        getColumnData, handlePlotSelectionChange
     } = useVisualizationContext();
     const { setMode } = usePalette();
 
@@ -90,7 +90,13 @@ export function ResultsSection({ guiConfig }: ResultsSectionProps) {
     // preprocessing and eigencorrelations are present in the result.
     const plotOptions = useMemo(() => {
         if (!pcaResponse?.result) return [];
-        const { method, preprocessing_applied, eigencorrelations } = pcaResponse.result;
+        const { method, preprocessing_applied, eigencorrelations, variable_correlations } = pcaResponse.result;
+        // The Circle of Correlations needs the variable-component correlations, not
+        // the loadings (#793). The engine cannot produce them without a preprocessed
+        // matrix to correlate against — NIPALS with native missing values is the case
+        // that reaches here — so gate the menu entry on them rather than offering a
+        // plot that would fail to draw.
+        const hasVariableCorrelations = !!variable_correlations && variable_correlations.length > 0;
         return [
             { value: 'scores', label: 'Scores Plot' },
             { value: 'scores3d', label: '3D Scores Plot' },
@@ -100,13 +106,13 @@ export function ResultsSection({ guiConfig }: ResultsSectionProps) {
             ...(method === 'temporal' ? [{ value: 'temporal-variable-importance', label: 'Variable Importance' }] : []),
             ...(preprocessing_applied && method !== 'kernel' && method !== 'temporal' ? [{ value: 'biplot', label: 'Biplot' }] : []),
             ...(preprocessing_applied && method !== 'kernel' && method !== 'temporal' ? [{ value: 'biplot3d', label: '3D Biplot' }] : []),
-            ...(preprocessing_applied && method !== 'kernel' && method !== 'temporal' ? [{ value: 'correlations', label: 'Circle of Correlations' }] : []),
+            ...(hasVariableCorrelations && preprocessing_applied && method !== 'kernel' && method !== 'temporal' ? [{ value: 'correlations', label: 'Circle of Correlations' }] : []),
             ...(method !== 'kernel' && method !== 'temporal' ? [{ value: 'diagnostics', label: 'Diagnostic Plot' }] : []),
             ...(eigencorrelations && method !== 'kernel' ? [{ value: 'eigencorrelation', label: 'Eigencorrelation Plot' }] : []),
             ...(method === 'kernel' ? [
                 { value: 'kernel-matrix', label: 'Kernel Matrix Heatmap' },
                 { value: 'sample-contributions', label: 'Sample Contributions' }
-            ] : []),
+            ] : [])
         ];
     }, [pcaResponse?.result]);
 
@@ -118,16 +124,16 @@ export function ResultsSection({ guiConfig }: ResultsSectionProps) {
             ? Object.keys(fileData.categoricalColumns).map((colName) => ({
                 value: colName,
                 label: `🏷️ ${colName}`,
-                group: 'Categorical',
+                group: 'Categorical'
             }))
             : []),
         ...(fileData?.numericTargetColumns && Object.keys(fileData.numericTargetColumns).length > 0
             ? Object.keys(fileData.numericTargetColumns).map((colName) => ({
                 value: colName,
                 label: `📊 ${colName}`,
-                group: 'Continuous',
+                group: 'Continuous'
             }))
-            : []),
+            : [])
     ], [fileData?.categoricalColumns, fileData?.numericTargetColumns]);
 
     return (

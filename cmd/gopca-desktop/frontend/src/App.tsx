@@ -57,10 +57,10 @@ function AppContent() {
     const {
         showDocumentation, setShowDocumentation,
         showAboutDialog, setShowAboutDialog,
-        mainScrollRef, handleLogoClick,
+        mainScrollRef, handleLogoClick
     } = useUIContext();
     const {
-        showGoCSVDownloadDialog, setShowGoCSVDownloadDialog, handleGoCSVDownload,
+        showGoCSVDownloadDialog, setShowGoCSVDownloadDialog, handleGoCSVDownload
     } = useGoCSVContext();
 
     // ── onStartupFile: orchestrate across FileData + PCA contexts ────────────

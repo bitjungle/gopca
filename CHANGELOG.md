@@ -5,6 +5,120 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.6.0] - 2026-08-24
+
+This release is dominated by a systematic quality-assurance pass over every tutorial and over the
+parts of the applications no test had exercised. Several of the fixes change what you see on screen
+or what a command returns, so read **Changed** before upgrading if you script the CLI or compare
+plots against earlier screenshots.
+
+### Added
+- **NHANES Body Measures sample dataset and tutorial** — real anthropometric measurements from the
+  US National Health and Nutrition Examination Survey, added as the seventh built-in sample dataset
+  with a full guided exploration. It gives PCA on data where every variable is positively correlated,
+  producing a textbook "size" first component and a shape contrast on the second (#724, #725, #765)
+- **Column exclusion in GoPCA Desktop** — datasets wide enough to make the variable list unwieldy now
+  offer a selection interface for excluding columns before analysis, with a sparkline preview of each
+  variable (#775)
+- **Excel files with a title block now open** in GoCSV. Spreadsheets written for people rather than
+  programs — a report title, a date, a blank row, then the real header — previously failed to load at
+  all. GoCSV now detects the layout and opens the Import Wizard on the file with the rows to skip
+  already filled in (#799)
+
+### Changed
+- **`pca validate` now refuses files that `pca analyze` refuses.** The two commands could disagree:
+  a file with no numeric columns was reported as "ready for PCA analysis" and then rejected by
+  `analyze`. `validate` now runs the same engine validation `analyze` runs, so the verdicts cannot
+  drift apart. **If you script `pca validate`, note that input which previously exited 0 may now exit
+  1** — this affects files with no numeric columns or fewer than two samples (#810)
+- **The Circle of Correlations now plots correlations rather than loadings.** Arrow lengths were the
+  raw loadings, which made every arrow too short and meant the distance to the unit circle carried no
+  interpretation. Arrows are now the variable's correlation with each component, so their length
+  squared is the share of that variable's variance the plane captures. **Arrows will look longer than
+  in v1.5.0** — on the Wine dataset `flavanoids` now reaches 0.92 where it previously drew 0.42. The
+  inner reference circle moved from 0.5 to √½ ≈ 0.707, the true halfway mark (#793, #794)
+- **Component signs are consistent between methods.** A principal component is defined only up to its
+  sign, and SVD and NIPALS previously resolved that ambiguity differently — on the Wine dataset,
+  switching method mirrored the scores plot on both axes for otherwise identical components. Both
+  methods now make the largest-magnitude loading of each component positive, the rule scikit-learn and
+  MATLAB use. **Scores plots may appear mirrored relative to v1.5.0.** Signs may still differ from
+  software that applies no convention, such as R's `prcomp`; see "A note on the sign of a component"
+  in the PCA introduction (#779, #780)
+- **`pca transform` refuses kernel and temporal models** instead of crashing. It previously exited
+  with a Go panic on both. Neither can project new data from the model file alone: kernel PCA needs
+  the training data and the kernel function, which the file does not store, and temporal PCA needs the
+  new series re-embedded with the same lag structure. Both now exit 1 with an explanation and a
+  pointer to re-running `analyze` over the combined data (#809)
+- **The biplot is titled "Biplot"** rather than "Biplot (correlation scaling)". The scaling type was
+  never implemented — the plot is a form biplot, and the label promised a construction the code did
+  not perform. No geometry changed; arrow directions and relative lengths are as before (#796)
+- Toolchain modernised to **Go 1.26 and Node 24**. Go 1.24 is end-of-life and no longer receives
+  security updates (#713)
+- GoCSV's stubbed JSON import and Excel cell-range option have been removed. Both were accepted by the
+  interface and did nothing (#719)
+- Configuration options that no code consumed have been removed from the GUI configuration. Ten of the
+  twelve exposed thresholds were read by nothing, with the values actually in force hardcoded in the
+  frontend (#778)
+
+### Fixed
+- **Kernel PCA training scores** were not scaled by the square root of the eigenvalue, so scores were
+  reported on the wrong scale (#736, #747)
+- **NIPALS with native missing-value handling** computed explained variance against the wrong
+  denominator on complete data, and silently ignored requests for standard, robust or scale-only
+  preprocessing — returning an unscaled analysis with no warning a desktop user would ever see. Column
+  statistics are now computed over the observed values of each column (#738, #741, #779, #780)
+- **`Transform` after a native-NIPALS fit** projected raw values onto loadings learned in centered and
+  scaled space, returning scores wrong by an order of magnitude when columns differed in scale, with no
+  error. The preprocessing parameters are now recorded and reapplied (#783, #785)
+- **The Q-residual (SPE) confidence limit** used the wrong power of h₀, departing from
+  Jackson & Mudholkar's formulation (#737, #742)
+- **CLI and Desktop reported different diagnostic metrics** for the same analysis. Both now share one
+  PCA-and-diagnostics pipeline (#716, #760, #762)
+- **The Circle of Correlations disappeared from the GoPCA Desktop menu** in a pre-release build: the
+  correlations were computed by the engine but dropped when the result was converted for the frontend
+  (#795)
+- **The component-count spinner capped Kernel PCA** at the number of variables, when kernel PCA can
+  extract up to the number of samples (#767, #768)
+- **`pca transform` and `pca validate` panicked on an empty `--delimiter`**, and `validate --summary`
+  truncated long column headers (#740, #743)
+- **CSV export from GoPCA Desktop lost missing values** when the data had row names (#739, #744)
+- A duplicate "Input Data" heading appeared above the data table in GoPCA Desktop (#781, #782)
+- Excel sheets whose rows have differing widths — which `GetRows` produces whenever trailing cells are
+  empty — failed to parse (#799)
+- A React hook cleanup issue left a `setTimeout` unguarded and captured a stale closure (#636, #637)
+
+### Security
+- Updated `excelize` to 2.11.0, closing an unbounded row-index allocation in the worksheet parser that
+  a crafted spreadsheet could use to exhaust memory. `golang.org/x/crypto` and `golang.org/x/net` were
+  raised at the same time; their advisories concern SSH and are not reachable from any GoPCA binary,
+  but the bumps clear them from the dashboard so a future alert that matters is not buried (#797)
+- Resolved high-severity npm advisories in `postcss`, `nanoid` and `brace-expansion` (#715, #757)
+- Fixed all code-scanning alerts: a regular-expression denial-of-service pattern and over-broad
+  workflow permissions (#710)
+
+### Documentation
+- **Every tutorial has been checked against the software's actual output**, and the errors found were
+  corrected: the CSTR, Corn, Body Measures, EEG, Iris and Wine explorations all carried claims that did
+  not match what GoPCA produces. The recurring fault was a real observation attributed to the wrong
+  cause, with correct arithmetic underneath (#770, #772, #777, #787, #789, #791, #803, #813)
+- Factual corrections to the PCA introduction (#763, #764)
+- The data-preparation guide now documents the **Import Wizard** — sheet selection, header row, rows to
+  skip, row limits, row names and column selection — none of which it previously mentioned (#805)
+- Added EEG tutorial illustrations, and the missing `git-aliases.md` referenced by the development
+  guide (#712, #722, #723)
+
+### CI/Build
+- The full `cmd/gocsv` test suite and the `internal/cobra` tests now run in CI; both were previously
+  skipped or filtered, leaving the CLI command layer effectively untested (#746, #748, #751, #753)
+- Documentation mirrors are verified by `sync-docs --check`, gated by a pre-commit hook and a broader
+  CI trigger, so bundled tutorial copies cannot drift from their sources (#730, #754)
+- Frontend ESLint is enforced in CI, with the accumulated backlog cleared (#714, #759)
+- `cmd/gocsv/app.go` was split by concern, and dead code was removed from `pkg/integration` (#717,
+  #718, #745, #761)
+- `package.json.md5` is no longer tracked. It is a Wails build cache the tool rewrites whenever it
+  drifts, which gave every developer a permanently dirty working tree (#815)
+- Privacy-audit false positives on local and user-initiated fetches are silenced (#755, #756)
+
 ## [1.5.0] - 2026-06-02
 
 ### Added

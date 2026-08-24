@@ -23,7 +23,7 @@
 
 // Utility functions to transform GoPCA data to Plotly component formats
 
-import { PCAResult, EllipseParams, SampleMetrics } from '../types';
+import { PCAResult } from '../types';
 import type {
   ScoresPlotData,
   ScoresPlotConfig,
@@ -114,8 +114,8 @@ export function transformToScoresPlotData(
  * Create ScoresPlot config from GoPCA props
  */
 export function createScoresPlotConfig(
-  xComponent: number = 0,
-  yComponent: number = 1,
+  _xComponent: number = 0,
+  _yComponent: number = 1,
   showEllipses?: boolean,
   confidenceLevel?: 0.90 | 0.95 | 0.99,
   showRowLabels?: boolean,
@@ -259,11 +259,23 @@ export function createLoadingsPlotConfig(
     showMarkers = numVariables <= variableThreshold;
   }
 
+  // Reference line for "a variable contributing more than its equal share".
+  // Loadings are unit-norm, so if every one of p variables contributed equally
+  // each would be 1/sqrt(p). A fixed 0.3 only suits mid-sized datasets: it is
+  // about right for Wine (13 variables -> 0.28) but meaningless for spectra,
+  // where 700 variables put the equal share at 0.038 — an order of magnitude
+  // below the line. Because the threshold is drawn as a Plotly shape on the y
+  // axis, an out-of-range value also forces the autorange and squashes the data
+  // into a sliver of the plot.
+  const equalShare = numVariables && numVariables > 0
+    ? 1 / Math.sqrt(numVariables)
+    : 0.3;
+
   return {
     mode: plotType,
     sortByMagnitude,
     showThreshold: true,
-    thresholdValue: 0.3,
+    thresholdValue: equalShare,
     showMarkers,
     // Don't set maxVariables - show all by default
     theme,
@@ -319,7 +331,6 @@ export function createBiplotConfig(
   return {
     pcX: xComponent + 1,
     pcY: yComponent + 1,
-    scalingType: 'correlation',
     showScores: true,
     showLoadings: true,
     showLabels,
@@ -337,18 +348,29 @@ export function createBiplotConfig(
 export function transformToCircleOfCorrelationsData(
   pcaResult: PCAResult
 ): CircleOfCorrelationsData {
-  // Check if loadings exist (e.g., not available for Kernel PCA)
-  if (!pcaResult.loadings || pcaResult.loadings.length === 0) {
-    throw new Error('Circle of Correlations visualization requires loadings data, which is not available for this PCA method.');
+  // This plot needs the variable-component CORRELATIONS, which the engine
+  // computes alongside the loadings. Substituting loadings here is the defect
+  // recorded in #793: the two differ by sqrt(eigenvalue)/sd, so the arrows come
+  // out roughly half length and the unit circle becomes unreachable.
+  //
+  // The engine leaves the field empty when it has no preprocessed matrix to
+  // correlate against — kernel PCA, and NIPALS with native missing values.
+  // Refuse rather than fall back to loadings: a plot that declines to draw is
+  // recoverable, one that quietly shows a different quantity under the same
+  // axes is not.
+  if (!pcaResult.variable_correlations || pcaResult.variable_correlations.length === 0) {
+    throw new Error(
+      'Circle of Correlations requires variable-component correlations, which are not available for this PCA method or preprocessing.'
+    );
   }
 
-  // Backend stores loadings as [variables][components], but frontend expects [components][variables]
-  const transposedLoadings = transposeMatrix(pcaResult.loadings);
+  // Backend stores them as [variables][components]; this plot expects [components][variables]
+  const transposed = transposeMatrix(pcaResult.variable_correlations);
 
   return {
-    loadings: transposedLoadings,
+    correlations: transposed,
     variableNames: pcaResult.variable_labels ||
-      Array.from({ length: pcaResult.loadings.length }, (_, i) => `Var${i + 1}`), // Use loadings.length for number of variables
+      Array.from({ length: pcaResult.variable_correlations.length }, (_, i) => `Var${i + 1}`),
     explainedVariance: pcaResult.explained_variance_ratio // Already in percentages from backend
   };
 }
@@ -441,7 +463,6 @@ export function transformToEigencorrelationPlotData(
   // Backend format: {variable: [correlations per component]}
   // Frontend expects: [[correlations per component for all variables]]
   const numComponents = eigencorr.components.length;
-  const numVariables = eigencorr.variables.length;
 
   const correlationMatrix: number[][] = [];
 
@@ -555,7 +576,6 @@ export function createBiplot3DConfig(options: {
   } = options;
 
   return {
-    scalingType: 'correlation',
     showScores,
     showLoadings,
     showLabels,

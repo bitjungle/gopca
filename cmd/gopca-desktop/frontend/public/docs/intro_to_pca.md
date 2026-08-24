@@ -16,12 +16,12 @@ The **GoPCA Suite** brings this powerful technique to your fingertips with a foc
 
 GoPCA is designed to serve two roles simultaneously — and it does not compromise on either:
 
-* **A learning tool:** GoPCA ships with six carefully chosen sample datasets spanning biology, chemistry, spectroscopy, chemical engineering, and neuroscience. Each dataset comes with a step-by-step interactive tutorial that teaches both PCA concepts and how to use the software. You can go from zero to a complete multivariate analysis — including data diagnostics, outlier removal, and interpretation — without leaving the application. The tutorials are not toy examples; they are real datasets with real challenges, selected precisely because they expose the situations you will encounter in your own work.
+* **A learning tool:** GoPCA ships with seven carefully chosen sample datasets spanning biology, chemistry, spectroscopy, chemical engineering, neuroscience, and public health. Each dataset comes with a step-by-step interactive tutorial that teaches both PCA concepts and how to use the software. You can go from zero to a complete multivariate analysis — including data diagnostics, outlier removal, and interpretation — without leaving the application. The tutorials are not toy examples; they are real datasets with real challenges, selected precisely because they expose the situations you will encounter in your own work.
 
 * **A professional analysis tool:** The same application you use to learn is the one you use on your own data. Load your CSV, configure your preprocessing, choose your method (standard SVD, NIPALS, Kernel PCA, or Temporal PCA), and export your model. There are no artificial limits, no watermarks, and no features locked behind a tutorial mode. When you are ready to analyse your own datasets, GoPCA is ready too.
 
 > **Interactive Tutorials:**  
-> GoPCA Desktop includes guided interactive tutorials for six carefully chosen sample datasets. Each tutorial walks you through a complete analysis, explains what to look for, and teaches you a specific aspect of PCA or data analysis. This introduction gives you the conceptual foundation; the tutorials give you the hands-on experience. Look for the **Open Tutorial** button next to each sample dataset in GoPCA Desktop.
+> GoPCA Desktop includes guided interactive tutorials for seven carefully chosen sample datasets. Each tutorial walks you through a complete analysis, explains what to look for, and teaches you a specific aspect of PCA or data analysis. This introduction gives you the conceptual foundation; the tutorials give you the hands-on experience. Look for the **Open Tutorial** button next to each sample dataset in GoPCA Desktop.
 
 > **Note on Data Preparation:**  
 > Before performing PCA, your data should be properly cleaned and structured. If you're starting with raw data that contains missing values, outliers, or quality issues, consider using **GoCSV Desktop** for data preparation. See our companion guide *"Data Preparation with GoCSV Desktop"* for detailed guidance on getting your data ready for analysis.
@@ -38,11 +38,13 @@ PCA does something remarkably similar with your data. When you have many variabl
 
 Principal Component Analysis is a **dimensionality reduction** technique that transforms your original variables into a new set of uncorrelated variables called principal components. These components are special because:
 
-* **They're ordered by importance:** The first principal component (PC1) captures the most variation in your data, PC2 captures the second-most (while being completely independent of PC1), and so on.
+* **They're ordered by importance:** The first principal component (PC1) captures the most variation in your data, PC2 captures the second-most (while being completely uncorrelated with PC1), and so on.
 
 * **They're efficient:** Often, just 2–3 principal components can capture 80–90% of the information contained in dozens of original variables.
 
 * **They're interpretable:** Each PC is a weighted combination of your original variables, revealing what aspects of your data each component represents.
+
+To make "a weighted combination of your original variables" concrete: you already rely on combined measurements every day. **Body Mass Index (BMI)** — weight divided by height squared — folds two measurements into a single number that summarizes body build. Someone designed that formula by hand. PCA automates the same idea of compressing several measurements into one informative number, with one twist: the combinations PCA builds are **weighted sums** (linear blends) that it *learns* from the data, rather than a fixed formula handed down by an expert.
 
 Without diving too deep into the mathematics (we'll explore that later for those interested), PCA essentially rotates your data's coordinate system to align with the directions of maximum variation. It's like turning a tilted oval until it lies flat along the x-axis: suddenly, the main pattern becomes crystal clear.
 
@@ -72,9 +74,9 @@ The benefits are immediate and tangible. A simple plot of the first two principa
 
 ---
 
-## 4. Six Datasets, Six Lessons
+## 4. Seven Datasets, Seven Lessons
 
-GoPCA Desktop ships with six carefully selected sample datasets. Together they cover the most important situations you will encounter in practice — from a clean textbook case to spectroscopic data to a nonlinear manifold to a time series from a chemical reactor. Each dataset teaches a specific lesson about data, preprocessing, and the choice of PCA method. This section introduces all six. The interactive tutorials in GoPCA Desktop go deeper into each one.
+GoPCA Desktop ships with seven carefully selected sample datasets. Together they cover the most important situations you will encounter in practice — from a clean textbook case to spectroscopic data to a nonlinear manifold to a time series from a chemical reactor to a real population health survey. Each dataset teaches a specific lesson about data, preprocessing, and the choice of PCA method. This section introduces all seven. The interactive tutorials in GoPCA Desktop go deeper into each one.
 
 ![Wine Analysis Walkthrough](images/intro_to_pca_fig_04-01.jpg)
 
@@ -82,7 +84,7 @@ GoPCA Desktop ships with six carefully selected sample datasets. Together they c
 
 ### Dataset 1: Iris — Learning to See Clusters
 
-**The data:** 150 flower measurements from three species of iris (*Setosa*, *Versicolor*, and *Virginica*). Four variables: sepal length, sepal width, petal length, and petal width. Collected by Ronald Fisher in 1936 and still one of the most widely used teaching datasets in statistics.
+**The data:** 150 flower measurements from three species of iris (*Setosa*, *Versicolor*, and *Virginica*). Four variables: sepal length, sepal width, petal length, and petal width. Measured by the botanist Edgar Anderson and made famous by Ronald Fisher's 1936 paper on discriminant analysis — still one of the most widely used teaching datasets in statistics.
 
 **Why it is special:** The dataset is clean, well-behaved, and small enough to understand completely. The three species form partially overlapping groups that become clearly separated in PCA space — making it a perfect first experience of PCA doing something useful.
 
@@ -114,7 +116,7 @@ GoPCA Desktop ships with six carefully selected sample datasets. Together they c
 - What it means when a loading is near zero vs. near ±1
 - How PCA supports authentication: wines with unusual chemical profiles appear as outliers
 
-**Preprocessing:** Standard scaling (zero mean, unit variance) is essential here — proline ranges from 278 to 1680 mg/L while pH ranges from 2.74 to 4.01. Without scaling, proline dominates purely because of its larger numbers.
+**Preprocessing:** Standard scaling (zero mean, unit variance) is essential here — proline ranges from 278 to 1680 mg/L while nonflavanoid phenols range from 0.13 to 0.66. Their standard deviations differ by a factor of roughly 2,500. Without scaling, proline dominates purely because of its larger numbers.
 
 **PCA method:** Standard SVD. A clean example of correlation PCA at work.
 
@@ -151,15 +153,16 @@ GoPCA Desktop ships with six carefully selected sample datasets. Together they c
 
 **What you will learn:**
 - What "nonlinear structure" means geometrically, and why linear PCA cannot see it
-- How **Kernel PCA** maps the data into a higher-dimensional space where the curved structure becomes flat
+- How **Kernel PCA** maps the data into a higher-dimensional space where curved structure can become flat
 - What the RBF (Radial Basis Function) kernel does and how the gamma parameter controls it
-- That the choice of PCA *method* (not just preprocessing) can make the difference between seeing structure and missing it entirely
+- Why a nonlinear method is not automatically an improvement: the kernel encodes an assumption about what "similar" means, and the Swiss Roll is built to violate it
+- That a tidy, orderly scores plot can still be the wrong answer — one of the most useful habits this suite can teach you
 
 **Preprocessing:** No centering or scaling — Kernel PCA handles the geometry internally.
 
-**PCA method:** Kernel PCA with the RBF kernel. The tutorial compares standard SVD PCA (which fails) with Kernel PCA (which succeeds), making the difference tangible.
+**PCA method:** Kernel PCA with the RBF kernel. The tutorial has you compare it against standard SVD directly. Be warned that the result is not the tidy victory you might expect: the RBF kernel measures straight-line distance, which is precisely the misleading quantity on a rolled-up sheet, so no setting of gamma unrolls it. Working out *why* is the point of the exercise.
 
-> **→ Open the Swiss Roll tutorial in GoPCA Desktop** to see standard PCA fail — and Kernel PCA succeed.
+> **→ Open the Swiss Roll tutorial in GoPCA Desktop** to see standard PCA fail — and to find out why reaching for a more powerful method does not always fix it.
 
 ---
 
@@ -170,7 +173,7 @@ GoPCA Desktop ships with six carefully selected sample datasets. Together they c
 **Why it is special:** Process data from a reactor is fundamentally different from independent samples like Iris or Wine — every measurement is connected to the previous one through the physics of the reactor. The energy and mass balances couple the variables to each other with time delays (thermal inertia, residence time, controller response), and the dataset contains both slow trends and a periodic oscillation designed to be identified by Temporal PCA. The cooling fault scenario makes the dataset directly relevant to industrial process monitoring and fault detection.
 
 **What you will learn:**
-- How to compare ordinary PCA (L = 0) to Temporal PCA, and what the lag parameter adds
+- How to compare ordinary PCA to Temporal PCA, and what the lag window adds
 - How to read PCA scores as a **process trajectory**: stable clusters, step jumps, loops from oscillations, and drift from faults
 - How temporal loading curves reveal **delayed coupling** between variables (e.g. coolant temperature changes before reactor temperature responds)
 - How to identify an SSA **oscillatory pair** from the shape of temporal loading curves — sinusoidal and ~90° phase-shifted — and why similar explained variance alone is not a reliable criterion
@@ -179,7 +182,7 @@ GoPCA Desktop ships with six carefully selected sample datasets. Together they c
 
 **Preprocessing:** Standard scaling is essential — temperatures, concentrations, and flow rates have completely different units and magnitudes. The tutorial starts with unscaled results so you can see the distortion directly.
 
-**PCA method:** Temporal PCA. The tutorial compares L = 0, 5, 10, and 40 to show how the lag window controls which dynamics become visible. L = 40 is needed to resolve the 40-minute flow oscillation as a recognisable sine/cosine pair.
+**PCA method:** Temporal PCA. The tutorial compares an ordinary SVD baseline against L = 5, 10 and 40 to show how the lag window controls which dynamics become visible. L = 40 is needed to resolve the 40-minute flow oscillation as a recognisable sine/cosine pair.
 
 > **→ Open the CSTR tutorial in GoPCA Desktop** to explore process dynamics and fault detection with Temporal PCA.
 
@@ -208,7 +211,27 @@ GoPCA Desktop ships with six carefully selected sample datasets. Together they c
 
 ---
 
-### The Six Datasets at a Glance
+### Dataset 7: Body Measures — What the Components Mean
+
+**The data:** Seven body measurements from 5,096 US adults in the 2017–2018 National Health and Nutrition Examination Survey (NHANES): weight, height, upper leg length, upper arm length, and arm, waist, and hip circumferences. Unlike the curated benchmarks above, this is a slice of a real population survey.
+
+**Why it is special:** Iris and Wine were about separating *known groups*. Body Measures has no natural classes — instead, the interesting question is what the components themselves *mean*. Because every body measurement grows with overall size, PCA hands you two remarkably interpretable axes: **PC1 (~60% of the variance) is an overall "size" factor** — all seven loadings share the same sign, so moving along it makes a person larger or smaller in every dimension at once — and **PC2 (~29%) is a "shape" factor** that contrasts stature (height, limb lengths) against girth (waist, hip, arm circumference). Together they capture about 88% of the variation in a clean 2D picture.
+
+**What you will learn:**
+- How a principal component can be an *interpretable factor* (size, shape), not just an abstract axis
+- Why a set of positively correlated measurements always yields a first component with same-sign loadings — a general "size" component
+- How to tell a *shift between overlapping groups* (men and women differ along the shape axis but overlap heavily) from the clean cluster separation seen in Iris
+- That PCA finds the directions of greatest variance, which need not line up with any variable you care about (colouring by age reveals almost no structure)
+
+**Preprocessing:** Standard scaling is essential — weight is in kilograms while the lengths and circumferences are in centimetres, and weight's numerical variance is roughly 60× that of arm length. Without scaling, weight and the largest girths dominate; with it, the size-and-shape structure emerges cleanly.
+
+**PCA method:** Standard SVD. The lesson is about *interpretation* — reading meaning into the components — rather than a new algorithm.
+
+> **→ Open the Body Measures tutorial in GoPCA Desktop** to see how PCA separates body size from body shape.
+
+---
+
+### The Seven Datasets at a Glance
 
 | Dataset | Domain | Variables | Key lesson | Preprocessing | Method |
 |---|---|---|---|---|---|
@@ -218,6 +241,7 @@ GoPCA Desktop ships with six carefully selected sample datasets. Together they c
 | **Swiss Roll** | Synthetic | 3 | Nonlinear structure | None | Kernel PCA |
 | **CSTR** | Chemical engineering | 12 (×time) | Process dynamics, fault detection | Standard scaling | Temporal PCA |
 | **EEG Eye State** | Neuroscience | 14 (×time) | Brain rhythms, phase-space trajectories | Standard scaling | Temporal PCA |
+| **Body Measures** | Public health | 7 | Interpreting components (size vs shape) | Standard scaling | SVD |
 
 ---
 
@@ -249,11 +273,11 @@ Raw data rarely tells the full story. Variables measured in different units (mg/
 PCA requires **centered** data. By subtracting a reference value from each variable, you shift your data cloud to the origin — this ensures PCA finds the directions of genuine variation rather than being pulled toward arbitrary baseline levels. The standard approach subtracts each variable's **mean**. When your data contains outliers, the **median** is a more reliable choice, since a single extreme value can shift the mean substantially without changing the median at all.
 
 **Scaling (Often Critical):**  
-When variables have different units or ranges, **scaling** prevents variables with larger numbers from dominating. Consider:
-- Proline in wine: ranges from 278 to 1680 mg/L
-- pH in wine: ranges from 2.74 to 4.01
+When variables have different units or ranges, **scaling** prevents variables with larger numbers from dominating. Consider two of the wine dataset's 13 measurements:
+- Proline: ranges from 278 to 1680 mg/L
+- Nonflavanoid phenols: ranges from 0.13 to 0.66
 
-Without scaling, proline would dominate the analysis simply due to its larger numbers!
+Without scaling, proline would dominate the analysis simply due to its larger numbers — it contributes about six million times more variance than nonflavanoid phenols, purely as an accident of the units each was reported in.
 
 > **Decision Guide:**
 > - **Always center** your data (PCA will not work properly without it)
@@ -274,11 +298,11 @@ Beyond basic centering and scaling, GoPCA Suite offers specialized preprocessing
    - **SNV (Standard Normal Variate)**: Row-wise normalization that removes multiplicative scatter effects in spectroscopic data
    - **Vector Normalization**: Normalizes each sample to unit length, useful for compositional data
 
-**In GoPCA Suite:** Both the pca CLI and GoPCA Desktop provide simple options for all preprocessing methods. GoPCA Desktop offers intuitive checkboxes, while the pca CLI uses flags like `--no-mean-centering`, `--scale` (with options: none, standard, or robust), `--snv`, and `--vector-norm`.
+**In GoPCA Suite:** Both the pca CLI and GoPCA Desktop provide simple options for all preprocessing methods. GoPCA Desktop offers intuitive checkboxes, while the pca CLI uses flags like `--no-mean-centering`, `--scale` (with options: none, standard, or robust), `--scale-only` (variance scaling without centering), `--snv`, and `--vector-norm`.
 
 ![Center and scale](images/intro_to_pca_fig_05-03.jpg)
 
-> **Important:** These mathematical preprocessing steps (centering and scaling) are handled by GoPCA Suite during the analysis. Data cleaning tasks like handling missing values, removing outliers, and selecting variables should be done beforehand using appropriate data preparation tools like GoCSV Desktop.
+> **Important:** These mathematical preprocessing steps (centering and scaling) are handled by GoPCA Suite during the analysis. Larger data cleaning tasks — handling missing values, reshaping, merging files — should be done beforehand with a data preparation tool like GoCSV Desktop. Excluding individual rows and variables, however, is part of the analysis itself and belongs inside GoPCA Desktop, where you can take a variable out, re-run, and see immediately what changed.
 
 ### Step 3: Calculate the Covariance Matrix
 
@@ -306,7 +330,10 @@ Imagine your data cloud as a swarm of points in space. PCA finds:
 3. And so on, each perpendicular to all previous directions
 
 **In Practice:**
-GoPCA Suite uses either eigendecomposition or Singular Value Decomposition (SVD) depending on your data size and chosen algorithm. Both give equivalent results, but SVD is often more numerically stable and efficient.
+GoPCA Suite computes standard PCA with **Singular Value Decomposition (SVD)**, which reaches the same answer as eigendecomposition but is more numerically stable — it never has to form the covariance matrix explicitly. Kernel PCA does use eigendecomposition, applied to the kernel matrix rather than the covariance matrix.
+
+**A third option: NIPALS.**
+GoPCA also offers **NIPALS** (Nonlinear Iterative Partial Least Squares), which extracts components one at a time instead of all at once. Two situations make it worth choosing. First, when you need only the first few components of a very wide dataset, computing them one by one is cheaper than a full decomposition. Second — and this is the more useful property — NIPALS can work **directly on data containing missing values**, without discarding rows or filling gaps with invented numbers. In the pca CLI this is `--method nipals --missing-strategy native`; GoPCA Desktop offers the same choice when it detects missing values in your file.
 
 ![Find the Principal Direction](images/intro_to_pca_fig_05-05.jpg)
 
@@ -363,6 +390,8 @@ PCA essentially rotates your coordinate system to align with the natural "shape"
 2. **Finding Perpendicular Axes:** It then finds the next direction of maximum spread that's perpendicular to the first. This becomes PC2.
 3. **Continuing the Process:** This continues for PC3, PC4, and so on, each perpendicular to all previous ones.
 
+There is a subtle but important detail in that first step. The line PCA draws is the one that comes as close as possible to the points *taken together* — precisely, the line that makes the **total of the squared perpendicular distances** from the points to the line as small as possible. Two things are worth noticing. First, those distances are measured **perpendicular** to the line, not straight up and down — which is what sets PCA apart from the familiar "line of best fit" from regression, which minimizes only the **vertical** gaps because it treats one variable as the thing to be predicted. Second, PCA plays no favorites: it singles out no variable as the response, measuring how far each data point sits from the line itself. This is, in fact, the original definition of a principal component — Karl Pearson introduced it in 1901 in a paper titled *On Lines and Planes of Closest Fit to Systems of Points in Space*. The axis PCA finds is quite literally Pearson's "line of closest fit."
+
 Projecting onto PC1–PC2 is like shining a light through your data cloud and looking at its 2D shadow — but unlike random projections, this shadow is carefully chosen to preserve as much of the cloud's structure as possible.
 
 ### Geometric Interpretation of Key Concepts
@@ -394,7 +423,7 @@ PCA assumes linear geometry, but real data might have:
 - **Circular patterns:** Periodic or cyclic relationships
 - **Temporal structure:** Where the order of observations carries information
 
-When you see curved or horseshoe-shaped patterns in PCA scores plots, it is a sign that nonlinear methods (like Kernel PCA) might reveal additional structure.
+When you see curved or horseshoe-shaped patterns in PCA scores plots, it is a sign that nonlinear methods (like Kernel PCA) might reveal additional structure. One caution about the horseshoe in particular: it very often arises when a *single* strong gradient runs through the data nonlinearly, and PCA is forced to bend it across two components. The second component is then an artifact of the first rather than a separate finding — so resist the temptation to interpret it as one.
 
 ---
 
@@ -453,6 +482,23 @@ $$
 
 The connection: loadings are the columns of **V**; scores are **U × Σ**; eigenvalues are the squared singular values divided by (*n*−1).
 
+### A note on the sign of a component
+
+A principal component is defined only up to its sign. If **a** is a unit-length direction of maximum variance, so is **−a**: it describes the same line through the data, traversed the other way, with the same eigenvalue. Flipping a component's loadings and its scores together leaves the reconstruction of your data exactly as good. Nothing in the mathematics prefers one direction over the other.
+
+The practical consequence is that **the same data can produce mirror-image plots in different software**, and this is not an error in either. Different packages resolve the ambiguity differently, and there is no agreed standard:
+
+- **GoPCA** makes the largest-magnitude loading of each component positive. This is the rule scikit-learn and MATLAB also use, and it guarantees that GoPCA's own methods — SVD and NIPALS — always agree with each other on the same data.
+- **R's `prcomp`** applies no rule at all. Its documentation states that the signs "are arbitrary, and so may differ between different programs for PCA, and even between different builds of R."
+
+So if your GoPCA scores plot is a mirror image of one you produced elsewhere, nothing is wrong. What you should compare instead is what the signs mean *relative to one another*:
+
+- Which variables load with the **same** sign as each other, and which oppose them
+- Whether a group of samples sits on the same side as a given variable
+- The **magnitude** of each loading
+
+All of these are unchanged by a flip. A statement like "PC2 contrasts the length measurements against the girth measurements" is reproducible anywhere; "height loads +0.53 on PC2" is only reproducible in software that happens to share your sign convention.
+
 ### The Optimization at the Heart of PCA
 
 PCA solves a beautiful optimization problem: find the direction that captures the most variance in the data. For PC1:
@@ -473,11 +519,11 @@ Like any analytical tool, PCA excels in certain situations and struggles in othe
 
 PCA works best under certain conditions:
 
-**Linearity:** PCA assumes that relationships between variables are linear. This works well in cases like height vs weight, but fails for curved patterns (like enzyme activity vs pH, where the relationship is bell-shaped).
+**Linearity:** PCA assumes that relationships between variables are linear. This holds well in many measurement settings — absorbance rises in proportion to concentration under the Beer–Lambert law, which is a large part of why PCA works so well on the Corn NIR spectra. It fails for genuinely curved patterns, such as enzyme activity against pH, where the relationship is bell-shaped.
 
 **Variance equals importance:** PCA assumes that the directions with the most spread contain the most meaningful signal. This is often true in measurement data, but can fail when subtle, low-variance signals matter more than broad fluctuations.
 
-**Orthogonality:** Each principal component must be perpendicular to the others. This works well if the true underlying factors are independent, but if those factors are correlated, PCA may split them awkwardly across components.
+**Orthogonality:** Each principal component must be perpendicular to the others. That is a constraint you impose, not one nature is obliged to respect. It works well when the true underlying factors really are uncorrelated, but if those factors overlap, PCA has no choice but to split them awkwardly across several components.
 
 **Continuous, quantitative data:** PCA handles measurements, concentrations, and intensities naturally, but struggles with categorical, binary, or purely count-based variables.
 
@@ -499,7 +545,7 @@ PCA works best under certain conditions:
 
 ### Limitations: Where PCA Struggles
 
-**Nonlinear relationships:** If your data contains important nonlinear patterns (like a Swiss Roll), linear PCA will miss them. This is why GoPCA Suite includes Kernel PCA for nonlinear patterns.
+**Nonlinear relationships:** If your data contains important nonlinear patterns, linear PCA will miss them. This is why GoPCA Suite includes Kernel PCA. Note that Kernel PCA is not a universal remedy — it works when closeness in the original space genuinely reflects closeness on the underlying structure, and the Swiss Roll tutorial explores a case where that assumption breaks down.
 
 **Interpretability:** Each PC is a weighted combination of all original variables, sometimes mixing conceptually different measurements in ways that are hard to interpret.
 
@@ -519,7 +565,11 @@ PCA works best under certain conditions:
 
 ### Data Preparation Essentials
 
-Before running PCA, ensure your data is clean and properly formatted. This involves handling missing values (remove or impute), investigating outliers (genuine extremes or errors?), and selecting relevant variables (avoid constants and near-duplicates).
+Before running PCA, ensure your data is clean and properly formatted. This involves handling missing values (remove, impute, or let NIPALS work around them natively), investigating outliers (genuine extremes or errors?), and selecting relevant variables (avoid constants and near-duplicates).
+
+**Selecting variables is rarely a one-off decision.** You usually discover which variables to drop *from* a PCA — a variable that turns out to be an identifier, a region of a spectrum swamped by a single strong absorber, a sensor that was offline. GoPCA Desktop is built for that loop: exclude a variable or a region, click **Go PCA!** again, and compare. For datasets with more than about twenty columns the **Variables** panel above the data table shows the variables as an axis you can drag across, so a whole region is one gesture rather than hundreds of checkboxes; below that, the per-column checkboxes in the data table are the more precise tool, since every variable name is visible at once. The `pca` CLI does the same job non-interactively with `--exclude-columns` and `--exclude-rows`.
+
+Be aware that excluding variables is never free. Removing a region removes whatever information it carried along with the interference you were aiming at — so a variable exclusion is a claim about your data that you should be able to justify, and record.
 
 **The Preprocessing Decision Tree:**
 - **Always center** your data
@@ -698,6 +748,11 @@ The window length *L* should cover at least 1–2 full periods of the oscillatio
 - **Reality:** Scaled and unscaled PCA can give opposite conclusions
 - **Solution:** Always document and report your preprocessing choices
 
+**Pitfall 5: Reading Meaning into a Component's Sign**
+- **Problem:** Concluding that results disagree because a plot is mirrored, or that "positive PC2" means something in itself
+- **Reality:** Components are defined only up to sign, and software packages resolve that ambiguity differently — see Section 7. A flipped component is the same component.
+- **Solution:** Compare *relative* signs (which variables oppose which) and magnitudes, not absolute direction. If you quote a signed loading in a report, say which software produced it.
+
 ### Domain-Specific Best Practices
 
 **Spectroscopy (NIR, Raman, etc.):**
@@ -740,7 +795,7 @@ You've traveled from the basic intuition of PCA through its mathematical foundat
 
 ### Your Next Steps with GoPCA Suite
 
-**Start with the interactive tutorials:** Each of the six sample datasets has a guided tutorial in GoPCA Desktop. Work through them in order — Iris first to build your foundations, then Wine, Corn, Swiss Roll, CSTR, and EEG. By the end of the EEG tutorial, you will have used every major feature of GoPCA and encountered every major challenge that real datasets present.
+**Start with the interactive tutorials:** Each of the seven sample datasets has a guided tutorial in GoPCA Desktop. Work through the first six in order — Iris first to build your foundations, then Wine, Corn, Swiss Roll, CSTR, and EEG. By the end of the EEG tutorial, you will have used every major feature of GoPCA and encountered every major challenge that real datasets present. Then finish with Body Measures, the seventh — a fitting close: a simple, real population dataset that steps back from method complexity to ask what the principal components actually *mean* — how PC1 and PC2 become interpretable "size" and "shape" factors.
 
 **Then bring your own data:**
 1. Prepare your data with GoCSV Desktop (handle missing values, check quality)

@@ -36,28 +36,20 @@ import (
 )
 
 // outputTableFormat outputs PCA results in table format
-func outputTableFormat(result *types.PCAResult, data *pkgcsv.Data, preprocessedData types.Matrix,
+func outputTableFormat(result *types.PCAResult, data *pkgcsv.Data,
 	outputScores, outputLoadings, outputVariance, includeMetrics bool, varianceExplained float64) error {
 
-	// Calculate metrics if requested (skip for kernel PCA as it doesn't have loadings)
+	// Diagnostics (Q/T²) are computed once by the shared core pipeline
+	// (AttachDiagnostics) and attached to result.Metrics; reuse them. They are
+	// empty for methods where per-sample reconstruction does not apply — kernel
+	// and temporal PCA, and NIPALS with native missing values — in which case a
+	// placeholder keeps the table columns aligned.
 	var metrics []types.SampleMetrics
 	if includeMetrics && outputScores {
-		if result.Method != "kernel" {
-			var err error
-			metrics, err = core.CalculateMetricsFromPCAResult(result, preprocessedData)
-			if err != nil {
-				fmt.Fprintf(os.Stderr, "Warning: Failed to calculate metrics: %v\n", err)
-				// Create placeholder metrics
-				metrics = make([]types.SampleMetrics, len(result.Scores))
-			}
+		if len(result.Metrics) > 0 {
+			metrics = result.Metrics
 		} else {
-			// For kernel PCA, use metrics from result if available
-			if len(result.Metrics) > 0 {
-				metrics = result.Metrics
-			} else {
-				// Create empty metrics for kernel PCA
-				metrics = make([]types.SampleMetrics, len(result.Scores))
-			}
+			metrics = make([]types.SampleMetrics, len(result.Scores))
 		}
 	}
 

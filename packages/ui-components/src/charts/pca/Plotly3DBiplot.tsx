@@ -46,7 +46,6 @@ export interface Biplot3DData {
 }
 
 export interface Biplot3DConfig {
-  scalingType?: 'correlation' | 'symmetric' | 'pca';
   showScores?: boolean;
   showLoadings?: boolean;
   showLabels?: boolean;  // Whether to show sample labels
@@ -82,7 +81,6 @@ export class Plotly3DBiplot {
   constructor(data: Biplot3DData, config?: Biplot3DConfig) {
     this.data = data;
     this.config = {
-      scalingType: 'correlation',
       showScores: true,
       showLoadings: true,
       maxVariables: 50,  // Default to 50 for clarity in 3D
@@ -569,7 +567,7 @@ export class Plotly3DBiplot {
     };
 
     // Create title with filtering indicator if needed
-    let titleText = `3D Biplot (${this.config.scalingType} scaling)`;
+    let titleText = '3D Biplot';
     if (this.needsFiltering) {
       titleText += `<br><span style="font-size: 12px; color: #f59e0b;">Showing top ${this.displayedVariables} of ${this.totalVariables} variables</span>`;
     }

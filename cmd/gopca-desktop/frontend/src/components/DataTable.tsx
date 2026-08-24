@@ -22,6 +22,7 @@
 // See LICENSE for the full license terms.
 
 import React from 'react';
+import { applyColumnToggle } from '../utils/columnRange';
 import {
   useReactTable,
   getCoreRowModel,
@@ -39,7 +40,7 @@ interface TableRowData {
 // Component for the select-all checkbox to avoid React Hooks in non-component functions
 const SelectAllCheckbox: React.FC<{ table: any }> = ({ table }) => {
   const checkboxRef = React.useRef<HTMLInputElement>(null);
-  
+
   React.useEffect(() => {
     if (checkboxRef.current) {
       checkboxRef.current.indeterminate = table.getIsSomeRowsSelected();
@@ -67,6 +68,7 @@ interface DataTableProps {
   onRowSelectionChange?: (selectedRows: number[]) => void;
   onColumnSelectionChange?: (selectedColumns: number[]) => void;
   externalSelectedRows?: number[];
+  externalSelectedColumns?: number[];
   highlightExternalSelections?: boolean;
 }
 
@@ -80,6 +82,7 @@ export const DataTable: React.FC<DataTableProps> = ({
   onRowSelectionChange,
   onColumnSelectionChange,
   externalSelectedRows,
+  externalSelectedColumns,
   highlightExternalSelections: _highlightExternalSelections
 }) => {
   const hasRowNames = rowNames && rowNames.length > 0;
@@ -125,6 +128,35 @@ return;
       setRowSelection(newSelection);
     }
   }, [externalSelectedRows?.length]); // Only watch length to avoid deep comparison
+
+  // Columns had no external sync, so a selection could be pushed in but never
+  // reset or restored by the parent. Keyed on the membership signature: two
+  // different selections of equal size must still resync.
+  const externalColumnKey = externalSelectedColumns?.join(',');
+  React.useEffect(() => {
+    if (externalSelectedColumns === undefined || !enableColumnSelection) return;
+    const newSelection: Record<string, boolean> = {};
+    headers.forEach((_, index) => {
+      newSelection[`col${index}`] = externalSelectedColumns.includes(index);
+    });
+    setColumnSelection(newSelection);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [externalColumnKey, headers.length, enableColumnSelection]);
+
+  // Anchor for shift-click range selection: the last column toggled on its own.
+  const lastToggledColumn = React.useRef<number | null>(null);
+
+  /**
+   * Toggle one column, or — with shift held — every column between it and the
+   * previously toggled one, so a contiguous block can be excluded in two clicks
+   * rather than one per column.
+   */
+  const handleColumnToggle = React.useCallback((index: number, checked: boolean, shiftKey: boolean) => {
+    setColumnSelection(prev => applyColumnToggle(
+      prev, index, checked, shiftKey ? lastToggledColumn.current : null, i => `col${i}`
+    ));
+    lastToggledColumn.current = index;
+  }, []);
 
   // Notify parent of row selection changes
   React.useEffect(() => {
@@ -184,11 +216,10 @@ return;
             <input
               type="checkbox"
               checked={columnSelection[colId] !== false}
+              title={`${header} — shift-click to select a range`}
               onChange={(e) => {
-                setColumnSelection(prev => ({
-                  ...prev,
-                  [colId]: e.target.checked
-                }));
+                const shiftKey = (e.nativeEvent as MouseEvent).shiftKey === true;
+                handleColumnToggle(index, e.target.checked, shiftKey);
               }}
               className="w-4 h-4 text-blue-600 bg-white dark:bg-gray-700 border-gray-300 dark:border-gray-600 rounded focus:ring-blue-500"
             />
@@ -203,7 +234,7 @@ return;
     });
 
     return cols;
-  }, [headers, hasRowNames, enableRowSelection, enableColumnSelection, columnSelection]);
+  }, [headers, hasRowNames, enableRowSelection, enableColumnSelection, columnSelection, handleColumnToggle]);
 
   // Transform data for table
   const tableData = React.useMemo(() => {

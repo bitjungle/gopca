@@ -59,7 +59,7 @@ export const DEFAULT_PCA_CONFIG: PCAConfigState = {
     kernelDegree: 3,
     kernelCoef0: 1.0,
     temporalLags: 10,
-    varianceExplained: 0.0,
+    varianceExplained: 0.0
 };
 
 export interface PCAConfigResult {
@@ -103,7 +103,7 @@ export function usePCAConfig(): PCAConfigResult {
             setConfig(prev => ({
                 ...prev,
                 kernelGamma: 1.0 / numFeatures,
-                components: Math.min(5, Math.max(1, numFeatures - 1)),
+                components: Math.min(5, Math.max(1, numFeatures - 1))
             }));
         }
     }, []);
@@ -121,6 +121,6 @@ export function usePCAConfig(): PCAConfigResult {
         setExcludedRows,
         setExcludedColumns,
         updateGammaForData,
-        resetExclusions,
+        resetExclusions
     };
 }

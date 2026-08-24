@@ -168,10 +168,6 @@ export const FileSelector: React.FC<FileSelectorProps> = ({ onFileSelect, isLoad
                         <span className="font-mono bg-gray-200 dark:bg-gray-600 px-1 rounded">.xlsx/.xls</span>
                         Microsoft Excel
                     </li>
-                    <li className="flex items-center gap-2">
-                        <span className="font-mono bg-gray-200 dark:bg-gray-600 px-1 rounded">.json</span>
-                        JSON arrays (coming soon)
-                    </li>
                 </ul>
             </div>
         </div>

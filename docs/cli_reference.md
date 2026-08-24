@@ -117,9 +117,11 @@ pca analyze [OPTIONS] <input.csv>
 
 **Note:** The `native` strategy is only available with the NIPALS method. When using SVD (default), you must choose a preprocessing strategy (drop, mean, median, or zero) if your data contains missing values.
 
+**Preprocessing with `native`:** Column-wise preprocessing is fully supported — `--scale standard`, `--scale robust` and `--scale-only` compute their statistics over the observed values of each column, so a request to scale is honoured rather than ignored. The row-wise methods `--snv` and `--vector-norm` are **rejected** with this strategy: both divide a row by a statistic of that row, which is computed over a different subset of variables for every incomplete row, so the rows would no longer share a common scale. Impute or drop first if you need them.
+
 ##### Data Selection
 - `--exclude-rows <string>` - Row indices to exclude (1-based). Supports individual indices and ranges: `1,3,5` or `1-5,8-10`
-- `--exclude-columns <string>` - Column indices/names to exclude. Supports ranges for indices: `1-3,5` or `col1,col2`
+- `--exclude-columns <string>` - Columns to exclude, as names, 1-based indices, or ranges of either: `col1,col2`, `1-3,5`, or `1400-1450`. Each entry is resolved in that order — an exact column name first, then a range between two column names, then an index range, then a single index — so on a spectrum whose columns are named by wavelength, `1400-1450` means the wavelength band. An entry that resolves to nothing is an error, never silently ignored.
 - `--target-columns <string>` - Comma-separated list of target columns to exclude
 
 ##### Group and Correlation Analysis
@@ -193,8 +195,11 @@ When verbose mode is enabled, the CLI will report:
 
 ##### Data Selection Examples
 ```bash
-# Exclude specific columns
+# Exclude specific columns by name
 pca analyze --exclude-columns "id,timestamp" data.csv
+
+# Exclude a wavelength region from a spectrum whose columns are named by wavelength
+pca analyze --exclude-columns "1400-1450,1900-1960" --snv corn.csv
 
 # Exclude specific rows (individual and ranges)
 pca analyze --exclude-rows "1,5,10-15" data.csv

@@ -52,7 +52,6 @@ export interface BiplotData {
 export interface BiplotConfig {
   pcX?: number;  // PC for X-axis (1-indexed)
   pcY?: number;  // PC for Y-axis (1-indexed)
-  scalingType?: 'correlation' | 'symmetric' | 'pca';
   showScores?: boolean;
   showLoadings?: boolean;
   showLabels?: boolean;
@@ -81,7 +80,6 @@ export class PlotlyBiplot {
     this.config = {
       pcX: 1,
       pcY: 2,
-      scalingType: 'correlation',
       showScores: true,
       showLoadings: true,
       showLabels: true,
@@ -453,7 +451,7 @@ return { x: 0, y: 0 };
     const yRange = [Math.min(...allY) * 1.2, Math.max(...allY) * 1.2];
 
     // Create title with filtering indicator if needed
-    let titleText = `Biplot (${this.config.scalingType} scaling)`;
+    let titleText = 'Biplot';
     if ((this as any)._needsFiltering) {
       titleText += `<br><span style="font-size: 12px; color: #f59e0b;">Showing top ${(this as any)._displayedVariables} of ${(this as any)._totalVariables} variables</span>`;
     }

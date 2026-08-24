@@ -90,6 +90,6 @@ export function useGoCSVIntegration(): GoCSVIntegrationResult {
         showGoCSVDownloadDialog,
         setShowGoCSVDownloadDialog,
         handleGoCSVAction,
-        handleGoCSVDownload,
+        handleGoCSVDownload
     };
 }

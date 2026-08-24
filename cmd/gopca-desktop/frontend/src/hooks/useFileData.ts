@@ -138,6 +138,6 @@ export function useFileData(): FileDataResult {
         loadDataset,
         handleNativeFileSelect,
         setFileDataDirect,
-        clearFileError,
+        clearFileError
     };
 }

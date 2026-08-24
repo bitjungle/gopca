@@ -25,7 +25,8 @@ package cobra
 
 import (
 	"fmt"
-	"math"
+	"os"
+	"sort"
 	"strings"
 
 	"github.com/bitjungle/gopca/internal/core"
@@ -438,10 +439,18 @@ func runAnalyze(opts *AnalyzeOptions, inputFile string) error {
 
 	// Parse exclude options
 	if opts.ExcludeRows != "" {
-		config.ExcludedRows = parseExcludeIndices(opts.ExcludeRows)
+		var err error
+		config.ExcludedRows, err = parseExcludeIndices(opts.ExcludeRows)
+		if err != nil {
+			return err
+		}
 	}
 	if opts.ExcludeColumns != "" {
-		config.ExcludedColumns = parseExcludeColumns(opts.ExcludeColumns, data.Headers)
+		var err error
+		config.ExcludedColumns, err = parseExcludeColumns(opts.ExcludeColumns, data.Headers)
+		if err != nil {
+			return err
+		}
 	}
 
 	// Apply row and column exclusions to the data
@@ -506,57 +515,34 @@ func runAnalyze(opts *AnalyzeOptions, inputFile string) error {
 		}
 	}
 
-	// Create and run PCA (preprocessing is handled inside pca.Fit())
-	pca := core.NewPCAEngineForMethod(config.Method)
-	result, err := pca.Fit(data.Matrix, config)
+	// Fit PCA and attach diagnostics (Q/T² + confidence limits) via the shared
+	// core pipeline, so the CLI and Desktop compute identical metrics against the
+	// exact matrix the engine used (result.PreprocessedData) — see #716.
+	result, err := core.RunPCAWithDiagnostics(data.Matrix, config)
 	if err != nil {
 		return fmt.Errorf("PCA analysis failed: %w", err)
 	}
 
-	// Recreate preprocessed data for metrics calculation
-	// This ensures metrics are calculated on the same preprocessed data that was used for PCA
-	var preprocessedData types.Matrix
-	var preprocessor *core.Preprocessor
-
-	// Check if we need to handle NIPALS with native missing values specially
-	hasMissing := false
-	for i := range data.Matrix {
-		for j := range data.Matrix[i] {
-			if math.IsNaN(data.Matrix[i][j]) {
-				hasMissing = true
-				break
-			}
-		}
-		if hasMissing {
-			break
-		}
+	// Distinguish "diagnostics don't apply" (PreprocessedData nil for
+	// kernel/temporal/native-missing) from "diagnostics failed" (PreprocessedData
+	// present but no metrics attached). In the latter case the table would print
+	// zero-valued placeholders; warn so they aren't mistaken for real Q/T² values.
+	if opts.IncludeMetrics && result.PreprocessedData != nil && len(result.Metrics) == 0 {
+		fmt.Fprintln(os.Stderr, "Warning: diagnostic metrics (Q/T²) could not be computed; reported values are placeholders.")
 	}
 
-	usingNativeMissing := config.Method == "nipals" && config.MissingStrategy == types.MissingNative && hasMissing
+	// Reuse the engine's preprocessed matrix for output so downstream metrics stay
+	// consistent with the attached diagnostics.
+	preprocessedData := result.PreprocessedData
 
-	if usingNativeMissing {
-		// For NIPALS with native missing values, only mean centering is applied (handled internally)
-		// We don't preprocess for metrics in this case
-		preprocessedData = data.Matrix
-		preprocessor = nil
-	} else if config.MeanCenter || config.StandardScale || config.RobustScale || config.ScaleOnly || config.SNV || config.VectorNorm {
-		// Re-create preprocessor with the same settings used by pca.Fit()
-		preprocessor = core.NewPreprocessorWithScaleOnly(
-			config.MeanCenter,
-			config.StandardScale,
-			config.RobustScale,
-			config.ScaleOnly,
-			config.SNV,
-			config.VectorNorm,
-		)
-		preprocessedData, err = preprocessor.FitTransform(data.Matrix)
-		if err != nil {
-			return fmt.Errorf("preprocessing for metrics failed: %w", err)
-		}
-	} else {
-		// No preprocessing
-		preprocessedData = data.Matrix
-		preprocessor = nil
+	// Check if we need to handle NIPALS with native missing values specially
+	// The JSON exporter needs the fitted preprocessor for the extended parameters
+	// (feature medians/MADs, row means/std devs) that the result does not carry.
+	// FitPreprocessorForExport re-fits it, including for native NIPALS missing-
+	// value handling, where the statistics have to skip the absent entries.
+	preprocessor, _, err := core.FitPreprocessorForExport(data.Matrix, config)
+	if err != nil {
+		return fmt.Errorf("preprocessing for output metadata failed: %w", err)
 	}
 
 	// Output results based on format
@@ -568,121 +554,180 @@ func runAnalyze(opts *AnalyzeOptions, inputFile string) error {
 		outputScores := opts.OutputScores || opts.OutputAll
 		outputLoadings := opts.OutputLoadings || opts.OutputAll
 		outputVariance := opts.OutputVariance || opts.OutputAll
-		return outputTableFormat(result, data, preprocessedData,
+		return outputTableFormat(result, data,
 			outputScores, outputLoadings, outputVariance, opts.IncludeMetrics, opts.VarianceExplained)
 	}
 }
 
 // Helper functions for parsing exclude options
-func parseExcludeIndices(excludeStr string) []int {
+// parseExcludeIndices resolves a comma-separated spec of 1-based row indices,
+// accepting individual values and inclusive ranges ("1-5,8"). Unlike columns,
+// rows have no names, so every token must be numeric.
+//
+// Malformed tokens are reported rather than skipped, for the same reason as
+// parseExcludeColumns: a silently ignored exclusion yields an analysis that is
+// not the one the user asked for.
+func parseExcludeIndices(excludeStr string) ([]int, error) {
 	indexSet := make(map[int]bool)
-	parts := strings.Split(excludeStr, ",")
+	var unmatched []string
 
-	for _, part := range parts {
+	for _, part := range strings.Split(excludeStr, ",") {
 		part = strings.TrimSpace(part)
+		if part == "" {
+			continue
+		}
 
-		if strings.Contains(part, "-") {
-			// Parse range format "start-end"
-			rangeParts := strings.SplitN(part, "-", 2)
-			if len(rangeParts) == 2 {
-				var start, end int
-				if _, err := fmt.Sscanf(rangeParts[0], "%d", &start); err == nil {
-					if _, err := fmt.Sscanf(rangeParts[1], "%d", &end); err == nil {
-						// Add all indices in range (inclusive)
-						for i := start; i <= end; i++ {
-							if i > 0 { // Ensure positive indices
-								indexSet[i-1] = true // Convert to 0-based
-							}
-						}
+		if idx := strings.Index(part, "-"); idx > 0 {
+			var start, end int
+			if _, err1 := fmt.Sscanf(part[:idx], "%d", &start); err1 == nil {
+				if _, err2 := fmt.Sscanf(part[idx+1:], "%d", &end); err2 == nil {
+					if start < 1 || start > end {
+						unmatched = append(unmatched, fmt.Sprintf("%q (invalid range)", part))
+						continue
 					}
+					for i := start; i <= end; i++ {
+						indexSet[i-1] = true
+					}
+					continue
 				}
 			}
-		} else {
-			// Parse individual number
-			var idx int
-			if _, err := fmt.Sscanf(part, "%d", &idx); err == nil && idx > 0 {
-				indexSet[idx-1] = true // Convert to 0-based
-			}
+			unmatched = append(unmatched, fmt.Sprintf("%q (not a valid range)", part))
+			continue
 		}
+
+		var single int
+		if _, err := fmt.Sscanf(part, "%d", &single); err != nil || single < 1 {
+			unmatched = append(unmatched, fmt.Sprintf("%q (not a positive integer)", part))
+			continue
+		}
+		indexSet[single-1] = true
 	}
 
-	// Convert map to sorted slice
+	if len(unmatched) > 0 {
+		return nil, fmt.Errorf("--exclude-rows: could not resolve %s; "+
+			"rows are given as 1-based indices, e.g. 1,3,5 or 1-5,8",
+			strings.Join(unmatched, ", "))
+	}
+
 	indices := make([]int, 0, len(indexSet))
 	for idx := range indexSet {
 		indices = append(indices, idx)
 	}
-
-	// Sort the indices
-	if len(indices) > 1 {
-		// Simple bubble sort for small arrays
-		for i := 0; i < len(indices)-1; i++ {
-			for j := 0; j < len(indices)-i-1; j++ {
-				if indices[j] > indices[j+1] {
-					indices[j], indices[j+1] = indices[j+1], indices[j]
-				}
-			}
-		}
-	}
-
-	return indices
+	sort.Ints(indices)
+	return indices, nil
 }
 
-func parseExcludeColumns(excludeStr string, headers []string) []int {
+// parseExcludeColumns resolves a comma-separated exclusion spec into 0-based
+// column indices. A token may be a column name, a 1-based index, or a 1-based
+// inclusive index range ("3-7").
+//
+// Resolution order per token is name, then range, then index. Name first matters
+// for spectroscopic data, whose columns are named by wavelength: on a file with
+// 700 channels named 1100..2498, "1400" is a wavelength, not column number 1400.
+// It also protects the case where a name and an index collide — with columns
+// named 5..12, "5" now removes the column called 5 rather than the fifth column.
+// Checking the whole token as a name first also lets names containing a hyphen
+// ("col-1") resolve correctly.
+//
+// Every token that resolves to nothing is reported. Silently dropping an
+// unmatched name would let a typo produce an analysis of the full data while the
+// user believed a region had been excluded.
+// indexOfHeader returns the position of an exact column-name match.
+func indexOfHeader(headers []string, name string) (int, bool) {
+	for i, header := range headers {
+		if header == name {
+			return i, true
+		}
+	}
+	return 0, false
+}
+
+func parseExcludeColumns(excludeStr string, headers []string) ([]int, error) {
 	indexSet := make(map[int]bool)
-	parts := strings.Split(excludeStr, ",")
+	var unmatched []string
 
-	for _, part := range parts {
+	for _, part := range strings.Split(excludeStr, ",") {
 		part = strings.TrimSpace(part)
+		if part == "" {
+			continue
+		}
 
-		if strings.Contains(part, "-") {
-			// Parse range format "start-end" (only for numeric indices)
-			rangeParts := strings.SplitN(part, "-", 2)
-			if len(rangeParts) == 2 {
-				var start, end int
-				if _, err := fmt.Sscanf(rangeParts[0], "%d", &start); err == nil {
-					if _, err := fmt.Sscanf(rangeParts[1], "%d", &end); err == nil {
-						// Add all indices in range (inclusive)
-						for i := start; i <= end; i++ {
-							if i > 0 && i <= len(headers) { // Ensure valid range
-								indexSet[i-1] = true // Convert to 0-based
-							}
-						}
-					}
-				}
+		// 1. Exact column name.
+		matched := false
+		for i, header := range headers {
+			if header == part {
+				indexSet[i] = true
+				matched = true
+				break
 			}
-		} else {
-			// Try to parse as index first
-			var idx int
-			if _, err := fmt.Sscanf(part, "%d", &idx); err == nil && idx > 0 && idx <= len(headers) {
-				indexSet[idx-1] = true // Convert to 0-based
-			} else {
-				// Try to match by name
-				for i, header := range headers {
-					if header == part {
-						indexSet[i] = true
-						break
+		}
+		if matched {
+			continue
+		}
+
+		// 2. Inclusive range "start-end", by column name at both ends.
+		// Checked before the index interpretation so that a spectral axis
+		// reads naturally: on a dataset whose columns are named 1100..2498,
+		// "1400-1450" is the wavelength band, not columns 1400 through 1450.
+		// GoPCA Desktop's variable selector resolves ranges the same way.
+		if idx := strings.Index(part, "-"); idx > 0 {
+			lo, okLo := indexOfHeader(headers, strings.TrimSpace(part[:idx]))
+			hi, okHi := indexOfHeader(headers, strings.TrimSpace(part[idx+1:]))
+			if okLo && okHi {
+				if lo > hi {
+					lo, hi = hi, lo
+				}
+				for i := lo; i <= hi; i++ {
+					indexSet[i] = true
+				}
+				continue
+			}
+		}
+
+		// 3. Inclusive 1-based index range "start-end".
+		if idx := strings.Index(part, "-"); idx > 0 {
+			var start, end int
+			if _, err1 := fmt.Sscanf(part[:idx], "%d", &start); err1 == nil {
+				if _, err2 := fmt.Sscanf(part[idx+1:], "%d", &end); err2 == nil {
+					if start < 1 || end > len(headers) || start > end {
+						unmatched = append(unmatched, fmt.Sprintf(
+							"%q (index range outside 1-%d)", part, len(headers)))
+						continue
 					}
+					for i := start; i <= end; i++ {
+						indexSet[i-1] = true
+					}
+					continue
 				}
 			}
 		}
+
+		// 4. Single 1-based index.
+		var single int
+		if _, err := fmt.Sscanf(part, "%d", &single); err == nil {
+			if single < 1 || single > len(headers) {
+				unmatched = append(unmatched, fmt.Sprintf(
+					"%q (index outside 1-%d)", part, len(headers)))
+			} else {
+				indexSet[single-1] = true
+			}
+			continue
+		}
+
+		unmatched = append(unmatched, fmt.Sprintf("%q (no column with this name)", part))
 	}
 
-	// Convert map to sorted slice
+	if len(unmatched) > 0 {
+		return nil, fmt.Errorf("--exclude-columns: could not resolve %s; "+
+			"columns may be given by name, by 1-based index, as an index range such as 3-7, "+
+			"or as a range between two column names such as 1400-1450",
+			strings.Join(unmatched, ", "))
+	}
+
 	indices := make([]int, 0, len(indexSet))
 	for idx := range indexSet {
 		indices = append(indices, idx)
 	}
-
-	// Sort the indices
-	if len(indices) > 1 {
-		for i := 0; i < len(indices)-1; i++ {
-			for j := 0; j < len(indices)-i-1; j++ {
-				if indices[j] > indices[j+1] {
-					indices[j], indices[j+1] = indices[j+1], indices[j]
-				}
-			}
-		}
-	}
-
-	return indices
+	sort.Ints(indices)
+	return indices, nil
 }

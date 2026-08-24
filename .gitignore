@@ -50,6 +50,11 @@ cmd/gopca-desktop/gopca-desktop
 # Node modules
 node_modules/
 
+# Wails writes this next to package.json to decide whether to re-run npm
+# install, and rewrites it whenever it drifts. Tracking it gives every
+# developer a permanently dirty working tree (#815).
+package.json.md5
+
 # Python
 __pycache__/
 .venv/
@@ -71,3 +76,6 @@ cmd/gopca-desktop/AppxManifest.xml
 _tmp/
 testdata/wine/plotly/
 testdata/validation/reference_results
+
+# Private PCA presentation (personal, not shared)
+testdata/nhanes/pca_presentation/

@@ -81,6 +81,6 @@ export function useUIState(): UIStateResult {
         showCopied,
         mainScrollRef,
         handleLogoClick,
-        copyToClipboard,
+        copyToClipboard
     };
 }

@@ -67,6 +67,12 @@ export interface PCARequest {
 export interface PCAResult {
   scores: number[][];
   loadings: number[][];
+  /**
+   * Pearson correlation of each variable with each component, [variables][components].
+   * Distinct from loadings by a factor of sqrt(eigenvalue)/sd -- see issue #793.
+   * Absent for kernel PCA and for NIPALS with native missing values.
+   */
+  variable_correlations?: number[][];
   explained_variance: number[];
   explained_variance_ratio: number[];
   cumulative_variance: number[];

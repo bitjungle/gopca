@@ -30,9 +30,10 @@ import (
 
 func TestParseExcludeIndices(t *testing.T) {
 	tests := []struct {
-		name     string
-		input    string
-		expected []int
+		name      string
+		input     string
+		expected  []int
+		expectErr bool
 	}{
 		{
 			name:     "empty string",
@@ -89,16 +90,33 @@ func TestParseExcludeIndices(t *testing.T) {
 			input:    "10,5,1-3",
 			expected: []int{0, 1, 2, 4, 9}, // 0-based, sorted
 		},
+		// Behaviour change (#772): invalid tokens used to be discarded in silence,
+		// so a mistyped exclusion produced an analysis of unfiltered data with no
+		// indication anything had gone wrong. They are now reported.
 		{
-			name:     "invalid indices ignored",
-			input:    "0,1,2,-5",
-			expected: []int{0, 1}, // 0 and negative indices ignored
+			name:      "zero and negative indices are rejected, not ignored",
+			input:     "0,1,2,-5",
+			expectErr: true,
+		},
+		{
+			name:      "non-numeric row token is rejected",
+			input:     "1,abc",
+			expectErr: true,
 		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			result := parseExcludeIndices(tt.input)
+			result, err := parseExcludeIndices(tt.input)
+			if tt.expectErr {
+				if err == nil {
+					t.Errorf("parseExcludeIndices(%q) = %v, want an error", tt.input, result)
+				}
+				return
+			}
+			if err != nil {
+				t.Fatalf("parseExcludeIndices(%q) returned unexpected error: %v", tt.input, err)
+			}
 			if !reflect.DeepEqual(result, tt.expected) {
 				t.Errorf("parseExcludeIndices(%q) = %v, want %v", tt.input, result, tt.expected)
 			}
@@ -268,10 +286,11 @@ func TestParseExcludeColumns(t *testing.T) {
 	headers := []string{"col1", "col2", "col3", "col4", "col5"}
 
 	tests := []struct {
-		name     string
-		input    string
-		headers  []string
-		expected []int
+		name      string
+		input     string
+		headers   []string
+		expected  []int
+		expectErr bool
 	}{
 		{
 			name:     "empty string",
@@ -309,23 +328,100 @@ func TestParseExcludeColumns(t *testing.T) {
 			headers:  headers,
 			expected: []int{0, 1, 2, 4}, // 0-based
 		},
+		// Behaviour changes below (#772). Previously every one of these resolved to
+		// nothing and was discarded in silence, so the analysis ran on unfiltered
+		// data while the user believed columns had been removed.
 		{
-			name:     "out of range indices ignored",
-			input:    "1,10,3",
-			headers:  headers,
-			expected: []int{0, 2}, // 10 is out of range
+			name:      "out of range index is rejected, not ignored",
+			input:     "1,10,3",
+			headers:   headers,
+			expectErr: true,
 		},
 		{
-			name:     "invalid column names ignored",
-			input:    "col1,invalid,col3",
-			headers:  headers,
-			expected: []int{0, 2},
+			name:      "unknown column name is rejected, not ignored",
+			input:     "col1,invalid,col3",
+			headers:   headers,
+			expectErr: true,
+		},
+		{
+			name:      "out of range index range is rejected",
+			input:     "1400-1450",
+			headers:   headers,
+			expectErr: true,
+		},
+		// Name is resolved before index. On spectroscopic data the columns are named
+		// by wavelength, so "1400" must mean the wavelength and not column 1400.
+		{
+			name:     "numeric column name wins over index interpretation",
+			input:    "5",
+			headers:  []string{"5", "6", "7", "8", "9"},
+			expected: []int{0}, // the column named 5, not the fifth column
+		},
+		{
+			name:     "index still used when no column carries that name",
+			input:    "3",
+			headers:  []string{"a", "b", "c", "d"},
+			expected: []int{2},
+		},
+		{
+			name:     "hyphenated column name is not mistaken for a range",
+			input:    "col-1",
+			headers:  []string{"col-1", "col-2", "x"},
+			expected: []int{0},
+		},
+		{
+			name:     "wavelength names spanning a spectrum resolve by name",
+			input:    "1400,1402,1404",
+			headers:  []string{"1100", "1400", "1402", "1404", "2498"},
+			expected: []int{1, 2, 3},
+		},
+		// A range between two column names (#775). GoPCA Desktop's variable
+		// selector resolves ranges this way, and the two must agree: typing
+		// the same range in either place has to exclude the same columns.
+		{
+			name:     "range between two column names",
+			input:    "1400-1404",
+			headers:  []string{"1100", "1400", "1402", "1404", "2498"},
+			expected: []int{1, 2, 3},
+		},
+		{
+			name:     "reversed name range is accepted",
+			input:    "1404-1400",
+			headers:  []string{"1100", "1400", "1402", "1404", "2498"},
+			expected: []int{1, 2, 3},
+		},
+		{
+			name:     "name range wins over index range when both ends are column names",
+			input:    "2-4",
+			headers:  []string{"1", "2", "3", "4", "5"},
+			expected: []int{1, 2, 3}, // the columns named 2,3,4
+		},
+		{
+			name:     "index range still used when the ends are not column names",
+			input:    "2-4",
+			headers:  []string{"a", "b", "c", "d", "e"},
+			expected: []int{1, 2, 3},
+		},
+		{
+			name:      "half-resolvable name range falls through and is rejected",
+			input:     "1400-9999",
+			headers:   []string{"1100", "1400", "1402", "1404", "2498"},
+			expectErr: true,
 		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			result := parseExcludeColumns(tt.input, tt.headers)
+			result, err := parseExcludeColumns(tt.input, tt.headers)
+			if tt.expectErr {
+				if err == nil {
+					t.Errorf("parseExcludeColumns(%q, %v) = %v, want an error", tt.input, tt.headers, result)
+				}
+				return
+			}
+			if err != nil {
+				t.Fatalf("parseExcludeColumns(%q, %v) returned unexpected error: %v", tt.input, tt.headers, err)
+			}
 			if !reflect.DeepEqual(result, tt.expected) {
 				t.Errorf("parseExcludeColumns(%q, %v) = %v, want %v", tt.input, tt.headers, result, tt.expected)
 			}

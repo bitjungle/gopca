@@ -125,7 +125,11 @@ func runTransform(opts *TransformOptions, modelFile, inputFile string) error {
 	parseOpts := pkgcsv.DefaultOptions()
 	parseOpts.HasHeaders = !opts.NoHeaders
 	parseOpts.HasRowNames = !opts.NoIndex
-	parseOpts.Delimiter = rune(opts.Delimiter[0])
+	parsedDelim, delimErr := parseDelimiter(opts.Delimiter)
+	if delimErr != nil {
+		return fmt.Errorf("invalid delimiter: %w", delimErr)
+	}
+	parseOpts.Delimiter = parsedDelim
 	// Use ParseMixedWithTargets to properly identify and exclude target columns
 	parseOpts.ParseMode = pkgcsv.ParseMixedWithTargets
 
@@ -224,8 +228,17 @@ func runTransform(opts *TransformOptions, modelFile, inputFile string) error {
 		return fmt.Errorf("preprocessing failed: %w", err)
 	}
 
+	// Some methods cannot project new data from the model file alone, and the
+	// shape of their stored loadings would otherwise be misread (#809).
+	if err := checkTransformSupported(pcaOutputData.Metadata.Config.Method); err != nil {
+		return err
+	}
+
 	// Project data using loadings
-	scores := ProjectData(processedData, pcaOutputData.Model.Loadings)
+	scores, err := ProjectData(processedData, pcaOutputData.Model.Loadings)
+	if err != nil {
+		return fmt.Errorf("projection failed: %w", err)
+	}
 
 	// Create result structure
 	result := &types.PCAResult{
@@ -334,5 +347,28 @@ func outputTransformJSON(result *types.PCAResult, data *pkgcsv.Data,
 	}
 
 	fmt.Printf("\nResults saved to: %s\n", outputFile)
+	return nil
+}
+
+// checkTransformSupported reports whether a model of the given method can
+// project new data from the model file alone.
+//
+// Kernel PCA projects through the kernel evaluated between new samples and the
+// training set, so it needs the training data, which the model file does not
+// carry. Temporal PCA's loadings live over a lagged embedding, so new data would
+// have to be re-embedded with the same lag structure first. Neither can be
+// approximated by multiplying by the stored loadings, so both are refused rather
+// than given a plausible but wrong answer.
+func checkTransformSupported(method string) error {
+	switch strings.ToLower(method) {
+	case "kernel":
+		return fmt.Errorf("this model was fitted with kernel PCA, which cannot transform new data: " +
+			"projection requires the original training data and the kernel function, which the model file does not store. " +
+			"Run 'pca analyze' over the combined data instead")
+	case "temporal":
+		return fmt.Errorf("this model was fitted with temporal PCA, which cannot transform new data: " +
+			"its loadings describe a lagged embedding rather than the input variables, so new data must be re-embedded. " +
+			"Run 'pca analyze' over the combined series instead")
+	}
 	return nil
 }
