@@ -120,7 +120,7 @@ The plot will look almost empty — just two or three isolated points with what 
 
 Open the **Diagnostic Plot**. Two axes:
 
-* **Horizontal — Hotelling's T²**: how far an observation is from the centroid within the PCA model space
+* **Horizontal — Hotelling's T²**: how far an observation is from the [centroid](https://en.wikipedia.org/wiki/Centroid) — the average position of all the samples — within the PCA model space
 * **Vertical — Q-statistic**: how well the model fits the observation (large Q = large residuals)
 
 | Region | T² | Q | Interpretation |

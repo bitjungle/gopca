@@ -27,8 +27,8 @@ For each wine, **13 continuous chemical variables** were measured:
 * Proanthocyanins
 * Color intensity
 * Hue
-* OD280/OD315 of diluted wines
-* Proline
+* OD280/OD315 of diluted wines — an optical measurement rather than a named compound: the ratio of light absorbed at 280 nm to light absorbed at 315 nm by a diluted sample. Phenolic compounds are built around aromatic rings, which absorb strongly near 280 nm, so this ratio works as a quick stand-in for how much phenolic material a wine contains.
+* Proline — an amino acid, and the most abundant one in wine. Yeast needs oxygen to break it down, so most of what the grape accumulated while ripening survives fermentation, and how much that is depends strongly on the cultivar. It is reported in mg/L, which is why its values run into the hundreds and thousands while most variables here stay below 10.
 
 Each wine is described by **13 variables** — each sample lives in a **13-dimensional space**, far beyond anything we can directly visualise.
 
@@ -221,7 +221,7 @@ Enable **Confidence Ellipses** (95%) on the Scores Plot.
 * Which class is best separated from the other two?
 * What does overlapping ellipses tell you about the difficulty of classification?
 
-👉 Assign every wine to whichever class centroid it sits nearest in the PC1–PC2 plane and the picture is precise:
+👉 Each class has a [centroid](https://en.wikipedia.org/wiki/Centroid): the average position of all its samples, the point sitting at the middle of that cluster. Assign every wine to whichever centroid it lies nearest in the PC1–PC2 plane and the picture is precise:
 
 | | nearest its own centroid |
 |---|---|
