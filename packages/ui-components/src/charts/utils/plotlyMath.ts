@@ -36,13 +36,6 @@ export interface EllipseParams {
   angle: number; // in radians
 }
 
-export interface VectorTrace {
-  x: number[];
-  y: number[];
-  text: string;
-  color: string;
-}
-
 /**
  * Calculate confidence ellipse parameters using chi-square distribution
  * Reference: Johnson & Wichern (2007), Applied Multivariate Statistical Analysis, Ch. 4
@@ -155,63 +148,6 @@ export function generateEllipsePath(
 }
 
 /**
- * Scale loading vectors for biplot visualization
- * Reference: Gabriel (1971), "The biplot graphic display", Biometrika 58(3), 453-467
- *
- * @param loadings - Loading matrix (variables x components)
- * @param scores - Score matrix (observations x components)
- * @param scale - Scaling factor (0-1, where 0.5 is symmetric)
- * @param variableNames - Names of variables
- * @returns Scaled vector traces for plotting
- *
- * scale=0: row-metric preserving (emphasis on observations)
- * scale=1: column-metric preserving (emphasis on variables)
- * scale=0.5: symmetric (default, balanced emphasis)
- */
-export function scaleBiplotVectors(
-  loadings: number[][],
-  scores: number[][],
-  scale: number = 0.5,
-  variableNames: string[]
-): VectorTrace[] {
-  const nObservations = scores.length;
-
-  // Gabriel (1971), Equation 2
-  const alpha = Math.pow(nObservations, scale);
-
-  // Find maximum score value for scaling
-  let maxScore = 0;
-  for (const score of scores) {
-    for (const val of score) {
-      maxScore = Math.max(maxScore, Math.abs(val));
-    }
-  }
-
-  // Scale loadings
-  const scaledLoadings = loadings.map(loading =>
-    loading.map(val => val * alpha)
-  );
-
-  // Find maximum loading for additional scaling
-  let maxLoading = 0;
-  for (const loading of scaledLoadings) {
-    for (const val of loading) {
-      maxLoading = Math.max(maxLoading, Math.abs(val));
-    }
-  }
-
-  // Additional scaling to fit within plot
-  const plotScale = (maxScore * 0.8) / maxLoading;
-
-  return scaledLoadings.map((loading, i) => ({
-    x: [0, loading[0] * plotScale],
-    y: [0, loading[1] * plotScale],
-    text: variableNames[i],
-    color: 'red'
-  }));
-}
-
-/**
  * Calculate smart labels - select points furthest from origin
  * This preserves the smart label selection feature from the previous implementation
  *
@@ -239,77 +175,6 @@ export function calculateSmartLabels(
 
 // Alias for consistency
 export const selectSmartLabels = calculateSmartLabels;
-
-/**
- * Calculate biplot scaling for loading vectors with adaptive visual scaling
- * Reference: Gabriel (1971), "The biplot graphic display of matrices with application to principal component analysis"
- *
- * @param loadings - Loading matrix [n_components][n_variables]
- * @param explainedVariance - Explained variance per component
- * @param scalingType - Type of scaling to apply
- * @param scores - Optional score matrix for adaptive scaling [n_samples][n_components]
- * @returns Scaled loadings for biplot visualization
- */
-export function calculateBiplotScaling(
-  loadings: number[][],
-  explainedVariance: number[],
-  scalingType: 'correlation' | 'symmetric' | 'pca' = 'correlation',
-  scores?: number[][]
-): { scaledLoadings: number[][]; adaptiveScale: number } {
-  // First apply mathematical scaling based on biplot type
-  const mathScaledLoadings = loadings.map((componentLoadings, i) => {
-    let scale = 1;
-
-    switch (scalingType) {
-      case 'correlation':
-        // Scale by sqrt of explained variance (preserves correlations)
-        // This emphasizes variable relationships
-        scale = Math.sqrt(explainedVariance[i] / 100);
-        break;
-      case 'symmetric':
-        // Square root scaling for both scores and loadings
-        // This provides a balanced representation
-        scale = Math.pow(explainedVariance[i] / 100, 0.25);
-        break;
-      case 'pca':
-        // Standard PCA scaling (loadings as-is)
-        // Raw loadings without variance scaling
-        scale = 1;
-        break;
-    }
-
-    return componentLoadings.map(loading => loading * scale);
-  });
-
-  // Apply adaptive visual scaling if scores are provided
-  let adaptiveScale = 1;
-  if (scores && scores.length > 0) {
-    // Calculate the range of scores
-    const scoreValues = scores.flat();
-    const scoreRange = Math.max(...scoreValues.map(Math.abs));
-
-    // Calculate the range of mathematically scaled loadings
-    const loadingValues = mathScaledLoadings.flat();
-    const loadingRange = Math.max(...loadingValues.map(Math.abs));
-
-    // Ensure loadings are not too small
-    if (loadingRange > 0 && scoreRange > 0) {
-      // Scale loadings to use 60-70% of the score range for good visibility
-      // This ensures arrows are clearly visible without dominating the plot
-      adaptiveScale = (scoreRange * 0.65) / loadingRange;
-
-      // Apply reasonable limits to prevent extreme scaling
-      adaptiveScale = Math.max(0.1, Math.min(adaptiveScale, 100));
-    }
-  }
-
-  // Apply adaptive scaling to all loadings
-  const scaledLoadings = mathScaledLoadings.map(componentLoadings =>
-    componentLoadings.map(loading => loading * adaptiveScale)
-  );
-
-  return { scaledLoadings, adaptiveScale };
-}
 
 /**
  * 2D Kernel Density Estimation using Gaussian kernel
