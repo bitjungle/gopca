@@ -91,7 +91,8 @@ export class PlotlyCircleOfCorrelations {
     const pcX = (this.config.pcX || 1) - 1;
     const pcY = (this.config.pcY || 2) - 1;
 
-    // Extract correlations (loadings) for selected PCs
+    // Correlations between each variable and the two selected components.
+    // Not loadings: substituting those is the defect fixed in #793.
     const correlationsX = correlations[pcX];
     const correlationsY = correlations[pcY];
 

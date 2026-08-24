@@ -45,14 +45,15 @@ import (
 // correlations are strictly larger than the loadings — plotting loadings in their
 // place makes every arrow too short and puts the unit circle out of reach.
 //
-// The identity that matters for interpretation is
+// Summing r_jk^2 across components gives variable j's communality — the share of
+// its variance those components capture. Over the FULL basis that sum is exactly
+// 1; over the retained components it is less, and callers should not treat the
+// returned rows as unit vectors. A truncated fit returns a truncated sum.
 //
-//	sum over all k of r_jk^2 = 1
-//
-// so the squared length of a variable's arrow in a two-component plot is the
-// fraction of that variable's variance those two components capture. An arrow
-// reaching the unit circle is fully represented; one at 0.707 has half its
-// variance there.
+// This is what gives arrow length its meaning: the squared length of a variable's
+// arrow in a two-component plot is the fraction of that variable's variance those
+// two components capture. An arrow at the unit circle is fully represented; one at
+// 0.707 has half its variance there.
 //
 // Rather than assemble the formula from stored eigenvalues and standard
 // deviations, this computes the correlation directly from the two matrices it is
