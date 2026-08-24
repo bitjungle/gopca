@@ -156,7 +156,7 @@ The dashed threshold lines mark **±1/√p**, which for Wine's 13 variables is *
 Now open the **Circle of Correlations**. This plot shows all 13 variables simultaneously as arrows (vectors) in the PC1–PC2 plane. Two things to read:
 
 * **Direction**: variables pointing in the same direction are positively correlated with each other; variables pointing in opposite directions are negatively correlated. Arrows pointing at 90° are uncorrelated.
-* **Length**: an arrow reaching the outer dashed circle means that variable is *perfectly* explained by PC1 and PC2 alone — nothing of it is hidden in the remaining components. A short arrow means most of that variable's variance lives in PC3 or beyond.
+* **Length**: longer arrows indicate variables more strongly involved in these two components. Read length comparatively rather than absolutely — GoPCA currently draws the raw loadings here rather than the variable-component correlations, so the distance to the outer circle does not translate into a percentage of variance captured ([#793](https://github.com/bitjungle/gopca/issues/793)). Use the **direction** for the chemistry and the **Loadings Plot** when you need a number.
 
 #### Questions:
 
@@ -167,7 +167,7 @@ Now open the **Circle of Correlations**. This plot shows all 13 variables simult
 👉 The four phenolic variables really do travel together — they correlate with one another at **0.69** on average, which is why their arrows nearly coincide. `color_intensity`, `malic_acid` and `alcalinity_of_ash` point away from them, and that opposition is the chemical backbone of PC1.
 
 **`hue` is the interesting case, and it is not a phenolic.** It is a colour ratio, and it correlates with the four phenolics at only 0.30 to 0.57 — noticeably weaker than their 0.69 with each other. What it really tracks is the *other* group, negatively: −0.52 with `color_intensity` and −0.56 with `malic_acid`. It sits near the phenolics because deeply coloured, acidic wines are also the phenol-poor ones, not because hue measures a phenol. A variable can join a cluster in a biplot by opposing that cluster's opposite.
-* Notice that **all arrows are short** — none reach the outer circle. Why? Recall the Scree Plot from Step 3: PC1 and PC2 together explain only ~55% of the total variance. That means no variable is fully captured in this 2D view — all 13 variables have variance hidden in PC3 and beyond. The short arrows are not a problem; they are an honest representation of how much the 2D projection is leaving out.
+* No arrow reaches the outer circle. Resist reading a percentage into that: on this plot the arrow lengths are loadings, so the gap to the circle reflects the scaling as much as the data (see the note above and [#793](https://github.com/bitjungle/gopca/issues/793)). What *is* true, and worth carrying from Step 3, is that PC1 and PC2 hold only 55.4% between them, so every variable does have variance living in PC3 and beyond. For how much, read the Loadings Plot: flavanoids at 0.423 on PC1 is the largest single contribution anywhere in the first two components.
 
 > **Loadings Plot vs Circle of Correlations — when to use which:**
 > Use the Loadings Plot when you want to read precise loading values for a specific component. Use the Circle of Correlations when you want to see the full pattern of variable relationships and understand which variables are driving the same direction of variation simultaneously across two components.
