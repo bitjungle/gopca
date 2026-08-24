@@ -84,6 +84,27 @@ type PCAResult struct {
 	// Preprocessing statistics
 	Means   []float64 `json:"means,omitempty"`   // Original feature means
 	StdDevs []float64 `json:"stddevs,omitempty"` // Original feature std devs
+	// VariableCorrelations holds the Pearson correlation between each
+	// preprocessed variable and each retained component, as [variables][components].
+	//
+	// This is what a Circle of Correlations plots. It is NOT the loadings: the two
+	// differ by a factor of sqrt(eigenvalue)/sd, so on standardised data the
+	// correlations are systematically the larger of the two.
+	//
+	// Squared and summed over a variable's row, these give its communality in the
+	// components retained — the share of that variable's variance those components
+	// capture. The total reaches 1 only when the full basis is present; this matrix
+	// holds the components actually computed, so for a truncated fit the row sums
+	// to less than 1 and should not be read as an identity.
+	//
+	// That is exactly what makes the unit circle a benchmark rather than a bound
+	// that is always met: an arrow of length 0.9 in a two-component plot says 81%
+	// of that variable's variance lives in those two components.
+	//
+	// Empty when the engine has no preprocessed matrix to correlate against, which
+	// is the case for kernel PCA and for NIPALS with native missing values.
+	VariableCorrelations Matrix `json:"variable_correlations,omitempty"`
+
 	// PreprocessedData is the exact matrix the engine operated on internally —
 	// the data preprocessed with the same settings used for fitting, in the same
 	// space as the reconstruction (scores·loadingsᵀ). Diagnostic metrics (Q/T²)

@@ -33,7 +33,17 @@ import { getWatermarkDataUrlSync } from '../assets/watermark';
 import { PlotlyVisualizationConfig } from '../core/PlotlyVisualization';
 
 export interface CircleOfCorrelationsData {
-  loadings: number[][];  // [n_components][n_variables]
+  /**
+   * Correlations between each variable and each component, as
+   * [n_components][n_variables].
+   *
+   * These must be correlations, not loadings. The two differ by a factor of
+   * sqrt(eigenvalue)/sd, so substituting loadings draws every arrow short — on
+   * standardised data the leading eigenvalues exceed 1, which puts the unit
+   * circle permanently out of reach and strips the arrow lengths of the meaning
+   * this plot exists to convey. See issue #793.
+   */
+  correlations: number[][];
   variableNames: string[];
   explainedVariance: number[];
 }
@@ -77,13 +87,14 @@ export class PlotlyCircleOfCorrelations {
   }
 
   private prepareData() {
-    const { loadings, variableNames } = this.data;
+    const { correlations, variableNames } = this.data;
     const pcX = (this.config.pcX || 1) - 1;
     const pcY = (this.config.pcY || 2) - 1;
 
-    // Extract correlations (loadings) for selected PCs
-    const correlationsX = loadings[pcX];
-    const correlationsY = loadings[pcY];
+    // Correlations between each variable and the two selected components.
+    // Not loadings: substituting those is the defect fixed in #793.
+    const correlationsX = correlations[pcX];
+    const correlationsY = correlations[pcY];
 
     // Calculate vector magnitudes
     const magnitudes = correlationsX.map((x, i) =>
@@ -126,12 +137,14 @@ export class PlotlyCircleOfCorrelations {
         hoverinfo: 'skip'
       });
 
-      // Add inner circles at 0.5
+      // Inner reference circle at sqrt(0.5) ~ 0.707, the radius at which a
+      // variable has half its variance captured by the two components shown.
+      // (A circle at radius 0.5 would mark 25%, which is not a level anyone reads for.)
       traces.push({
         type: 'scatter',
         mode: 'lines',
-        x: theta.map(t => 0.5 * Math.cos(t)),
-        y: theta.map(t => 0.5 * Math.sin(t)),
+        x: theta.map(t => Math.SQRT1_2 * Math.cos(t)),
+        y: theta.map(t => Math.SQRT1_2 * Math.sin(t)),
         line: {
           color: 'lightgray',
           width: 1,
