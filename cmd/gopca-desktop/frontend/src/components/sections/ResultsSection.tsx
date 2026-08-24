@@ -90,7 +90,13 @@ export function ResultsSection({ guiConfig }: ResultsSectionProps) {
     // preprocessing and eigencorrelations are present in the result.
     const plotOptions = useMemo(() => {
         if (!pcaResponse?.result) return [];
-        const { method, preprocessing_applied, eigencorrelations } = pcaResponse.result;
+        const { method, preprocessing_applied, eigencorrelations, variable_correlations } = pcaResponse.result;
+        // The Circle of Correlations needs the variable-component correlations, not
+        // the loadings (#793). The engine cannot produce them without a preprocessed
+        // matrix to correlate against — NIPALS with native missing values is the case
+        // that reaches here — so gate the menu entry on them rather than offering a
+        // plot that would fail to draw.
+        const hasVariableCorrelations = !!variable_correlations && variable_correlations.length > 0;
         return [
             { value: 'scores', label: 'Scores Plot' },
             { value: 'scores3d', label: '3D Scores Plot' },
@@ -100,7 +106,7 @@ export function ResultsSection({ guiConfig }: ResultsSectionProps) {
             ...(method === 'temporal' ? [{ value: 'temporal-variable-importance', label: 'Variable Importance' }] : []),
             ...(preprocessing_applied && method !== 'kernel' && method !== 'temporal' ? [{ value: 'biplot', label: 'Biplot' }] : []),
             ...(preprocessing_applied && method !== 'kernel' && method !== 'temporal' ? [{ value: 'biplot3d', label: '3D Biplot' }] : []),
-            ...(preprocessing_applied && method !== 'kernel' && method !== 'temporal' ? [{ value: 'correlations', label: 'Circle of Correlations' }] : []),
+            ...(hasVariableCorrelations && preprocessing_applied && method !== 'kernel' && method !== 'temporal' ? [{ value: 'correlations', label: 'Circle of Correlations' }] : []),
             ...(method !== 'kernel' && method !== 'temporal' ? [{ value: 'diagnostics', label: 'Diagnostic Plot' }] : []),
             ...(eigencorrelations && method !== 'kernel' ? [{ value: 'eigencorrelation', label: 'Eigencorrelation Plot' }] : []),
             ...(method === 'kernel' ? [
