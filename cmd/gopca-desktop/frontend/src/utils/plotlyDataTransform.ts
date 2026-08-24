@@ -349,18 +349,29 @@ export function createBiplotConfig(
 export function transformToCircleOfCorrelationsData(
   pcaResult: PCAResult
 ): CircleOfCorrelationsData {
-  // Check if loadings exist (e.g., not available for Kernel PCA)
-  if (!pcaResult.loadings || pcaResult.loadings.length === 0) {
-    throw new Error('Circle of Correlations visualization requires loadings data, which is not available for this PCA method.');
+  // This plot needs the variable-component CORRELATIONS, which the engine
+  // computes alongside the loadings. Substituting loadings here is the defect
+  // recorded in #793: the two differ by sqrt(eigenvalue)/sd, so the arrows come
+  // out roughly half length and the unit circle becomes unreachable.
+  //
+  // The engine leaves the field empty when it has no preprocessed matrix to
+  // correlate against — kernel PCA, and NIPALS with native missing values.
+  // Refuse rather than fall back to loadings: a plot that declines to draw is
+  // recoverable, one that quietly shows a different quantity under the same
+  // axes is not.
+  if (!pcaResult.variable_correlations || pcaResult.variable_correlations.length === 0) {
+    throw new Error(
+      'Circle of Correlations requires variable-component correlations, which are not available for this PCA method or preprocessing.'
+    );
   }
 
-  // Backend stores loadings as [variables][components], but frontend expects [components][variables]
-  const transposedLoadings = transposeMatrix(pcaResult.loadings);
+  // Backend stores them as [variables][components]; this plot expects [components][variables]
+  const transposed = transposeMatrix(pcaResult.variable_correlations);
 
   return {
-    loadings: transposedLoadings,
+    correlations: transposed,
     variableNames: pcaResult.variable_labels ||
-      Array.from({ length: pcaResult.loadings.length }, (_, i) => `Var${i + 1}`), // Use loadings.length for number of variables
+      Array.from({ length: pcaResult.variable_correlations.length }, (_, i) => `Var${i + 1}`),
     explainedVariance: pcaResult.explained_variance_ratio // Already in percentages from backend
   };
 }

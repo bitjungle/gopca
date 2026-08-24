@@ -258,8 +258,21 @@ func (p *PCAImpl) Fit(data types.Matrix, config types.PCAConfig) (*types.PCAResu
 		stddevs = p.preprocessor.GetStdDevs()
 	}
 
+	scoreMatrix := utils.DenseToMatrix(scores)
+
+	// Correlations between each variable and each component, for the Circle of
+	// Correlations. Best effort: without a preprocessed matrix there is nothing
+	// to correlate against, and a plot that declines to draw is better than one
+	// drawing loadings under a label that promises correlations.
+	var variableCorrelations types.Matrix
+	if preprocessedForMetrics != nil {
+		if vc, err := CalculateVariableCorrelations(preprocessedForMetrics, scoreMatrix); err == nil {
+			variableCorrelations = vc
+		}
+	}
+
 	return &types.PCAResult{
-		Scores:               utils.DenseToMatrix(scores),
+		Scores:               scoreMatrix,
 		Loadings:             utils.DenseToMatrix(loadings),
 		ExplainedVar:         eigenvalues,
 		ExplainedVarRatio:    explainedVarRatio,
@@ -271,6 +284,7 @@ func (p *PCAImpl) Fit(data types.Matrix, config types.PCAConfig) (*types.PCAResu
 		Means:                means,
 		StdDevs:              stddevs,
 		AllEigenvalues:       allEigenvalues,
+		VariableCorrelations: variableCorrelations,
 		PreprocessedData:     preprocessedForMetrics,
 	}, nil
 }
