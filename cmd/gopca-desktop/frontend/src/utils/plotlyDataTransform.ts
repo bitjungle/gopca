@@ -331,7 +331,6 @@ export function createBiplotConfig(
   return {
     pcX: xComponent + 1,
     pcY: yComponent + 1,
-    scalingType: 'correlation',
     showScores: true,
     showLoadings: true,
     showLabels,
@@ -577,7 +576,6 @@ export function createBiplot3DConfig(options: {
   } = options;
 
   return {
-    scalingType: 'correlation',
     showScores,
     showLoadings,
     showLabels,
