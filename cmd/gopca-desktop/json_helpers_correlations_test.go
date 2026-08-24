@@ -53,7 +53,20 @@ func TestIssue795_VariableCorrelationsReachTheFrontend(t *testing.T) {
 	if err := json.Unmarshal(encoded, &decoded); err != nil {
 		t.Fatalf("unmarshal failed: %v", err)
 	}
+	// Check the shape before indexing into it. A conversion that truncated a row
+	// is exactly the bug this test guards, so it must report that plainly rather
+	// than panic with an index-out-of-range stack trace. The row count is checked
+	// again here because the assertion above covers conversion only — this one
+	// covers the marshal/unmarshal leg, which is a separate opportunity to lose data.
+	if len(decoded.VariableCorrelations) != len(result.VariableCorrelations) {
+		t.Fatalf("the round trip changed the row count: %d in, %d out",
+			len(result.VariableCorrelations), len(decoded.VariableCorrelations))
+	}
 	for j := range result.VariableCorrelations {
+		if len(decoded.VariableCorrelations[j]) != len(result.VariableCorrelations[j]) {
+			t.Fatalf("row %d changed width: %d columns in, %d out",
+				j, len(result.VariableCorrelations[j]), len(decoded.VariableCorrelations[j]))
+		}
 		for k := range result.VariableCorrelations[j] {
 			if got, want := decoded.VariableCorrelations[j][k], result.VariableCorrelations[j][k]; got != want {
 				t.Errorf("value [%d][%d] survived as %v, want %v", j, k, got, want)
