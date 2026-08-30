@@ -19,10 +19,10 @@ if command -v go &> /dev/null; then
     GO_MAJOR=$(echo $GO_VERSION | cut -d. -f1)
     GO_MINOR=$(echo $GO_VERSION | cut -d. -f2)
     
-    if [ "$GO_MAJOR" -gt 1 ] || ([ "$GO_MAJOR" -eq 1 ] && [ "$GO_MINOR" -ge 21 ]); then
+    if [ "$GO_MAJOR" -gt 1 ] || ([ "$GO_MAJOR" -eq 1 ] && [ "$GO_MINOR" -ge 26 ]); then
         echo -e "${GREEN}✓${NC} Go $GO_VERSION installed"
     else
-        echo -e "${RED}✗${NC} Go version $GO_VERSION is too old. Need 1.21+"
+        echo -e "${RED}✗${NC} Go version $GO_VERSION is too old. Need 1.26+"
     fi
 else
     echo -e "${RED}✗${NC} Go not installed"
@@ -33,10 +33,10 @@ echo ""
 echo "→ Checking Node.js version..."
 if command -v node &> /dev/null; then
     NODE_VERSION=$(node --version | grep -oE '[0-9]+' | head -1)
-    if [ "$NODE_VERSION" -ge 18 ]; then
+    if [ "$NODE_VERSION" -ge 24 ]; then
         echo -e "${GREEN}✓${NC} Node.js $(node --version) installed"
     else
-        echo -e "${YELLOW}⚠${NC} Node.js version $(node --version) is old. Recommend 18+"
+        echo -e "${YELLOW}⚠${NC} Node.js version $(node --version) is old. Recommend 24+"
     fi
 else
     echo -e "${YELLOW}⚠${NC} Node.js not installed (only needed for GUI development)"
@@ -69,9 +69,31 @@ else
     echo -e "${YELLOW}⚠${NC} golangci-lint not installed (optional but recommended)"
 fi
 
-# Check if wails is installed (for GUI development)
-if command -v wails &> /dev/null || [ -f "$HOME/go/bin/wails" ]; then
-    echo -e "${GREEN}✓${NC} Wails installed (for GUI development)"
+# Check if wails is installed, and that it is new enough for the Go toolchain.
+#
+# The Wails CLI parses the project with its own bundled copy of golang.org/x/tools,
+# and that pin decides which Go releases it can read. v2.12.0 bundles x/tools
+# v0.30.0, which predates Go 1.27's export-data format and fails with
+# "package \"context\" without types" rather than anything that names Wails.
+# Reinstalling the same version does not help: the pin is in Wails' own go.mod.
+WAILS_BIN=""
+if command -v wails &> /dev/null; then
+    WAILS_BIN="wails"
+elif [ -x "$HOME/go/bin/wails" ]; then
+    WAILS_BIN="$HOME/go/bin/wails"
+fi
+
+if [ -n "$WAILS_BIN" ]; then
+    WAILS_VERSION=$("$WAILS_BIN" version 2>/dev/null | grep -oE 'v?[0-9]+\.[0-9]+\.[0-9]+' | head -1 | tr -d 'v')
+    WAILS_MAJOR=$(echo "$WAILS_VERSION" | cut -d. -f1)
+    WAILS_MINOR=$(echo "$WAILS_VERSION" | cut -d. -f2)
+    if [ -z "$WAILS_VERSION" ]; then
+        echo -e "${YELLOW}⚠${NC} Wails installed but its version could not be determined"
+    elif [ "$WAILS_MAJOR" -gt 2 ] 2>/dev/null || { [ "$WAILS_MAJOR" -eq 2 ] && [ "$WAILS_MINOR" -ge 13 ]; } 2>/dev/null; then
+        echo -e "${GREEN}✓${NC} Wails v$WAILS_VERSION installed (for GUI development)"
+    else
+        echo -e "${RED}✗${NC} Wails v$WAILS_VERSION is too old for Go 1.26+. Run: go install github.com/wailsapp/wails/v2/cmd/wails@v2.13.0"
+    fi
 else
     echo -e "${YELLOW}⚠${NC} Wails not installed (only needed for GUI development)"
 fi
