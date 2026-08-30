@@ -23,6 +23,7 @@
 
 import React, { useCallback, useMemo, useRef, useState } from 'react';
 import { X } from 'lucide-react';
+import { HelpWrapper } from './HelpWrapper';
 import {
     toRuns, describeRun, runToIndices, parseRangeSpec, namesFormOrderedAxis,
     profileFractions, sharedScaleIsReadable, ScaleMode
@@ -197,31 +198,42 @@ export const ColumnRangeSelector: React.FC<ColumnRangeSelectorProps> = ({
                         drag across the plot to exclude a region
                     </span>
                     {/* Only offered for bars. A spectrum shares a unit across every
-                        column, so scaling its channels apart would misrepresent it. */}
+                        column, so scaling its channels apart would misrepresent it.
+                        Explanations go to the app-wide help area rather than a title
+                        tooltip, so the header keeps its promise that hovering any
+                        element explains it. */}
                     {!orderedAxis && (
                         <div
                             role="group"
                             aria-label="Profile scaling"
                             className="inline-flex rounded border border-gray-300 dark:border-gray-600 overflow-hidden"
                         >
-                            {([
-                                ['shared', 'Shared', 'One axis for every column: bar heights are comparable, but a large-magnitude column flattens the rest'],
-                                ['independent', 'Per column', 'Each column scaled to its own range: shows where the mean sits in that column’s spread, and no column is flattened by another’s units']
-                            ] as Array<[ScaleMode, string, string]>).map(([mode, label, title]) => (
+                            <HelpWrapper helpKey="variable-profile-scale-shared">
                                 <button
-                                    key={mode}
-                                    onClick={() => setScaleOverride(mode)}
-                                    title={title}
-                                    aria-pressed={scaleMode === mode}
+                                    onClick={() => setScaleOverride('shared')}
+                                    aria-pressed={scaleMode === 'shared'}
                                     className={`text-xs px-2 py-1 ${
-                                        scaleMode === mode
+                                        scaleMode === 'shared'
                                             ? 'bg-blue-600 text-white'
                                             : 'bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-200 hover:bg-gray-200 dark:hover:bg-gray-600'
                                     }`}
                                 >
-                                    {label}
+                                    Shared
                                 </button>
-                            ))}
+                            </HelpWrapper>
+                            <HelpWrapper helpKey="variable-profile-scale-independent">
+                                <button
+                                    onClick={() => setScaleOverride('independent')}
+                                    aria-pressed={scaleMode === 'independent'}
+                                    className={`text-xs px-2 py-1 ${
+                                        scaleMode === 'independent'
+                                            ? 'bg-blue-600 text-white'
+                                            : 'bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-200 hover:bg-gray-200 dark:hover:bg-gray-600'
+                                    }`}
+                                >
+                                    Per column
+                                </button>
+                            </HelpWrapper>
                         </div>
                     )}
                     {excludedColumns.length > 0 && (
@@ -360,19 +372,19 @@ export const ColumnRangeSelector: React.FC<ColumnRangeSelectorProps> = ({
                 <div className="flex items-center gap-2 mt-3 flex-wrap">
                     <span className="text-xs text-gray-500 dark:text-gray-400">Excluded:</span>
                     {runs.map((r, k) => (
-                        <button
-                            key={`chip-${k}`}
-                            onClick={() => {
-                                const next = new Set(excludedColumns);
-                                runToIndices(r).forEach(i => next.delete(i));
-                                onChange([...next].sort((a, b) => a - b));
-                            }}
-                            title="Click to put these columns back"
-                            className="inline-flex items-center gap-1 text-xs px-2 py-1 rounded bg-red-100 dark:bg-red-900/40 text-red-800 dark:text-red-200 hover:bg-red-200 dark:hover:bg-red-900/70"
-                        >
-                            {describeRun(r, headers)}
-                            <X className="w-3 h-3" />
-                        </button>
+                        <HelpWrapper key={`chip-${k}`} helpKey="variable-profile-excluded">
+                            <button
+                                onClick={() => {
+                                    const next = new Set(excludedColumns);
+                                    runToIndices(r).forEach(i => next.delete(i));
+                                    onChange([...next].sort((a, b) => a - b));
+                                }}
+                                className="inline-flex items-center gap-1 text-xs px-2 py-1 rounded bg-red-100 dark:bg-red-900/40 text-red-800 dark:text-red-200 hover:bg-red-200 dark:hover:bg-red-900/70"
+                            >
+                                {describeRun(r, headers)}
+                                <X className="w-3 h-3" />
+                            </button>
+                        </HelpWrapper>
                     ))}
                 </div>
             )}
