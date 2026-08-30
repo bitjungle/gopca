@@ -24,7 +24,8 @@
 import React, { useCallback, useMemo, useRef, useState } from 'react';
 import { X } from 'lucide-react';
 import {
-    toRuns, describeRun, runToIndices, parseRangeSpec, columnMeans, namesFormOrderedAxis
+    toRuns, describeRun, runToIndices, parseRangeSpec, namesFormOrderedAxis,
+    profileFractions, sharedScaleIsReadable, ScaleMode
 } from '../utils/columnRanges';
 
 interface ColumnRangeSelectorProps {
@@ -56,6 +57,15 @@ const VIEW_H = 120;
  * when the column names say so — see namesFormOrderedAxis. Forty unrelated assay
  * variables get bars instead, because a line through them would draw a curve
  * where the data has none. The gesture is identical either way.
+ *
+ * What the bars are measured against is a separate question from how they are
+ * drawn. One shared y-axis makes heights comparable between columns, which is
+ * what a spectrum wants; but it also lets a single large-magnitude column flatten
+ * every other one, which is what happens to any dataset storing measurements next
+ * to their targets. So the starting scale is chosen from the values rather than
+ * from the column names or the column count — see sharedScaleIsReadable — and the
+ * toolbar lets the user switch, because which reading is wanted depends on a
+ * question about the data that the data cannot answer.
  */
 export const ColumnRangeSelector: React.FC<ColumnRangeSelectorProps> = ({
     headers, data, excludedColumns, onChange
@@ -74,49 +84,51 @@ export const ColumnRangeSelector: React.FC<ColumnRangeSelectorProps> = ({
     // the width either way, so dragging behaves identically.
     const orderedAxis = useMemo(() => namesFormOrderedAxis(headers), [headers]);
 
+    // Whether one shared y-axis can actually show every column, or whether the
+    // largest-magnitude column would flatten the rest. Decided from the values,
+    // not the column count: corn.csv is 709 columns wide and still unreadable
+    // under a shared axis, because four named target columns sit two orders of
+    // magnitude above the spectral channels they are stored beside.
+    const sharedReadable = useMemo(
+        () => sharedScaleIsReadable(data, n),
+        [data, n]
+    );
+
+    // A spectrum is drawn on one axis because its columns genuinely share a unit.
+    // Everything else starts on whichever axis can be read, and the user can
+    // override that from the toolbar.
+    const [scaleOverride, setScaleOverride] = useState<ScaleMode | null>(null);
+    const scaleMode: ScaleMode = scaleOverride
+        ?? (orderedAxis || sharedReadable ? 'shared' : 'independent');
+
     // Mean profile, normalised into the viewBox. Recomputed only when the data
-    // changes, not on every drag frame.
+    // or the chosen scaling changes, not on every drag frame.
     const profile = useMemo(() => {
-        const means = columnMeans(data, n);
-        // One pass rather than Math.min(...means): spreading a per-column array
-        // into an argument list costs two throwaway argument lists, and stakes the
-        // panel on staying under the engine's argument limit — a limit this code
-        // has no way to see, currently kept out of reach only by the 10,000-column
-        // ceiling that pkg/csv enforces on load.
-        let lo = Infinity;
-        let hi = -Infinity;
-        for (const m of means) {
-            if (m < lo) lo = m;
-            if (m > hi) hi = m;
-        }
-        if (!Number.isFinite(lo) || !Number.isFinite(hi)) {
-            lo = 0;
-            hi = 0;
-        }
-        const span = hi - lo || 1;
+        const fractions = profileFractions(data, n, scaleMode);
         const top = 8;
         const base = VIEW_H - 8;
-        const yOf = (m: number) => base - ((m - lo) / span) * (base - top);
+        const yOf = (f: number) => base - f * (base - top);
         const xAt = (i: number) => ((i + 0.5) * VIEW_W) / n;
 
         if (orderedAxis) {
             return {
-                line: means.map((m, i) => `${xAt(i).toFixed(1)},${yOf(m).toFixed(1)}`).join(' '),
+                line: fractions.map((f, i) => `${xAt(i).toFixed(1)},${yOf(f).toFixed(1)}`).join(' '),
                 bars: ''
             };
         }
 
         // One bar per variable, emitted as a single path rather than n <rect>
         // elements so that a few thousand columns stay cheap to render. Bars grow
-        // from zero when the means straddle it, otherwise from the floor.
-        const zero = lo <= 0 && hi >= 0 ? yOf(0) : base;
+        // from the floor: under either scaling the fractions are already relative
+        // to the smallest value drawn, so the floor is the natural origin.
+        const zero = base;
         return {
             line: '',
-            bars: means
-                .map((m, i) => `M${xAt(i).toFixed(1)},${zero.toFixed(1)}V${yOf(m).toFixed(1)}`)
+            bars: fractions
+                .map((f, i) => `M${xAt(i).toFixed(1)},${zero.toFixed(1)}V${yOf(f).toFixed(1)}`)
                 .join('')
         };
-    }, [data, n, orderedAxis]);
+    }, [data, n, orderedAxis, scaleMode]);
 
     // Bars should fill most of the space each variable occupies, so their width is
     // a share of the column pitch rather than a fixed number of pixels.
@@ -184,6 +196,34 @@ export const ColumnRangeSelector: React.FC<ColumnRangeSelectorProps> = ({
                     <span className="hidden md:inline text-xs text-gray-400 dark:text-gray-500">
                         drag across the plot to exclude a region
                     </span>
+                    {/* Only offered for bars. A spectrum shares a unit across every
+                        column, so scaling its channels apart would misrepresent it. */}
+                    {!orderedAxis && (
+                        <div
+                            role="group"
+                            aria-label="Profile scaling"
+                            className="inline-flex rounded border border-gray-300 dark:border-gray-600 overflow-hidden"
+                        >
+                            {([
+                                ['shared', 'Shared', 'One axis for every column: bar heights are comparable, but a large-magnitude column flattens the rest'],
+                                ['independent', 'Per column', 'Each column scaled to its own range: shows where the mean sits in that column’s spread, and no column is flattened by another’s units']
+                            ] as Array<[ScaleMode, string, string]>).map(([mode, label, title]) => (
+                                <button
+                                    key={mode}
+                                    onClick={() => setScaleOverride(mode)}
+                                    title={title}
+                                    aria-pressed={scaleMode === mode}
+                                    className={`text-xs px-2 py-1 ${
+                                        scaleMode === mode
+                                            ? 'bg-blue-600 text-white'
+                                            : 'bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-200 hover:bg-gray-200 dark:hover:bg-gray-600'
+                                    }`}
+                                >
+                                    {label}
+                                </button>
+                            ))}
+                        </div>
+                    )}
                     {excludedColumns.length > 0 && (
                         <button
                             onClick={() => onChange([])}

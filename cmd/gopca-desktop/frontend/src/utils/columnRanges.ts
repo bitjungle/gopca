@@ -193,3 +193,104 @@ export function columnMeans(data: number[][], columnCount: number): number[] {
     }
     return sums.map((s, i) => (counts[i] > 0 ? s / counts[i] : 0));
 }
+
+/**
+ * Smallest and largest finite value in each column.
+ *
+ * The overview profile needs this to scale a column against its own spread
+ * rather than against the whole dataset. A column with no finite values at all
+ * gets an empty extent, which callers treat as "nothing to draw".
+ */
+export function columnExtents(
+    data: number[][],
+    columnCount: number
+): Array<{ min: number; max: number; empty: boolean }> {
+    const mins = new Array(columnCount).fill(Infinity);
+    const maxs = new Array(columnCount).fill(-Infinity);
+    for (const row of data) {
+        for (let c = 0; c < columnCount; c++) {
+            const v = row[c];
+            if (Number.isFinite(v)) {
+                if (v < mins[c]) mins[c] = v;
+                if (v > maxs[c]) maxs[c] = v;
+            }
+        }
+    }
+    return mins.map((min, i) => {
+        const max = maxs[i];
+        const empty = !Number.isFinite(min) || !Number.isFinite(max);
+        return { min: empty ? 0 : min, max: empty ? 0 : max, empty };
+    });
+}
+
+/**
+ * How the overview profile turns column values into bar heights.
+ *
+ * `shared` puts every column on one y-axis, so bar heights are comparable
+ * between columns. That is the right reading for a spectrum, where each column
+ * is the same measurement at a different wavelength.
+ *
+ * `independent` scales each column against its own min..max, so the bar shows
+ * where the mean sits inside that column's own spread. Heights are no longer
+ * comparable between columns, but no column can be flattened by another one's
+ * units — which is what happens to a mixed-unit dataset under `shared`.
+ */
+export type ScaleMode = 'shared' | 'independent';
+
+/** Height of each bar as a fraction of the panel, where 0 is the floor and 1 the top. */
+export function profileFractions(
+    data: number[][],
+    columnCount: number,
+    mode: ScaleMode
+): number[] {
+    const means = columnMeans(data, columnCount);
+
+    if (mode === 'independent') {
+        const extents = columnExtents(data, columnCount);
+        return means.map((m, i) => {
+            const { min, max, empty } = extents[i];
+            if (empty) return 0;
+            // A constant column has no spread to place the mean inside. Half
+            // height says "no information here" without pretending the value is
+            // extreme in either direction.
+            if (max === min) return 0.5;
+            return (m - min) / (max - min);
+        });
+    }
+
+    // One pass rather than Math.min(...means): spreading a per-column array into
+    // an argument list costs two throwaway argument lists, and stakes the panel
+    // on staying under the engine's argument limit.
+    let lo = Infinity;
+    let hi = -Infinity;
+    for (const m of means) {
+        if (m < lo) lo = m;
+        if (m > hi) hi = m;
+    }
+    if (!Number.isFinite(lo) || !Number.isFinite(hi)) {
+        lo = 0;
+        hi = 0;
+    }
+    const span = hi - lo || 1;
+    return means.map(m => (m - lo) / span);
+}
+
+/**
+ * Whether the columns are similar enough in magnitude to share one y-axis.
+ *
+ * Under a shared axis a column is only visible if its mean is a reasonable
+ * fraction of the largest mean, so a dataset mixing proline (~750) with hue
+ * (~1) renders as one bar and a row of flat stubs. This reports the fraction of
+ * columns that would survive, which is what decides whether `shared` is a
+ * usable default rather than any property of the column names.
+ */
+export function sharedScaleIsReadable(
+    data: number[][],
+    columnCount: number,
+    minVisibleFraction = 0.5
+): boolean {
+    if (columnCount === 0) return true;
+    const fractions = profileFractions(data, columnCount, 'shared');
+    const visible = fractions.filter(f => f >= 0.05).length;
+    return visible / columnCount >= minVisibleFraction;
+}

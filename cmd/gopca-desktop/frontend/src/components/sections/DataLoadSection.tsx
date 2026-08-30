@@ -42,7 +42,12 @@ import { OpenTutorial } from '../../../wailsjs/go/main/App';
 // spectral channels is a strip tens of thousands of pixels across — so the axis
 // view is offered instead, where a whole region is one drag. Below it the strip
 // fits on screen and is the more precise tool, because every column name is visible.
-const WIDE_DATASET_COLUMNS = 20;
+// The overview panel used to be reserved for datasets too wide to select with
+// checkboxes. It doubles as a preview of the loaded data though, which is worth
+// having at any width, and appearing only past a threshold made it look like it
+// came and went at random. Two columns is simply the point below which a profile
+// has no shape to show.
+const MIN_PROFILE_COLUMNS = 2;
 
 export function DataLoadSection() {
     const {
@@ -200,7 +205,7 @@ export function DataLoadSection() {
             {fileData && (
                 <div className="bg-white dark:bg-gray-800 rounded-lg p-6 shadow-lg border border-gray-200 dark:border-gray-700">
                     <h2 className="text-xl font-semibold mb-4">Loaded Data</h2>
-                    {fileData.headers.length > WIDE_DATASET_COLUMNS && (
+                    {fileData.headers.length >= MIN_PROFILE_COLUMNS && (
                         <div className="mb-4">
                             <ColumnRangeSelector
                                 headers={fileData.headers}

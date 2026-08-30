@@ -22,7 +22,10 @@
 // See LICENSE for the full license terms.
 
 import { describe, it, expect } from 'vitest';
-import { toRuns, describeRun, runToIndices, parseRangeSpec, columnMeans, namesFormOrderedAxis } from './columnRanges';
+import {
+    toRuns, describeRun, runToIndices, parseRangeSpec, columnMeans, namesFormOrderedAxis,
+    columnExtents, profileFractions, sharedScaleIsReadable
+} from './columnRanges';
 
 // A 700-channel NIR axis, 1100–2498 nm at 2 nm steps, as in the Corn dataset.
 const NIR = Array.from({ length: 700 }, (_, i) => String(1100 + i * 2));
@@ -173,5 +176,88 @@ describe('namesFormOrderedAxis', () => {
     it('rejects fewer than two columns, where the question is meaningless', () => {
         expect(namesFormOrderedAxis(['1100'])).toBe(false);
         expect(namesFormOrderedAxis([])).toBe(false);
+    });
+});
+
+describe('columnExtents', () => {
+    it('reports the smallest and largest value per column', () => {
+        const data = [[1, 40], [3, 10], [2, 20]];
+        expect(columnExtents(data, 2)).toEqual([
+            { min: 1, max: 3, empty: false },
+            { min: 10, max: 40, empty: false }
+        ]);
+    });
+
+    it('ignores non-finite values rather than letting them win the comparison', () => {
+        const data = [[NaN, 5], [2, Infinity], [8, 7]];
+        expect(columnExtents(data, 2)).toEqual([
+            { min: 2, max: 8, empty: false },
+            { min: 5, max: 7, empty: false }
+        ]);
+    });
+
+    it('marks a column with no finite values as empty', () => {
+        expect(columnExtents([[NaN], [NaN]], 1)).toEqual([{ min: 0, max: 0, empty: true }]);
+    });
+});
+
+describe('profileFractions', () => {
+    it('places the smallest and largest column mean at the ends of the shared axis', () => {
+        // Column means are 1, 5 and 9, so the middle one lands exactly halfway.
+        const data = [[1, 5, 9]];
+        expect(profileFractions(data, 3, 'shared')).toEqual([0, 0.5, 1]);
+    });
+
+    it('is the regression this change exists for: a large column no longer flattens the rest', () => {
+        // Four spectral channels next to one target column two orders of magnitude
+        // above them — the shape of testdata/corn/corn.csv.
+        const data = [
+            [0.10, 0.20, 0.30, 0.40, 64],
+            [0.12, 0.22, 0.34, 0.44, 66]
+        ];
+        const shared = profileFractions(data, 5, 'shared');
+        // Under one axis the four channels are indistinguishable from the floor.
+        expect(shared.slice(0, 4).every(f => f < 0.01)).toBe(true);
+
+        // Scaled per column they separate again: each mean sits mid-range, because
+        // each channel here has two evenly spread observations.
+        const independent = profileFractions(data, 5, 'independent');
+        expect(independent.slice(0, 4).every(f => f > 0.4 && f < 0.6)).toBe(true);
+    });
+
+    it('puts the mean where it falls inside a skewed column', () => {
+        // min 0, max 10, mean 1 -> one tenth of the way up.
+        const data = [[0], [0], [0], [0], [0], [0], [0], [0], [0], [10]];
+        expect(profileFractions(data, 1, 'independent')[0]).toBeCloseTo(0.1, 10);
+    });
+
+    it('gives a constant column half height, having no spread to place the mean in', () => {
+        expect(profileFractions([[7], [7], [7]], 1, 'independent')).toEqual([0.5]);
+    });
+
+    it('draws nothing for a column with no finite values', () => {
+        expect(profileFractions([[NaN], [NaN]], 1, 'independent')).toEqual([0]);
+    });
+
+    it('survives an empty dataset', () => {
+        expect(profileFractions([], 0, 'shared')).toEqual([]);
+        expect(profileFractions([], 0, 'independent')).toEqual([]);
+    });
+});
+
+describe('sharedScaleIsReadable', () => {
+    it('accepts columns of comparable magnitude, as in a spectrum', () => {
+        const data = [Array.from({ length: 20 }, (_, i) => 0.5 + i * 0.01)];
+        expect(sharedScaleIsReadable(data, 20)).toBe(true);
+    });
+
+    it('rejects a dataset where one column dwarfs the others', () => {
+        // Wine: proline near 750 alongside hue near 1.
+        const data = [[746, 0.96, 1.59, 0.36, 2.03]];
+        expect(sharedScaleIsReadable(data, 5)).toBe(false);
+    });
+
+    it('treats no columns as trivially readable', () => {
+        expect(sharedScaleIsReadable([], 0)).toBe(true);
     });
 });
