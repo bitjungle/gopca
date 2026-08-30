@@ -67,7 +67,7 @@
     },
     "variable-profile-distribution": {
       "title": "Distribution",
-      "text": "Five-number summary per column: whisker = full range, box = middle 50%, tick = median. Each column scaled to its own range, so this compares shapes, not sizes.",
+      "text": "Box = middle 50%, tick = median, whisker = the last value within 1.5\u00d7IQR, dashed tail = outliers beyond it. Each column scaled to its own range.",
       "category": "data-input"
     },
     "variable-profile-excluded": {

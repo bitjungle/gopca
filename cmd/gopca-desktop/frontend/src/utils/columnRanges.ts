@@ -313,6 +313,20 @@ export interface BoxStats {
     median: number;
     q3: number;
     max: number;
+    /**
+     * Tukey fences: the most extreme observations still within 1.5×IQR of the
+     * box. Anything past them is an outlier.
+     *
+     * These are what the whiskers should be drawn to. Drawing whiskers to min
+     * and max instead makes them span the full height of every column, because
+     * the column is normalised by exactly those two numbers — a mark that
+     * implies variation while being a constant by construction.
+     */
+    lowerFence: number;
+    upperFence: number;
+    /** Whether any observation lies outside the corresponding fence. */
+    hasLowOutliers: boolean;
+    hasHighOutliers: boolean;
     /** No finite values in the column, so nothing can be drawn for it. */
     empty: boolean;
 }
@@ -353,7 +367,12 @@ export function columnBoxStats(
             if (Number.isFinite(v)) col.push(v);
         }
         if (col.length === 0) {
-            stats.push({ min: 0, q1: 0, median: 0, q3: 0, max: 0, empty: true });
+            stats.push({
+                min: 0, q1: 0, median: 0, q3: 0, max: 0,
+                lowerFence: 0, upperFence: 0,
+                hasLowOutliers: false, hasHighOutliers: false,
+                empty: true
+            });
             continue;
         }
         col.sort((a, b) => a - b);
@@ -363,12 +382,34 @@ export function columnBoxStats(
             const hi = Math.ceil(pos);
             return lo === hi ? col[lo] : col[lo] + (col[hi] - col[lo]) * (pos - lo);
         };
+        const q1 = quantile(0.25);
+        const q3 = quantile(0.75);
+        const min = col[0];
+        const max = col[col.length - 1];
+        // Tukey's rule. The fence is pulled back to the most extreme observation
+        // still inside 1.5×IQR rather than sitting at the cutoff itself, so the
+        // whisker always ends on real data.
+        const reach = 1.5 * (q3 - q1);
+        const lowCut = q1 - reach;
+        const highCut = q3 + reach;
+        let lowerFence = min;
+        for (const v of col) {
+            if (v >= lowCut) { lowerFence = v; break; }
+        }
+        let upperFence = max;
+        for (let k = col.length - 1; k >= 0; k--) {
+            if (col[k] <= highCut) { upperFence = col[k]; break; }
+        }
         stats.push({
-            min: col[0],
-            q1: quantile(0.25),
+            min,
+            q1,
             median: quantile(0.5),
-            q3: quantile(0.75),
-            max: col[col.length - 1],
+            q3,
+            max,
+            lowerFence,
+            upperFence,
+            hasLowOutliers: lowerFence > min,
+            hasHighOutliers: upperFence < max,
             empty: false
         });
     }
@@ -383,15 +424,38 @@ export function columnBoxStats(
  * shapes. Where the box sits inside the whiskers is the skew, and how tall it is
  * is how tightly the middle half is packed.
  */
-export function boxFractions(stats: BoxStats): { q1: number; median: number; q3: number } | null {
+export interface BoxDrawing {
+    q1: number;
+    median: number;
+    q3: number;
+    /** Whisker ends, at the Tukey fences. */
+    lowerFence: number;
+    upperFence: number;
+    /** Outlier tails, present only where observations lie past a fence. */
+    lowTail: boolean;
+    highTail: boolean;
+}
+
+export function boxFractions(stats: BoxStats): BoxDrawing | null {
     if (stats.empty) return null;
     const span = stats.max - stats.min;
     // A constant column is a single value, not a distribution. Drawn as a flat
     // line at mid height, matching how profileFractions treats the same case.
-    if (span === 0) return { q1: 0.5, median: 0.5, q3: 0.5 };
+    if (span === 0) {
+        return {
+            q1: 0.5, median: 0.5, q3: 0.5,
+            lowerFence: 0.5, upperFence: 0.5,
+            lowTail: false, highTail: false
+        };
+    }
+    const at = (v: number) => (v - stats.min) / span;
     return {
-        q1: (stats.q1 - stats.min) / span,
-        median: (stats.median - stats.min) / span,
-        q3: (stats.q3 - stats.min) / span
+        q1: at(stats.q1),
+        median: at(stats.median),
+        q3: at(stats.q3),
+        lowerFence: at(stats.lowerFence),
+        upperFence: at(stats.upperFence),
+        lowTail: stats.hasLowOutliers,
+        highTail: stats.hasHighOutliers
     };
 }

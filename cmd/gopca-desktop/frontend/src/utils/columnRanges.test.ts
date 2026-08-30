@@ -24,7 +24,7 @@
 import { describe, it, expect } from 'vitest';
 import {
     toRuns, describeRun, runToIndices, parseRangeSpec, columnMeans, namesFormOrderedAxis,
-    columnExtents, profileFractions, sharedScaleIsReadable, columnBoxStats, boxFractions
+    columnExtents, profileFractions, sharedScaleIsReadable, columnBoxStats, boxFractions, BoxStats
 } from './columnRanges';
 
 // A 700-channel NIR axis, 1100–2498 nm at 2 nm steps, as in the Corn dataset.
@@ -266,7 +266,7 @@ describe('columnBoxStats', () => {
     it('matches the linear-interpolation quantiles numpy and R type 7 produce', () => {
         // percentile([1..9], [25,50,75]) = 3, 5, 7
         const data = [1, 2, 3, 4, 5, 6, 7, 8, 9].map(v => [v]);
-        expect(columnBoxStats(data, 1)[0]).toEqual({
+        expect(columnBoxStats(data, 1)[0]).toMatchObject({
             min: 1, q1: 3, median: 5, q3: 7, max: 9, empty: false
         });
     });
@@ -307,23 +307,105 @@ describe('columnBoxStats', () => {
 });
 
 describe('boxFractions', () => {
+    const stats = (o: Partial<BoxStats>): BoxStats => ({
+        min: 0, q1: 0, median: 0, q3: 0, max: 0,
+        lowerFence: 0, upperFence: 0,
+        hasLowOutliers: false, hasHighOutliers: false,
+        empty: false,
+        ...o
+    });
+
     it('puts the column min at the floor and its max at the top', () => {
-        const f = boxFractions({ min: 0, q1: 25, median: 50, q3: 75, max: 100, empty: false });
-        expect(f).toEqual({ q1: 0.25, median: 0.5, q3: 0.75 });
+        const f = boxFractions(stats({
+            min: 0, q1: 25, median: 50, q3: 75, max: 100,
+            lowerFence: 0, upperFence: 100
+        }))!;
+        expect(f).toMatchObject({ q1: 0.25, median: 0.5, q3: 0.75 });
     });
 
     it('shows a right-skewed column with its box low in the range', () => {
-        const f = boxFractions({ min: 0, q1: 1, median: 2, q3: 4, max: 100, empty: false })!;
+        const f = boxFractions(stats({
+            min: 0, q1: 1, median: 2, q3: 4, max: 100,
+            lowerFence: 0, upperFence: 8
+        }))!;
         expect(f.median).toBeLessThan(0.1);
         expect(f.q3).toBeLessThan(0.1);
     });
 
     it('draws a constant column flat at mid height, as profileFractions does', () => {
-        expect(boxFractions({ min: 7, q1: 7, median: 7, q3: 7, max: 7, empty: false }))
-            .toEqual({ q1: 0.5, median: 0.5, q3: 0.5 });
+        expect(boxFractions(stats({ min: 7, q1: 7, median: 7, q3: 7, max: 7 })))
+            .toMatchObject({ q1: 0.5, median: 0.5, q3: 0.5 });
     });
 
     it('draws nothing for an empty column', () => {
-        expect(boxFractions({ min: 0, q1: 0, median: 0, q3: 0, max: 0, empty: true })).toBeNull();
+        expect(boxFractions(stats({ empty: true }))).toBeNull();
+    });
+
+    // The regression this change exists for: whiskers drawn to min and max are
+    // pinned at 0 and 1 for every column, so they can never differ.
+    it('places whiskers at the fences, not at the extremes', () => {
+        const f = boxFractions(stats({
+            min: 0, q1: 40, median: 50, q3: 60, max: 100,
+            lowerFence: 20, upperFence: 80,
+            hasLowOutliers: true, hasHighOutliers: true
+        }))!;
+        expect(f.lowerFence).toBeCloseTo(0.2, 10);
+        expect(f.upperFence).toBeCloseTo(0.8, 10);
+        expect(f.lowTail).toBe(true);
+        expect(f.highTail).toBe(true);
+    });
+
+    it('reports no tail where the fence reaches the extreme', () => {
+        const f = boxFractions(stats({
+            min: 0, q1: 25, median: 50, q3: 75, max: 100,
+            lowerFence: 0, upperFence: 100
+        }))!;
+        expect(f.lowTail).toBe(false);
+        expect(f.highTail).toBe(false);
+        expect(f.lowerFence).toBe(0);
+        expect(f.upperFence).toBe(1);
+    });
+});
+
+describe('Tukey fences', () => {
+    it('reaches the extremes when nothing lies beyond 1.5 IQR', () => {
+        // 1..9: IQR = 4, so the cutoffs are -3 and 13 and no value is outside.
+        const s = columnBoxStats([1, 2, 3, 4, 5, 6, 7, 8, 9].map(v => [v]), 1)[0];
+        expect(s.lowerFence).toBe(1);
+        expect(s.upperFence).toBe(9);
+        expect(s.hasLowOutliers).toBe(false);
+        expect(s.hasHighOutliers).toBe(false);
+    });
+
+    it('stops short of a high outlier and flags it', () => {
+        // 1..9 as above, plus a far outlier at 100.
+        const s = columnBoxStats([1, 2, 3, 4, 5, 6, 7, 8, 9, 100].map(v => [v]), 1)[0];
+        expect(s.max).toBe(100);
+        expect(s.upperFence).toBeLessThan(100);
+        expect(s.hasHighOutliers).toBe(true);
+        expect(s.hasLowOutliers).toBe(false);
+    });
+
+    it('stops short of a low outlier and flags it', () => {
+        const s = columnBoxStats([-100, 1, 2, 3, 4, 5, 6, 7, 8, 9].map(v => [v]), 1)[0];
+        expect(s.min).toBe(-100);
+        expect(s.lowerFence).toBeGreaterThan(-100);
+        expect(s.hasLowOutliers).toBe(true);
+        expect(s.hasHighOutliers).toBe(false);
+    });
+
+    it('ends the whisker on real data rather than at the cutoff itself', () => {
+        const s = columnBoxStats([1, 2, 3, 4, 5, 6, 7, 8, 9, 100].map(v => [v]), 1)[0];
+        // Whatever the fence is, it must be an observed value.
+        expect([1, 2, 3, 4, 5, 6, 7, 8, 9, 100]).toContain(s.upperFence);
+        expect([1, 2, 3, 4, 5, 6, 7, 8, 9, 100]).toContain(s.lowerFence);
+    });
+
+    it('handles a constant column without inventing outliers', () => {
+        const s = columnBoxStats([[5], [5], [5]], 1)[0];
+        expect(s.lowerFence).toBe(5);
+        expect(s.upperFence).toBe(5);
+        expect(s.hasLowOutliers).toBe(false);
+        expect(s.hasHighOutliers).toBe(false);
     });
 });
