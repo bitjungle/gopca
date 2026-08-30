@@ -223,9 +223,13 @@ export const ColumnRangeSelector: React.FC<ColumnRangeSelectorProps> = ({
     // How many fit is a question about pixels, so it is measured rather than
     // assumed: a constant is wrong in both directions, showing six labels on a
     // panel with room for fifteen and still colliding when the window is narrow.
-    // Labels are capped at 7rem by their own class, so this is the width one
-    // occupies plus a gap.
-    const LABEL_PITCH_PX = 120;
+    //
+    // Labels are rotated 45°, which changes what "fits" means. Upright, a label
+    // needs its full width and a 28-character variable name crowds out its
+    // neighbours; tilted, consecutive labels only need enough horizontal room to
+    // clear each other's line height, so the pitch is a small multiple of that
+    // rather than the length of the longest name.
+    const LABEL_PITCH_PX = 28;
     const [panelWidth, setPanelWidth] = useState(0);
     useEffect(() => {
         const el = svgRef.current;
@@ -434,19 +438,27 @@ export const ColumnRangeSelector: React.FC<ColumnRangeSelectorProps> = ({
 
             {/* Axis labels sit outside the SVG so they are not distorted by
                 preserveAspectRatio="none". */}
-            <div className="relative h-4 mt-1">
+            {/* No clipping here: a rotated label reaches left of its own tick,
+                and the leftmost one would lose its start to the container edge.
+                The card's padding absorbs the overhang; truncation stays on the
+                spans, where it is the ellipsis rather than a hard cut. */}
+            <div className="relative h-[4.5rem] mt-1">
                 {ticks.map(t => (
                     <span
                         key={`l-${t.i}`}
-                        style={t.first
-                            ? { left: 0 }
-                            : t.last
-                                ? { right: 0 }
-                                : { left: `${(midOf(t.i) / VIEW_W) * 100}%` }}
+                        // Anchored by its right edge at the tick and rotated about
+                        // that corner, so the name ends where the column is rather
+                        // than starting there — the reading runs up into the tick.
+                        style={{
+                            right: `${100 - (midOf(t.i) / VIEW_W) * 100}%`,
+                            transformOrigin: 'top right',
+                            transform: 'rotate(-45deg)'
+                        }}
+                        // Truncation is what bounds the panel's height: at 45° a
+                        // label's vertical extent is its width times sin 45°, so
+                        // capping the width caps how far the axis grows.
                         title={t.label}
-                        className={`absolute text-[10px] text-gray-500 dark:text-gray-400 whitespace-nowrap max-w-[7rem] overflow-hidden text-ellipsis ${
-                            t.first || t.last ? '' : '-translate-x-1/2'
-                        }`}
+                        className="absolute top-0 text-[10px] text-gray-500 dark:text-gray-400 whitespace-nowrap max-w-[5rem] overflow-hidden text-ellipsis"
                     >
                         {t.label}
                     </span>
