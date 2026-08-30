@@ -65,6 +65,11 @@
       "text": "Bar = column mean, on one scale shared by all columns: lowest mean at the floor, highest at the top. Comparable between columns; best when columns share a unit.",
       "category": "data-input"
     },
+    "variable-profile-distribution": {
+      "title": "Distribution",
+      "text": "Five-number summary per column: whisker = full range, box = middle 50%, tick = median. Each column scaled to its own range, so this compares shapes, not sizes.",
+      "category": "data-input"
+    },
     "variable-profile-excluded": {
       "title": "Excluded Columns",
       "text": "Columns held out of the analysis. Click a chip to put that range back, or drag across the plot to exclude or restore a region.",

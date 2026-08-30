@@ -24,7 +24,7 @@
 import { describe, it, expect } from 'vitest';
 import {
     toRuns, describeRun, runToIndices, parseRangeSpec, columnMeans, namesFormOrderedAxis,
-    columnExtents, profileFractions, sharedScaleIsReadable
+    columnExtents, profileFractions, sharedScaleIsReadable, columnBoxStats, boxFractions
 } from './columnRanges';
 
 // A 700-channel NIR axis, 1100–2498 nm at 2 nm steps, as in the Corn dataset.
@@ -259,5 +259,71 @@ describe('sharedScaleIsReadable', () => {
 
     it('treats no columns as trivially readable', () => {
         expect(sharedScaleIsReadable([], 0)).toBe(true);
+    });
+});
+
+describe('columnBoxStats', () => {
+    it('matches the linear-interpolation quantiles numpy and R type 7 produce', () => {
+        // percentile([1..9], [25,50,75]) = 3, 5, 7
+        const data = [1, 2, 3, 4, 5, 6, 7, 8, 9].map(v => [v]);
+        expect(columnBoxStats(data, 1)[0]).toEqual({
+            min: 1, q1: 3, median: 5, q3: 7, max: 9, empty: false
+        });
+    });
+
+    it('interpolates between order statistics rather than picking a neighbour', () => {
+        // percentile([1,2,3,4], 25) = 1.75, median 2.5, 75 = 3.25
+        const s = columnBoxStats([[1], [2], [3], [4]], 1)[0];
+        expect(s.q1).toBeCloseTo(1.75, 10);
+        expect(s.median).toBeCloseTo(2.5, 10);
+        expect(s.q3).toBeCloseTo(3.25, 10);
+    });
+
+    it('summarises each column separately', () => {
+        const stats = columnBoxStats([[1, 100], [2, 200], [3, 300]], 2);
+        expect(stats[0].median).toBe(2);
+        expect(stats[1].median).toBe(200);
+    });
+
+    it('ignores non-finite values instead of sorting them into the middle', () => {
+        const s = columnBoxStats([[1], [NaN], [3], [5]], 1)[0];
+        expect(s).toMatchObject({ min: 1, median: 3, max: 5, empty: false });
+    });
+
+    it('marks a column with no finite values as empty', () => {
+        expect(columnBoxStats([[NaN], [NaN]], 1)[0].empty).toBe(true);
+    });
+
+    it('samples above the row cap, staying close to the exact quartiles', () => {
+        // A skewed column, so sampling error would show if the stride biased it.
+        const data = Array.from({ length: 6000 }, (_, i) => [Math.pow(i / 6000, 3) * 100]);
+        const exact = columnBoxStats(data, 1, Number.MAX_SAFE_INTEGER)[0];
+        const sampled = columnBoxStats(data, 1, 500)[0];
+        const range = exact.max - exact.min;
+        for (const k of ['q1', 'median', 'q3'] as const) {
+            expect(Math.abs(exact[k] - sampled[k]) / range).toBeLessThan(0.01);
+        }
+    });
+});
+
+describe('boxFractions', () => {
+    it('puts the column min at the floor and its max at the top', () => {
+        const f = boxFractions({ min: 0, q1: 25, median: 50, q3: 75, max: 100, empty: false });
+        expect(f).toEqual({ q1: 0.25, median: 0.5, q3: 0.75 });
+    });
+
+    it('shows a right-skewed column with its box low in the range', () => {
+        const f = boxFractions({ min: 0, q1: 1, median: 2, q3: 4, max: 100, empty: false })!;
+        expect(f.median).toBeLessThan(0.1);
+        expect(f.q3).toBeLessThan(0.1);
+    });
+
+    it('draws a constant column flat at mid height, as profileFractions does', () => {
+        expect(boxFractions({ min: 7, q1: 7, median: 7, q3: 7, max: 7, empty: false }))
+            .toEqual({ q1: 0.5, median: 0.5, q3: 0.5 });
+    });
+
+    it('draws nothing for an empty column', () => {
+        expect(boxFractions({ min: 0, q1: 0, median: 0, q3: 0, max: 0, empty: true })).toBeNull();
     });
 });

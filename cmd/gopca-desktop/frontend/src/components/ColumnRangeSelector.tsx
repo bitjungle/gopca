@@ -26,7 +26,7 @@ import { X } from 'lucide-react';
 import { HelpWrapper } from './HelpWrapper';
 import {
     toRuns, describeRun, runToIndices, parseRangeSpec, namesFormOrderedAxis,
-    profileFractions, sharedScaleIsReadable, ScaleMode
+    profileFractions, sharedScaleIsReadable, columnBoxStats, boxFractions, ProfileMode
 } from '../utils/columnRanges';
 
 interface ColumnRangeSelectorProps {
@@ -98,13 +98,14 @@ export const ColumnRangeSelector: React.FC<ColumnRangeSelectorProps> = ({
     // A spectrum is drawn on one axis because its columns genuinely share a unit.
     // Everything else starts on whichever axis can be read, and the user can
     // override that from the toolbar.
-    const [scaleOverride, setScaleOverride] = useState<ScaleMode | null>(null);
-    const scaleMode: ScaleMode = scaleOverride
+    const [modeOverride, setModeOverride] = useState<ProfileMode | null>(null);
+    const scaleMode: ProfileMode = modeOverride
         ?? (orderedAxis || sharedReadable ? 'shared' : 'independent');
 
     // Mean profile, normalised into the viewBox. Recomputed only when the data
     // or the chosen scaling changes, not on every drag frame.
     const profile = useMemo(() => {
+        if (scaleMode === 'distribution') return { line: '', bars: '' };
         const fractions = profileFractions(data, n, scaleMode);
         const top = 8;
         const base = VIEW_H - 8;
@@ -130,6 +131,39 @@ export const ColumnRangeSelector: React.FC<ColumnRangeSelectorProps> = ({
                 .join('')
         };
     }, [data, n, orderedAxis, scaleMode]);
+
+    // Five-number summary per column, as three paths rather than 3n elements so a
+    // wide dataset stays cheap to render. Whiskers span the column's full range,
+    // the box is its interquartile band and the tick is the median, all rescaled
+    // to that column's own range: the reader compares shapes, not magnitudes.
+    const distribution = useMemo(() => {
+        if (scaleMode !== 'distribution') return null;
+        const top = 8;
+        const base = VIEW_H - 8;
+        const yOf = (f: number) => base - f * (base - top);
+        const xAt = (i: number) => ((i + 0.5) * VIEW_W) / n;
+
+        const whiskers: string[] = [];
+        const boxes: string[] = [];
+        const medians: string[] = [];
+        const stats = columnBoxStats(data, n);
+
+        stats.forEach((st, i) => {
+            const f = boxFractions(st);
+            if (!f) return;
+            const x = xAt(i).toFixed(1);
+            whiskers.push(`M${x},${yOf(0).toFixed(1)}V${yOf(1).toFixed(1)}`);
+            // A box with zero height would vanish, so it is floored at a hairline
+            // to keep a tightly packed column visible as a mark rather than a gap.
+            const yTop = yOf(f.q3);
+            const yBottom = yOf(f.q1);
+            const height = Math.max(0.8, yBottom - yTop);
+            boxes.push(`M${x},${(yTop + height).toFixed(1)}V${yTop.toFixed(1)}`);
+            medians.push(`M${x},${yOf(f.median).toFixed(1)}v0.01`);
+        });
+
+        return { whiskers: whiskers.join(''), boxes: boxes.join(''), medians: medians.join('') };
+    }, [data, n, scaleMode]);
 
     // Bars should fill most of the space each variable occupies, so their width is
     // a share of the column pitch rather than a fixed number of pixels.
@@ -202,40 +236,43 @@ export const ColumnRangeSelector: React.FC<ColumnRangeSelectorProps> = ({
                         Explanations go to the app-wide help area rather than a title
                         tooltip, so the header keeps its promise that hovering any
                         element explains it. */}
-                    {!orderedAxis && (
-                        <div
-                            role="group"
-                            aria-label="Profile scaling"
-                            className="inline-flex rounded border border-gray-300 dark:border-gray-600 overflow-hidden"
-                        >
-                            <HelpWrapper helpKey="variable-profile-scale-shared">
+                    <div
+                        role="group"
+                        aria-label="Profile display"
+                        className="inline-flex rounded border border-gray-300 dark:border-gray-600 overflow-hidden"
+                    >
+                        {(
+                            [
+                                // A spectrum shares a unit across every column, so its
+                                // channels are already on one axis and the shared/per
+                                // column choice is moot — but it still needs a way back
+                                // from the distribution view, so one profile button stays.
+                                ...(orderedAxis
+                                    ? ([
+                                        ['shared', 'Profile', 'variable-profile-scale-shared']
+                                    ] as Array<[ProfileMode, string, string]>)
+                                    : ([
+                                        ['shared', 'Shared', 'variable-profile-scale-shared'],
+                                        ['independent', 'Per column', 'variable-profile-scale-independent']
+                                    ] as Array<[ProfileMode, string, string]>)),
+                                ['distribution', 'Distribution', 'variable-profile-distribution']
+                            ] as Array<[ProfileMode, string, string]>
+                        ).map(([mode, label, helpKey]) => (
+                            <HelpWrapper key={mode} helpKey={helpKey}>
                                 <button
-                                    onClick={() => setScaleOverride('shared')}
-                                    aria-pressed={scaleMode === 'shared'}
+                                    onClick={() => setModeOverride(mode)}
+                                    aria-pressed={scaleMode === mode}
                                     className={`text-xs px-2 py-1 ${
-                                        scaleMode === 'shared'
+                                        scaleMode === mode
                                             ? 'bg-blue-600 text-white'
                                             : 'bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-200 hover:bg-gray-200 dark:hover:bg-gray-600'
                                     }`}
                                 >
-                                    Shared
+                                    {label}
                                 </button>
                             </HelpWrapper>
-                            <HelpWrapper helpKey="variable-profile-scale-independent">
-                                <button
-                                    onClick={() => setScaleOverride('independent')}
-                                    aria-pressed={scaleMode === 'independent'}
-                                    className={`text-xs px-2 py-1 ${
-                                        scaleMode === 'independent'
-                                            ? 'bg-blue-600 text-white'
-                                            : 'bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-200 hover:bg-gray-200 dark:hover:bg-gray-600'
-                                    }`}
-                                >
-                                    Per column
-                                </button>
-                            </HelpWrapper>
-                        </div>
-                    )}
+                        ))}
+                    </div>
                     {excludedColumns.length > 0 && (
                         <button
                             onClick={() => onChange([])}
@@ -294,7 +331,32 @@ export const ColumnRangeSelector: React.FC<ColumnRangeSelectorProps> = ({
                     />
                 )}
 
-                {orderedAxis ? (
+                {distribution ? (
+                    <>
+                        <path
+                            d={distribution.whiskers}
+                            fill="none"
+                            vectorEffect="non-scaling-stroke"
+                            className="stroke-blue-400/70 dark:stroke-blue-400/50"
+                            strokeWidth={1}
+                        />
+                        <path
+                            d={distribution.boxes}
+                            fill="none"
+                            className="stroke-blue-600 dark:stroke-blue-400"
+                            strokeWidth={barWidth}
+                        />
+                        {/* Drawn with a round cap so a zero-length segment still
+                            renders as a dot: the median is a position, not a span. */}
+                        <path
+                            d={distribution.medians}
+                            fill="none"
+                            strokeLinecap="round"
+                            className="stroke-white dark:stroke-gray-900"
+                            strokeWidth={Math.min(barWidth, 3)}
+                        />
+                    </>
+                ) : orderedAxis ? (
                     <polyline
                         points={profile.line}
                         fill="none"
