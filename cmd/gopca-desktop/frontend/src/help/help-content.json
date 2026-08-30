@@ -60,6 +60,26 @@
       "text": "First row = variable names. First column = sample names. Missing values allowed.",
       "category": "data-input"
     },
+    "variable-profile-scale-shared": {
+      "title": "Shared Scaling",
+      "text": "Bar = column mean, on one scale shared by all columns: lowest mean at the floor, highest at the top. Comparable between columns; best when columns share a unit.",
+      "category": "data-input"
+    },
+    "variable-profile-distribution": {
+      "title": "Distribution",
+      "text": "Five-number summary per column: whisker = full range, box = middle 50%, tick = median. Each column scaled to its own range, so this compares shapes, not sizes.",
+      "category": "data-input"
+    },
+    "variable-profile-excluded": {
+      "title": "Excluded Columns",
+      "text": "Columns held out of the analysis. Click a chip to put that range back, or drag across the plot to exclude or restore a region.",
+      "category": "data-input"
+    },
+    "variable-profile-scale-independent": {
+      "title": "Per-Column Scaling",
+      "text": "Bar = column mean scaled to that column's own min-max, showing where the mean sits in its spread. Not comparable between columns; best when units differ.",
+      "category": "data-input"
+    },
     "num-components": {
       "title": "Number of Components",
       "text": "Principal components to extract. Default: 2. Max meaningful: min(n-1, p). Use 2-3 for visualization, more for full variance.",
