@@ -8,7 +8,7 @@ require (
 	github.com/bitjungle/gopca v0.0.0-00010101000000-000000000000
 	github.com/parquet-go/parquet-go v0.30.1
 	github.com/stretchr/testify v1.11.1
-	github.com/wailsapp/wails/v2 v2.12.0
+	github.com/wailsapp/wails/v2 v2.13.0
 	github.com/xuri/excelize/v2 v2.11.0
 )
 
