@@ -228,7 +228,7 @@ jobs:
   build-cli:
     name: Build pca CLI
     needs: test
-    if: (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/develop') && github.event_name == 'push' || github.ref == 'refs/heads/160-macos-signing'
+    if: (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/develop') && github.event_name == 'push' || github.event_name == 'workflow_dispatch'
     runs-on: self-hosted
     # Fallback: runs-on: ubuntu-latest  # Use if self-hosted runner unavailable
     
@@ -267,7 +267,7 @@ jobs:
   build-desktop:
     name: Build GoPCA Desktop
     needs: test
-    if: (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/develop') && github.event_name == 'push' || github.ref == 'refs/heads/160-macos-signing'
+    if: (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/develop') && github.event_name == 'push' || github.event_name == 'workflow_dispatch'
     strategy:
       fail-fast: false  # Continue building other platforms even if one fails
       matrix:
@@ -302,7 +302,10 @@ jobs:
         cache-dependency-path: package-lock.json
     
     - name: Install Wails
-      run: go install github.com/wailsapp/wails/v2/cmd/wails@latest
+      # Pinned to the library version in go.mod. The CLI and the library are
+      # separate things and the CLI rewrites go.mod to match itself, so an
+      # unpinned CLI would build releases against a version nobody chose.
+      run: go install github.com/wailsapp/wails/v2/cmd/wails@v2.13.0
     
     - name: Install Linux dependencies
       if: matrix.os == 'ubuntu-latest'
@@ -355,7 +358,7 @@ jobs:
   build-gocsv:
     name: Build GoCSV Desktop
     needs: test
-    if: (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/develop') && github.event_name == 'push' || github.ref == 'refs/heads/160-macos-signing'
+    if: (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/develop') && github.event_name == 'push' || github.event_name == 'workflow_dispatch'
     strategy:
       fail-fast: false  # Continue building other platforms even if one fails
       matrix:
@@ -390,7 +393,10 @@ jobs:
         cache-dependency-path: package-lock.json
     
     - name: Install Wails
-      run: go install github.com/wailsapp/wails/v2/cmd/wails@latest
+      # Pinned to the library version in go.mod. The CLI and the library are
+      # separate things and the CLI rewrites go.mod to match itself, so an
+      # unpinned CLI would build releases against a version nobody chose.
+      run: go install github.com/wailsapp/wails/v2/cmd/wails@v2.13.0
     
     - name: Install Linux dependencies
       if: matrix.os == 'ubuntu-latest'
