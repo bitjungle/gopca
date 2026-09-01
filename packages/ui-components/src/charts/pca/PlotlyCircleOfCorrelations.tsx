@@ -296,7 +296,16 @@ export class PlotlyCircleOfCorrelations {
         showgrid: this.config.showGrid,
         gridcolor: 'rgba(128, 128, 128, 0.2)',
         scaleanchor: 'y',
-        scaleratio: 1
+        scaleratio: 1,
+        // With scaleanchor alone, Plotly satisfies the 1:1 ratio in a container
+        // wider than it is tall by widening the x range -- so the declared
+        // [-1.2, 1.2] was inert, the axis ran to roughly +/-3, and the unit
+        // circle shrank to about a third of the panel. Constraining the domain
+        // instead shrinks the plotting area to a square and keeps the range,
+        // which matters here because this plot is read by distance from the
+        // origin against a fixed reference circle.
+        constrain: 'domain',
+        constraintoward: 'center'
       },
       yaxis: {
         title: {
@@ -305,7 +314,9 @@ export class PlotlyCircleOfCorrelations {
         range: [-1.2, 1.2],
         zeroline: false,
         showgrid: this.config.showGrid,
-        gridcolor: 'rgba(128, 128, 128, 0.2)'
+        gridcolor: 'rgba(128, 128, 128, 0.2)',
+        constrain: 'domain',
+        constraintoward: 'middle'
       },
       hovermode: 'closest',
       showlegend: false,
