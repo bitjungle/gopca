@@ -313,6 +313,20 @@ export interface BoxStats {
     median: number;
     q3: number;
     max: number;
+    /**
+     * Tukey fences: the most extreme observations still within 1.5×IQR of the
+     * box. Anything past them is an outlier.
+     *
+     * These are what the whiskers should be drawn to. Drawing whiskers to min
+     * and max instead makes them span the full height of every column, because
+     * the column is normalised by exactly those two numbers — a mark that
+     * implies variation while being a constant by construction.
+     */
+    lowerFence: number;
+    upperFence: number;
+    /** Whether any observation lies outside the corresponding fence. */
+    hasLowOutliers: boolean;
+    hasHighOutliers: boolean;
     /** No finite values in the column, so nothing can be drawn for it. */
     empty: boolean;
 }
@@ -347,28 +361,73 @@ export function columnBoxStats(
     const stats: BoxStats[] = [];
 
     for (let c = 0; c < columnCount; c++) {
-        const col: number[] = [];
-        for (let r = 0; r < data.length; r += stride) {
+        // Quartiles are stable under sampling; extremes and outliers are not.
+        // An outlier is rare by definition, so a stride that keeps one row in
+        // eight keeps an outlier one time in eight — which would silently drop
+        // the tail that exists to report it, and would put the 0..1 reference
+        // itself at a sampled extreme rather than the real one. So the sample
+        // decides the quartiles only, and every row is read for the rest.
+        const sample: number[] = [];
+        let min = Infinity;
+        let max = -Infinity;
+        let finiteSeen = 0;
+        for (let r = 0; r < data.length; r++) {
             const v = data[r][c];
-            if (Number.isFinite(v)) col.push(v);
+            if (!Number.isFinite(v)) continue;
+            if (v < min) min = v;
+            if (v > max) max = v;
+            // Counted over finite values rather than rows, so a column whose
+            // sampled rows all happen to be blank still yields a sample.
+            if (finiteSeen % stride === 0) sample.push(v);
+            finiteSeen++;
         }
-        if (col.length === 0) {
-            stats.push({ min: 0, q1: 0, median: 0, q3: 0, max: 0, empty: true });
+        if (finiteSeen === 0) {
+            stats.push({
+                min: 0, q1: 0, median: 0, q3: 0, max: 0,
+                lowerFence: 0, upperFence: 0,
+                hasLowOutliers: false, hasHighOutliers: false,
+                empty: true
+            });
             continue;
         }
-        col.sort((a, b) => a - b);
+        sample.sort((a, b) => a - b);
         const quantile = (p: number) => {
-            const pos = (col.length - 1) * p;
+            const pos = (sample.length - 1) * p;
             const lo = Math.floor(pos);
             const hi = Math.ceil(pos);
-            return lo === hi ? col[lo] : col[lo] + (col[hi] - col[lo]) * (pos - lo);
+            return lo === hi ? sample[lo] : sample[lo] + (sample[hi] - sample[lo]) * (pos - lo);
         };
+        const q1 = quantile(0.25);
+        const q3 = quantile(0.75);
+        // Tukey's rule. The fence is pulled back to the most extreme observation
+        // still inside 1.5×IQR rather than sitting at the cutoff itself, so the
+        // whisker always ends on real data.
+        const reach = 1.5 * (q3 - q1);
+        const lowCut = q1 - reach;
+        const highCut = q3 + reach;
+        let lowerFence = Infinity;
+        let upperFence = -Infinity;
+        for (let r = 0; r < data.length; r++) {
+            const v = data[r][c];
+            if (!Number.isFinite(v)) continue;
+            if (v >= lowCut && v < lowerFence) lowerFence = v;
+            if (v <= highCut && v > upperFence) upperFence = v;
+        }
+        // Every value outside the cutoffs would leave a fence unset. That cannot
+        // happen for a fence derived from the same column's quartiles, but the
+        // quartiles here come from a sample, so it is guarded rather than assumed.
+        if (!Number.isFinite(lowerFence)) lowerFence = min;
+        if (!Number.isFinite(upperFence)) upperFence = max;
         stats.push({
-            min: col[0],
-            q1: quantile(0.25),
+            min,
+            q1,
             median: quantile(0.5),
-            q3: quantile(0.75),
-            max: col[col.length - 1],
+            q3,
+            max,
+            lowerFence,
+            upperFence,
+            hasLowOutliers: lowerFence > min,
+            hasHighOutliers: upperFence < max,
             empty: false
         });
     }
@@ -378,20 +437,43 @@ export function columnBoxStats(
 /**
  * A box summary rescaled so the column's own min sits at 0 and its max at 1.
  *
- * Whiskers therefore span the full height for every column, which is the point:
- * the reader is not comparing magnitudes between columns, they are comparing
- * shapes. Where the box sits inside the whiskers is the skew, and how tall it is
- * is how tightly the middle half is packed.
+ * The reader is not comparing magnitudes between columns, they are comparing
+ * shapes: where the box sits is the skew, how tall it is is how tightly the
+ * middle half is packed, and how far the whisker falls short of the frame is how
+ * far the outliers reach beyond the bulk of the data.
  */
-export function boxFractions(stats: BoxStats): { q1: number; median: number; q3: number } | null {
+export interface BoxDrawing {
+    q1: number;
+    median: number;
+    q3: number;
+    /** Whisker ends, at the Tukey fences. */
+    lowerFence: number;
+    upperFence: number;
+    /** Outlier tails, present only where observations lie past a fence. */
+    lowTail: boolean;
+    highTail: boolean;
+}
+
+export function boxFractions(stats: BoxStats): BoxDrawing | null {
     if (stats.empty) return null;
     const span = stats.max - stats.min;
     // A constant column is a single value, not a distribution. Drawn as a flat
     // line at mid height, matching how profileFractions treats the same case.
-    if (span === 0) return { q1: 0.5, median: 0.5, q3: 0.5 };
+    if (span === 0) {
+        return {
+            q1: 0.5, median: 0.5, q3: 0.5,
+            lowerFence: 0.5, upperFence: 0.5,
+            lowTail: false, highTail: false
+        };
+    }
+    const at = (v: number) => (v - stats.min) / span;
     return {
-        q1: (stats.q1 - stats.min) / span,
-        median: (stats.median - stats.min) / span,
-        q3: (stats.q3 - stats.min) / span
+        q1: at(stats.q1),
+        median: at(stats.median),
+        q3: at(stats.q3),
+        lowerFence: at(stats.lowerFence),
+        upperFence: at(stats.upperFence),
+        lowTail: stats.hasLowOutliers,
+        highTail: stats.hasHighOutliers
     };
 }

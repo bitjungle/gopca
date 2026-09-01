@@ -21,7 +21,7 @@
 //
 // See LICENSE for the full license terms.
 
-import React, { useCallback, useMemo, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { X } from 'lucide-react';
 import { HelpWrapper } from './HelpWrapper';
 import {
@@ -144,6 +144,7 @@ export const ColumnRangeSelector: React.FC<ColumnRangeSelectorProps> = ({
         const xAt = (i: number) => ((i + 0.5) * VIEW_W) / n;
 
         const whiskers: string[] = [];
+        const tails: string[] = [];
         const boxes: string[] = [];
         const medians: string[] = [];
         const stats = columnBoxStats(data, n);
@@ -152,7 +153,14 @@ export const ColumnRangeSelector: React.FC<ColumnRangeSelectorProps> = ({
             const f = boxFractions(st);
             if (!f) return;
             const x = xAt(i).toFixed(1);
-            whiskers.push(`M${x},${yOf(0).toFixed(1)}V${yOf(1).toFixed(1)}`);
+            // Whiskers reach the Tukey fences, not the extremes. Drawn to min and
+            // max they would span the full height of every column, since the
+            // column is normalised by exactly those two values.
+            whiskers.push(`M${x},${yOf(f.lowerFence).toFixed(1)}V${yOf(f.upperFence).toFixed(1)}`);
+            // The stretch from a fence out to the extreme exists only where there
+            // are outliers, so its presence and length are the outlier signal.
+            if (f.lowTail) tails.push(`M${x},${yOf(0).toFixed(1)}V${yOf(f.lowerFence).toFixed(1)}`);
+            if (f.highTail) tails.push(`M${x},${yOf(f.upperFence).toFixed(1)}V${yOf(1).toFixed(1)}`);
             // A box with zero height would vanish, so it is floored at a hairline
             // to keep a tightly packed column visible as a mark rather than a gap.
             const yTop = yOf(f.q3);
@@ -162,7 +170,12 @@ export const ColumnRangeSelector: React.FC<ColumnRangeSelectorProps> = ({
             medians.push(`M${x},${yOf(f.median).toFixed(1)}v0.01`);
         });
 
-        return { whiskers: whiskers.join(''), boxes: boxes.join(''), medians: medians.join('') };
+        return {
+            whiskers: whiskers.join(''),
+            tails: tails.join(''),
+            boxes: boxes.join(''),
+            medians: medians.join('')
+        };
     }, [data, n, scaleMode]);
 
     // Bars should fill most of the space each variable occupies, so their width is
@@ -206,13 +219,41 @@ export const ColumnRangeSelector: React.FC<ColumnRangeSelectorProps> = ({
     const edgeOf = (i: number) => i * pitch;
     const midOf = (i: number) => (i + 0.5) * pitch;
     // Ticks at even fractions, labelled with the real column names.
+    //
+    // How many fit is a question about pixels, so it is measured rather than
+    // assumed: a constant is wrong in both directions, showing six labels on a
+    // panel with room for fifteen and still colliding when the window is narrow.
+    //
+    // Labels are rotated 45°, which changes what "fits" means. Upright, a label
+    // needs its full width and a 28-character variable name crowds out its
+    // neighbours; tilted, consecutive labels only need enough horizontal room to
+    // clear each other's line height, so the pitch is a small multiple of that
+    // rather than the length of the longest name.
+    const LABEL_PITCH_PX = 28;
+    const [panelWidth, setPanelWidth] = useState(0);
+    useEffect(() => {
+        const el = svgRef.current;
+        if (!el || typeof ResizeObserver === 'undefined') return;
+        const observer = new ResizeObserver(entries => {
+            for (const entry of entries) setPanelWidth(entry.contentRect.width);
+        });
+        observer.observe(el);
+        return () => observer.disconnect();
+    }, []);
+
     const ticks = useMemo(() => {
-        const count = Math.min(6, n);
+        // Before the first measurement, and where ResizeObserver is unavailable,
+        // fall back to the old fixed count rather than rendering no labels.
+        const fits = panelWidth > 0 ? Math.floor(panelWidth / LABEL_PITCH_PX) : 6;
+        const count = Math.max(2, Math.min(n, fits));
+        if (count >= n) {
+            return headers.map((label, i) => ({ i, label }));
+        }
         return Array.from({ length: count }, (_, k) => {
             const i = Math.round((k / Math.max(1, count - 1)) * (n - 1));
-            return { i, label: headers[i] ?? String(i + 1), first: k === 0, last: k === count - 1 };
+            return { i, label: headers[i] ?? String(i + 1) };
         });
-    }, [headers, n]);
+    }, [headers, n, panelWidth]);
 
     const included = n - excludedColumns.length;
 
@@ -333,12 +374,25 @@ export const ColumnRangeSelector: React.FC<ColumnRangeSelectorProps> = ({
 
                 {distribution ? (
                     <>
+                        {/* Outlier tails first, so the solid whisker draws over
+                            them. Omitted entirely when no column has outliers,
+                            rather than emitting a path with an empty d. */}
+                        {distribution.tails !== '' && (
+                            <path
+                                d={distribution.tails}
+                                fill="none"
+                                vectorEffect="non-scaling-stroke"
+                                strokeDasharray="2 2"
+                                className="stroke-blue-400/50 dark:stroke-blue-400/40"
+                                strokeWidth={1}
+                            />
+                        )}
                         <path
                             d={distribution.whiskers}
                             fill="none"
                             vectorEffect="non-scaling-stroke"
-                            className="stroke-blue-400/70 dark:stroke-blue-400/50"
-                            strokeWidth={1}
+                            className="stroke-blue-500 dark:stroke-blue-400"
+                            strokeWidth={1.5}
                         />
                         <path
                             d={distribution.boxes}
@@ -386,19 +440,27 @@ export const ColumnRangeSelector: React.FC<ColumnRangeSelectorProps> = ({
 
             {/* Axis labels sit outside the SVG so they are not distorted by
                 preserveAspectRatio="none". */}
-            <div className="relative h-4 mt-1">
+            {/* No clipping here: a rotated label reaches left of its own tick,
+                and the leftmost one would lose its start to the container edge.
+                The card's padding absorbs the overhang; truncation stays on the
+                spans, where it is the ellipsis rather than a hard cut. */}
+            <div className="relative h-[4.5rem] mt-1">
                 {ticks.map(t => (
                     <span
                         key={`l-${t.i}`}
-                        style={t.first
-                            ? { left: 0 }
-                            : t.last
-                                ? { right: 0 }
-                                : { left: `${(midOf(t.i) / VIEW_W) * 100}%` }}
+                        // Anchored by its right edge at the tick and rotated about
+                        // that corner, so the name ends where the column is rather
+                        // than starting there — the reading runs up into the tick.
+                        style={{
+                            right: `${100 - (midOf(t.i) / VIEW_W) * 100}%`,
+                            transformOrigin: 'top right',
+                            transform: 'rotate(-45deg)'
+                        }}
+                        // Truncation is what bounds the panel's height: at 45° a
+                        // label's vertical extent is its width times sin 45°, so
+                        // capping the width caps how far the axis grows.
                         title={t.label}
-                        className={`absolute text-[10px] text-gray-500 dark:text-gray-400 whitespace-nowrap max-w-[7rem] overflow-hidden text-ellipsis ${
-                            t.first || t.last ? '' : '-translate-x-1/2'
-                        }`}
+                        className="absolute top-0 text-[10px] text-gray-500 dark:text-gray-400 whitespace-nowrap max-w-[5rem] overflow-hidden text-ellipsis"
                     >
                         {t.label}
                     </span>
