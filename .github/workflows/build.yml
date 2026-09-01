@@ -228,7 +228,7 @@ jobs:
   build-cli:
     name: Build pca CLI
     needs: test
-    if: (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/develop') && github.event_name == 'push' || github.event_name == 'workflow_dispatch'
+    if: ((github.ref == 'refs/heads/main' || github.ref == 'refs/heads/develop') && github.event_name == 'push') || github.event_name == 'workflow_dispatch'
     runs-on: self-hosted
     # Fallback: runs-on: ubuntu-latest  # Use if self-hosted runner unavailable
     
@@ -267,7 +267,7 @@ jobs:
   build-desktop:
     name: Build GoPCA Desktop
     needs: test
-    if: (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/develop') && github.event_name == 'push' || github.event_name == 'workflow_dispatch'
+    if: ((github.ref == 'refs/heads/main' || github.ref == 'refs/heads/develop') && github.event_name == 'push') || github.event_name == 'workflow_dispatch'
     strategy:
       fail-fast: false  # Continue building other platforms even if one fails
       matrix:
@@ -358,7 +358,7 @@ jobs:
   build-gocsv:
     name: Build GoCSV Desktop
     needs: test
-    if: (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/develop') && github.event_name == 'push' || github.event_name == 'workflow_dispatch'
+    if: ((github.ref == 'refs/heads/main' || github.ref == 'refs/heads/develop') && github.event_name == 'push') || github.event_name == 'workflow_dispatch'
     strategy:
       fail-fast: false  # Continue building other platforms even if one fails
       matrix:
