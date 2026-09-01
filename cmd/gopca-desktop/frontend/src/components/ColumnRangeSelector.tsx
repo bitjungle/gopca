@@ -247,13 +247,11 @@ export const ColumnRangeSelector: React.FC<ColumnRangeSelectorProps> = ({
         const fits = panelWidth > 0 ? Math.floor(panelWidth / LABEL_PITCH_PX) : 6;
         const count = Math.max(2, Math.min(n, fits));
         if (count >= n) {
-            return headers.map((label, i) => ({
-                i, label, first: i === 0, last: i === n - 1
-            }));
+            return headers.map((label, i) => ({ i, label }));
         }
         return Array.from({ length: count }, (_, k) => {
             const i = Math.round((k / Math.max(1, count - 1)) * (n - 1));
-            return { i, label: headers[i] ?? String(i + 1), first: k === 0, last: k === count - 1 };
+            return { i, label: headers[i] ?? String(i + 1) };
         });
     }, [headers, n, panelWidth]);
 
