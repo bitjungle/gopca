@@ -361,12 +361,27 @@ export function columnBoxStats(
     const stats: BoxStats[] = [];
 
     for (let c = 0; c < columnCount; c++) {
-        const col: number[] = [];
-        for (let r = 0; r < data.length; r += stride) {
+        // Quartiles are stable under sampling; extremes and outliers are not.
+        // An outlier is rare by definition, so a stride that keeps one row in
+        // eight keeps an outlier one time in eight — which would silently drop
+        // the tail that exists to report it, and would put the 0..1 reference
+        // itself at a sampled extreme rather than the real one. So the sample
+        // decides the quartiles only, and every row is read for the rest.
+        const sample: number[] = [];
+        let min = Infinity;
+        let max = -Infinity;
+        let finiteSeen = 0;
+        for (let r = 0; r < data.length; r++) {
             const v = data[r][c];
-            if (Number.isFinite(v)) col.push(v);
+            if (!Number.isFinite(v)) continue;
+            if (v < min) min = v;
+            if (v > max) max = v;
+            // Counted over finite values rather than rows, so a column whose
+            // sampled rows all happen to be blank still yields a sample.
+            if (finiteSeen % stride === 0) sample.push(v);
+            finiteSeen++;
         }
-        if (col.length === 0) {
+        if (finiteSeen === 0) {
             stats.push({
                 min: 0, q1: 0, median: 0, q3: 0, max: 0,
                 lowerFence: 0, upperFence: 0,
@@ -375,31 +390,34 @@ export function columnBoxStats(
             });
             continue;
         }
-        col.sort((a, b) => a - b);
+        sample.sort((a, b) => a - b);
         const quantile = (p: number) => {
-            const pos = (col.length - 1) * p;
+            const pos = (sample.length - 1) * p;
             const lo = Math.floor(pos);
             const hi = Math.ceil(pos);
-            return lo === hi ? col[lo] : col[lo] + (col[hi] - col[lo]) * (pos - lo);
+            return lo === hi ? sample[lo] : sample[lo] + (sample[hi] - sample[lo]) * (pos - lo);
         };
         const q1 = quantile(0.25);
         const q3 = quantile(0.75);
-        const min = col[0];
-        const max = col[col.length - 1];
         // Tukey's rule. The fence is pulled back to the most extreme observation
         // still inside 1.5×IQR rather than sitting at the cutoff itself, so the
         // whisker always ends on real data.
         const reach = 1.5 * (q3 - q1);
         const lowCut = q1 - reach;
         const highCut = q3 + reach;
-        let lowerFence = min;
-        for (const v of col) {
-            if (v >= lowCut) { lowerFence = v; break; }
+        let lowerFence = Infinity;
+        let upperFence = -Infinity;
+        for (let r = 0; r < data.length; r++) {
+            const v = data[r][c];
+            if (!Number.isFinite(v)) continue;
+            if (v >= lowCut && v < lowerFence) lowerFence = v;
+            if (v <= highCut && v > upperFence) upperFence = v;
         }
-        let upperFence = max;
-        for (let k = col.length - 1; k >= 0; k--) {
-            if (col[k] <= highCut) { upperFence = col[k]; break; }
-        }
+        // Every value outside the cutoffs would leave a fence unset. That cannot
+        // happen for a fence derived from the same column's quartiles, but the
+        // quartiles here come from a sample, so it is guarded rather than assumed.
+        if (!Number.isFinite(lowerFence)) lowerFence = min;
+        if (!Number.isFinite(upperFence)) upperFence = max;
         stats.push({
             min,
             q1,
@@ -419,10 +437,10 @@ export function columnBoxStats(
 /**
  * A box summary rescaled so the column's own min sits at 0 and its max at 1.
  *
- * Whiskers therefore span the full height for every column, which is the point:
- * the reader is not comparing magnitudes between columns, they are comparing
- * shapes. Where the box sits inside the whiskers is the skew, and how tall it is
- * is how tightly the middle half is packed.
+ * The reader is not comparing magnitudes between columns, they are comparing
+ * shapes: where the box sits is the skew, how tall it is is how tightly the
+ * middle half is packed, and how far the whisker falls short of the frame is how
+ * far the outliers reach beyond the bulk of the data.
  */
 export interface BoxDrawing {
     q1: number;

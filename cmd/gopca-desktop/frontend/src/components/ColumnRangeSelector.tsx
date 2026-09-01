@@ -376,15 +376,19 @@ export const ColumnRangeSelector: React.FC<ColumnRangeSelectorProps> = ({
 
                 {distribution ? (
                     <>
-                        {/* Outlier tails first, so the solid whisker draws over them. */}
-                        <path
-                            d={distribution.tails}
-                            fill="none"
-                            vectorEffect="non-scaling-stroke"
-                            strokeDasharray="2 2"
-                            className="stroke-blue-400/50 dark:stroke-blue-400/40"
-                            strokeWidth={1}
-                        />
+                        {/* Outlier tails first, so the solid whisker draws over
+                            them. Omitted entirely when no column has outliers,
+                            rather than emitting a path with an empty d. */}
+                        {distribution.tails !== '' && (
+                            <path
+                                d={distribution.tails}
+                                fill="none"
+                                vectorEffect="non-scaling-stroke"
+                                strokeDasharray="2 2"
+                                className="stroke-blue-400/50 dark:stroke-blue-400/40"
+                                strokeWidth={1}
+                            />
+                        )}
                         <path
                             d={distribution.whiskers}
                             fill="none"
