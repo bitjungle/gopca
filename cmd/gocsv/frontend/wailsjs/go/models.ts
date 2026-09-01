@@ -479,7 +479,6 @@ export namespace main {
 	    hasHeaders: boolean;
 	    headerRow: number;
 	    sheet?: string;
-	    range?: string;
 	    rowNameColumn: number;
 	    skipRows: number;
 	    maxRows: number;
@@ -496,7 +495,6 @@ export namespace main {
 	        this.hasHeaders = source["hasHeaders"];
 	        this.headerRow = source["headerRow"];
 	        this.sheet = source["sheet"];
-	        this.range = source["range"];
 	        this.rowNameColumn = source["rowNameColumn"];
 	        this.skipRows = source["skipRows"];
 	        this.maxRows = source["maxRows"];

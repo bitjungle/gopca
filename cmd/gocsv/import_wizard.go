@@ -55,7 +55,6 @@ type ImportOptions struct {
 	HasHeaders      bool   `json:"hasHeaders"`
 	HeaderRow       int    `json:"headerRow"`                 // 0-based
 	Sheet           string `json:"sheet,omitempty"`           // For Excel
-	Range           string `json:"range,omitempty"`           // For Excel (e.g., "A1:Z100")
 	RowNameColumn   int    `json:"rowNameColumn"`             // -1 if none, 0-based
 	SkipRows        int    `json:"skipRows"`                  // Number of rows to skip from top
 	MaxRows         int    `json:"maxRows"`                   // 0 for all rows
