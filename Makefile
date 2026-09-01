@@ -64,6 +64,10 @@ GOLINT := $(shell which golangci-lint 2> /dev/null)
 
 # Check if wails is installed - check in PATH and common locations
 WAILS := $(shell which wails 2> /dev/null || echo "$${HOME}/go/bin/wails")
+# Derived from go.mod rather than written out, so the CLI a developer is told
+# to install cannot drift from the library the project builds against. That
+# mismatch is what #822 was: the CLI rewrites go.mod to match itself.
+WAILS_VERSION := $(shell grep 'wailsapp/wails/v2 v' go.mod | awk '{print $$2}')
 
 # Default target
 .DEFAULT_GOAL := all
@@ -138,7 +142,7 @@ pca-dev: sync-docs sync-datasets
 		cd $(DESKTOP_PATH) && $(WAILS) dev; \
 	else \
 		echo "Wails not found. Install it with:"; \
-		echo "  go install github.com/wailsapp/wails/v2/cmd/wails@latest"; \
+		echo "  go install github.com/wailsapp/wails/v2/cmd/wails@$(WAILS_VERSION)"; \
 		exit 1; \
 	fi
 
@@ -150,7 +154,7 @@ pca-build: sync-docs sync-datasets
 		echo "GoPCA Desktop build complete. Check $(DESKTOP_PATH)/build/bin/"; \
 	else \
 		echo "Wails not found. Install it with:"; \
-		echo "  go install github.com/wailsapp/wails/v2/cmd/wails@latest"; \
+		echo "  go install github.com/wailsapp/wails/v2/cmd/wails@$(WAILS_VERSION)"; \
 		exit 1; \
 	fi
 
@@ -180,7 +184,7 @@ csv-dev: sync-docs
 		cd $(CSV_PATH) && $(WAILS) dev; \
 	else \
 		echo "Wails not found. Install it with:"; \
-		echo "  go install github.com/wailsapp/wails/v2/cmd/wails@latest"; \
+		echo "  go install github.com/wailsapp/wails/v2/cmd/wails@$(WAILS_VERSION)"; \
 		exit 1; \
 	fi
 
@@ -192,7 +196,7 @@ csv-build: sync-docs
 		echo "CSV editor build complete. Check $(CSV_PATH)/build/bin/"; \
 	else \
 		echo "Wails not found. Install it with:"; \
-		echo "  go install github.com/wailsapp/wails/v2/cmd/wails@latest"; \
+		echo "  go install github.com/wailsapp/wails/v2/cmd/wails@$(WAILS_VERSION)"; \
 		exit 1; \
 	fi
 
@@ -730,7 +734,7 @@ pca-build-all:
 		echo "GoPCA builds complete for all platforms"; \
 	else \
 		echo "Wails not found. Install it with:"; \
-		echo "  go install github.com/wailsapp/wails/v2/cmd/wails@latest"; \
+		echo "  go install github.com/wailsapp/wails/v2/cmd/wails@$(WAILS_VERSION)"; \
 		exit 1; \
 	fi
 
@@ -742,7 +746,7 @@ csv-build-all:
 		echo "CSV editor builds complete for all platforms"; \
 	else \
 		echo "Wails not found. Install it with:"; \
-		echo "  go install github.com/wailsapp/wails/v2/cmd/wails@latest"; \
+		echo "  go install github.com/wailsapp/wails/v2/cmd/wails@$(WAILS_VERSION)"; \
 		exit 1; \
 	fi
 

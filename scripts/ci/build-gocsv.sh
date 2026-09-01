@@ -32,7 +32,7 @@ if ! command -v wails &> /dev/null; then
         export PATH="$PATH:$(go env GOPATH)/bin"
     else
         echo "ERROR: Wails CLI is not installed"
-        echo "Install with: go install github.com/wailsapp/wails/v2/cmd/wails@latest"
+        echo "Install with: go install github.com/wailsapp/wails/v2/cmd/wails@v2.13.0"
         exit 1
     fi
 fi
