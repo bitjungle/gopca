@@ -5,6 +5,76 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.7.0] - 2026-09-01
+
+This release turns the column overview above the data table into a general data preview. It now
+appears for every dataset rather than only wide ones, it no longer collapses when variables are
+measured on different scales, and it can show the distribution of each variable rather than just its
+mean. The Circle of Correlations also gets the panel space it needs. If you compare plots or
+screenshots against earlier versions, read **Changed** first.
+
+### Added
+- **The data preview appears for every dataset.** The column overview above the data table used to
+  be reserved for datasets wider than 20 columns, where a checkbox list becomes unwieldy. It doubles
+  as a preview of what you loaded, which is worth having at any width, so it now appears for any
+  dataset with two or more columns. Appearing only past a threshold made it look like it came and
+  went at random (#820)
+- **A distribution view for the data preview.** A new **Distribution** button draws a five-number
+  summary of each variable, with each variable scaled to its own range so you compare shapes rather
+  than sizes: the box is the middle half, the tick is the median, the whisker reaches the last value
+  within 1.5×IQR, and a dashed tail marks outliers beyond it. It shows what a mean cannot — which
+  variables are skewed, where their mass sits, and which columns are index sequences you should
+  exclude before analysis. Most legible below roughly 100 columns (#820, #825)
+
+### Changed
+- **The data preview no longer flattens variables measured on different scales.** Every variable was
+  drawn against one shared axis, which is correct for a spectrum but lets a single large-magnitude
+  variable compress all the others to nothing. On the built-in Corn dataset, where four reference
+  measurements sit two orders of magnitude above the 700 spectral channels stored beside them, only
+  5 of 709 bars were visible; all 705 are now. The preview picks its scaling from the values
+  themselves and offers **Shared** and **Per column** buttons to switch. **Spectra are unaffected** —
+  they keep the connected line on a shared axis (#820)
+- **The Circle of Correlations fills the panel.** It rendered at about a third of the available
+  width, because the axes are locked to a 1:1 ratio and the plot was resolving that by widening the
+  range rather than squaring the plotting area. The circle is now as large as the panel allows and
+  the axes read ±1.2 as intended. **This plot will look considerably larger than in v1.6.0.** It
+  matters here more than on other plots: the reading depends on how far an arrow reaches toward a
+  fixed reference circle, so a shrunken circle crowds short arrows into the origin (#807)
+- **The data preview explains itself through the help area.** Its controls used to show native
+  tooltips while the rest of the application explains itself in the header that says "Hover over any
+  element for help". They now use the header like everything else (#820)
+- **Variable names on the preview axis are rotated and no longer capped at six.** How many fit is now
+  measured from the panel width instead of assumed, and rotating them 45° means a few long variable
+  names no longer crowd out all the others (#825)
+
+### Fixed
+- **The distribution whiskers now carry information.** Drawn to each variable's minimum and maximum,
+  they spanned the full height of every column by construction, since that is what the column is
+  scaled by. They now end at the Tukey fences, so their length varies and outliers are visible
+  (#825)
+- **Outliers are no longer missed in large datasets.** Quartiles for the distribution view are
+  computed from a row sample for speed, but extremes and outliers were too, and an outlier is rare by
+  definition. Extremes are now read from every row (#825)
+- **GoCSV no longer advertises a spreadsheet cell range it cannot import.** The import options
+  declared a `range` field documented with a worked example, but nothing read it and the wizard
+  offered no control for it. Removed — the wizard's existing Skip Rows, Maximum Rows and column
+  selection already cover what it would have done (#808)
+
+### Internal
+- **Wails updated to v2.13.0** in both applications, matching the CLI version required by Go 1.26+.
+  The older CLI could not read the newer Go toolchain's output and rewrote `go.mod` on every dev run,
+  which broke the GoCSV module (#822)
+- **The Wails CLI is pinned in CI and in the Makefile** rather than installed as `@latest`, so
+  release artifacts are built by a version that was chosen and reviewed. The Makefile derives it from
+  `go.mod`, so the version a developer installs cannot drift from the library (#827)
+- **Build jobs can be run on any branch on demand** via `workflow_dispatch`, replacing a hardcoded
+  reference to a branch deleted long ago. Changes to the build workflow could not previously be
+  verified before they were merged (#827)
+- **`check-dev-setup.sh` verifies the Wails CLI version**, not just its presence, and its Go and Node
+  thresholds were corrected to the documented 1.26 and 24 (#822)
+- **The project website was brought up to date** — seven datasets rather than six, the correct
+  tutorial order, the Microsoft Store link, and GoCSV's Excel, Parquet and URL import (#818)
+
 ## [1.6.0] - 2026-08-24
 
 This release is dominated by a systematic quality-assurance pass over every tutorial and over the

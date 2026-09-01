@@ -58,7 +58,6 @@ export const ImportWizard: React.FC<ImportWizardProps> = ({ isOpen, onClose, onI
         hasHeaders: true,
         headerRow: 0,
         sheet: '',
-        range: '',
         rowNameColumn: -1,
         skipRows: 0,
         maxRows: 0,

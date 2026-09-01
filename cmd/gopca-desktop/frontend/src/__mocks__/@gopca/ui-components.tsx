@@ -45,6 +45,14 @@ export const AboutDialog = ({ isOpen, version }: { isOpen: boolean; onClose?: ()
 // Hooks
 export const useTheme = vi.fn().mockReturnValue({ theme: 'light', toggleTheme: vi.fn() });
 export const useChartTheme = vi.fn().mockReturnValue({ backgroundColor: '#fff', gridColor: '#eee' });
+// Components that route their explanation to the app-wide help area call this to
+// register themselves. The ref is all the component needs; registration itself is
+// the HelpContext's business and is tested there.
+export const useHelpHover = vi.fn(() => React.createRef<HTMLDivElement>());
+export const useHelp = vi.fn().mockReturnValue({
+    registerHelpElement: vi.fn(),
+    unregisterHelpElement: vi.fn()
+});
 
 // Utility
 export const setupPlotlyWailsIntegration = vi.fn();

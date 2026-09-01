@@ -193,3 +193,287 @@ export function columnMeans(data: number[][], columnCount: number): number[] {
     }
     return sums.map((s, i) => (counts[i] > 0 ? s / counts[i] : 0));
 }
+
+/**
+ * Smallest and largest finite value in each column.
+ *
+ * The overview profile needs this to scale a column against its own spread
+ * rather than against the whole dataset. A column with no finite values at all
+ * gets an empty extent, which callers treat as "nothing to draw".
+ */
+export function columnExtents(
+    data: number[][],
+    columnCount: number
+): Array<{ min: number; max: number; empty: boolean }> {
+    const mins = new Array(columnCount).fill(Infinity);
+    const maxs = new Array(columnCount).fill(-Infinity);
+    for (const row of data) {
+        for (let c = 0; c < columnCount; c++) {
+            const v = row[c];
+            if (Number.isFinite(v)) {
+                if (v < mins[c]) mins[c] = v;
+                if (v > maxs[c]) maxs[c] = v;
+            }
+        }
+    }
+    return mins.map((min, i) => {
+        const max = maxs[i];
+        const empty = !Number.isFinite(min) || !Number.isFinite(max);
+        return { min: empty ? 0 : min, max: empty ? 0 : max, empty };
+    });
+}
+
+/**
+ * How the overview profile turns column values into bar heights.
+ *
+ * `shared` puts every column on one y-axis, so bar heights are comparable
+ * between columns. That is the right reading for a spectrum, where each column
+ * is the same measurement at a different wavelength.
+ *
+ * `independent` scales each column against its own min..max, so the bar shows
+ * where the mean sits inside that column's own spread. Heights are no longer
+ * comparable between columns, but no column can be flattened by another one's
+ * units — which is what happens to a mixed-unit dataset under `shared`.
+ */
+export type ScaleMode = 'shared' | 'independent';
+
+/**
+ * What the panel draws.
+ *
+ * The first two are mean profiles differing only in normalisation. `distribution`
+ * is a different reading altogether: a five-number summary per column, which
+ * answers "what shape is this variable" rather than "how big is it". It needs
+ * roughly ten pixels of width per column to be legible, so it suits the narrow
+ * datasets the panel now also covers rather than a 700-channel spectrum.
+ */
+export type ProfileMode = ScaleMode | 'distribution';
+
+/** Height of each bar as a fraction of the panel, where 0 is the floor and 1 the top. */
+export function profileFractions(
+    data: number[][],
+    columnCount: number,
+    mode: ScaleMode
+): number[] {
+    const means = columnMeans(data, columnCount);
+
+    if (mode === 'independent') {
+        const extents = columnExtents(data, columnCount);
+        return means.map((m, i) => {
+            const { min, max, empty } = extents[i];
+            if (empty) return 0;
+            // A constant column has no spread to place the mean inside. Half
+            // height says "no information here" without pretending the value is
+            // extreme in either direction.
+            if (max === min) return 0.5;
+            return (m - min) / (max - min);
+        });
+    }
+
+    // One pass rather than Math.min(...means): spreading a per-column array into
+    // an argument list costs two throwaway argument lists, and stakes the panel
+    // on staying under the engine's argument limit.
+    let lo = Infinity;
+    let hi = -Infinity;
+    for (const m of means) {
+        if (m < lo) lo = m;
+        if (m > hi) hi = m;
+    }
+    if (!Number.isFinite(lo) || !Number.isFinite(hi)) {
+        lo = 0;
+        hi = 0;
+    }
+    const span = hi - lo || 1;
+    return means.map(m => (m - lo) / span);
+}
+
+/**
+ * Whether the columns are similar enough in magnitude to share one y-axis.
+ *
+ * Under a shared axis a column is only visible if its mean is a reasonable
+ * fraction of the largest mean, so a dataset mixing proline (~750) with hue
+ * (~1) renders as one bar and a row of flat stubs. This reports the fraction of
+ * columns that would survive, which is what decides whether `shared` is a
+ * usable default rather than any property of the column names.
+ */
+export function sharedScaleIsReadable(
+    data: number[][],
+    columnCount: number,
+    minVisibleFraction = 0.5
+): boolean {
+    if (columnCount === 0) return true;
+    const fractions = profileFractions(data, columnCount, 'shared');
+    const visible = fractions.filter(f => f >= 0.05).length;
+    return visible / columnCount >= minVisibleFraction;
+}
+
+/** Five-number summary of one column, in the column's own units. */
+export interface BoxStats {
+    min: number;
+    q1: number;
+    median: number;
+    q3: number;
+    max: number;
+    /**
+     * Tukey fences: the most extreme observations still within 1.5×IQR of the
+     * box. Anything past them is an outlier.
+     *
+     * These are what the whiskers should be drawn to. Drawing whiskers to min
+     * and max instead makes them span the full height of every column, because
+     * the column is normalised by exactly those two numbers — a mark that
+     * implies variation while being a constant by construction.
+     */
+    lowerFence: number;
+    upperFence: number;
+    /** Whether any observation lies outside the corresponding fence. */
+    hasLowOutliers: boolean;
+    hasHighOutliers: boolean;
+    /** No finite values in the column, so nothing can be drawn for it. */
+    empty: boolean;
+}
+
+/**
+ * Rows are sampled at a stride above this many, because the panel is a preview
+ * and quartiles do not need every row to be visually right. Measured on a
+ * 15,000-row skewed column, sampling to 2,000 moved each quartile by at most
+ * 0.21% of the column range — a quarter of a pixel in a 120-unit viewBox — while
+ * cutting the work by roughly a factor of ten.
+ */
+export const BOX_SAMPLE_ROWS = 2000;
+
+/**
+ * Five-number summary of every column: the shape of the data rather than just
+ * its centre.
+ *
+ * A mean says where a column sits; it cannot say whether the column is skewed,
+ * has its mass at one end, or is spread evenly. For a narrow dataset — where the
+ * panel now appears but the drag gesture is not needed — that shape is the more
+ * useful preview, and it is what tells a user something before they run PCA.
+ *
+ * Quantiles use linear interpolation between order statistics, matching the
+ * default of numpy.percentile and R's type 7.
+ */
+export function columnBoxStats(
+    data: number[][],
+    columnCount: number,
+    sampleRows: number = BOX_SAMPLE_ROWS
+): BoxStats[] {
+    const stride = Math.max(1, Math.ceil(data.length / sampleRows));
+    const stats: BoxStats[] = [];
+
+    for (let c = 0; c < columnCount; c++) {
+        // Quartiles are stable under sampling; extremes and outliers are not.
+        // An outlier is rare by definition, so a stride that keeps one row in
+        // eight keeps an outlier one time in eight — which would silently drop
+        // the tail that exists to report it, and would put the 0..1 reference
+        // itself at a sampled extreme rather than the real one. So the sample
+        // decides the quartiles only, and every row is read for the rest.
+        const sample: number[] = [];
+        let min = Infinity;
+        let max = -Infinity;
+        let finiteSeen = 0;
+        for (let r = 0; r < data.length; r++) {
+            const v = data[r][c];
+            if (!Number.isFinite(v)) continue;
+            if (v < min) min = v;
+            if (v > max) max = v;
+            // Counted over finite values rather than rows, so a column whose
+            // sampled rows all happen to be blank still yields a sample.
+            if (finiteSeen % stride === 0) sample.push(v);
+            finiteSeen++;
+        }
+        if (finiteSeen === 0) {
+            stats.push({
+                min: 0, q1: 0, median: 0, q3: 0, max: 0,
+                lowerFence: 0, upperFence: 0,
+                hasLowOutliers: false, hasHighOutliers: false,
+                empty: true
+            });
+            continue;
+        }
+        sample.sort((a, b) => a - b);
+        const quantile = (p: number) => {
+            const pos = (sample.length - 1) * p;
+            const lo = Math.floor(pos);
+            const hi = Math.ceil(pos);
+            return lo === hi ? sample[lo] : sample[lo] + (sample[hi] - sample[lo]) * (pos - lo);
+        };
+        const q1 = quantile(0.25);
+        const q3 = quantile(0.75);
+        // Tukey's rule. The fence is pulled back to the most extreme observation
+        // still inside 1.5×IQR rather than sitting at the cutoff itself, so the
+        // whisker always ends on real data.
+        const reach = 1.5 * (q3 - q1);
+        const lowCut = q1 - reach;
+        const highCut = q3 + reach;
+        let lowerFence = Infinity;
+        let upperFence = -Infinity;
+        for (let r = 0; r < data.length; r++) {
+            const v = data[r][c];
+            if (!Number.isFinite(v)) continue;
+            if (v >= lowCut && v < lowerFence) lowerFence = v;
+            if (v <= highCut && v > upperFence) upperFence = v;
+        }
+        // Every value outside the cutoffs would leave a fence unset. That cannot
+        // happen for a fence derived from the same column's quartiles, but the
+        // quartiles here come from a sample, so it is guarded rather than assumed.
+        if (!Number.isFinite(lowerFence)) lowerFence = min;
+        if (!Number.isFinite(upperFence)) upperFence = max;
+        stats.push({
+            min,
+            q1,
+            median: quantile(0.5),
+            q3,
+            max,
+            lowerFence,
+            upperFence,
+            hasLowOutliers: lowerFence > min,
+            hasHighOutliers: upperFence < max,
+            empty: false
+        });
+    }
+    return stats;
+}
+
+/**
+ * A box summary rescaled so the column's own min sits at 0 and its max at 1.
+ *
+ * The reader is not comparing magnitudes between columns, they are comparing
+ * shapes: where the box sits is the skew, how tall it is is how tightly the
+ * middle half is packed, and how far the whisker falls short of the frame is how
+ * far the outliers reach beyond the bulk of the data.
+ */
+export interface BoxDrawing {
+    q1: number;
+    median: number;
+    q3: number;
+    /** Whisker ends, at the Tukey fences. */
+    lowerFence: number;
+    upperFence: number;
+    /** Outlier tails, present only where observations lie past a fence. */
+    lowTail: boolean;
+    highTail: boolean;
+}
+
+export function boxFractions(stats: BoxStats): BoxDrawing | null {
+    if (stats.empty) return null;
+    const span = stats.max - stats.min;
+    // A constant column is a single value, not a distribution. Drawn as a flat
+    // line at mid height, matching how profileFractions treats the same case.
+    if (span === 0) {
+        return {
+            q1: 0.5, median: 0.5, q3: 0.5,
+            lowerFence: 0.5, upperFence: 0.5,
+            lowTail: false, highTail: false
+        };
+    }
+    const at = (v: number) => (v - stats.min) / span;
+    return {
+        q1: at(stats.q1),
+        median: at(stats.median),
+        q3: at(stats.q3),
+        lowerFence: at(stats.lowerFence),
+        upperFence: at(stats.upperFence),
+        lowTail: stats.hasLowOutliers,
+        highTail: stats.hasHighOutliers
+    };
+}
