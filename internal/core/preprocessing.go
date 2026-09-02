@@ -502,6 +502,70 @@ func (p *Preprocessor) GetStdDevs() []float64 {
 	return p.originalStd
 }
 
+// ColumnAffine returns the per-column center and divisor that the column-wise
+// stage of Transform applies, so that a caller can express the whole
+// preprocessing step as a single affine map a = (x - center) / divisor.
+//
+// This exists because none of the individual getters answers that question.
+// GetStdDevs returns the standard deviations as measured, which are computed
+// whether or not scaling is applied and are not clamped, so dividing by them
+// reproduces Transform only in the one case where standard scaling is enabled
+// and no column was near constant. Robust scaling centers on the median and
+// divides by the MAD on a separate branch entirely. A caller reconstructing the
+// map from the flags would be duplicating the branch structure of Transform, and
+// the two copies would eventually disagree; the numbers that come out of such a
+// disagreement look perfectly reasonable, which is what makes it worth avoiding.
+//
+// The returned slices describe the column-wise stage only. When row-wise
+// preprocessing is enabled the full map is not affine at all, because SNV and
+// vector normalization scale each row by a statistic of that same row; see
+// IsRowWiseEnabled.
+//
+// The slices are freshly allocated and safe for the caller to retain.
+func (p *Preprocessor) ColumnAffine() (center, divisor []float64, err error) {
+	if !p.fitted {
+		return nil, nil, fmt.Errorf("preprocessor not fitted: call Fit first")
+	}
+
+	m := len(p.mean)
+	center = make([]float64, m)
+	divisor = make([]float64, m)
+
+	for j := 0; j < m; j++ {
+		// The branches below mirror Transform exactly. Keep them in step.
+		switch {
+		case p.RobustScale:
+			center[j] = p.median[j]
+			divisor[j] = p.mad[j]
+		case p.ScaleOnly:
+			center[j] = 0
+			divisor[j] = p.scale[j]
+		default:
+			if p.MeanCenter {
+				center[j] = p.mean[j]
+			}
+			if p.StandardScale {
+				divisor[j] = p.scale[j]
+			} else {
+				divisor[j] = 1
+			}
+		}
+	}
+
+	return center, divisor, nil
+}
+
+// IsRowWiseEnabled reports whether a row-wise transform is applied.
+//
+// Row-wise transforms are sample dependent: SNV divides a spectrum by its own
+// standard deviation and vector normalization by its own length, both computed
+// from the row being transformed rather than from the training set. No fixed set
+// of per-column coefficients can reproduce their effect, so callers that want to
+// collapse a model into original-variable coefficients must check this first.
+func (p *Preprocessor) IsRowWiseEnabled() bool {
+	return p.SNV || p.VectorNorm
+}
+
 // GetMedians returns the fitted median values
 func (p *Preprocessor) GetMedians() []float64 {
 	if !p.fitted {
