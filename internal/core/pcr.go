@@ -446,10 +446,23 @@ func resolveMaxComponents(data types.Matrix, labelled []int, config types.PCRCon
 	}
 
 	if config.Selection.Mode == "cv" {
+		// A fold count of zero means one fold per group, so the effective count
+		// has to be resolved before it can bound anything. Skipping that case
+		// would leave leave-one-out estimating its ceiling from the full row
+		// count rather than from a training partition that is one row shorter.
 		folds := config.Selection.CV.Folds
+		if folds == 0 {
+			folds = countGroups(labelled, config.Selection.CV.Groups)
+		}
 		if folds > 1 {
 			// The largest test fold takes ceil(n/folds) rows, so the smallest
 			// training partition keeps the rest.
+			//
+			// With uneven groups the largest fold can exceed that average, so this
+			// is an estimate rather than a guarantee. It exists to fail early and
+			// clearly on an impossible request; the binding check is per fold, in
+			// evaluateFold, which caps each fold at its own numerical rank and
+			// reports the smallest ceiling any fold could honour.
 			largestTest := (len(labelled) + folds - 1) / folds
 			foldLimit := len(labelled) - largestTest - 2
 			if foldLimit < limit {

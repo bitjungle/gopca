@@ -77,6 +77,7 @@ func (p *PCRImpl) crossValidate(data types.Matrix, y []float64, labelled []int,
 	predicted := make([][]float64, kMax+1)
 	measured := make([][]float64, kMax+1)
 	foldRMSE := make([][]float64, kMax+1)
+	foldMAE := make([][]float64, kMax+1)
 
 	// firstRepeatOOF keeps one held-out prediction per labelled row, taken from
 	// the first repeat, so that a caller can plot predicted against measured.
@@ -115,7 +116,7 @@ func (p *PCRImpl) crossValidate(data types.Matrix, y []float64, labelled []int,
 
 		for foldIndex, fold := range folds {
 			usable, err := p.evaluateFold(data, y, fold, unlabelled, config, kMax,
-				predicted, measured, foldRMSE,
+				predicted, measured, foldRMSE, foldMAE,
 				firstRepeatOOF, positionOf, repeat == 0)
 			if err != nil {
 				return nil, fmt.Errorf("repeat %d fold %d: %w", repeat+1, foldIndex+1, err)
@@ -156,6 +157,9 @@ func (p *PCRImpl) crossValidate(data types.Matrix, y []float64, labelled []int,
 		mean, se := meanAndStandardError(foldRMSE[k])
 		report.RMSECVMean = append(report.RMSECVMean, mean)
 		report.RMSECVSE = append(report.RMSECVSE, se)
+
+		_, maeSE := meanAndStandardError(foldMAE[k])
+		report.MAESE = append(report.MAESE, maeSE)
 	}
 
 	rule := config.Selection.Rule
@@ -164,28 +168,31 @@ func (p *PCRImpl) crossValidate(data types.Matrix, y []float64, labelled []int,
 		report.Rule = rule
 	}
 
-	curve := report.RMSECV
+	// The standard error must come from the same curve the rule is applied to.
+	// Measuring the spread of RMSE across folds and then adding it to an MAE curve
+	// would combine two different quantities and give the one-standard-error rule
+	// a threshold that means nothing.
+	curve, curveSE := report.RMSECV, report.RMSECVSE
+	alternative, alternativeSE := report.MAE, report.MAESE
 	if config.Selection.Metric == "mae" {
-		curve = report.MAE
+		curve, curveSE = report.MAE, report.MAESE
+		alternative, alternativeSE = report.RMSECV, report.RMSECVSE
 	}
 
-	selected, err := SelectComponents(report.Candidates, curve, report.RMSECVSE,
+	selected, err := SelectComponents(report.Candidates, curve, curveSE,
 		rule, config.Selection.Tolerance, config.Selection.WoldR)
 	if err != nil {
 		return nil, err
 	}
 	report.Selected = selected
 
-	// What the other metric would have chosen. When the two disagree, a few large
+	// What the other measure would have chosen. When the two disagree, a few large
 	// residuals are driving the choice, which is worth surfacing rather than
 	// resolving silently.
-	alternative := report.MAE
-	if config.Selection.Metric == "mae" {
-		alternative = report.RMSECV
-	}
-	if byOther, err := SelectComponents(report.Candidates, alternative, report.RMSECVSE,
+	report.SelectedByAlternateMetric = selected
+	if byOther, err := SelectComponents(report.Candidates, alternative, alternativeSE,
 		rule, config.Selection.Tolerance, config.Selection.WoldR); err == nil {
-		report.SelectedByMAE = byOther
+		report.SelectedByAlternateMetric = byOther
 	}
 
 	report.OutOfFold = firstRepeatOOF[selected]
@@ -197,7 +204,7 @@ func (p *PCRImpl) crossValidate(data types.Matrix, y []float64, labelled []int,
 // could fit.
 func (p *PCRImpl) evaluateFold(data types.Matrix, y []float64, fold crossval.Fold,
 	unlabelled []int, config types.PCRConfig, kMax int,
-	predicted, measured, foldRMSE [][]float64,
+	predicted, measured, foldRMSE, foldMAE [][]float64,
 	firstRepeatOOF [][]float64, positionOf map[int]int, recordOOF bool) (int, error) {
 
 	if len(fold.Train) == 0 || len(fold.Test) == 0 {
@@ -255,7 +262,7 @@ func (p *PCRImpl) evaluateFold(data types.Matrix, y []float64, fold crossval.Fol
 			return 0, err
 		}
 
-		var sumSq float64
+		var sumSq, sumAbs float64
 		for i := range fold.Test {
 			prediction := coefficients[0]
 			for j := 0; j < k; j++ {
@@ -266,12 +273,14 @@ func (p *PCRImpl) evaluateFold(data types.Matrix, y []float64, fold crossval.Fol
 
 			residual := prediction - testMeasured[i]
 			sumSq += residual * residual
+			sumAbs += math.Abs(residual)
 
 			if recordOOF {
 				firstRepeatOOF[k][positionOf[fold.Test[i]]] = prediction
 			}
 		}
 		foldRMSE[k] = append(foldRMSE[k], math.Sqrt(sumSq/float64(len(fold.Test))))
+		foldMAE[k] = append(foldMAE[k], sumAbs/float64(len(fold.Test)))
 	}
 
 	return available, nil

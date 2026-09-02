@@ -542,3 +542,136 @@ func ordinaryLeastSquares(t *testing.T, data types.Matrix, y []float64) olsFit {
 	}
 	return olsFit{beta: beta, intercept: intercept}
 }
+
+// TestPCRMAESelectionUsesItsOwnStandardError checks that selecting on MAE draws
+// its spread from the MAE curve rather than the RMSE one.
+//
+// The one-standard-error rule adds a standard error to the minimum of a curve.
+// Taking that spread from RMSE while applying it to MAE combines two quantities
+// with different units of sensitivity to large residuals, and the resulting
+// threshold means nothing. The two standard errors genuinely differ, so a
+// crossed wiring changes the answer.
+func TestPCRMAESelectionUsesItsOwnStandardError(t *testing.T) {
+	// This seed and noise level are chosen because the two standard errors lead
+	// to different answers here: applying the RMSE spread to the MAE curve picks
+	// one component where the MAE spread picks three. On quieter data the two
+	// agree and the test would pass whichever way the wiring ran, proving nothing.
+	data, y := makeRegressionData(50, 8, 3, 2.5, 13)
+
+	config := cvConfig(6, 5)
+	config.Selection.Metric = "mae"
+	config.Selection.Rule = types.SelectOneSE
+
+	result, err := NewPCREngine().Fit(data, y, config)
+	if err != nil {
+		t.Fatalf("Fit: %v", err)
+	}
+	report := result.CV
+
+	if len(report.MAESE) != len(report.Candidates) {
+		t.Fatalf("MAESE has %d values but there are %d candidates",
+			len(report.MAESE), len(report.Candidates))
+	}
+
+	differs := false
+	for i := range report.MAESE {
+		if report.MAESE[i] != report.RMSECVSE[i] {
+			differs = true
+			break
+		}
+	}
+	if !differs {
+		t.Error("the MAE and RMSE standard errors are identical at every candidate, " +
+			"which suggests one is being copied from the other")
+	}
+
+	// Selecting on MAE with the MAE spread must reproduce what the rule gives when
+	// applied directly to those two arrays.
+	want, err := SelectComponents(report.Candidates, report.MAE, report.MAESE,
+		types.SelectOneSE, 0, 0)
+	if err != nil {
+		t.Fatalf("SelectComponents: %v", err)
+	}
+	if report.Selected != want {
+		t.Errorf("selected %d components, but the MAE curve with its own standard "+
+			"error gives %d", report.Selected, want)
+	}
+
+	// Confirm the check is capable of failing: on this data the crossed wiring
+	// gives a different answer, so passing above is evidence rather than luck.
+	crossed, err := SelectComponents(report.Candidates, report.MAE, report.RMSECVSE,
+		types.SelectOneSE, 0, 0)
+	if err != nil {
+		t.Fatalf("SelectComponents: %v", err)
+	}
+	if crossed == want {
+		t.Fatal("this dataset no longer distinguishes the two standard errors, so the " +
+			"test cannot detect the wiring it exists to check; choose different data")
+	}
+}
+
+// TestPCRAlternateMetricIsTheOtherOne checks that the reported alternative is
+// genuinely the other measure, whichever was primary. Naming the field after MAE
+// would have made it wrong exactly when MAE was the selection metric.
+func TestPCRAlternateMetricIsTheOtherOne(t *testing.T) {
+	data, y := makeRegressionData(60, 8, 3, 0.6, 103)
+
+	for _, metric := range []string{"rmse", "mae"} {
+		t.Run(metric, func(t *testing.T) {
+			config := cvConfig(6, 5)
+			config.Selection.Metric = metric
+			config.Selection.Rule = types.SelectMin
+
+			result, err := NewPCREngine().Fit(data, y, config)
+			if err != nil {
+				t.Fatalf("Fit: %v", err)
+			}
+			report := result.CV
+
+			other, otherSE := report.MAE, report.MAESE
+			if metric == "mae" {
+				other, otherSE = report.RMSECV, report.RMSECVSE
+			}
+			want, err := SelectComponents(report.Candidates, other, otherSE,
+				types.SelectMin, 0, 0)
+			if err != nil {
+				t.Fatalf("SelectComponents: %v", err)
+			}
+			if report.SelectedByAlternateMetric != want {
+				t.Errorf("SelectedByAlternateMetric = %d, want %d (the choice the other "+
+					"measure would have made)", report.SelectedByAlternateMetric, want)
+			}
+		})
+	}
+}
+
+// TestPCRLeaveOneOutComponentCeiling checks that leave-one-out bounds the
+// component count by its training partition, which is one row shorter than the
+// dataset.
+//
+// The ceiling is resolved from a fold count of zero, which means one fold per
+// group. Treating zero as "no fold constraint" would let the ceiling be computed
+// from the full row count and overstate what any fold can actually fit.
+func TestPCRLeaveOneOutComponentCeiling(t *testing.T) {
+	const n, p = 12, 20
+	data, y := makeRegressionData(n, p, 4, 0.3, 107)
+
+	// Ask for far more components than the data can support, so the ceiling is
+	// what decides the answer rather than the request.
+	config := cvConfig(n, 0)
+	config.Selection.Rule = types.SelectMin
+
+	result, err := NewPCREngine().Fit(data, y, config)
+	if err != nil {
+		t.Fatalf("Fit: %v", err)
+	}
+
+	// Each training partition holds n-1 rows. Centring costs one degree of
+	// freedom and the score-space intercept another, leaving n-3.
+	ceiling := n - 3
+	last := result.CV.Candidates[len(result.CV.Candidates)-1]
+	if last > ceiling {
+		t.Errorf("the sweep evaluated %d components, but a leave-one-out training "+
+			"partition of %d rows supports at most %d", last, n-1, ceiling)
+	}
+}

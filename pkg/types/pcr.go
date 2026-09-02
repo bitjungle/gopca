@@ -177,7 +177,13 @@ type CVReport struct {
 	// metric. RMSE is driven by the largest residuals and MAE by the typical one,
 	// so when the two select different counts a handful of samples is deciding
 	// the model and that is worth surfacing.
-	MAE []float64 `json:"mae"`
+	//
+	// MAESE is its per-fold standard error, kept for the same reason RMSECVSE is:
+	// the one-standard-error rule needs a spread drawn from the curve it is
+	// applied to. Selecting on MAE while measuring the spread of RMSE would mix
+	// two different quantities.
+	MAE   []float64 `json:"mae"`
+	MAESE []float64 `json:"mae_se"`
 
 	// Q2 is the cross-validated coefficient of determination.
 	Q2 []float64 `json:"q2"`
@@ -185,9 +191,15 @@ type CVReport struct {
 	Selected int    `json:"selected"`
 	Rule     string `json:"rule"`
 
-	// SelectedByMAE is what the MAE curve would have chosen. When it differs from
-	// Selected, the choice is sensitive to a few extreme residuals.
-	SelectedByMAE int `json:"selected_by_mae"`
+	// SelectedByAlternateMetric is what the other error measure would have chosen:
+	// MAE when the selection used RMSE, and RMSE when it used MAE. When it differs
+	// from Selected, the choice is sensitive to a few extreme residuals, because
+	// RMSE is driven by the largest of them and MAE by the typical one.
+	//
+	// The name says "alternate" rather than naming a metric because which one it
+	// is depends on Metric. Calling it selected_by_mae would have been wrong
+	// exactly when the primary metric was MAE.
+	SelectedByAlternateMetric int `json:"selected_by_alternate_metric"`
 
 	// OutOfFold holds one held-out prediction per labelled row at the selected
 	// component count, indexed as LabelledRows.
