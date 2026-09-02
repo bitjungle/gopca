@@ -61,6 +61,7 @@ Features:
 	// Add subcommands
 	rootCmd.AddCommand(
 		NewAnalyzeCommand(),
+		NewRegressCommand(),
 		NewTransformCommand(),
 		NewValidateCommand(),
 		NewVersionCommand(),

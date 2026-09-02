@@ -161,6 +161,58 @@ type PCAOutputData struct {
 	Diagnostics       DiagnosticLimits        `json:"diagnostics,omitempty"`
 	Eigencorrelations *EigencorrelationResult `json:"eigencorrelations,omitempty"`
 	PreservedColumns  *PreservedColumns       `json:"preservedColumns,omitempty"`
+
+	// Regression is present when the model also predicts a response, which makes
+	// it a principal component regression model rather than a plain decomposition.
+	// The field is optional and additive: a model without it is exactly what
+	// earlier versions produced, and a model with it still satisfies the v1
+	// schema, so the two remain interchangeable.
+	Regression *RegressionModel `json:"regression,omitempty"`
+}
+
+// RegressionModel is the regression half of a principal component regression
+// model: everything needed to turn component scores into a prediction.
+//
+// The decomposition it sits beside is the other half. Stored together, the pair
+// is sufficient to predict from raw predictor values without the training data.
+type RegressionModel struct {
+	// Response names the column this model predicts.
+	Response string `json:"response"`
+
+	// Components is the number of leading components the regression uses. It may
+	// be fewer than the decomposition carries, since the extra components are kept
+	// for the variance profile.
+	Components int `json:"components"`
+
+	// ScoreCoefficients maps component scores to the response, one per retained
+	// component. Their signs follow the component signs and so carry no meaning
+	// on their own.
+	ScoreCoefficients []float64 `json:"score_coefficients"`
+	Intercept         float64   `json:"intercept"`
+
+	// Coefficients and InterceptOriginal give the collapsed form
+	// y = InterceptOriginal + x . Coefficients, which is what a downstream
+	// consumer needs to predict without reimplementing the pipeline.
+	//
+	// They are absent when OriginalScaleValid is false, which happens with
+	// row-wise preprocessing: SNV and vector normalization scale each sample by a
+	// statistic of that same sample, so no fixed coefficient vector reproduces
+	// their effect. Prediction is still possible through the full pipeline.
+	Coefficients       []float64 `json:"coefficients,omitempty"`
+	InterceptOriginal  float64   `json:"intercept_original,omitempty"`
+	OriginalScaleValid bool      `json:"original_scale_valid"`
+
+	ResponseMean float64 `json:"response_mean"`
+
+	// RMSEC is the root mean square error of the training residuals. It describes
+	// the fit and is not an estimate of future performance. Validation carries the
+	// held-out figure.
+	RMSEC float64 `json:"rmsec"`
+	R2C   float64 `json:"r2c"`
+
+	// Validation records how the component count was chosen, so a reported error
+	// can be traced to the design that produced it.
+	Validation *CVReport `json:"validation,omitempty"`
 }
 
 // SampleData contains sample-space results

@@ -101,6 +101,10 @@
         }
       }
     },
+    "regression": {
+      "$ref": "regression.schema.json",
+      "description": "Present when the model also predicts a response, making it a principal component regression model. Optional and additive: models without it are unchanged, and models with it remain valid v1."
+    },
     "preservedColumns": {
       "type": "object",
       "description": "Columns excluded from PCA but preserved in output",

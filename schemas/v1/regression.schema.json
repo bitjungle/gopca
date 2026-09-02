@@ -1,0 +1,88 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://github.com/bitjungle/gopca/schemas/v1/regression.schema.json",
+  "title": "Principal Component Regression Model",
+  "description": "The regression half of a principal component regression model: everything needed to turn component scores into a prediction. Optional; a model without it is a plain decomposition.",
+  "type": "object",
+  "required": ["response", "components", "score_coefficients", "intercept", "original_scale_valid"],
+  "properties": {
+    "response": {
+      "type": "string",
+      "description": "Name of the column this model predicts"
+    },
+    "components": {
+      "type": "integer",
+      "minimum": 0,
+      "description": "Number of leading components the regression uses. May be fewer than the decomposition carries. Zero is the intercept-only baseline."
+    },
+    "score_coefficients": {
+      "type": "array",
+      "items": { "type": "number" },
+      "description": "Regression coefficients in score space, one per retained component. Signs follow the arbitrary component signs and carry no meaning alone."
+    },
+    "intercept": {
+      "type": "number",
+      "description": "Intercept of the score-space regression"
+    },
+    "coefficients": {
+      "type": "array",
+      "items": { "type": "number" },
+      "description": "Coefficients on the original predictor scale, one per variable. Absent when original_scale_valid is false."
+    },
+    "intercept_original": {
+      "type": "number",
+      "description": "Intercept on the original predictor scale. Absent when original_scale_valid is false."
+    },
+    "original_scale_valid": {
+      "type": "boolean",
+      "description": "Whether the model collapses to fixed original-scale coefficients. False under row-wise preprocessing (SNV, vector normalisation), which scales each sample by a statistic of that same sample, so no fixed coefficient vector reproduces its predictions."
+    },
+    "response_mean": {
+      "type": "number",
+      "description": "Mean of the response over the rows used to fit the regression"
+    },
+    "rmsec": {
+      "type": "number",
+      "minimum": 0,
+      "description": "Root mean square error of the training residuals. Describes the fit; NOT an estimate of future performance."
+    },
+    "r2c": {
+      "type": "number",
+      "description": "Coefficient of determination of the training fit"
+    },
+    "validation": {
+      "type": "object",
+      "description": "How the component count was chosen, so a reported error can be traced to the design that produced it",
+      "properties": {
+        "scheme": { "type": "string" },
+        "design": { "type": "string" },
+        "folds": { "type": "integer", "minimum": 0 },
+        "repeats": { "type": "integer", "minimum": 0 },
+        "group_by": { "type": "string" },
+        "seed": { "type": "integer" },
+        "n_samples": { "type": "integer", "minimum": 0 },
+        "candidates": { "type": "array", "items": { "type": "integer" } },
+        "rmsecv": {
+          "type": "array",
+          "items": { "type": "number" },
+          "description": "Pooled across all out-of-fold residuals, so each observation carries equal weight"
+        },
+        "rmsecv_mean": {
+          "type": "array",
+          "items": { "type": "number" },
+          "description": "Mean of the per-fold RMSE, which is never larger than the pooled value"
+        },
+        "rmsecv_se": { "type": "array", "items": { "type": "number" } },
+        "bias": { "type": "array", "items": { "type": "number" } },
+        "sep": { "type": "array", "items": { "type": "number" } },
+        "mae": { "type": "array", "items": { "type": "number" } },
+        "mae_se": { "type": "array", "items": { "type": "number" } },
+        "q2": { "type": "array", "items": { "type": "number" } },
+        "selected": { "type": "integer", "minimum": 0 },
+        "selected_by_alternate_metric": { "type": "integer", "minimum": 0 },
+        "rule": { "type": "string" },
+        "out_of_fold_predictions": { "type": "array", "items": { "type": "number" } }
+      }
+    }
+  }
+}
