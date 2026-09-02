@@ -320,10 +320,111 @@ func loadRegressionData(opts *RegressOptions, inputFile string) (
 		return data, targets, categorical, nil
 	}
 
+	if err := applyExclusions(opts, data, targets); err != nil {
+		return nil, nil, nil, err
+	}
 	if err := applyMissingStrategy(opts, data, targets); err != nil {
 		return nil, nil, nil, err
 	}
 	return data, targets, categorical, nil
+}
+
+// applyExclusions removes the rows and columns the caller asked to leave out.
+//
+// Exclusions are applied before missing-value handling, so that a row dropped
+// here never influences a later decision, and before the fit, so that an excluded
+// outlier cannot reach the decomposition through the unlabelled path.
+//
+// Rows are the delicate part. The response, the categorical columns and the row
+// names are all indexed by row, so every one of them has to lose exactly the same
+// rows as the matrix. Filtering the matrix alone would pair each surviving sample
+// with a different sample's response, and nothing downstream would look wrong.
+func applyExclusions(opts *RegressOptions, data *pkgcsv.Data, targets map[string][]float64) error {
+	if opts.ExcludeColumns != "" {
+		columns, err := parseExcludeColumns(opts.ExcludeColumns, data.Headers)
+		if err != nil {
+			return err
+		}
+		if len(columns) > 0 {
+			excluded := make(map[int]bool, len(columns))
+			for _, column := range columns {
+				excluded[column] = true
+			}
+			if len(excluded) >= data.Columns {
+				return fmt.Errorf("--exclude-columns would remove every predictor")
+			}
+
+			for i := range data.Matrix {
+				kept := make([]float64, 0, data.Columns-len(excluded))
+				for j, v := range data.Matrix[i] {
+					if !excluded[j] {
+						kept = append(kept, v)
+					}
+				}
+				data.Matrix[i] = kept
+			}
+			headers := make([]string, 0, len(data.Headers))
+			for j, name := range data.Headers {
+				if !excluded[j] {
+					headers = append(headers, name)
+				}
+			}
+			data.Headers = headers
+			data.Columns = len(headers)
+
+			if opts.Verbose {
+				fmt.Printf("Excluded %d predictor columns; %d remain.\n",
+					len(excluded), data.Columns)
+			}
+		}
+	}
+
+	if opts.ExcludeRows == "" {
+		return nil
+	}
+	rows, err := parseExcludeIndices(opts.ExcludeRows)
+	if err != nil {
+		return err
+	}
+	if len(rows) == 0 {
+		return nil
+	}
+
+	excluded := make(map[int]bool, len(rows))
+	for _, row := range rows {
+		if row < 0 || row >= data.Rows {
+			return fmt.Errorf("--exclude-rows names row %d, but the data has %d rows",
+				row+1, data.Rows)
+		}
+		excluded[row] = true
+	}
+	if len(excluded) >= data.Rows {
+		return fmt.Errorf("--exclude-rows would remove every observation")
+	}
+
+	matrix := make([]([]float64), 0, data.Rows-len(excluded))
+	for i, row := range data.Matrix {
+		if !excluded[i] {
+			matrix = append(matrix, row)
+		}
+	}
+	data.Matrix = matrix
+	data.Rows = len(matrix)
+
+	for name, values := range targets {
+		targets[name] = filterByRow(values, excluded)
+	}
+	for name, values := range data.CategoricalColumns {
+		data.CategoricalColumns[name] = filterCategoricalByRow(values, excluded)
+	}
+	if len(data.RowNames) > 0 {
+		data.RowNames = filterCategoricalByRow(data.RowNames, excluded)
+	}
+
+	if opts.Verbose {
+		fmt.Printf("Excluded %d rows; %d remain.\n", len(excluded), data.Rows)
+	}
+	return nil
 }
 
 // applyMissingStrategy resolves missing predictor values before fitting, keeping

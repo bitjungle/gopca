@@ -329,3 +329,97 @@ func indexOf(haystack, needle string) int {
 	}
 	return -1
 }
+
+// TestApplyExclusionsKeepsResponseAligned is the row-alignment check for the
+// exclusion path, which has the same hazard as dropping incomplete rows: the
+// response, the categorical columns and the row names are all indexed by row and
+// must lose exactly the rows the matrix loses.
+func TestApplyExclusionsKeepsResponseAligned(t *testing.T) {
+	data := &pkgcsv.Data{
+		Matrix: types.Matrix{
+			{1, 1}, {2, 2}, {3, 3}, {4, 4}, {5, 5},
+		},
+		Headers:  []string{"a", "b"},
+		RowNames: []string{"r1", "r2", "r3", "r4", "r5"},
+		Rows:     5,
+		Columns:  2,
+		CategoricalColumns: map[string][]string{
+			"batch": {"A", "B", "C", "D", "E"},
+		},
+	}
+	targets := map[string][]float64{"y#target": {10, 20, 30, 40, 50}}
+
+	// Rows are named 1-based on the command line; 2 and 4 remove the second and
+	// fourth observations.
+	opts := &RegressOptions{ExcludeRows: "2,4"}
+	if err := applyExclusions(opts, data, targets); err != nil {
+		t.Fatalf("applyExclusions: %v", err)
+	}
+
+	if data.Rows != 3 {
+		t.Fatalf("kept %d rows, want 3", data.Rows)
+	}
+	if want := []float64{10, 30, 50}; !reflect.DeepEqual(targets["y#target"], want) {
+		t.Errorf("response = %v, want %v: no longer aligned with its rows",
+			targets["y#target"], want)
+	}
+	if want := []string{"A", "C", "E"}; !reflect.DeepEqual(data.CategoricalColumns["batch"], want) {
+		t.Errorf("grouping column = %v, want %v", data.CategoricalColumns["batch"], want)
+	}
+	if want := []string{"r1", "r3", "r5"}; !reflect.DeepEqual(data.RowNames, want) {
+		t.Errorf("row names = %v, want %v", data.RowNames, want)
+	}
+	if want := (types.Matrix{{1, 1}, {3, 3}, {5, 5}}); !reflect.DeepEqual(data.Matrix, want) {
+		t.Errorf("matrix = %v, want %v", data.Matrix, want)
+	}
+}
+
+func TestApplyExclusionsColumns(t *testing.T) {
+	data := &pkgcsv.Data{
+		Matrix:  types.Matrix{{1, 2, 3}, {4, 5, 6}},
+		Headers: []string{"a", "b", "c"},
+		Rows:    2,
+		Columns: 3,
+	}
+	opts := &RegressOptions{ExcludeColumns: "b"}
+	if err := applyExclusions(opts, data, map[string][]float64{}); err != nil {
+		t.Fatalf("applyExclusions: %v", err)
+	}
+	if want := []string{"a", "c"}; !reflect.DeepEqual(data.Headers, want) {
+		t.Errorf("headers = %v, want %v", data.Headers, want)
+	}
+	if want := (types.Matrix{{1, 3}, {4, 6}}); !reflect.DeepEqual(data.Matrix, want) {
+		t.Errorf("matrix = %v, want %v", data.Matrix, want)
+	}
+	if data.Columns != 2 {
+		t.Errorf("Columns = %d, want 2", data.Columns)
+	}
+}
+
+func TestApplyExclusionsErrors(t *testing.T) {
+	newData := func() *pkgcsv.Data {
+		return &pkgcsv.Data{
+			Matrix:  types.Matrix{{1, 2}, {3, 4}},
+			Headers: []string{"a", "b"},
+			Rows:    2,
+			Columns: 2,
+		}
+	}
+
+	tests := []struct {
+		name string
+		opts *RegressOptions
+	}{
+		{"row out of range", &RegressOptions{ExcludeRows: "9"}},
+		{"every row excluded", &RegressOptions{ExcludeRows: "1,2"}},
+		{"every column excluded", &RegressOptions{ExcludeColumns: "a,b"}},
+		{"unknown column", &RegressOptions{ExcludeColumns: "nope"}},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if err := applyExclusions(tt.opts, newData(), map[string][]float64{}); err == nil {
+				t.Error("expected an error, got nil")
+			}
+		})
+	}
+}
