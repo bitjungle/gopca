@@ -27,6 +27,7 @@ import (
 	"encoding/json"
 	"math"
 	"math/rand/v2"
+	"strings"
 	"testing"
 
 	"github.com/bitjungle/gopca/internal/core"
@@ -198,5 +199,59 @@ func TestPredictFromModelInterceptOnly(t *testing.T) {
 		if v != 7.25 {
 			t.Errorf("row %d predicted %v, want the intercept 7.25", i, v)
 		}
+	}
+}
+
+// TestZeroInterceptSurvivesSerialization checks that an original-scale intercept
+// of exactly zero is written rather than omitted.
+//
+// Zero is a legitimate intercept: it is what a mean-centred response with a
+// mean-centred predictor set produces. Under `omitempty` it would vanish from the
+// artifact and be indistinguishable from a model that never recorded one, which
+// matters because the presence of the field is otherwise a reasonable thing for a
+// consumer to test. OriginalScaleValid is what says whether the collapsed form
+// applies; the field is always there.
+func TestZeroInterceptSurvivesSerialization(t *testing.T) {
+	model := &types.RegressionModel{
+		Response:           "y",
+		Components:         1,
+		ScoreCoefficients:  []float64{1},
+		Intercept:          0,
+		Coefficients:       []float64{0.5},
+		InterceptOriginal:  0,
+		OriginalScaleValid: true,
+	}
+
+	encoded, err := json.Marshal(model)
+	if err != nil {
+		t.Fatalf("marshal: %v", err)
+	}
+	if !strings.Contains(string(encoded), `"intercept_original"`) {
+		t.Errorf("a zero original-scale intercept was omitted from the artifact: %s", encoded)
+	}
+	if !strings.Contains(string(encoded), `"original_scale_valid"`) {
+		t.Errorf("original_scale_valid was omitted: %s", encoded)
+	}
+
+	var restored types.RegressionModel
+	if err := json.Unmarshal(encoded, &restored); err != nil {
+		t.Fatalf("unmarshal: %v", err)
+	}
+	if restored.InterceptOriginal != 0 || !restored.OriginalScaleValid {
+		t.Errorf("round trip changed the model: %+v", restored)
+	}
+
+	// Coefficients keep omitempty, because a nil slice is unambiguously absent and
+	// is exactly how a model without a collapsed form is represented.
+	rowWise := &types.RegressionModel{
+		Response: "y", Components: 1, ScoreCoefficients: []float64{1},
+		OriginalScaleValid: false,
+	}
+	encoded, err = json.Marshal(rowWise)
+	if err != nil {
+		t.Fatalf("marshal: %v", err)
+	}
+	if strings.Contains(string(encoded), `"coefficients"`) {
+		t.Errorf("a model with no collapsed form should not carry coefficients: %s", encoded)
 	}
 }

@@ -234,8 +234,12 @@ type PCRResult struct {
 	// coefficient vector reproduces its predictions. OriginalScaleValid says which
 	// case applies; the fields are omitted when it is false rather than filled
 	// with a plausible but wrong number.
+	// Coefficients is omitted when there is no collapsed form, since a nil slice
+	// is unambiguously absent. InterceptOriginal is always written, even when it
+	// is zero: an intercept of exactly zero is a legitimate value that omitempty
+	// would erase, leaving it indistinguishable from one that was never recorded.
 	Coefficients       []float64 `json:"coefficients,omitempty"`
-	InterceptOriginal  float64   `json:"intercept_original,omitempty"`
+	InterceptOriginal  float64   `json:"intercept_original"`
 	OriginalScaleValid bool      `json:"original_scale_valid"`
 
 	ResponseMean float64 `json:"response_mean"`

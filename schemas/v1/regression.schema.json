@@ -31,7 +31,7 @@
     },
     "intercept_original": {
       "type": "number",
-      "description": "Intercept on the original predictor scale. Absent when original_scale_valid is false."
+      "description": "Intercept on the original predictor scale. Always present, including when it is zero; original_scale_valid says whether the collapsed form should be used."
     },
     "original_scale_valid": {
       "type": "boolean",

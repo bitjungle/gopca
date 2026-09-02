@@ -109,14 +109,16 @@ func TestValidateRegressionBlock(t *testing.T) {
 				"intercept":3.0,"original_scale_valid":false}`,
 		},
 		{
-			name:       "missing response",
-			regression: `{"components":1,"score_coefficients":[1],"intercept":0}`,
-			wantErr:    "response",
+			name: "missing response",
+			regression: `{"components":1,"score_coefficients":[1],"intercept":0,
+				"original_scale_valid":false}`,
+			wantErr: "response",
 		},
 		{
-			name:       "component count disagrees with coefficients",
-			regression: `{"response":"y","components":5,"score_coefficients":[1,2],"intercept":0}`,
-			wantErr:    "score coefficients",
+			name: "component count disagrees with coefficients",
+			regression: `{"response":"y","components":5,"score_coefficients":[1,2],
+				"intercept":0,"original_scale_valid":false}`,
+			wantErr: "score coefficients",
 		},
 		{
 			name: "claims a collapsed form it does not carry",
@@ -125,14 +127,29 @@ func TestValidateRegressionBlock(t *testing.T) {
 			wantErr: "does not carry",
 		},
 		{
-			name:       "negative component count",
-			regression: `{"response":"y","components":-1,"score_coefficients":[],"intercept":0}`,
-			wantErr:    "negative",
+			name: "negative component count",
+			regression: `{"response":"y","components":-1,"score_coefficients":[],
+				"intercept":0,"original_scale_valid":false}`,
+			wantErr: "negative",
 		},
 		{
 			name:       "not an object",
 			regression: `"a string"`,
 			wantErr:    "object",
+		},
+		{
+			// Absent, this field unmarshals to false and silently reclassifies a
+			// model that does carry a collapsed form as one that does not. That is
+			// a change of meaning, so it is required rather than defaulted.
+			name:       "original_scale_valid absent",
+			regression: `{"response":"y","components":1,"score_coefficients":[1],"intercept":0}`,
+			wantErr:    "missing required field: original_scale_valid",
+		},
+		{
+			name: "original_scale_valid not a boolean",
+			regression: `{"response":"y","components":1,"score_coefficients":[1],
+				"intercept":0,"original_scale_valid":"yes"}`,
+			wantErr: "boolean",
 		},
 	}
 

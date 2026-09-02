@@ -156,7 +156,9 @@ func (v *ModelValidator) validateRegression(data interface{}) error {
 		return fmt.Errorf("regression must be an object")
 	}
 
-	for _, field := range []string{"response", "components", "score_coefficients", "intercept"} {
+	for _, field := range []string{
+		"response", "components", "score_coefficients", "intercept", "original_scale_valid",
+	} {
 		if _, present := regression[field]; !present {
 			return fmt.Errorf("missing required field: %s", field)
 		}
@@ -189,23 +191,23 @@ func (v *ModelValidator) validateRegression(data interface{}) error {
 		return fmt.Errorf("intercept must be a number")
 	}
 
-	// original_scale_valid is a promise about the fields beside it. If it claims
-	// the collapsed form is usable, the coefficients must actually be there.
-	if valid, present := regression["original_scale_valid"]; present {
-		claimed, ok := valid.(bool)
-		if !ok {
-			return fmt.Errorf("original_scale_valid must be a boolean")
+	// original_scale_valid is a promise about the fields beside it, and it is
+	// required rather than optional. Absent, it would unmarshal to false and
+	// silently reclassify a model that does carry a collapsed form as one that
+	// does not, which is a change of meaning rather than a missing convenience.
+	claimed, ok := regression["original_scale_valid"].(bool)
+	if !ok {
+		return fmt.Errorf("original_scale_valid must be a boolean")
+	}
+	if claimed {
+		original, present := regression["coefficients"]
+		if !present {
+			return fmt.Errorf(
+				"original_scale_valid is true but coefficients are absent: " +
+					"the model claims a collapsed form it does not carry")
 		}
-		if claimed {
-			original, present := regression["coefficients"]
-			if !present {
-				return fmt.Errorf(
-					"original_scale_valid is true but coefficients are absent: " +
-						"the model claims a collapsed form it does not carry")
-			}
-			if _, ok := original.([]interface{}); !ok {
-				return fmt.Errorf("coefficients must be an array")
-			}
+		if _, ok := original.([]interface{}); !ok {
+			return fmt.Errorf("coefficients must be an array")
 		}
 	}
 

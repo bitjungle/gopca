@@ -194,12 +194,19 @@ type RegressionModel struct {
 	// y = InterceptOriginal + x . Coefficients, which is what a downstream
 	// consumer needs to predict without reimplementing the pipeline.
 	//
-	// They are absent when OriginalScaleValid is false, which happens with
+	// OriginalScaleValid says whether that form exists. It is false under
 	// row-wise preprocessing: SNV and vector normalization scale each sample by a
 	// statistic of that same sample, so no fixed coefficient vector reproduces
 	// their effect. Prediction is still possible through the full pipeline.
+	//
+	// Coefficients is omitted when there is no collapsed form, since a nil slice
+	// is unambiguously absent. InterceptOriginal is always written, even when it
+	// is zero: an intercept of exactly zero is a legitimate value, and omitting it
+	// would be indistinguishable from a model that failed to record one.
+	// OriginalScaleValid, not the presence of a field, is what says whether to use
+	// the collapsed form.
 	Coefficients       []float64 `json:"coefficients,omitempty"`
-	InterceptOriginal  float64   `json:"intercept_original,omitempty"`
+	InterceptOriginal  float64   `json:"intercept_original"`
 	OriginalScaleValid bool      `json:"original_scale_valid"`
 
 	ResponseMean float64 `json:"response_mean"`
