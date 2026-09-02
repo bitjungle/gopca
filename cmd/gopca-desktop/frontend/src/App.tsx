@@ -106,6 +106,7 @@ function AppContent() {
                                 onClick={handleLogoClick}
                             />
                         </HelpWrapper>
+                        <AnalysisModeToggle mode={mode} onChange={setMode} />
                     </div>
                     <div className="flex-1 mx-8 overflow-hidden">
                         <HelpDisplay
@@ -147,9 +148,6 @@ function AppContent() {
             <main ref={mainScrollRef} className="flex-1 overflow-auto p-6">
                 <div className="max-w-7xl mx-auto space-y-6">
                     <DataLoadSection />
-                    <div className="flex justify-end">
-                        <AnalysisModeToggle mode={mode} onChange={setMode} />
-                    </div>
                     <PCAConfigSection onRunPCA={handleRunPCA} />
                     {mode === 'explore' ? (
                         <ResultsSection guiConfig={guiConfig} />
