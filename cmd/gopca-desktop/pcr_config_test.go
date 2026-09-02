@@ -1,0 +1,331 @@
+// GoPCA Suite
+//
+// Copyright © 2025-2026 Rune Mathisen <devel@bitjungle.com>
+//
+// This file is part of GoPCA Suite.
+//
+// GoPCA Suite is source-available software with free binary redistribution.
+// Official compiled binary releases may be used and redistributed free of charge
+// under the GoPCA Suite Source-Available Freeware License.
+//
+// The source code is provided for viewing, review, education, security analysis,
+// research, interoperability analysis, and evaluation only.
+//
+// Modification, redistribution, publication, sublicensing, reuse, incorporation
+// into another project, or creation of derivative works based on the source code
+// is not permitted without prior written permission from the copyright holder.
+//
+// Usage Restriction: GoPCA Suite may not be used, directly or indirectly, for
+// military, warfare, weapons, intelligence, surveillance, targeting, or
+// law-enforcement surveillance applications.
+//
+// See LICENSE for the full license terms.
+
+package main
+
+import (
+	"math"
+	"strings"
+	"testing"
+)
+
+// frontendDefaultMethod is what DEFAULT_PCA_CONFIG in
+// frontend/src/hooks/usePCAConfig.ts stores for the method. It is the display
+// spelling, not the engine's, and passing it through unchanged is what made the
+// first regression attempt fail with `unknown PCA method "SVD"`.
+const frontendDefaultMethod = "SVD"
+
+// TestRunPCRAcceptsTheMethodAsTheInterfaceSpellsIt is the regression test for
+// that failure.
+//
+// The engine compares method names against lowercase constants, while the
+// configuration panel stores them as they are displayed. Every path from the
+// interface to the engine therefore has to fold the case, and this one did not.
+// Nothing caught it, because the engine tests construct their own configuration
+// and never see the interface's spelling.
+func TestRunPCRAcceptsTheMethodAsTheInterfaceSpellsIt(t *testing.T) {
+	app := &App{}
+
+	response := app.RunPCR(PCRRequest{
+		PCA: PCARequest{
+			Data:            wellConditionedMatrix(24, 5),
+			Headers:         []string{"a", "b", "c", "d", "e"},
+			Method:          frontendDefaultMethod,
+			MeanCenter:      true,
+			MissingStrategy: "error",
+		},
+		Response:       "y#target",
+		ResponseValues: linearResponse(24),
+		Components:     2,
+	})
+
+	if !response.Success {
+		t.Fatalf("the interface's own default method was rejected: %s", response.Error)
+	}
+	if response.Result == nil {
+		t.Fatal("no result returned")
+	}
+	if response.Result.Components != 2 {
+		t.Errorf("retained %d components, want 2", response.Result.Components)
+	}
+}
+
+// TestRunPCRFoldsCaseOnEveryStringFromTheInterface checks the whole family
+// rather than the one field that happened to break, since any of them could be
+// respelled by a later change to the panel.
+func TestRunPCRFoldsCaseOnEveryStringFromTheInterface(t *testing.T) {
+	cases := []struct {
+		name    string
+		mutate  func(*PCRRequest)
+		wantErr bool
+	}{
+		{"method in upper case", func(r *PCRRequest) { r.PCA.Method = "SVD" }, false},
+		{"method in mixed case", func(r *PCRRequest) { r.PCA.Method = "NiPaLs" }, false},
+		{"scheme in upper case", func(r *PCRRequest) {
+			r.Components = 0
+			r.MaxComponents = 3
+			r.CVFolds = 4
+			r.CVScheme = "RANDOM"
+		}, false},
+		{"metric in upper case", func(r *PCRRequest) {
+			r.Components = 0
+			r.MaxComponents = 3
+			r.CVFolds = 4
+			r.Metric = "RMSE"
+		}, false},
+		{"rule in upper case", func(r *PCRRequest) {
+			r.Components = 0
+			r.MaxComponents = 3
+			r.CVFolds = 4
+			r.SelectRule = "ONE-SE"
+		}, false},
+		{"a method that does not exist is still refused", func(r *PCRRequest) {
+			r.PCA.Method = "Quantum"
+		}, true},
+	}
+
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			request := PCRRequest{
+				PCA: PCARequest{
+					Data:            wellConditionedMatrix(24, 5),
+					Headers:         []string{"a", "b", "c", "d", "e"},
+					Method:          "svd",
+					MeanCenter:      true,
+					MissingStrategy: "error",
+				},
+				Response:       "y#target",
+				ResponseValues: linearResponse(24),
+				Components:     2,
+			}
+			tc.mutate(&request)
+
+			response := (&App{}).RunPCR(request)
+			if tc.wantErr {
+				if response.Success {
+					t.Error("expected the request to be refused")
+				}
+				return
+			}
+			if !response.Success {
+				t.Errorf("request was refused: %s", response.Error)
+			}
+		})
+	}
+}
+
+// TestRunPCRExcludedRowsFilterTheResponseToo guards the alignment hazard: the
+// predictors and the response are indexed by the same rows, so excluding a row
+// from one without the other pairs every later sample with the wrong response.
+//
+// The check is made at full rank deliberately. With every component retained,
+// PCR is ordinary least squares, so a response that is an exact linear function
+// of the predictors must be reproduced exactly whichever rows survive. That is
+// true of the aligned data and impossible for misaligned data, which makes it a
+// real test of the filtering.
+//
+// A truncated fit would not do. Removing rows rotates the leading components, so
+// R2C at k below full rank moves for reasons that have nothing to do with
+// alignment; an earlier version of this test asserted against that movement and
+// failed on correct code.
+func TestRunPCRExcludedRowsFilterTheResponseToo(t *testing.T) {
+	const rows, predictors = 24, 4
+	data := wellConditionedMatrix(rows, predictors)
+	y := linearResponse(rows)
+
+	fit := func(excluded []int) *PCRResultJSON {
+		t.Helper()
+		response := (&App{}).RunPCR(PCRRequest{
+			PCA: PCARequest{
+				Data: data, Headers: []string{"a", "b", "c", "d"},
+				Method: "svd", MeanCenter: true, MissingStrategy: "error",
+				ExcludedRows: excluded,
+			},
+			Response: "y#target", ResponseValues: y, Components: predictors,
+		})
+		if !response.Success {
+			t.Fatalf("fit failed: %s", response.Error)
+		}
+		return response.Result
+	}
+
+	baseline := fit(nil)
+	if 1-float64(baseline.R2C) > 1e-9 {
+		t.Fatalf("baseline R2C = %.6f; the response should be exactly linear in the "+
+			"predictors, so this test cannot detect anything", float64(baseline.R2C))
+	}
+
+	excluded := fit([]int{0, 1, 2})
+	if got := len(excluded.Fitted); got != rows-3 {
+		t.Errorf("fitted %d rows, want %d after excluding 3", got, rows-3)
+	}
+	if 1-float64(excluded.R2C) > 1e-9 {
+		t.Errorf("R2C = %.6f after excluding three rows. At full rank an exactly "+
+			"linear response must still be reproduced exactly, so the response is no "+
+			"longer aligned with its predictors", float64(excluded.R2C))
+	}
+
+	// Excluding from the far end as well, so an off-by-one in the filter that
+	// happens to be harmless at the start of the data is still caught.
+	tail := fit([]int{rows - 1, rows - 2})
+	if 1-float64(tail.R2C) > 1e-9 {
+		t.Errorf("R2C = %.6f after excluding the last two rows", float64(tail.R2C))
+	}
+}
+
+func TestRunPCRRejectsMalformedRequests(t *testing.T) {
+	base := func() PCRRequest {
+		return PCRRequest{
+			PCA: PCARequest{
+				Data: wellConditionedMatrix(24, 4), Headers: []string{"a", "b", "c", "d"},
+				Method: "svd", MeanCenter: true, MissingStrategy: "error",
+			},
+			Response: "y#target", ResponseValues: linearResponse(24), Components: 2,
+		}
+	}
+
+	cases := []struct {
+		name   string
+		mutate func(*PCRRequest)
+	}{
+		{"no data", func(r *PCRRequest) { r.PCA.Data = nil }},
+		{"no response chosen", func(r *PCRRequest) { r.Response = "" }},
+		{"response length mismatch", func(r *PCRRequest) { r.ResponseValues = []float64{1, 2} }},
+		{"unknown scheme", func(r *PCRRequest) {
+			r.Components = 0
+			r.MaxComponents = 3
+			r.CVFolds = 4
+			r.CVScheme = "sideways"
+		}},
+		{"grouping labels of the wrong length", func(r *PCRRequest) {
+			r.Components = 0
+			r.MaxComponents = 3
+			r.CVFolds = 4
+			r.CVGroupColumn = "batch"
+			r.CVGroupLabels = []string{"a", "b"}
+		}},
+	}
+
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			request := base()
+			tc.mutate(&request)
+			if response := (&App{}).RunPCR(request); response.Success {
+				t.Error("expected the request to be refused")
+			}
+		})
+	}
+}
+
+// TestListResponsesSeparatesNumericFromCategorical checks that a column marked as
+// a target but holding categories is named rather than silently omitted, so the
+// interface can explain why it is not offered.
+func TestListResponsesSeparatesNumericFromCategorical(t *testing.T) {
+	options := (&App{}).ListResponses(&FileData{
+		NumericTargetColumns: map[string][]float64{
+			"Oil#target":      {1, 2},
+			"Moisture#target": {3, 4},
+		},
+		CategoricalColumns: map[string][]string{
+			"species#target": {"a", "b"},
+			"batch":          {"x", "y"},
+		},
+	})
+
+	want := []string{"Moisture#target", "Oil#target"}
+	if len(options.Numeric) != len(want) {
+		t.Fatalf("numeric responses = %v, want %v", options.Numeric, want)
+	}
+	for i, name := range want {
+		if options.Numeric[i] != name {
+			t.Errorf("numeric[%d] = %q, want %q (the list must be sorted so a picker "+
+				"does not reshuffle between loads)", i, options.Numeric[i], name)
+		}
+	}
+
+	if len(options.Categorical) != 1 || options.Categorical[0] != "species#target" {
+		t.Errorf("categorical targets = %v, want only species#target; a plain "+
+			"categorical column is not a target and should not be listed",
+			options.Categorical)
+	}
+}
+
+func TestListResponsesHandlesNil(t *testing.T) {
+	options := (&App{}).ListResponses(nil)
+	if options == nil || len(options.Numeric) != 0 || len(options.Categorical) != 0 {
+		t.Errorf("expected empty options for nil data, got %+v", options)
+	}
+}
+
+func TestIsTargetName(t *testing.T) {
+	cases := map[string]bool{
+		"Moisture#target": true,
+		"MOISTURE#TARGET": true,
+		"x #target":       true,
+		"target":          false,
+		"#targetish":      false,
+		"":                false,
+		"#tar":            false,
+	}
+	for name, want := range cases {
+		if got := isTargetName(name); got != want {
+			t.Errorf("isTargetName(%q) = %v, want %v", name, got, want)
+		}
+	}
+}
+
+// wellConditionedMatrix builds a deterministic matrix with a low condition
+// number, following the guidance in CLAUDE.md that platform-sensitive numerical
+// tests should not rest on ill-conditioned data.
+func wellConditionedMatrix(rows, columns int) [][]float64 {
+	data := make([][]float64, rows)
+	for i := 0; i < rows; i++ {
+		data[i] = make([]float64, columns)
+		for j := 0; j < columns; j++ {
+			angle := float64(i+1) * float64(j+1)
+			data[i][j] = math.Sin(angle) + 0.5*math.Cos(angle/3) + float64(j)
+		}
+	}
+	return data
+}
+
+// linearResponse is a clean function of the first two predictors, so a correct
+// fit explains nearly all of it and a misaligned one does not.
+func linearResponse(rows int) []float64 {
+	data := wellConditionedMatrix(rows, 4)
+	y := make([]float64, rows)
+	for i := 0; i < rows; i++ {
+		y[i] = 2*data[i][0] - 1.5*data[i][1] + 3
+	}
+	return y
+}
+
+// TestFrontendDefaultMethodIsStillSpeltThisWay documents the coupling this file
+// depends on, so that a change to the panel's spelling is noticed here rather
+// than by a user clicking Fit regression.
+func TestFrontendDefaultMethodIsStillSpeltThisWay(t *testing.T) {
+	if strings.ToLower(frontendDefaultMethod) != "svd" {
+		t.Fatalf("frontendDefaultMethod %q no longer folds to a method the engine knows",
+			frontendDefaultMethod)
+	}
+}

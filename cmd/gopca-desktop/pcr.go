@@ -27,6 +27,7 @@ import (
 	"fmt"
 	"math"
 	"sort"
+	"strings"
 
 	"github.com/bitjungle/gopca/internal/core"
 	"github.com/bitjungle/gopca/internal/utils"
@@ -208,15 +209,21 @@ func isTargetName(name string) bool {
 
 // buildDesktopPCRConfig turns a frontend request into an engine configuration.
 func buildDesktopPCRConfig(request PCRRequest, groupLabels []string, rows int) (types.PCRConfig, error) {
+	// The configuration panel stores the method as it is displayed, so it arrives
+	// as "SVD" rather than "svd" and the engine, which compares against lowercase
+	// names, rejects it. RunPCA normalises the same field for the same reason.
+	// Everything the frontend can send is folded here rather than trusted to
+	// arrive in the right case, because the shared panel is free to change how it
+	// labels its options without knowing this path exists.
 	pca := types.PCAConfig{
-		Method:          request.PCA.Method,
+		Method:          strings.ToLower(request.PCA.Method),
 		MeanCenter:      request.PCA.MeanCenter,
 		StandardScale:   request.PCA.StandardScale,
 		RobustScale:     request.PCA.RobustScale,
 		ScaleOnly:       request.PCA.ScaleOnly,
 		SNV:             request.PCA.SNV,
 		VectorNorm:      request.PCA.VectorNorm,
-		MissingStrategy: types.MissingValueStrategy(request.PCA.MissingStrategy),
+		MissingStrategy: types.MissingValueStrategy(strings.ToLower(request.PCA.MissingStrategy)),
 	}
 
 	config := types.PCRConfig{PCA: pca, Response: request.Response}
@@ -237,7 +244,7 @@ func buildDesktopPCRConfig(request PCRRequest, groupLabels []string, rows int) (
 	}
 	config.PCA.Components = maxComponents
 
-	scheme := request.CVScheme
+	scheme := strings.ToLower(request.CVScheme)
 	switch scheme {
 	case types.CVRandom, types.CVContiguous, types.CVForwardChaining:
 	case "":
@@ -274,6 +281,7 @@ func buildDesktopPCRConfig(request PCRRequest, groupLabels []string, rows int) (
 }
 
 func metricOrDefault(metric string) string {
+	metric = strings.ToLower(metric)
 	if metric == "" {
 		return "rmse"
 	}
@@ -281,6 +289,7 @@ func metricOrDefault(metric string) string {
 }
 
 func ruleOrDefault(rule string) string {
+	rule = strings.ToLower(rule)
 	if rule == "" {
 		return types.SelectOneSE
 	}
