@@ -626,6 +626,7 @@ generate-sklearn-reference:
 		. .venv/bin/activate && \
 		cd validation && \
 		python generate_reference_pca.py && \
+		python generate_reference_pcr.py && \
 		echo "Sklearn reference data generated successfully in testdata/validation/reference_results/"
 
 ## fmt: Format all Go code
