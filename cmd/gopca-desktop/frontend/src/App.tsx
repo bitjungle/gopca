@@ -38,6 +38,10 @@ import { useAppInit } from './hooks/useAppInit';
 import { DataLoadSection } from './components/sections/DataLoadSection';
 import { PCAConfigSection } from './components/sections/PCAConfigSection';
 import { ResultsSection } from './components/sections/ResultsSection';
+import { RegressionConfigSection } from './components/sections/RegressionConfigSection';
+import { RegressionResultsSection } from './components/sections/RegressionResultsSection';
+import { AnalysisModeToggle } from './components/AnalysisModeToggle';
+import { PCRProvider, usePCRContext, AnalysisMode } from './contexts/PCRContext';
 import { logger } from './utils/logger';
 import { FileData } from './types';
 import { GetAppMode } from '../wailsjs/go/main/App';
@@ -52,6 +56,7 @@ import { GetAppMode } from '../wailsjs/go/main/App';
  */
 function AppContent() {
     const { currentHelp, currentHelpKey } = useHelp();
+    const { mode, setMode } = usePCRContext();
     const { pcaResponse, runPCA, handleStartupFile } = usePCAContext();
     const { selectedPlot, resetVisualizationSelections } = useVisualizationContext();
     const {
@@ -142,8 +147,18 @@ function AppContent() {
             <main ref={mainScrollRef} className="flex-1 overflow-auto p-6">
                 <div className="max-w-7xl mx-auto space-y-6">
                     <DataLoadSection />
+                    <div className="flex justify-end">
+                        <AnalysisModeToggle mode={mode} onChange={setMode} />
+                    </div>
                     <PCAConfigSection onRunPCA={handleRunPCA} />
-                    <ResultsSection guiConfig={guiConfig} />
+                    {mode === 'explore' ? (
+                        <ResultsSection guiConfig={guiConfig} />
+                    ) : (
+                        <>
+                            <RegressionConfigSection />
+                            <RegressionResultsSection />
+                        </>
+                    )}
                 </div>
             </main>
 
@@ -220,6 +235,7 @@ function App() {
                 <HelpProvider content={helpContent}>
                     <FileDataProvider>
                         <PCAProvider>
+                            <PCRModeProvider>
                             <VisualizationProvider>
                                 <UIProvider>
                                     <GoCSVProvider>
@@ -233,6 +249,7 @@ function App() {
                                     </GoCSVProvider>
                                 </UIProvider>
                             </VisualizationProvider>
+                            </PCRModeProvider>
                         </PCAProvider>
                     </FileDataProvider>
                 </HelpProvider>
@@ -240,5 +257,21 @@ function App() {
         </ThemeProvider>
     );
 }
+
+/**
+ * PCRModeProvider owns the analysis mode and supplies the regression context.
+ *
+ * The mode lives here rather than inside PCRProvider so that switching it does
+ * not tear down and rebuild the regression state, which would discard a fitted
+ * model every time the user glanced back at the decomposition.
+ */
+const PCRModeProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+    const [mode, setMode] = useState<AnalysisMode>('explore');
+    return (
+        <PCRProvider mode={mode} setMode={setMode}>
+            {children}
+        </PCRProvider>
+    );
+};
 
 export default App;
