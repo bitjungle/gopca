@@ -220,6 +220,101 @@ pca analyze --output-scores --output-variance data.csv
 pca analyze --include-metrics -f json data.csv
 ```
 
+### `regress` - Fit a Principal Component Regression Model
+
+Predict a numeric response from principal component scores.
+
+The components are chosen from the predictors alone, without looking at the response, so a component that matters for prediction can carry very little predictor variance. Choose the number of components by cross-validation rather than by explained variance.
+
+#### Basic Usage
+
+```bash
+pca regress [OPTIONS] <input.csv>
+```
+
+#### Choosing a Response
+
+The response is a numeric column marked with the `#target` suffix. Ask which columns qualify:
+
+```bash
+pca regress --list-responses corn.csv
+```
+
+Categorical `#target` columns are listed separately and cannot be used: predicting a category is classification, which GoPCA does not do.
+
+#### Options
+
+| Option | Description | Default |
+|--------|-------------|---------|
+| `--response <name>` | Numeric `#target` column to predict | required |
+| `--list-responses` | List usable response columns and exit | `false` |
+| `-c, --components <n>` | Fix the component count instead of selecting it | select by CV |
+| `--max-components <n>` | Ceiling for the cross-validation sweep | `20` |
+| `--cv <n\|loo>` | Number of folds, or `loo` for leave-one-out | `10` |
+| `--cv-scheme <s>` | `random`, `contiguous`, `forward-chaining` | `random` |
+| `--cv-group <column>` | Categorical column whose levels must not split across folds | none |
+| `--cv-repeats <n>` | Repeat the design with fresh partitions | `1` |
+| `--cv-seed <n>` | Seed for the fold shuffle, recorded with the result | `42` |
+| `--select <rule>` | `min`, `one-se`, `tolerance`, `wold` | `one-se` |
+| `--tolerance <x>` | For `--select tolerance`: acceptable error increase | `0` |
+| `--wold-r <x>` | For `--select wold`: PRESS ratio threshold | `1.0` |
+| `--metric <m>` | Selection metric: `rmse` or `mae` | `rmse` |
+
+Predictor-side options (`--method`, `--scale`, `--snv`, `--vector-norm`, `--no-mean-centering`, `--exclude-rows`, `--exclude-columns`) work as they do for `analyze`.
+
+#### Examples
+
+```bash
+# Choose the component count by 10-fold cross-validation
+pca regress --response "Moisture#target" --cv 10 --scale standard corn.csv
+
+# Leave-one-out, which is K-fold with as many folds as there are groups
+pca regress --response "Moisture#target" --cv loo corn.csv
+
+# Keep replicates of one object together so none straddles a fold boundary
+pca regress --response "Yield#target" --cv 10 --cv-group "BatchID" process.csv
+
+# Leave-one-group-out
+pca regress --response "Yield#target" --cv loo --cv-group "BatchID" process.csv
+
+# Fix the component count instead of selecting it
+pca regress --response "Oil#target" --components 7 corn.csv
+
+# Save the predictions, coefficients, error curve and a reusable model
+pca regress --response "Protein#target" --cv 10 -o results/ corn.csv
+```
+
+#### Reading the Error Figures
+
+Three root-mean-square errors appear, and they are not interchangeable:
+
+| Name | Computed from | What it is for |
+|------|---------------|----------------|
+| `RMSEC` | Training residuals of the final model | Describes the fit. **Not** an estimate of future performance: the model has seen every row it is scored on. |
+| `RMSECV` | Held-out predictions from cross-validation | Selecting the component count. |
+| `RMSEP` | An independent test set | The estimate of future performance. `regress` does not produce it, because a test set must be kept out of model development entirely. |
+
+`bias` and `SEP` decompose `RMSECV` exactly, through `RMSECV² = bias² + (n−1)/n · SEP²`. A large bias with a small SEP is a precise model with a systematic offset, which a slope-and-bias correction can repair; a small bias with a large SEP is simply imprecise. The two call for different remedies, which is why both are reported.
+
+#### Missing Values
+
+Rows whose **response** is missing are excluded from the regression but still inform the decomposition, since PCA does not use the response. The counts are reported.
+
+Missing **predictors** must be resolved first. `--missing-strategy drop` and `zero` are available, and `--method nipals --missing-strategy native` handles them internally. `mean` and `median` are deliberately refused: both estimate values from the data, so applying them before cross-validation would let the held-out rows influence the model and make every reported error optimistic.
+
+#### Applying a Model
+
+With `-o`, `regress` writes `pcr_model.json` alongside the CSV outputs. It is an ordinary GoPCA model file with a `regression` block added, so `transform` reads it and emits predictions as well as scores:
+
+```bash
+pca regress --response "Moisture#target" --cv 10 -o cal/ calibration.csv
+pca transform cal/pcr_model.json new_samples.csv
+```
+
+#### Why PCR and Not PLS
+
+Partial least squares generally predicts better on the calibration problems this suite targets, because it chooses its directions using the response rather than predictor variance alone. GoPCA implements PCR deliberately: the suite exists to do Principal Component Analysis exceptionally well, and PCR is built from the same decomposition, whereas PLS is a different latent-variable family. This is a scope decision, not a claim that PCR predicts better. If PLS is what your problem calls for, a dedicated chemometrics package will serve you better.
+
 ### `validate` - Validate Input Data
 
 Check your data for issues before running PCA analysis.

@@ -48,6 +48,37 @@ func ConvertToPCAOutputData(result *types.PCAResult, data *Data, preprocessedDat
 		preprocessor, categoricalData, targetData, nil)
 }
 
+// ConvertToPCROutputData builds an exportable model from a principal component
+// regression fit.
+//
+// It reuses the PCA converter and attaches the regression block, so the two model
+// kinds share one artifact format. A consumer that only understands the
+// decomposition can ignore the extra block and still read the file, and
+// pca transform gains predictions from the same model it already loads.
+func ConvertToPCROutputData(result *types.PCRResult, data *Data, includeMetrics bool,
+	config types.PCAConfig, preprocessor *core.Preprocessor,
+	categoricalData map[string][]string, targetData map[string][]float64,
+	exportMeta *ExportMetadata) *types.PCAOutputData {
+
+	output := ConvertToPCAOutputDataWithMetadata(result.PCA, data, result.PCA.PreprocessedData,
+		includeMetrics, config, preprocessor, categoricalData, targetData, exportMeta)
+
+	output.Regression = &types.RegressionModel{
+		Response:           result.Response,
+		Components:         result.Components,
+		ScoreCoefficients:  result.ScoreCoefficients,
+		Intercept:          result.Intercept,
+		Coefficients:       result.Coefficients,
+		InterceptOriginal:  result.InterceptOriginal,
+		OriginalScaleValid: result.OriginalScaleValid,
+		ResponseMean:       result.ResponseMean,
+		RMSEC:              result.RMSEC,
+		R2C:                result.R2C,
+		Validation:         result.CV,
+	}
+	return output
+}
+
 // ConvertToPCAOutputDataWithMetadata converts PCAResult and Data to PCAOutputData with optional metadata
 func ConvertToPCAOutputDataWithMetadata(result *types.PCAResult, data *Data, preprocessedData types.Matrix, includeMetrics bool,
 	config types.PCAConfig, preprocessor *core.Preprocessor,

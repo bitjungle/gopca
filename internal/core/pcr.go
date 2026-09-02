@@ -185,6 +185,19 @@ func (p *PCRImpl) Fit(data types.Matrix, y []float64, config types.PCRConfig) (*
 	return result, nil
 }
 
+// Preprocessor returns the fitted preprocessing parameters, or nil when no
+// preprocessing was applied.
+//
+// Exporting a model needs the centring and scaling values so that a consumer can
+// reproduce the pipeline, and they live on the preprocessor rather than in the
+// result. Returns nil before Fit has run.
+func (p *PCRImpl) Preprocessor() *Preprocessor {
+	if !p.fitted {
+		return nil
+	}
+	return p.preprocessor
+}
+
 // FitPredict fits the model and returns its result in one step.
 func (p *PCRImpl) FitPredict(data types.Matrix, y []float64, config types.PCRConfig) (*types.PCRResult, error) {
 	return p.Fit(data, y, config)

@@ -250,6 +250,16 @@ func runTransform(opts *TransformOptions, modelFile, inputFile string) error {
 		Method:          pcaOutputData.Metadata.Config.Method,
 	}
 
+	// A model carrying a regression block predicts a response as well as
+	// projecting, so emit the predictions alongside the scores.
+	if pcaOutputData.Regression != nil {
+		predictions, err := predictFromModel(pcaOutputData.Regression, scores)
+		if err != nil {
+			return err
+		}
+		printTransformPredictions(pcaOutputData.Regression, predictions, data)
+	}
+
 	// Output results based on format
 	switch opts.OutputFormat {
 	case "json":
@@ -257,6 +267,71 @@ func runTransform(opts *TransformOptions, modelFile, inputFile string) error {
 	default: // table
 		return outputTransformTable(result, data)
 	}
+}
+
+// predictFromModel applies a stored regression to freshly projected scores.
+//
+// The score-space form is used rather than the collapsed original-scale
+// coefficients, because it is the one that stays correct under every
+// preprocessing option: row-wise transforms have no fixed coefficient vector, and
+// the scores handed in have already been through the full pipeline.
+func predictFromModel(model *types.RegressionModel, scores types.Matrix) ([]float64, error) {
+	k := len(model.ScoreCoefficients)
+	if k > 0 && len(scores) > 0 && len(scores[0]) < k {
+		return nil, fmt.Errorf(
+			"the model regresses on %d components but only %d could be projected from this data",
+			k, len(scores[0]))
+	}
+
+	predictions := make([]float64, len(scores))
+	for i := range scores {
+		value := model.Intercept
+		for j := 0; j < k; j++ {
+			value += model.ScoreCoefficients[j] * scores[i][j]
+		}
+		predictions[i] = value
+	}
+	return predictions, nil
+}
+
+// printTransformPredictions reports predictions for new data.
+//
+// No error figure accompanies each prediction. The measured response for these
+// rows is unknown, which is the point of predicting, and quoting the model's
+// training or cross-validated error beside a new prediction invites reading it as
+// that prediction's uncertainty. It is not: it is an average over the calibration
+// set, and a sample unlike that set can be predicted far worse.
+func printTransformPredictions(model *types.RegressionModel, predictions []float64,
+	data *pkgcsv.Data) {
+
+	fmt.Printf("\nPredicted %s\n", model.Response)
+	fmt.Println("──────────────────────────────────────────────────────────────")
+	fmt.Printf("  %-24s %16s\n", "Sample", "Predicted")
+
+	shown := len(predictions)
+	if shown > maxListedRows {
+		shown = maxListedRows
+	}
+	for i := 0; i < shown; i++ {
+		name := fmt.Sprintf("Row %d", i+1)
+		if i < len(data.RowNames) && data.RowNames[i] != "" {
+			name = data.RowNames[i]
+		}
+		fmt.Printf("  %-24s %16.8g\n", truncate(name, 24), predictions[i])
+	}
+	if len(predictions) > shown {
+		fmt.Printf("  ... %d more rows\n", len(predictions)-shown)
+	}
+
+	fmt.Printf("\n  Model: %d components, RMSEC %.6g", model.Components, model.RMSEC)
+	if model.Validation != nil {
+		if i := indexOfCandidate(model.Validation, model.Components); i >= 0 {
+			fmt.Printf(", RMSECV %.6g", model.Validation.RMSECV[i])
+		}
+	}
+	fmt.Println("\n  Those figures describe the calibration set. They are not the uncertainty")
+	fmt.Println("  of any individual prediction above, and a sample unlike the calibration")
+	fmt.Println("  data can be predicted far worse than they suggest.")
 }
 
 // Output functions for transform command

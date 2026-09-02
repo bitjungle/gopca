@@ -131,6 +131,86 @@ func (v *ModelValidator) ValidateModel(data []byte) error {
 		return fmt.Errorf("results validation failed: %w", err)
 	}
 
+	// The regression block is optional: a model without it is a plain
+	// decomposition, which is what every model produced before principal
+	// component regression existed looks like.
+	if regression, present := model["regression"]; present {
+		if err := v.validateRegression(regression); err != nil {
+			return fmt.Errorf("regression validation failed: %w", err)
+		}
+	}
+
+	return nil
+}
+
+// validateRegression checks the regression half of a principal component
+// regression model.
+//
+// The checks that matter are the ones a consumer would otherwise discover by
+// producing wrong numbers: a component count that disagrees with the coefficients
+// it indexes, and an original-scale form that claims to be usable while missing
+// the coefficients it needs. Both would predict silently and incorrectly.
+func (v *ModelValidator) validateRegression(data interface{}) error {
+	regression, ok := data.(map[string]interface{})
+	if !ok {
+		return fmt.Errorf("regression must be an object")
+	}
+
+	for _, field := range []string{
+		"response", "components", "score_coefficients", "intercept", "original_scale_valid",
+	} {
+		if _, present := regression[field]; !present {
+			return fmt.Errorf("missing required field: %s", field)
+		}
+	}
+
+	if _, ok := regression["response"].(string); !ok {
+		return fmt.Errorf("response must be a string")
+	}
+
+	components, ok := regression["components"].(float64)
+	if !ok {
+		return fmt.Errorf("components must be a number")
+	}
+	if components < 0 {
+		return fmt.Errorf("components must not be negative, got %v", components)
+	}
+
+	coefficients, ok := regression["score_coefficients"].([]interface{})
+	if !ok {
+		return fmt.Errorf("score_coefficients must be an array")
+	}
+	if len(coefficients) != int(components) {
+		return fmt.Errorf(
+			"the model declares %d components but carries %d score coefficients: "+
+				"predicting from it would read the wrong number of directions",
+			int(components), len(coefficients))
+	}
+
+	if _, ok := regression["intercept"].(float64); !ok {
+		return fmt.Errorf("intercept must be a number")
+	}
+
+	// original_scale_valid is a promise about the fields beside it, and it is
+	// required rather than optional. Absent, it would unmarshal to false and
+	// silently reclassify a model that does carry a collapsed form as one that
+	// does not, which is a change of meaning rather than a missing convenience.
+	claimed, ok := regression["original_scale_valid"].(bool)
+	if !ok {
+		return fmt.Errorf("original_scale_valid must be a boolean")
+	}
+	if claimed {
+		original, present := regression["coefficients"]
+		if !present {
+			return fmt.Errorf(
+				"original_scale_valid is true but coefficients are absent: " +
+					"the model claims a collapsed form it does not carry")
+		}
+		if _, ok := original.([]interface{}); !ok {
+			return fmt.Errorf("coefficients must be an array")
+		}
+	}
+
 	return nil
 }
 
