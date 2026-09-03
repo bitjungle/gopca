@@ -28,7 +28,7 @@ import { usePCARunner } from '../hooks/usePCARunner';
 import { useFileDataContext } from './FileDataContext';
 import { usePalette } from './PaletteContext';
 import { FileData, PCAResponse } from '../types';
-import { generateCLICommand as generateCLICommandUtil } from '../utils/cliCommandGenerator';
+import { generateCLICommand as generateCLICommandUtil, RegressionCLIConfig } from '../utils/cliCommandGenerator';
 import { logger } from '../utils/logger';
 
 export interface PCAContextType {
@@ -64,7 +64,8 @@ export interface PCAContextType {
     handleLoadDataset: (filename: string, defaultGroupColumn?: string) => Promise<void>;
     handleNativeFileSelectWithReset: () => Promise<void>;
     handleExportModel: () => Promise<void>;
-    generateCLICommand: () => string;
+    /** Builds the command-line preview. Pass a regression block to get `pca regress`. */
+    generateCLICommand: (regression?: RegressionCLIConfig) => string;
     handleRowSelectionChange: (selectedRows: number[]) => void;
     handleColumnSelectionChange: (selectedColumns: number[]) => void;
     /** Called when the app opens with a file path argument (startup event). */
@@ -175,8 +176,9 @@ export const PCAProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         }
     }, [pcaResponse, fileData, config, excludedRows, excludedColumns, fileName]);
 
-    const generateCLICommand = useCallback((): string => {
+    const generateCLICommand = useCallback((regression?: RegressionCLIConfig): string => {
         return generateCLICommandUtil({
+            regression,
             fileName, filePath,
             components: config.components,
             method: config.method,

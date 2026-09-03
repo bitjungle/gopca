@@ -8,6 +8,7 @@ import { usePCRConfig, PCRConfigState, PCRConfigResult } from '../hooks/usePCRCo
 import { usePCRRunner, PCRRunnerResult } from '../hooks/usePCRRunner';
 import { useFileDataContext } from './FileDataContext';
 import { usePCAContext } from './PCAContext';
+import { RegressionCLIConfig } from '../utils/cliCommandGenerator';
 
 /**
  * AnalysisMode selects what the configuration and results panels are for.
@@ -22,6 +23,13 @@ export type AnalysisMode = 'explore' | 'regress';
 export interface PCRContextType extends PCRConfigResult, PCRRunnerResult {
     mode: AnalysisMode;
     setMode: (mode: AnalysisMode) => void;
+
+    /**
+     * The regression settings shaped for the command-line preview, so the panel
+     * shows the command that reproduces what is on screen rather than the
+     * analyze command, which would not fit a regression at all.
+     */
+    regressionCLIConfig: RegressionCLIConfig;
 
     /** Numeric #target columns, sorted, which are the columns that can be predicted. */
     availableResponses: string[];
@@ -87,17 +95,33 @@ export const PCRProvider: React.FC<{
         [fileData]
     );
 
+    const regressionCLIConfig = useMemo<RegressionCLIConfig>(() => ({
+        response: configState.config.response,
+        components: configState.config.components,
+        maxComponents: configState.config.maxComponents,
+        cvFolds: configState.config.cvFolds,
+        cvScheme: configState.config.cvScheme,
+        cvGroupColumn: configState.config.cvGroupColumn,
+        cvSeed: configState.config.cvSeed,
+        selectRule: configState.config.selectRule,
+        metric: configState.config.metric,
+        tolerance: configState.config.tolerance,
+        woldR: configState.config.woldR
+    }), [configState.config]);
+
     const value = useMemo<PCRContextType>(
         () => ({
             ...configState,
             ...runner,
             mode,
             setMode,
+            regressionCLIConfig,
             availableResponses,
             categoricalTargets,
             groupingColumns
         }),
-        [configState, runner, mode, setMode, availableResponses, categoricalTargets, groupingColumns]
+        [configState, runner, mode, setMode, regressionCLIConfig,
+            availableResponses, categoricalTargets, groupingColumns]
     );
 
     return <PCRContext.Provider value={value}>{children}</PCRContext.Provider>;

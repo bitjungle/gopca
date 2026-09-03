@@ -45,6 +45,29 @@ export interface CLIConfig {
     missingStrategy?: string;
     excludedColumns?: number[];
     excludedRows?: number[];
+
+    /**
+     * Present when the command should fit a regression rather than run a plain
+     * decomposition. The predictor-side settings above apply either way, since
+     * both modes preprocess and decompose identically.
+     */
+    regression?: RegressionCLIConfig;
+}
+
+export interface RegressionCLIConfig {
+    response: string;
+    /** Zero means the count is chosen by cross-validation. */
+    components: number;
+    maxComponents: number;
+    /** Zero means one fold per group, which is leave-one-out. */
+    cvFolds: number;
+    cvScheme: string;
+    cvGroupColumn: string;
+    cvSeed: number;
+    selectRule: string;
+    metric: string;
+    tolerance: number;
+    woldR: number;
 }
 
 /**
@@ -53,7 +76,8 @@ export interface CLIConfig {
  * @returns The CLI command string
  */
 export function generateCLICommand(config: CLIConfig): string {
-    let cmd = 'pca analyze';
+    const regression = config.regression;
+    let cmd = regression ? 'pca regress' : 'pca analyze';
 
     // Use filePath if available (user file), otherwise fileName (built-in dataset)
     // For built-in datasets, fileName is just for illustration
@@ -68,14 +92,44 @@ export function generateCLICommand(config: CLIConfig): string {
         }
     }
 
-    // Add number of components
-    cmd += ` --components ${config.components}`;
+    if (regression) {
+        cmd += ` --response "${regression.response}"`;
+        if (regression.components > 0) {
+            cmd += ` --components ${regression.components}`;
+        } else {
+            cmd += ` --max-components ${regression.maxComponents}`;
+            cmd += regression.cvFolds === 0 ? ' --cv loo' : ` --cv ${regression.cvFolds}`;
+            if (regression.cvScheme && regression.cvScheme !== 'random') {
+                cmd += ` --cv-scheme ${regression.cvScheme}`;
+            }
+            if (regression.cvGroupColumn) {
+                cmd += ` --cv-group "${regression.cvGroupColumn}"`;
+            }
+            if (regression.cvSeed !== 42) {
+                cmd += ` --cv-seed ${regression.cvSeed}`;
+            }
+            if (regression.selectRule && regression.selectRule !== 'one-se') {
+                cmd += ` --select ${regression.selectRule}`;
+            }
+            if (regression.selectRule === 'tolerance') {
+                cmd += ` --tolerance ${regression.tolerance}`;
+            }
+            if (regression.selectRule === 'wold' && regression.woldR !== 1) {
+                cmd += ` --wold-r ${regression.woldR}`;
+            }
+            if (regression.metric && regression.metric !== 'rmse') {
+                cmd += ` --metric ${regression.metric}`;
+            }
+        }
+    } else {
+        cmd += ` --components ${config.components}`;
+    }
 
     // Add method
     cmd += ` --method ${config.method.toLowerCase()}`;
 
     // Add kernel parameters if using kernel PCA
-    if (config.method === 'kernel') {
+    if (!regression && config.method === 'kernel') {
         cmd += ` --kernel-type ${config.kernelType}`;
         if (config.kernelType === 'rbf') {
             cmd += ` --kernel-gamma ${config.kernelGamma}`;
@@ -88,7 +142,7 @@ export function generateCLICommand(config: CLIConfig): string {
     }
 
     // Add temporal parameters if using temporal PCA
-    if (config.method === 'temporal') {
+    if (!regression && config.method === 'temporal') {
         cmd += ` --temporal-lags ${config.temporalLags}`;
         if (config.varianceExplained && config.varianceExplained > 0) {
             cmd += ` --var-explained ${config.varianceExplained}`;
@@ -128,7 +182,7 @@ export function generateCLICommand(config: CLIConfig): string {
         // Convert 0-indexed to 1-indexed for CLI
         const columnIndices = config.excludedColumns.map(c => c + 1);
         const rangeStr = optimizeToRanges(columnIndices);
-        cmd += ` --exclude-cols ${rangeStr}`;
+        cmd += ` --exclude-columns ${rangeStr}`;
     }
 
     // Add excluded rows if any
