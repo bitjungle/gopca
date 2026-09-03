@@ -329,3 +329,155 @@ func TestFrontendDefaultMethodIsStillSpeltThisWay(t *testing.T) {
 			frontendDefaultMethod)
 	}
 }
+
+// matrixWithGaps returns a well-conditioned matrix with missing values punched
+// into the rows named, mimicking a file where a few samples are incomplete.
+func matrixWithGaps(rows, columns int, gapRows ...int) [][]float64 {
+	data := wellConditionedMatrix(rows, columns)
+	for _, row := range gapRows {
+		data[row][columns-1] = math.NaN()
+	}
+	return data
+}
+
+// TestRunPCRAppliesTheMissingValueStrategy is the regression test for a strategy
+// that was declared and ignored.
+//
+// The configuration panel offers a missing-value strategy, and the regression
+// path passed the matrix to the engine untouched. The engine refuses incomplete
+// predictors, so any file with a single gap could not be fitted at all, whatever
+// the user chose. A control that accepts a choice and acts on none of them is
+// worse than an absent one, because the user believes the gaps were handled.
+func TestRunPCRAppliesTheMissingValueStrategy(t *testing.T) {
+	const rows, columns = 30, 4
+	data := matrixWithGaps(rows, columns, 2, 7, 19)
+	y := linearResponse(rows)
+
+	fit := func(strategy string) PCRResponse {
+		t.Helper()
+		return (&App{}).RunPCR(PCRRequest{
+			PCA: PCARequest{
+				Data: data, Headers: []string{"a", "b", "c", "d"},
+				Method: "SVD", MeanCenter: true, MissingStrategy: strategy,
+			},
+			Response: "y#target", ResponseValues: y, Components: 2,
+		})
+	}
+
+	t.Run("drop removes the incomplete rows", func(t *testing.T) {
+		response := fit("drop")
+		if !response.Success {
+			t.Fatalf("drop was refused: %s", response.Error)
+		}
+		if got := len(response.Result.Fitted); got != rows-3 {
+			t.Errorf("fitted %d rows, want %d after dropping 3 incomplete ones", got, rows-3)
+		}
+	})
+
+	t.Run("zero keeps every row", func(t *testing.T) {
+		response := fit("zero")
+		if !response.Success {
+			t.Fatalf("zero was refused: %s", response.Error)
+		}
+		if got := len(response.Result.Fitted); got != rows {
+			t.Errorf("fitted %d rows, want all %d", got, rows)
+		}
+	})
+
+	t.Run("an unset strategy explains what to choose", func(t *testing.T) {
+		response := fit("error")
+		if response.Success {
+			t.Fatal("expected incomplete data with no strategy to be refused")
+		}
+		// The message has to be actionable: it must say what is wrong, how much of
+		// the data is affected, and which choices resolve it.
+		for _, expected := range []string{"missing", "3 rows", "drop", "zero"} {
+			if !strings.Contains(response.Error, expected) {
+				t.Errorf("the message does not mention %q: %s", expected, response.Error)
+			}
+		}
+	})
+
+	t.Run("learned imputation is refused", func(t *testing.T) {
+		for _, strategy := range []string{"mean", "median"} {
+			response := fit(strategy)
+			if response.Success {
+				t.Errorf("%s imputation should be refused before cross-validation", strategy)
+				continue
+			}
+			if !strings.Contains(response.Error, "cross-validation") {
+				t.Errorf("the refusal should say why: %s", response.Error)
+			}
+		}
+	})
+}
+
+// TestRunPCRDropKeepsTheResponseAligned checks the alignment hazard on the
+// missing-value path, which has the same shape as the exclusion path: dropping a
+// row from the predictors without dropping it from the response pairs every later
+// sample with the wrong measurement.
+//
+// Asserted at full rank, where an exactly linear response must be reproduced
+// exactly whichever rows survive.
+func TestRunPCRDropKeepsTheResponseAligned(t *testing.T) {
+	const rows, columns = 30, 4
+	data := matrixWithGaps(rows, columns, 1, 14, 28)
+	y := linearResponse(rows)
+
+	response := (&App{}).RunPCR(PCRRequest{
+		PCA: PCARequest{
+			Data: data, Headers: []string{"a", "b", "c", "d"},
+			Method: "svd", MeanCenter: true, MissingStrategy: "drop",
+		},
+		Response: "y#target", ResponseValues: y, Components: columns,
+	})
+	if !response.Success {
+		t.Fatalf("fit failed: %s", response.Error)
+	}
+	if 1-float64(response.Result.R2C) > 1e-9 {
+		t.Errorf("R2C = %.6f after dropping incomplete rows. At full rank an exactly "+
+			"linear response must still be reproduced exactly, so the response is no "+
+			"longer aligned with its predictors", float64(response.Result.R2C))
+	}
+}
+
+// TestRunPCRReportsRowsWithoutAResponse checks that rows whose response was never
+// measured are counted and reported, and that they still reach the decomposition.
+//
+// That combination is the whole point of the semi-supervised path: a sample with
+// predictors but no measurement still carries structure, and in calibration data
+// such samples are often the majority. Silently discarding them would be a real
+// loss with nothing on screen to show for it.
+func TestRunPCRReportsRowsWithoutAResponse(t *testing.T) {
+	const rows, columns = 30, 4
+	data := wellConditionedMatrix(rows, columns)
+	y := linearResponse(rows)
+
+	unmeasured := []int{3, 8, 15, 22}
+	for _, row := range unmeasured {
+		y[row] = math.NaN()
+	}
+
+	response := (&App{}).RunPCR(PCRRequest{
+		PCA: PCARequest{
+			Data: data, Headers: []string{"a", "b", "c", "d"},
+			Method: "svd", MeanCenter: true, MissingStrategy: "error",
+		},
+		Response: "y#target", ResponseValues: y, Components: 2,
+	})
+	if !response.Success {
+		t.Fatalf("fit failed: %s", response.Error)
+	}
+
+	if got := len(response.Result.ExcludedRows); got != len(unmeasured) {
+		t.Errorf("reported %d rows without a response, want %d; the interface reads this "+
+			"field to tell the user", got, len(unmeasured))
+	}
+	if got := len(response.Result.LabelledRows); got != rows-len(unmeasured) {
+		t.Errorf("regressed on %d rows, want %d", got, rows-len(unmeasured))
+	}
+	if got := len(response.Result.PCA.Scores); got != rows {
+		t.Errorf("the decomposition used %d rows, want all %d: rows without a measured "+
+			"response still carry predictor structure", got, rows)
+	}
+}

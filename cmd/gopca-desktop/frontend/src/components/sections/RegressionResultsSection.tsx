@@ -27,6 +27,7 @@ function show(value: number | undefined | null, digits = 4): string {
  */
 export const RegressionResultsSection: React.FC = () => {
     const { pcrResponse, pcrResultsRef } = usePCRContext();
+    const info = pcrResponse?.info;
     const { fileData } = useFileDataContext();
 
     const result = pcrResponse?.result;
@@ -135,6 +136,11 @@ export const RegressionResultsSection: React.FC = () => {
                 )}
 
                 <div className="mt-4 space-y-2 text-xs text-gray-600 dark:text-gray-400">
+                    {info && (
+                        <p className="text-gray-700 dark:text-gray-300">
+                            {info.split(' ').slice(0, 100).join(' ')}
+                        </p>
+                    )}
                     <p>
                         <strong>RMSEC</strong> describes the fit: the model has seen every row it
                         is scored on there, so it is not an estimate of future performance.
@@ -143,10 +149,18 @@ export const RegressionResultsSection: React.FC = () => {
                         model development entirely, which this screen does not create.
                     </p>
                     {result.excluded_rows && result.excluded_rows.length > 0 && (
-                        <p>
-                            {result.excluded_rows.length} rows had no measured response. They were
-                            left out of the regression but still informed the decomposition, since
-                            it does not use the response.
+                        <p className="text-gray-700 dark:text-gray-300">
+                            <strong>
+                                {result.excluded_rows.length} of{' '}
+                                {result.excluded_rows.length + (result.labelled_rows?.length ?? 0)} rows
+                                had no measured response.
+                            </strong>{' '}
+                            They were left out of the regression, which used{' '}
+                            {result.labelled_rows?.length ?? 0} rows, but they still informed the
+                            decomposition, which used all{' '}
+                            {result.pca?.scores?.length ?? 0}. The decomposition does not use the
+                            response, so a sample with predictors and no measurement still carries
+                            usable structure.
                         </p>
                     )}
                     {hitCeiling && (

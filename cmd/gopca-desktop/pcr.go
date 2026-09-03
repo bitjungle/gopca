@@ -132,6 +132,12 @@ func (a *App) RunPCR(request PCRRequest) (response PCRResponse) {
 		}
 	}
 
+	data, y, groupLabels, missingInfo, err := resolveMissingPredictors(
+		data, y, groupLabels, request.PCA.MissingStrategy, request.PCA.Method)
+	if err != nil {
+		return PCRResponse{Success: false, Error: err.Error()}
+	}
+
 	config, err := buildDesktopPCRConfig(request, groupLabels, len(data))
 	if err != nil {
 		return PCRResponse{Success: false, Error: err.Error()}
@@ -146,7 +152,100 @@ func (a *App) RunPCR(request PCRRequest) (response PCRResponse) {
 	return PCRResponse{
 		Success: true,
 		Result:  ConvertPCRResultToJSON(result),
-		Info:    describePCRFit(result),
+		Info:    describePCRFit(result, missingInfo),
+	}
+}
+
+// resolveMissingPredictors applies the chosen missing-value strategy before
+// fitting, keeping the response and any grouping labels aligned with the rows
+// that survive.
+//
+// Mean and median imputation are refused. Both estimate a value from the data,
+// which makes them learned steps, and a learned step applied before
+// cross-validation lets the held-out rows influence what the model trains on.
+// Every reported error would then be optimistic with nothing in the result to
+// reveal it. Dropping rows and substituting a constant estimate nothing, so both
+// are safe to apply once, up front. The command line refuses the same two for the
+// same reason.
+func resolveMissingPredictors(data [][]float64, y []float64, groupLabels []string,
+	strategy, method string) ([][]float64, []float64, []string, string, error) {
+
+	affected := map[int]bool{}
+	total := 0
+	for i := range data {
+		for _, v := range data[i] {
+			if math.IsNaN(v) || math.IsInf(v, 0) {
+				total++
+				affected[i] = true
+			}
+		}
+	}
+	if total == 0 {
+		return data, y, groupLabels, "", nil
+	}
+
+	switch strings.ToLower(strategy) {
+	case "mean", "median":
+		return nil, nil, nil, "", fmt.Errorf(
+			"%s imputation is not available for regression: filling gaps from column "+
+				"statistics estimates values from the data, so applying it before "+
+				"cross-validation would let the held-out rows influence the model and make "+
+				"every reported error optimistic. Choose 'drop' or 'zero', or use NIPALS "+
+				"with native handling", strings.ToLower(strategy))
+
+	case "native":
+		if strings.ToLower(method) != "nipals" {
+			return nil, nil, nil, "", fmt.Errorf(
+				"native missing-value handling needs the NIPALS method, not %s", method)
+		}
+		return data, y, groupLabels, fmt.Sprintf(
+			"NIPALS handled %d missing predictor values natively.", total), nil
+
+	case "zero":
+		cleaned := make([][]float64, len(data))
+		for i := range data {
+			cleaned[i] = make([]float64, len(data[i]))
+			for j, v := range data[i] {
+				if math.IsNaN(v) || math.IsInf(v, 0) {
+					cleaned[i][j] = 0
+				} else {
+					cleaned[i][j] = v
+				}
+			}
+		}
+		return cleaned, y, groupLabels, fmt.Sprintf(
+			"Substituted zero for %d missing predictor values.", total), nil
+
+	case "drop":
+		keptData := make([][]float64, 0, len(data)-len(affected))
+		keptY := make([]float64, 0, len(y))
+		var keptGroups []string
+		if groupLabels != nil {
+			keptGroups = make([]string, 0, len(groupLabels))
+		}
+		for i := range data {
+			if affected[i] {
+				continue
+			}
+			keptData = append(keptData, data[i])
+			keptY = append(keptY, y[i])
+			if keptGroups != nil {
+				keptGroups = append(keptGroups, groupLabels[i])
+			}
+		}
+		if len(keptData) == 0 {
+			return nil, nil, nil, "", fmt.Errorf(
+				"every row has at least one missing predictor, so dropping them leaves nothing to fit")
+		}
+		return keptData, keptY, keptGroups, fmt.Sprintf(
+			"Dropped %d rows with missing predictors; %d remain.", len(affected), len(keptData)), nil
+
+	default:
+		return nil, nil, nil, "", fmt.Errorf(
+			"this dataset has %d missing predictor values across %d rows. Choose a "+
+				"missing-value strategy: 'drop' removes those rows, 'zero' substitutes a "+
+				"constant, or use NIPALS with native handling",
+			total, len(affected))
 	}
 }
 
@@ -344,9 +443,13 @@ func filterStringsByExcludedRows(values []string, excluded []int) []string {
 
 // describePCRFit summarises the fit for the status line, naming what each error
 // figure is so that RMSEC is not read as a performance estimate.
-func describePCRFit(result *types.PCRResult) string {
+func describePCRFit(result *types.PCRResult, missingInfo string) string {
 	observed := len(result.LabelledRows)
-	summary := fmt.Sprintf("%d components, %d rows with an observed response, RMSEC %.4g",
+	summary := ""
+	if missingInfo != "" {
+		summary = missingInfo + " "
+	}
+	summary += fmt.Sprintf("%d components, %d rows with an observed response, RMSEC %.4g",
 		result.Components, observed, result.RMSEC)
 
 	if len(result.ExcludedRows) > 0 {
