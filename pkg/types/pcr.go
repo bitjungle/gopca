@@ -45,6 +45,16 @@ const (
 	// successive component counts exceeds WoldR, formalising "stop when the curve
 	// flattens".
 	SelectWold = "wold"
+
+	// SelectFirstMin takes the first candidate the curve turns upward from, rather
+	// than the lowest point anywhere in the range. It is the rule a practitioner
+	// applies by eye, and it is deliberately conservative: a later, deeper minimum
+	// is passed over in exchange for a simpler model reached before the curve
+	// starts wandering.
+	//
+	// The turn has to be larger than the noise in the curve to count, or every
+	// insignificant wiggle would stop the search. See SelectComponents.
+	SelectFirstMin = "first-min"
 )
 
 // Cross-validation schemes. Grouping is orthogonal to the scheme and is set
@@ -190,6 +200,19 @@ type CVReport struct {
 
 	Selected int    `json:"selected"`
 	Rule     string `json:"rule"`
+
+	// LowestError is the candidate with the smallest error anywhere in the range,
+	// which is not always the one selected. A parsimony rule passes over a deeper
+	// minimum on purpose, and a reader is owed the size of what was given up:
+	// accepting a slightly worse model for a much simpler one is a good trade, and
+	// accepting a much worse one is usually not.
+	LowestError int `json:"lowest_error"`
+
+	// CurveStillFalling records whether the error was still decreasing at the last
+	// candidate evaluated. Only then does raising the ceiling have any prospect of
+	// finding something better; on a curve that has turned, the end of the range
+	// is simply the end of the range.
+	CurveStillFalling bool `json:"curve_still_falling"`
 
 	// SelectedByAlternateMetric is what the other error measure would have chosen:
 	// MAE when the selection used RMSE, and RMSE when it used MAE. When it differs

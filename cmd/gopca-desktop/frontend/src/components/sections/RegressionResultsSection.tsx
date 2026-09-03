@@ -69,11 +69,22 @@ export const RegressionResultsSection: React.FC = () => {
     const selectedIndex = result.cv
         ? result.cv.candidates.indexOf(result.cv.selected)
         : -1;
-    const hitCeiling =
-        result.cv !== undefined &&
-        result.cv !== null &&
+
+    // Raising the ceiling is only worth suggesting when the error was actually
+    // still falling. A minimum landing on the last candidate of a curve that has
+    // already turned says the range ended, not that more components would help.
+    const worthExtending =
+        !!result.cv &&
         result.cv.candidates.length > 1 &&
-        result.cv.selected === result.cv.candidates[result.cv.candidates.length - 1];
+        result.cv.selected === result.cv.candidates[result.cv.candidates.length - 1] &&
+        result.cv.curve_still_falling;
+
+    const lowestIndex = result.cv
+        ? result.cv.candidates.indexOf(result.cv.lowest_error)
+        : -1;
+    const passedOverALowerPoint =
+        !!result.cv && lowestIndex >= 0 && selectedIndex >= 0 &&
+        result.cv.lowest_error !== result.cv.selected;
 
     return (
         <div ref={pcrResultsRef} className="space-y-6">
@@ -163,11 +174,23 @@ export const RegressionResultsSection: React.FC = () => {
                             usable structure.
                         </p>
                     )}
-                    {hitCeiling && (
+                    {worthExtending && (
                         <p className="text-amber-700 dark:text-amber-400">
-                            The search stopped at its ceiling of {result.cv!.selected} components
-                            and the error was still falling. Raise the maximum to see whether it
-                            keeps improving; this is the end of the range, not a minimum within it.
+                            The error was still falling at the ceiling of {result.cv!.selected}{' '}
+                            components. Raising the maximum may find something better, though
+                            whether a larger model is the right one is a separate question from
+                            whether it predicts better here.
+                        </p>
+                    )}
+                    {passedOverALowerPoint && (
+                        <p>
+                            The <strong>{result.cv!.rule}</strong> rule chose{' '}
+                            {result.cv!.selected} components. The lowest cross-validated error in
+                            the range was {show(Number(result.cv!.rmsecv[lowestIndex]))} at{' '}
+                            {result.cv!.lowest_error} components, against{' '}
+                            {show(Number(result.cv!.rmsecv[selectedIndex]))} here. The rule passes
+                            over that on purpose; whether the trade is a good one is yours to
+                            judge.
                         </p>
                     )}
                     {result.cv && result.cv.selected_by_alternate_metric !== result.cv.selected && (
@@ -186,9 +209,11 @@ export const RegressionResultsSection: React.FC = () => {
                         Cross-validated error by component count
                     </h3>
                     <p className="text-xs text-gray-500 dark:text-gray-400 mb-3">
-                        {result.components} components selected by the{' '}
-                        {result.cv!.rule} rule. Zero components is the intercept-only baseline,
-                        which predicts the training mean.
+                        {result.components} components suggested by the {result.cv!.rule} rule.
+                        Zero components is the intercept-only baseline, which predicts the
+                        training mean. A selection rule reads the curve and nothing else: the
+                        final count should also rest on what is known about the instrument and
+                        the system being measured, which no statistic in this panel can see.
                     </p>
                     <PlotlyLineChart
                         data={selectionCurve}

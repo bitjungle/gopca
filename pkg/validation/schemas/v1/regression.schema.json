@@ -80,6 +80,8 @@
         "q2": { "type": "array", "items": { "type": "number" } },
         "selected": { "type": "integer", "minimum": 0 },
         "selected_by_alternate_metric": { "type": "integer", "minimum": 0 },
+        "lowest_error": { "type": "integer", "minimum": 0, "description": "Candidate with the smallest error anywhere in the range, which a parsimony rule may deliberately pass over" },
+        "curve_still_falling": { "type": "boolean", "description": "Whether the error was still decreasing at the last candidate evaluated" },
         "rule": { "type": "string" },
         "out_of_fold_predictions": { "type": "array", "items": { "type": "number" } }
       }

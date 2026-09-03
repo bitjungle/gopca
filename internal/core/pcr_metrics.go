@@ -192,6 +192,26 @@ func SelectComponents(candidates []int, curve, standardError []float64,
 		}
 		return candidates[best], nil
 
+	case types.SelectFirstMin:
+		// Walk forward and stop where the curve first turns upward by more than
+		// the noise around it. The margin matters: a curve that dips, flattens
+		// within a hair, then continues down would otherwise stop on the first
+		// insignificant wiggle rather than at the shoulder a reader would pick.
+		// Where no standard error is available, a relative margin stands in.
+		for i := 0; i+1 < len(curve); i++ {
+			margin := 0.0
+			if standardError != nil && i < len(standardError) {
+				margin = standardError[i]
+			} else {
+				margin = 0.01 * math.Abs(curve[i])
+			}
+			if curve[i+1] > curve[i]+margin {
+				return candidates[i], nil
+			}
+		}
+		// The curve never turned, so it was still descending at the ceiling.
+		return candidates[len(candidates)-1], nil
+
 	case types.SelectWold:
 		r := woldR
 		if r <= 0 {
@@ -224,7 +244,8 @@ func SelectComponents(candidates []int, curve, standardError []float64,
 		return candidates[len(candidates)-1], nil
 
 	default:
-		return 0, fmt.Errorf("unknown selection rule %q: expected one of %q, %q, %q, %q",
-			rule, types.SelectMin, types.SelectOneSE, types.SelectTolerance, types.SelectWold)
+		return 0, fmt.Errorf("unknown selection rule %q: expected one of %q, %q, %q, %q, %q",
+			rule, types.SelectMin, types.SelectOneSE, types.SelectTolerance,
+			types.SelectWold, types.SelectFirstMin)
 	}
 }

@@ -457,7 +457,7 @@
     },
     "pcr-select-rule": {
       "title": "Selection Rule",
-      "text": "How the error curve becomes a component count. One standard error prefers the simplest model statistically indistinguishable from the best.",
+      "text": "How the error curve becomes a count. First minimum stops where the curve first turns up. The final choice should also rest on the instrument and the system.",
       "category": "analysis"
     },
     "pcr-metric": {

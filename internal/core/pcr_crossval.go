@@ -186,6 +186,28 @@ func (p *PCRImpl) crossValidate(data types.Matrix, y []float64, labelled []int,
 	}
 	report.Selected = selected
 
+	// Where the lowest point actually is, so a rule that passes over it can be
+	// held to account for the difference.
+	lowest := 0
+	for i := range curve {
+		if curve[i] < curve[lowest] {
+			lowest = i
+		}
+	}
+	report.LowestError = report.Candidates[lowest]
+
+	// Whether the error was still descending when the sweep ran out of room.
+	// Asserting that it was, without checking, would put a claim on screen that
+	// the curve does not support: a minimum landing on the last candidate of a
+	// noisy curve is not evidence that more components would help.
+	if n := len(curve); n >= 2 {
+		margin := 0.0
+		if len(report.RMSECVSE) == n {
+			margin = report.RMSECVSE[n-1]
+		}
+		report.CurveStillFalling = curve[n-1] < curve[n-2]-margin
+	}
+
 	// What the other measure would have chosen. When the two disagree, a few large
 	// residuals are driving the choice, which is worth surfacing rather than
 	// resolving silently.

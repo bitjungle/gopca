@@ -11,7 +11,7 @@ import { useCallback, useState } from 'react';
  * 'one-se' is the default rather than 'min' because the minimum of a noisy curve
  * is frequently reached by a model far more complex than the data supports.
  */
-export type SelectionRule = 'min' | 'one-se' | 'tolerance' | 'wold';
+export type SelectionRule = 'min' | 'one-se' | 'tolerance' | 'wold' | 'first-min';
 
 /** Fold layouts. Grouping is orthogonal and set through cvGroupColumn. */
 export type CVScheme = 'random' | 'contiguous' | 'forward-chaining';

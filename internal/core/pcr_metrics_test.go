@@ -280,3 +280,90 @@ func TestPCRRefusesMissingPredictors(t *testing.T) {
 		t.Errorf("NIPALS with native missing-value handling should accept incomplete data: %v", err)
 	}
 }
+
+// TestSelectComponentsFirstMinimum covers the rule a practitioner applies by eye:
+// take the first point the curve turns upward from, rather than the lowest point
+// anywhere in the range.
+func TestSelectComponentsFirstMinimum(t *testing.T) {
+	tests := []struct {
+		name       string
+		candidates []int
+		curve      []float64
+		stderr     []float64
+		want       int
+	}{
+		{
+			name:       "stops at the first real turn",
+			candidates: []int{0, 1, 2, 3, 4, 5},
+			curve:      []float64{1.0, 0.6, 0.4, 0.7, 0.3, 0.2},
+			stderr:     []float64{0.02, 0.02, 0.02, 0.02, 0.02, 0.02},
+			want:       2,
+		},
+		{
+			name:       "a wiggle smaller than the noise is not a turn",
+			candidates: []int{0, 1, 2, 3, 4},
+			curve:      []float64{1.0, 0.50, 0.51, 0.30, 0.20},
+			stderr:     []float64{0.1, 0.1, 0.1, 0.1, 0.1},
+			want:       4,
+		},
+		{
+			name:       "a monotone curve runs to the end of the range",
+			candidates: []int{0, 1, 2, 3},
+			curve:      []float64{1.0, 0.8, 0.6, 0.4},
+			stderr:     []float64{0.01, 0.01, 0.01, 0.01},
+			want:       3,
+		},
+		{
+			name:       "a curve that only rises stops immediately",
+			candidates: []int{0, 1, 2},
+			curve:      []float64{0.2, 0.5, 0.9},
+			stderr:     []float64{0.01, 0.01, 0.01},
+			want:       0,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got, err := SelectComponents(tt.candidates, tt.curve, tt.stderr,
+				types.SelectFirstMin, 0, 0)
+			if err != nil {
+				t.Fatalf("SelectComponents: %v", err)
+			}
+			if got != tt.want {
+				t.Errorf("selected %d, want %d", got, tt.want)
+			}
+		})
+	}
+}
+
+// TestSelectComponentsFirstMinimumPassesOverADeeperOne is the property that makes
+// the rule worth having and worth warning about at the same time.
+//
+// The curve here is the shape testdata/bronir2/bronir2.csv actually produces for
+// Dens#target: an early shoulder, a long unstable stretch, then a much lower
+// minimum far to the right. Stopping at the shoulder is the conservative reading
+// and it gives up a great deal, which is why the interface reports where the
+// lowest point was rather than only what was chosen.
+func TestSelectComponentsFirstMinimumPassesOverADeeperOne(t *testing.T) {
+	candidates := []int{0, 1, 2, 3, 4, 5, 6, 7}
+	curve := []float64{8.42, 7.43, 6.57, 6.52, 6.54, 6.51, 6.80, 3.48}
+	stderr := []float64{0.20, 0.20, 0.20, 0.20, 0.20, 0.20, 0.20, 0.20}
+
+	first, err := SelectComponents(candidates, curve, stderr, types.SelectFirstMin, 0, 0)
+	if err != nil {
+		t.Fatalf("SelectComponents: %v", err)
+	}
+	lowest, err := SelectComponents(candidates, curve, stderr, types.SelectMin, 0, 0)
+	if err != nil {
+		t.Fatalf("SelectComponents: %v", err)
+	}
+
+	if first >= lowest {
+		t.Errorf("the first-minimum rule selected %d and the lowest point is %d; "+
+			"on this curve the rule is supposed to stop earlier", first, lowest)
+	}
+	if curve[first] <= curve[lowest] {
+		t.Errorf("the rule stopped somewhere no worse than the minimum, so this curve " +
+			"does not exercise the trade-off it exists to make")
+	}
+}

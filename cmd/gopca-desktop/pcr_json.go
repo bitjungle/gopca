@@ -97,6 +97,8 @@ type CVReportJSON struct {
 	Selected                  int    `json:"selected"`
 	Rule                      string `json:"rule"`
 	SelectedByAlternateMetric int    `json:"selected_by_alternate_metric"`
+	LowestError               int    `json:"lowest_error"`
+	CurveStillFalling         bool   `json:"curve_still_falling"`
 
 	OutOfFold []types.JSONFloat64 `json:"out_of_fold_predictions"`
 }
@@ -150,6 +152,8 @@ func ConvertPCRResultToJSON(result *types.PCRResult) *PCRResultJSON {
 			Q2:                        toJSONFloats(result.CV.Q2),
 			Selected:                  result.CV.Selected,
 			Rule:                      result.CV.Rule,
+			LowestError:               result.CV.LowestError,
+			CurveStillFalling:         result.CV.CurveStillFalling,
 			SelectedByAlternateMetric: result.CV.SelectedByAlternateMetric,
 			OutOfFold:                 toJSONFloats(result.CV.OutOfFold),
 		}

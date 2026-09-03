@@ -159,7 +159,7 @@ EXAMPLES:
 		"Seed for the fold shuffle, recorded so a run can be reproduced")
 
 	cmd.Flags().StringVar(&opts.Select, "select", types.SelectOneSE,
-		"Selection rule: min, one-se, tolerance, wold")
+		"Selection rule: min, one-se, tolerance, wold, first-min")
 	cmd.Flags().Float64Var(&opts.Tolerance, "tolerance", 0,
 		"For --select tolerance: acceptable error increase, in response units")
 	cmd.Flags().Float64Var(&opts.WoldR, "wold-r", 1.0,

@@ -174,6 +174,7 @@ export const RegressionConfigSection: React.FC = () => {
                                         className="mt-1 block w-full rounded-md border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100 text-sm"
                                     >
                                         <option value="one-se">One standard error</option>
+                                        <option value="first-min">First minimum</option>
                                         <option value="min">Lowest error</option>
                                         <option value="tolerance">Within a tolerance</option>
                                         <option value="wold">Wold&apos;s R</option>
