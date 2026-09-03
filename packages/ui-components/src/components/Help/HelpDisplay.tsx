@@ -61,14 +61,19 @@ export const HelpDisplay: React.FC<HelpDisplayProps> = ({ helpKey, title, text }
     // so widening the header does nothing until this changes. 4xl fits the median
     // entry on one line and the 90th percentile comfortably on two.
     <div role="status" className="h-10 flex items-center justify-center max-w-4xl mx-auto">
-      <div className="flex items-center gap-2 text-center">
-        <span className="text-sm font-semibold text-gray-900 dark:text-gray-100">
-          {title}:
-        </span>
-        <span className="text-sm text-gray-600 dark:text-gray-300 line-clamp-2">
-          {text}
-        </span>
-      </div>
+      {/*
+        Title and text flow as one paragraph rather than sitting in two flex
+        items. As siblings in a flex row the title was a shrinkable item, so a
+        title of three or four words was broken across three lines while the text
+        beside it kept its own two-line clamp and the pair overflowed the fixed
+        h-10 box. Inline, the title only wraps if it alone exceeds a line, which
+        at a longest observed 28 characters it never does, and the clamp now
+        governs the whole message instead of the text alone.
+      */}
+      <p className="text-sm text-center line-clamp-2">
+        <span className="font-semibold text-gray-900 dark:text-gray-100">{title}:</span>{' '}
+        <span className="text-gray-600 dark:text-gray-300">{text}</span>
+      </p>
     </div>
   );
 };
