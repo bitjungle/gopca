@@ -52,9 +52,25 @@ export function usePCRRunner(
             return;
         }
 
-        const responseValues = fileData.numericTargetColumns?.[pcrConfig.response];
-        if (!responseValues) {
+        const rawResponse = fileData.numericTargetColumns?.[pcrConfig.response];
+        if (!rawResponse) {
             setPcrError(`The column "${pcrConfig.response}" is not available as a response.`);
+            return;
+        }
+
+        // A response that was never measured arrives here as null, because NaN
+        // cannot be represented in JSON and the backend marshals it that way.
+        // Sending it straight back would deliver a genuine measurement of zero:
+        // those rows would count as observed and the model would be fitted against
+        // values nobody recorded. The mask travels alongside so the backend can put
+        // the gaps back, which is how the predictor matrix already works.
+        const responseMissing = rawResponse.map(
+            value => value === null || value === undefined || !Number.isFinite(value)
+        );
+        const responseValues = rawResponse.map((value, i) => (responseMissing[i] ? 0 : value));
+
+        if (responseMissing.every(Boolean)) {
+            setPcrError(`No row has a measured value for "${pcrConfig.response}".`);
             return;
         }
 
@@ -79,6 +95,7 @@ export function usePCRRunner(
                 },
                 response: pcrConfig.response,
                 responseValues,
+                responseMissing,
                 components: pcrConfig.components,
                 maxComponents: pcrConfig.maxComponents,
                 cvFolds: pcrConfig.cvFolds,

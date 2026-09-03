@@ -52,6 +52,17 @@ type PCRRequest struct {
 	// to re-parse the file, and keeps one definition of which column was chosen.
 	ResponseValues []float64 `json:"responseValues"`
 
+	// ResponseMissing marks the rows whose response was never measured, one flag
+	// per row.
+	//
+	// A separate mask is necessary because NaN does not survive the round trip.
+	// The engine marshals it as null, JavaScript holds it as null, and unmarshalling
+	// null back into a float64 yields zero. An unmeasured response would therefore
+	// arrive as a real measurement of zero: the rows would count as observed, and
+	// the model would be fitted against values nobody recorded. PCARequest carries
+	// MissingMask for the predictors for exactly this reason.
+	ResponseMissing []bool `json:"responseMissing,omitempty"`
+
 	// Components fixes the retained count. Zero means choose it by
 	// cross-validation, bounded by MaxComponents.
 	Components    int `json:"components"`
@@ -113,8 +124,8 @@ func (a *App) RunPCR(request PCRRequest) (response PCRResponse) {
 		}
 	}
 
-	data := request.PCA.Data
-	y := request.ResponseValues
+	data := restoreMissing(request.PCA.Data, request.PCA.MissingMask)
+	y := restoreMissingResponse(request.ResponseValues, request.ResponseMissing)
 	groupLabels := request.CVGroupLabels
 
 	if len(request.PCA.ExcludedRows) > 0 || len(request.PCA.ExcludedColumns) > 0 {
@@ -409,6 +420,48 @@ func encodeDesktopGroups(labels []string) []int {
 		groups[i] = id
 	}
 	return groups
+}
+
+// restoreMissing puts NaN back where the mask says a value was missing.
+//
+// The matrix arrives from the interface as plain numbers, because NaN cannot be
+// represented in JSON: it is marshalled out as null and unmarshalled back as
+// zero. Without this the gaps would look like genuine measurements of zero, and
+// the missing-value strategy would find nothing to act on. RunPCA restores the
+// same way.
+func restoreMissing(data [][]float64, mask [][]bool) [][]float64 {
+	if mask == nil {
+		return data
+	}
+	restored := make([][]float64, len(data))
+	for i := range data {
+		restored[i] = make([]float64, len(data[i]))
+		copy(restored[i], data[i])
+		if i >= len(mask) {
+			continue
+		}
+		for j := range restored[i] {
+			if j < len(mask[i]) && mask[i][j] {
+				restored[i][j] = math.NaN()
+			}
+		}
+	}
+	return restored
+}
+
+// restoreMissingResponse puts NaN back where the response was never measured.
+func restoreMissingResponse(values []float64, missing []bool) []float64 {
+	if missing == nil {
+		return values
+	}
+	restored := make([]float64, len(values))
+	copy(restored, values)
+	for i := range restored {
+		if i < len(missing) && missing[i] {
+			restored[i] = math.NaN()
+		}
+	}
+	return restored
 }
 
 // filterFloatsByExcludedRows drops the excluded rows from a per-row vector.

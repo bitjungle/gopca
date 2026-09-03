@@ -481,3 +481,114 @@ func TestRunPCRReportsRowsWithoutAResponse(t *testing.T) {
 			"response still carry predictor structure", got, rows)
 	}
 }
+
+// TestRunPCRRestoresGapsFromTheMasks is the regression test for a corruption that
+// happened entirely in transit.
+//
+// NaN cannot be represented in JSON. The engine marshals it as null, the
+// interface holds it as null, and unmarshalling null back into a float64 yields
+// zero. A response that was never measured therefore arrived as a genuine
+// measurement of zero: every row counted as observed, and the model was fitted
+// against numbers nobody recorded.
+//
+// On testdata/bronir2/bronir2.csv that produced a model of nought components
+// reporting 880 observed responses when only 457 are measured, with an RMSEC of
+// 472 against a response whose standard deviation is about 8. The engine was
+// behaving correctly; it was being handed a different response from the one
+// chosen. The predictor matrix has carried a mask for this reason since before
+// regression existed, and this path ignored it.
+//
+// The request below is built the way the interface builds it, with gaps sent as
+// zero alongside a mask, because that is the shape in which the bug occurs.
+func TestRunPCRRestoresGapsFromTheMasks(t *testing.T) {
+	const rows, columns = 30, 4
+	data := wellConditionedMatrix(rows, columns)
+	y := linearResponse(rows)
+
+	unmeasured := map[int]bool{4: true, 11: true, 17: true, 25: true}
+
+	// Serialise the way the round trip does: gaps become zero, and the mask
+	// carries the knowledge that they were gaps.
+	sentResponse := make([]float64, rows)
+	responseMissing := make([]bool, rows)
+	for i := 0; i < rows; i++ {
+		if unmeasured[i] {
+			sentResponse[i] = 0
+			responseMissing[i] = true
+			continue
+		}
+		sentResponse[i] = y[i]
+	}
+
+	// Two predictor cells are missing as well, sent the same way.
+	sentData := make([][]float64, rows)
+	predictorMask := make([][]bool, rows)
+	for i := range data {
+		sentData[i] = make([]float64, columns)
+		copy(sentData[i], data[i])
+		predictorMask[i] = make([]bool, columns)
+	}
+	sentData[2][1], predictorMask[2][1] = 0, true
+	sentData[19][3], predictorMask[19][3] = 0, true
+
+	response := (&App{}).RunPCR(PCRRequest{
+		PCA: PCARequest{
+			Data: sentData, MissingMask: predictorMask,
+			Headers: []string{"a", "b", "c", "d"},
+			Method:  "SVD", MeanCenter: true, MissingStrategy: "drop",
+		},
+		Response:        "y#target",
+		ResponseValues:  sentResponse,
+		ResponseMissing: responseMissing,
+		Components:      2,
+	})
+	if !response.Success {
+		t.Fatalf("fit failed: %s", response.Error)
+	}
+
+	// Two rows are dropped for incomplete predictors. Of the 28 that remain, the
+	// four unmeasured responses leave the regression but stay in the decomposition.
+	const droppedForPredictors = 2
+	remaining := rows - droppedForPredictors
+	wantUnmeasured := len(unmeasured)
+	for row := range unmeasured {
+		if row == 2 || row == 19 {
+			wantUnmeasured-- // already removed for a missing predictor
+		}
+	}
+
+	if got := len(response.Result.ExcludedRows); got != wantUnmeasured {
+		t.Errorf("reported %d rows without a response, want %d. Zero is a legitimate "+
+			"measurement, so a gap that arrives as zero is indistinguishable from one",
+			got, wantUnmeasured)
+	}
+	if got := len(response.Result.LabelledRows); got != remaining-wantUnmeasured {
+		t.Errorf("regressed on %d rows, want %d", got, remaining-wantUnmeasured)
+	}
+	if got := len(response.Result.PCA.Scores); got != remaining {
+		t.Errorf("the decomposition used %d rows, want %d", got, remaining)
+	}
+}
+
+// TestRunPCRWithoutMasksTreatsEveryValueAsMeasured pins the other half of the
+// contract: absent a mask, the numbers are taken at face value. A caller that
+// genuinely has complete data should not have to send an all-false mask.
+func TestRunPCRWithoutMasksTreatsEveryValueAsMeasured(t *testing.T) {
+	const rows, columns = 24, 4
+	response := (&App{}).RunPCR(PCRRequest{
+		PCA: PCARequest{
+			Data: wellConditionedMatrix(rows, columns), Headers: []string{"a", "b", "c", "d"},
+			Method: "svd", MeanCenter: true, MissingStrategy: "error",
+		},
+		Response: "y#target", ResponseValues: linearResponse(rows), Components: 2,
+	})
+	if !response.Success {
+		t.Fatalf("fit failed: %s", response.Error)
+	}
+	if got := len(response.Result.ExcludedRows); got != 0 {
+		t.Errorf("excluded %d rows from complete data, want none", got)
+	}
+	if got := len(response.Result.LabelledRows); got != rows {
+		t.Errorf("regressed on %d rows, want all %d", got, rows)
+	}
+}
