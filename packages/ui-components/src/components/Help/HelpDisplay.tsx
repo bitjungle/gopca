@@ -56,7 +56,11 @@ export const HelpDisplay: React.FC<HelpDisplayProps> = ({ helpKey, title, text }
   }
 
   return (
-    <div role="status" className="h-10 flex items-center justify-center max-w-2xl mx-auto">
+    // The width cap, not the surrounding layout, is what decides how much help
+    // text is visible: the header gives this element more room than 2xl already,
+    // so widening the header does nothing until this changes. 4xl fits the median
+    // entry on one line and the 90th percentile comfortably on two.
+    <div role="status" className="h-10 flex items-center justify-center max-w-4xl mx-auto">
       <div className="flex items-center gap-2 text-center">
         <span className="text-sm font-semibold text-gray-900 dark:text-gray-100">
           {title}:
