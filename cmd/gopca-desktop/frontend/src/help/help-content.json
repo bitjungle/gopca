@@ -464,6 +464,16 @@
       "title": "Selection Metric",
       "text": "RMSE is driven by the largest errors, MAE by the typical one. When the two choose different models, a few samples are deciding the result.",
       "category": "analysis"
+    },
+    "configure-pca": {
+      "title": "Configure PCA",
+      "text": "Choose how many components to compute, which algorithm to use, and how the data is preprocessed before the decomposition.",
+      "category": "configuration"
+    },
+    "configure-pca-for-regression": {
+      "title": "Configure the Decomposition",
+      "text": "These settings shape the components the regression is built on. Switch to Explore to see how they change the decomposition before you fit.",
+      "category": "configuration"
     }
   },
   "categories": {

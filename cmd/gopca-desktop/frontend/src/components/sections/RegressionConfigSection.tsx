@@ -30,10 +30,8 @@ export const RegressionConfigSection: React.FC = () => {
     const usingCrossValidation = config.components === 0;
 
     return (
-        <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-6 space-y-4">
-            <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100">
-                Regression
-            </h2>
+        <div className="bg-white dark:bg-gray-800 rounded-lg p-6 shadow-lg border border-gray-200 dark:border-gray-700 space-y-4">
+            <h2 className="text-xl font-semibold mb-6">Step 3: Regression</h2>
 
             {noResponses ? (
                 <div className="text-sm text-gray-600 dark:text-gray-400 space-y-2">

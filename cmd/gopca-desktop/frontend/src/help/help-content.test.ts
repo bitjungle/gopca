@@ -41,15 +41,46 @@ describe('help content', () => {
     // and nothing checks the two agree: a key with a typo renders an empty help
     // area rather than failing, so the header quietly stops keeping its promise
     // that hovering any element explains it.
+    //
+    // Both spellings are collected. A key can be a plain attribute,
+    // helpKey="thing", or an expression that picks between keys at render time,
+    // helpKey={mode ? 'a' : 'b'}. An earlier version matched only the first, so
+    // keys chosen by an expression were never checked at all and this test passed
+    // by not looking at them.
+    const helpKeysIn = (text: string): string[] => {
+        const keys: string[] = [];
+        for (const m of text.matchAll(/helpKey=(?:["']([a-zA-Z0-9_-]+)["']|\{([^}]*)\})/g)) {
+            if (m[1]) {
+                keys.push(m[1]);
+                continue;
+            }
+            // Inside an expression, take every quoted literal. A key built by
+            // concatenation cannot be resolved statically and is skipped rather
+            // than guessed at.
+            for (const q of m[2].matchAll(/["']([a-zA-Z0-9_-]+)["']/g)) {
+                keys.push(q[1]);
+            }
+        }
+        return keys;
+    };
+
     it('defines every key that a component asks for', () => {
         const missing: string[] = [];
         for (const [file, text] of Object.entries(SOURCES)) {
             if (file.includes('.test.')) continue;
-            for (const m of text.matchAll(/helpKey=["']([a-zA-Z0-9_-]+)["']/g)) {
-                if (!defined.has(m[1])) missing.push(`${m[1]} (${file})`);
+            for (const key of helpKeysIn(text)) {
+                if (!defined.has(key)) missing.push(`${key} (${file})`);
             }
         }
         expect(missing).toEqual([]);
+    });
+
+    // Guards the extractor itself: it silently found nothing before, and a test
+    // that collects no keys passes just as happily as one that checks them all.
+    it('finds keys written as an expression, not only as a literal', () => {
+        const literal = '<HelpWrapper helpKey=\'plain\'>';
+        const expression = '<X helpKey={on ? \'first\' : \'second\'} />';
+        expect(helpKeysIn(literal + expression)).toEqual(['plain', 'first', 'second']);
     });
 
     it('gives every entry a title and a text', () => {

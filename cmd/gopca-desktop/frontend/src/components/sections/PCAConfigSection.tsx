@@ -65,34 +65,47 @@ export function PCAConfigSection({ onRunPCA }: PCAConfigSectionProps) {
 
     return (
         <div className="bg-white dark:bg-gray-800 rounded-lg p-6 shadow-lg border border-gray-200 dark:border-gray-700">
-            <h2 className="text-xl font-semibold mb-6">Step 2: Configure PCA</h2>
+            <HelpWrapper helpKey={regressing ? 'configure-pca-for-regression' : 'configure-pca'}>
+                <h2 className="text-xl font-semibold mb-6">
+                    {regressing ? 'Step 2: Configure the PCA Decomposition' : 'Step 2: Configure PCA'}
+                </h2>
+            </HelpWrapper>
 
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
                 {/* Left Column - Core PCA Configuration */}
                 <div className="space-y-4">
-                    <h3 className="text-sm font-semibold text-gray-700 dark:text-gray-300">PCA Options</h3>
+                    <h3 className="text-sm font-semibold text-gray-700 dark:text-gray-300">
+                        {regressing ? 'Decomposition Options' : 'PCA Options'}
+                    </h3>
 
                     <div className="p-3 bg-gray-50 dark:bg-gray-700/50 rounded-lg space-y-4">
-                        <HelpWrapper helpKey="num-components">
-                            <label className="block text-sm font-medium mb-2">
-                                Number of Components
-                            </label>
-                            <input
-                                type="number"
-                                min="1"
-                                max={maxComponentsFor(config.method, fileData.headers.length, fileData.data.length, config.temporalLags)}
-                                value={config.components}
-                                onChange={(e) => setConfig(prev => ({
-                                    ...prev,
-                                    components: clampComponentCount(
-                                        e.target.value,
-                                        prev.components,
-                                        maxComponentsFor(prev.method, fileData.headers.length, fileData.data.length, prev.temporalLags)
-                                    )
-                                }))}
-                                className="w-full px-3 py-2 bg-gray-100 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg text-gray-900 dark:text-white"
-                            />
-                        </HelpWrapper>
+                        {regressing ? (
+                            <p className="text-sm text-gray-500 dark:text-gray-400">
+                                The number of components is set in step 3, where it can also be
+                                chosen by cross-validation.
+                            </p>
+                        ) : (
+                            <HelpWrapper helpKey="num-components">
+                                <label className="block text-sm font-medium mb-2">
+                                    Number of Components
+                                </label>
+                                <input
+                                    type="number"
+                                    min="1"
+                                    max={maxComponentsFor(config.method, fileData.headers.length, fileData.data.length, config.temporalLags)}
+                                    value={config.components}
+                                    onChange={(e) => setConfig(prev => ({
+                                        ...prev,
+                                        components: clampComponentCount(
+                                            e.target.value,
+                                            prev.components,
+                                            maxComponentsFor(prev.method, fileData.headers.length, fileData.data.length, prev.temporalLags)
+                                        )
+                                    }))}
+                                    className="w-full px-3 py-2 bg-gray-100 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg text-gray-900 dark:text-white"
+                                />
+                            </HelpWrapper>
+                        )}
 
                         <HelpWrapper helpKey="pca-method">
                             <label className="block text-sm font-medium mb-2">
