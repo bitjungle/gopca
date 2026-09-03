@@ -63,10 +63,13 @@ describe('help content', () => {
     // entry is silently cut off rather than wrapping. Where exactly the clamp
     // falls depends on the rendered font and has not been measured, so this is a
     // ratchet rather than a real limit: it holds the line at the longest entry we
-    // already ship, so nothing new makes the problem worse. The entries near this
-    // bound may already be truncated on screen — worth checking against the
-    // running app, and lowering this once the true limit is known.
-    const LONGEST_SHIPPED = 350;
+    // already ship, so nothing new makes the problem worse.
+    //
+    // The box was widened from max-w-2xl to max-w-4xl, which roughly doubles what
+    // two lines hold, so the entries near this bound are likelier to fit now than
+    // when the number was first set. Lower it again whenever a long entry is
+    // rewritten; the value is the longest title plus text currently shipped.
+    const LONGEST_SHIPPED = 301;
     it('adds no entry longer than the longest one already shipped', () => {
         const tooLong = Object.entries(helpContent.help)
             .map(([key, e]) => [key, e.title.length + e.text.length] as const)

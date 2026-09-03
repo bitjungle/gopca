@@ -27,18 +27,25 @@ const MODES: { value: AnalysisMode; label: string; helpKey: string }[] = [
  * the loaded-data panel grew, and a control that changes what the entire screen
  * is for should not have to be hunted for.
  *
- * It is a segmented control rather than an on/off switch, and that is deliberate.
- * A switch expresses one feature being enabled, with an implied default state.
- * Explore and Regress are peers: neither is the absence of the other, so there is
- * no honest way to label a switch. "Regress: off" would suggest regression is
- * disabled rather than that a different question is being asked, and a screen
- * reader would announce exactly that. Two buttons carrying aria-pressed announce
- * "Explore, pressed" and "Regress, not pressed", which is what is actually true.
+ * The two options are stacked rather than side by side, which halves the width
+ * the control takes from the header. Stacking constrains the height: the header's
+ * content box is 56px, so the two buttons and the surrounding frame have to fit
+ * inside that. Small text with a one-unit vertical padding gives 24px per button,
+ * which is the smallest target WCAG 2.2 accepts at level AA, and leaves the
+ * control no taller than the logo beside it.
  *
- * It is also not icon-only like the theme and documentation buttons beside it.
- * Those use icons because a sun and a book are universally understood; there is
- * no conventional glyph for principal component regression, and an unlabelled
- * one would trade a control that moved for a control nobody can identify.
+ * It remains a segmented control rather than an on/off switch. A switch expresses
+ * one feature being enabled, with an implied default. Explore and Regress are
+ * peers: neither is the absence of the other, so there is no honest way to label
+ * a switch. "Regress: off" would suggest regression is disabled rather than that
+ * a different question is being asked, and a screen reader would announce exactly
+ * that. Two buttons carrying aria-pressed announce "Explore, pressed" and
+ * "Regress, not pressed", which is what is actually true.
+ *
+ * It is also not icon-only like the theme and documentation buttons. Those use
+ * icons because a sun and a book are universally understood; there is no
+ * conventional glyph for principal component regression, and an unlabelled one
+ * would trade a control that moved for a control nobody can identify.
  */
 export const AnalysisModeToggle: React.FC<AnalysisModeToggleProps> = ({
     mode,
@@ -46,7 +53,7 @@ export const AnalysisModeToggle: React.FC<AnalysisModeToggleProps> = ({
     disabled = false
 }) => (
     <div
-        className="inline-flex rounded-lg bg-gray-100 dark:bg-gray-900 p-0.5 border border-gray-300 dark:border-gray-600"
+        className="inline-flex flex-col rounded-lg bg-gray-100 dark:bg-gray-900 p-0.5 border border-gray-300 dark:border-gray-600"
         role="group"
         aria-label="Analysis mode"
     >
@@ -59,7 +66,8 @@ export const AnalysisModeToggle: React.FC<AnalysisModeToggleProps> = ({
                         onClick={() => onChange(option.value)}
                         disabled={disabled}
                         aria-pressed={active}
-                        className={`px-3.5 py-1.5 text-sm font-medium rounded-md transition-colors duration-150
+                        className={`w-full px-2.5 py-1 text-xs font-medium leading-4 rounded
+                            transition-colors duration-150
                             focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500
                             disabled:opacity-50 disabled:cursor-not-allowed
                             ${active
