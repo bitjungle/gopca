@@ -7,6 +7,7 @@ import React, { useMemo } from 'react';
 import { PlotlyScatterChart, PlotlyLineChart } from '@gopca/ui-components';
 import { usePCRContext } from '../../contexts/PCRContext';
 import { useFileDataContext } from '../../contexts/FileDataContext';
+import { sharedDomainFor } from '../../utils/agreementDomain';
 
 /** Formats a number for display, showing a dash where there is nothing to show. */
 function show(value: number | undefined | null, digits = 4): string {
@@ -52,6 +53,13 @@ export const RegressionResultsSection: React.FC = () => {
             };
         });
     }, [result, fileData]);
+
+    // Predicted and measured carry the same quantity, so they share one range;
+    // see sharedDomainFor for why that matters here.
+    const agreementDomain = useMemo(
+        () => sharedDomainFor(predictedVsMeasured.flatMap(p => [p.x, p.y])),
+        [predictedVsMeasured]
+    );
 
     const coefficients = useMemo(() => {
         if (!result?.original_scale_valid || !result.coefficients) return [];
@@ -232,16 +240,19 @@ export const RegressionResultsSection: React.FC = () => {
                 </h3>
                 <p className="text-xs text-gray-500 dark:text-gray-400 mb-3">
                     {result.cv
-                        ? 'Held-out predictions, so each point comes from a model that did not train on it.'
-                        : 'Fitted values. No cross-validation was run, so these come from a model that saw every point.'}
+                        ? 'Held-out predictions, so each point comes from a model that did not train on it. The dashed line is perfect agreement.'
+                        : 'Fitted values. No cross-validation was run, so these come from a model that saw every point. The dashed line is perfect agreement.'}
                 </p>
                 <PlotlyScatterChart
                     data={predictedVsMeasured}
+                    domain={agreementDomain}
                     xDataKey="x"
                     yDataKey="y"
                     xLabel={`Measured ${result.response}`}
                     yLabel="Predicted"
                     height={360}
+                    showReferenceLines={false}
+                    identityLine
                 />
             </div>
 
