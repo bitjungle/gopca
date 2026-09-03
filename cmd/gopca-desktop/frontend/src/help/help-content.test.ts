@@ -69,7 +69,7 @@ describe('help content', () => {
     // two lines hold, so the entries near this bound are likelier to fit now than
     // when the number was first set. Lower it again whenever a long entry is
     // rewritten; the value is the longest title plus text currently shipped.
-    const LONGEST_SHIPPED = 301;
+    const LONGEST_SHIPPED = 281;
     it('adds no entry longer than the longest one already shipped', () => {
         const tooLong = Object.entries(helpContent.help)
             .map(([key, e]) => [key, e.title.length + e.text.length] as const)
