@@ -116,9 +116,13 @@ jobs:
           python generate_temporal_pca_reference.py
         fi
         
-        # List generated files for verification
+        # List generated files for verification. No pipe to head: GitHub runs
+        # `shell: bash` with -o pipefail, so once there are more files than head
+        # consumes, ls takes SIGPIPE and the whole step fails on a progress
+        # message. That was latent until the PCR references pushed the count
+        # past ten.
         echo "Generated reference files:"
-        ls -la reference_results/*.json | head -10
+        ls -1 reference_results/
       shell: bash
       env:
         # The generators print progress with characters outside cp1252, which is
