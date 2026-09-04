@@ -100,7 +100,7 @@ func (v *ModelValidator) schema() (*gojsonschema.Schema, error) {
 //
 // The referenced schemas are registered before compiling so that gojsonschema
 // resolves each $ref from the pre-loaded set rather than dereferencing the
-// https:// URL in its $id. Nothing here touches the network.
+// absolute URL in its $id. Nothing here touches the network.
 func compileSchemaGraph(version string) (*gojsonschema.Schema, error) {
 	dir := path.Join("schemas", version)
 	entries, err := fs.ReadDir(schemaFS, dir)
