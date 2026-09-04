@@ -351,6 +351,17 @@ type DiagnosticLimits struct {
 
 // PreservedColumns contains columns that were excluded from PCA but preserved in output
 type PreservedColumns struct {
-	Categorical   map[string][]string  `json:"categorical,omitempty"`
-	NumericTarget map[string][]float64 `json:"numericTarget,omitempty"`
+	Categorical map[string][]string `json:"categorical,omitempty"`
+
+	// NumericTarget holds the #target columns, which routinely contain gaps: a
+	// calibration set where only part of the samples were sent for reference
+	// analysis is the normal case in chemometrics, not an edge case.
+	//
+	// It must be JSONFloat64, not float64. encoding/json refuses to marshal a
+	// NaN at all, so with plain float64 a single unmeasured target made the whole
+	// export fail — `pca analyze -f json` and `pca regress -o` both returned
+	// "json: unsupported value: NaN" and wrote nothing, on exactly the datasets
+	// this software exists to model. JSONFloat64 writes null and reads it back as
+	// NaN, which is the round trip the rest of the output types already use.
+	NumericTarget map[string][]JSONFloat64 `json:"numericTarget,omitempty"`
 }

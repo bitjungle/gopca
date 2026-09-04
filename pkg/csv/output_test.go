@@ -24,6 +24,9 @@
 package csv
 
 import (
+	"bytes"
+	"encoding/json"
+	"math"
 	"strings"
 	"testing"
 
@@ -185,5 +188,61 @@ func TestConvertToPCAOutputData_SchemaURL(t *testing.T) {
 
 	if !strings.Contains(out.Schema, "pca-output.schema.json") {
 		t.Errorf("unexpected schema URL: %q", out.Schema)
+	}
+}
+
+// TestPreservedTargetsSurviveAnUnmeasuredValue is a regression test for a defect
+// that made JSON export impossible for a whole class of ordinary dataset.
+//
+// PreservedColumns.NumericTarget was map[string][]float64, and encoding/json
+// refuses to marshal a NaN under any circumstances. A #target column with a gap
+// in it — a calibration set where only some samples went for reference analysis,
+// which is the normal case in chemometrics, not an edge case — therefore aborted
+// the entire export with "json: unsupported value: NaN". Both `pca analyze -f
+// json` and `pca regress -o` failed outright and wrote no model at all.
+//
+// The bug survived because every fixture in this file, and every dataset the
+// export was tried on, had complete target columns. It was found by a
+// differential test comparing the CLI against the desktop on testdata/bronir2,
+// whose Dens#target is unmeasured on 414 of 855 rows.
+//
+// The assertion is on json.Marshal, not on the struct: the failure was in the
+// encoding, so a check that only inspected the converted value would pass while
+// the export stayed broken.
+func TestPreservedTargetsSurviveAnUnmeasuredValue(t *testing.T) {
+	result := minimalPCAResult()
+	data := minimalData()
+	config := types.PCAConfig{Method: "svd"}
+	targetData := map[string][]float64{
+		"reference": {1.5, math.NaN()},
+	}
+
+	out := ConvertToPCAOutputData(result, data, nil, false, config, nil, nil, targetData)
+
+	encoded, err := json.Marshal(out)
+	if err != nil {
+		t.Fatalf("the model cannot be encoded, which is the whole defect: %v", err)
+	}
+
+	// Null, not zero and not omitted. Zero would be a measurement nobody made,
+	// and omitting the entry would misalign the column against the sample names.
+	var decoded types.PCAOutputData
+	if err := json.Unmarshal(encoded, &decoded); err != nil {
+		t.Fatalf("decoding what was written: %v", err)
+	}
+	got := decoded.PreservedColumns.NumericTarget["reference"]
+	if len(got) != 2 {
+		t.Fatalf("the target column has %d values after the round trip, want 2", len(got))
+	}
+	if float64(got[0]) != 1.5 {
+		t.Errorf("the measured value became %v, want 1.5", float64(got[0]))
+	}
+	if !got[1].IsNaN() {
+		t.Errorf("the unmeasured value came back as %v; it must remain absent, "+
+			"since a real measurement of that number is indistinguishable from a gap",
+			float64(got[1]))
+	}
+	if !bytes.Contains(encoded, []byte(`"reference":[1.5,null]`)) {
+		t.Errorf("the gap should be written as null; got:\n%s", encoded)
 	}
 }
