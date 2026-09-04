@@ -84,7 +84,14 @@ func TestValidateModel(t *testing.T) {
 			wantErr: false,
 		},
 		{
-			name:    "Invalid JSON",
+			// The table marshals every case, so this one arrives as the valid
+			// JSON document `"not json"` -- a string where an object belongs.
+			// That is a real rejection but not a parse failure; the name used to
+			// claim otherwise. Malformed bytes are covered by
+			// TestValidateModelRejectsMalformedJSON, which cannot be expressed
+			// here because anything this table holds is valid JSON by
+			// construction.
+			name:    "JSON that is not an object",
 			data:    "not json",
 			wantErr: true,
 			errMsg:  "Expected: object, given: string",
@@ -419,4 +426,34 @@ func createValidPCAOutputData() interface{} {
 
 func contains(s, substr string) bool {
 	return len(s) >= len(substr) && (s == substr || len(s) > 0 && (s[0:len(substr)] == substr || contains(s[1:], substr)))
+}
+
+// TestValidateModelRejectsMalformedJSON covers the parse-error branch.
+//
+// The table-driven test above cannot reach it: it marshals each case, so
+// whatever it holds is valid JSON by the time ValidateModel sees it. Its
+// "Invalid JSON" case therefore exercised a type mismatch and left the
+// `invalid JSON:` path untested, which is why this takes raw bytes instead.
+func TestValidateModelRejectsMalformedJSON(t *testing.T) {
+	validator, err := NewModelValidator("v1")
+	if err != nil {
+		t.Fatalf("NewModelValidator: %v", err)
+	}
+
+	for _, tc := range []struct{ name, data string }{
+		{"truncated object", `{"metadata": {`},
+		{"trailing comma", `{"metadata": {},}`},
+		{"not json at all", `this is not json`},
+		{"empty input", ``},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			err := validator.ValidateModel([]byte(tc.data))
+			if err == nil {
+				t.Fatal("malformed JSON was accepted")
+			}
+			if !contains(err.Error(), "invalid JSON") {
+				t.Errorf("expected a parse error naming the input as invalid JSON, got: %v", err)
+			}
+		})
+	}
 }
