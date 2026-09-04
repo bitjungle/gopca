@@ -73,7 +73,7 @@ WAILS_VERSION := $(shell grep 'wailsapp/wails/v2 v' go.mod | awk '{print $$2}')
 .DEFAULT_GOAL := all
 
 # Phony targets
-.PHONY: all build cli cli-all build-cross build-darwin-amd64 build-darwin-arm64 build-linux-amd64 build-linux-arm64 build-windows-amd64 build-all pca-dev pca-build pca-build-all pca-run pca-deps csv-dev csv-build csv-build-all csv-run csv-deps build-everything test test-verbose test-coverage test-integration test-platforms test-e2e test-parity test-regression fmt lint run-pca-iris clean clean-cross install deps deps-all install-hooks sign sign-cli sign-pca sign-csv sign-windows windows-installer windows-installer-signed windows-installer-all notarize notarize-cli notarize-pca notarize-csv sign-and-notarize help
+.PHONY: sync-schemas all build cli cli-all build-cross build-darwin-amd64 build-darwin-arm64 build-linux-amd64 build-linux-arm64 build-windows-amd64 build-all pca-dev pca-build pca-build-all pca-run pca-deps csv-dev csv-build csv-build-all csv-run csv-deps build-everything test test-verbose test-coverage test-integration test-platforms test-e2e test-parity test-regression fmt lint run-pca-iris clean clean-cross install deps deps-all install-hooks sign sign-cli sign-pca sign-csv sign-windows windows-installer windows-installer-signed windows-installer-all notarize notarize-cli notarize-pca notarize-csv sign-and-notarize help
 
 ## all: Build all applications for current platform and run tests
 all: build pca-build csv-build test
@@ -570,6 +570,13 @@ appimage-gocsv: appimage-tool
 ## appimage-all: Build both GoPCA Desktop and GoCSV Desktop AppImages (Linux only)
 appimage-all: appimage-gopca appimage-gocsv
 	@echo "All AppImages built successfully!"
+
+## sync-schemas: Copy the published v1 schemas over the embedded copy
+sync-schemas:
+	@echo "Syncing schemas/v1 -> pkg/validation/schemas/v1..."
+	@cp schemas/v1/*.json pkg/validation/schemas/v1/
+	@echo "Done. schemas/v1 is the source: it is what the \$$schema URLs name."
+	@echo "The copy exists only because //go:embed cannot reach outside its package."
 
 ## test: Run all tests with coverage
 test:
