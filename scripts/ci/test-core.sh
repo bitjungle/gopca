@@ -17,7 +17,7 @@ echo "Downloading dependencies..."
 go mod download
 
 # Run tests with proper exclusions
-echo "Running tests (excluding desktop package)..."
+echo "Running root-module tests..."
 
 # The package list is derived, not maintained by hand.
 #
@@ -116,8 +116,13 @@ echo "✓ All core tests passed"
 # Show coverage summary
 echo ""
 echo "=== Coverage Summary ==="
+# One command per module. cmd/gocsv has its own go.mod, so naming it from the
+# root module gives "main module does not contain package .../cmd/gocsv" and its
+# coverage never appears at all -- which is how it has been printing for as long
+# as the summary listed it alongside the root packages.
 # shellcheck disable=SC2086
-go test -cover $CORE_PACKAGES ./cmd/gocsv 2>/dev/null | grep -E "coverage:|ok" || true
+go test -cover $CORE_PACKAGES 2>/dev/null | grep -E "coverage:|ok" || true
+(cd cmd/gocsv && go test -cover ./... 2>/dev/null | grep -E "coverage:|ok") || true
 
 echo ""
 echo "=== Core tests completed successfully ===" 

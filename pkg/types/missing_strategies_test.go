@@ -16,8 +16,15 @@ import (
 
 // declaredStrategyPattern matches a MissingValueStrategy constant declaration
 // and captures the string it is bound to.
+//
+// The capture is any string-literal content, not just lowercase letters. An
+// earlier version matched `[a-z]+`, which would have quietly stopped tracking a
+// strategy spelled with a digit, a hyphen or an underscore — and a constant this
+// pattern does not match is a constant this test cannot notice is missing from
+// the list. That is the exact failure this file exists to prevent, reproduced
+// one level down in the check itself.
 var declaredStrategyPattern = regexp.MustCompile(
-	`\bMissing[A-Za-z]+\s+MissingValueStrategy\s*=\s*"([a-z]+)"`)
+	`\bMissing[A-Za-z]+\s+MissingValueStrategy\s*=\s*"([^"]*)"`)
 
 // TestAllMissingValueStrategiesIsComplete keeps the summary list honest.
 //
