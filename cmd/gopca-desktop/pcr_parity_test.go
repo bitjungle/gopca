@@ -56,9 +56,11 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
+	"io"
 	"math"
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 
 	"github.com/bitjungle/gopca/internal/cobra"
@@ -132,6 +134,16 @@ func parityCases() []parityCase {
 			why: "row-wise preprocessing, where OriginalScaleValid is false and coefficients are absent",
 		},
 		{
+			// iris ships species#target holding 0, 1 and 2 for three species, so
+			// this is the first thing a reader is likely to try and the case where
+			// both paths must say the fit means nothing. It is here for the
+			// advisory, not for the arithmetic.
+			name: "iris responding to a class-coded column", file: "testdata/iris/iris.csv",
+			response: "species#target", scale: "standard", missingStrategy: "error",
+			maxComponents: 3, cvFolds: 5, metric: types.MetricRMSE, selectRule: types.SelectOneSE,
+			why: "a numeric column that is really a class label; both paths must caution",
+		},
+		{
 			name: "bronir2 half the responses unmeasured", file: "testdata/bronir2/bronir2.csv",
 			response: "Dens#target", scale: "standard", missingStrategy: "drop",
 			maxComponents: 10, cvFolds: 5, metric: types.MetricRMSE, selectRule: types.SelectFirstMin,
@@ -170,6 +182,13 @@ func TestCLIAndDesktopAgree(t *testing.T) {
 // coefficient was internally consistent with that wrong count; only the count
 // itself gave the corruption away.
 type regressionFacts struct {
+	// Advisories is what the path told the reader about the response, over and
+	// above the numbers. On the CLI leg it is the captured stdout; on the desktop
+	// leg it is PCRResponse.Advisories. They are compared by containment rather
+	// than equality, because the CLI wraps its text for a terminal.
+	Advisories []string
+	RawOutput  string
+
 	Components     int
 	LabelledRows   int
 	Coefficients   []float64
@@ -225,9 +244,17 @@ func runCLILeg(t *testing.T, tc parityCase, path string) regressionFacts {
 	cmd.SetArgs(args)
 	cmd.SetOut(&bytes.Buffer{})
 	cmd.SetErr(&bytes.Buffer{})
-	if err := cmd.Execute(); err != nil {
-		t.Fatalf("pca regress %v: %v", args, err)
-	}
+
+	// The advisories go to stdout with fmt.Printf, not through cobra's writers,
+	// so they have to be captured at the file descriptor. They are part of what
+	// the two paths must agree on: a caution the CLI gives and the desktop does
+	// not is a divergence even when every number matches, which is exactly how
+	// the class-coded-response warning came to exist on one side only.
+	printed := captureStdout(t, func() {
+		if err := cmd.Execute(); err != nil {
+			t.Fatalf("pca regress %v: %v", args, err)
+		}
+	})
 
 	raw, err := os.ReadFile(filepath.Join(out, "pcr_model.json"))
 	if err != nil {
@@ -243,6 +270,7 @@ func runCLILeg(t *testing.T, tc parityCase, path string) regressionFacts {
 
 	r := model.Regression
 	facts := regressionFacts{
+		RawOutput:     printed,
 		Components:    r.Components,
 		Coefficients:  r.Coefficients,
 		Intercept:     r.InterceptOriginal,
@@ -327,6 +355,7 @@ func runDesktopLeg(t *testing.T, tc parityCase, path string) regressionFacts {
 	roundTrip(t, response.Result, &shown)
 
 	facts := regressionFacts{
+		Advisories:    response.Advisories,
 		Components:    shown.Components,
 		Coefficients:  floats(shown.Coefficients),
 		Intercept:     float64(shown.InterceptOriginal),
@@ -352,6 +381,8 @@ func runDesktopLeg(t *testing.T, tc parityCase, path string) regressionFacts {
 
 func compareRegressions(t *testing.T, tc parityCase, cli, desktop regressionFacts) {
 	t.Helper()
+
+	compareAdvisories(t, cli.RawOutput, desktop.Advisories)
 
 	if cli.Components != desktop.Components {
 		t.Errorf("components: CLI %d, desktop %d (%s)",
@@ -575,4 +606,112 @@ func floats(values []types.JSONFloat64) []float64 {
 		out[i] = float64(v)
 	}
 	return out
+}
+
+// --- advisories ------------------------------------------------------------
+
+// compareAdvisories checks that the two paths caution the reader about the same
+// things.
+//
+// This exists because the first version of the parity test compared only
+// numbers, and so could not see the divergence that mattered most on the day it
+// was written: `pca regress` warned that a response looked like a class label
+// encoded as a number, and GoPCA Desktop offered the same column in a dropdown
+// and said nothing. Every figure agreed to 1e-12. A model that is arithmetically
+// identical on both paths and meaningless on both is still meaningless, and only
+// one path said so.
+//
+// Containment rather than equality: the CLI wraps its text to a terminal width
+// and prefixes "Warning: ", so the line breaks differ by design. Both sides are
+// reduced to a single space-separated string before comparison, which ignores
+// the wrapping and nothing else.
+func compareAdvisories(t *testing.T, cliOutput string, desktopAdvisories []string) {
+	t.Helper()
+
+	flat := strings.Join(strings.Fields(cliOutput), " ")
+
+	for _, advisory := range desktopAdvisories {
+		want := strings.Join(strings.Fields(advisory), " ")
+		if !strings.Contains(flat, want) {
+			t.Errorf("the desktop gives an advisory the CLI does not:\n  %s", advisory)
+		}
+	}
+
+	// The other direction. Without this the check passes whenever the desktop
+	// says nothing, which is precisely the state being guarded against.
+	if len(desktopAdvisories) == 0 && strings.Contains(cliOutput, "Warning:") {
+		t.Errorf("the CLI printed a warning and the desktop returned none:\n%s",
+			firstWarning(cliOutput))
+	}
+}
+
+// firstWarning extracts the warning block from CLI output, for a readable
+// failure message rather than the whole report.
+func firstWarning(output string) string {
+	lines := strings.Split(output, "\n")
+	for i, line := range lines {
+		if !strings.HasPrefix(line, "Warning:") {
+			continue
+		}
+		end := i + 1
+		for end < len(lines) && strings.TrimSpace(lines[end]) != "" {
+			end++
+		}
+		return strings.Join(lines[i:end], "\n")
+	}
+	return output
+}
+
+// captureStdout redirects os.Stdout for the duration of fn.
+//
+// The CLI writes its report and its warnings with fmt.Printf, which goes to the
+// process's stdout rather than through cobra's configured writer, so setting
+// cmd.SetOut does not collect them.
+func captureStdout(t *testing.T, fn func()) string {
+	t.Helper()
+
+	read, write, err := os.Pipe()
+	if err != nil {
+		t.Fatalf("creating a pipe: %v", err)
+	}
+
+	// Drain concurrently. The CLI writes more than a pipe buffer holds on these
+	// datasets, so reading only after fn returns would deadlock once it filled.
+	//
+	// The read end is closed here rather than by the caller, because this
+	// goroutine is the only thing that knows when io.Copy has finished with it.
+	// Note what this does and does not buy: os.Pipe installs a finalizer, so a
+	// dropped read end is reclaimed by the garbage collector eventually and the
+	// descriptors do not grow without bound. I could not construct a run that
+	// failed without this close. It is deterministic cleanup rather than a fix
+	// for an observed failure, which is the honest reason to keep it.
+	done := make(chan string, 1)
+	go func() {
+		var buf bytes.Buffer
+		_, _ = io.Copy(&buf, read)
+		_ = read.Close()
+		done <- buf.String()
+	}()
+
+	original := os.Stdout
+	os.Stdout = write
+
+	// restore is called twice on the success path and is written to tolerate it:
+	// once explicitly, because io.Copy cannot finish until the write end is
+	// closed and so the receive below would deadlock without it, and once from
+	// the defer, which is what runs if fn calls t.Fatalf and unwinds this
+	// goroutine through runtime.Goexit. Closing an already-closed *os.File
+	// returns an error and does nothing else, and the assignment is idempotent.
+	// Without the deferred call a failing case would leave every later test in
+	// the package writing into a closed pipe.
+	restore := func() {
+		os.Stdout = original
+		_ = write.Close()
+	}
+	defer restore()
+
+	fn()
+
+	restore()
+	return <-done
 }
