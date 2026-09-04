@@ -35,6 +35,7 @@ function show(value: number | undefined | null, digits = 4): string {
 export const RegressionResultsSection: React.FC = () => {
     const { pcrResponse, pcrResultsRef } = usePCRContext();
     const info = pcrResponse?.info;
+    const advisories = pcrResponse?.advisories ?? [];
     const { fileData } = useFileDataContext();
 
     const result = pcrResponse?.result;
@@ -108,6 +109,28 @@ export const RegressionResultsSection: React.FC = () => {
 
     return (
         <div ref={pcrResultsRef} className="space-y-6">
+            {/*
+                Cautions about the response, above the numbers rather than below
+                them. These say whether the figures mean anything at all, so a
+                reader who stops at the headline metrics still sees them. The text
+                comes from the backend and is shared with `pca regress`, which
+                warned about a class-coded response from the day it shipped while
+                this screen, where such a column is likeliest to be picked from a
+                dropdown without a second thought, said nothing at all.
+            */}
+            {advisories.length > 0 && (
+                <div
+                    role="status"
+                    className="rounded-lg border border-amber-300 bg-amber-50 p-4 dark:border-amber-700 dark:bg-amber-950"
+                >
+                    {advisories.map((advisory, i) => (
+                        <p key={i} className="text-sm text-amber-900 dark:text-amber-200">
+                            {advisory}
+                        </p>
+                    ))}
+                </div>
+            )}
+
             <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-6">
                 <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-4">
                     Regression: {result.response}

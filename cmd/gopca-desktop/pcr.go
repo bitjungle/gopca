@@ -92,6 +92,17 @@ type PCRResponse struct {
 	Error   string         `json:"error,omitempty"`
 	Result  *PCRResultJSON `json:"result,omitempty"`
 	Info    string         `json:"info,omitempty"`
+
+	// Advisories are cautions about the response that the fit cannot express:
+	// things the numbers cannot rule out and the reader may need to. They are
+	// separate from Info because they are not a description of what happened but
+	// a warning about whether it means anything, and the panel styles them so.
+	//
+	// The text comes from core.ResponseAdvisories, shared with the CLI. It was
+	// CLI-only at first, which left the response dropdown — where a class-coded
+	// column is likeliest to be picked without thinking about it — as the one
+	// place that said nothing.
+	Advisories []string `json:"advisories,omitempty"`
 }
 
 // RunPCR fits a principal component regression model.
@@ -128,6 +139,12 @@ func (a *App) RunPCR(request PCRRequest) (response PCRResponse) {
 	y := restoreMissingResponse(request.ResponseValues, request.ResponseMissing)
 	groupLabels := request.CVGroupLabels
 
+	// Read from the whole response column, before exclusions and missing-value
+	// handling, so this matches what `pca regress` reports on the same file.
+	// Whether a column holds class codes is a property of the column, not of the
+	// subset a particular run happens to fit on.
+	advisories := core.ResponseAdvisories(request.Response, y)
+
 	if len(request.PCA.ExcludedRows) > 0 || len(request.PCA.ExcludedColumns) > 0 {
 		filtered, err := utils.FilterMatrix(data, request.PCA.ExcludedRows, request.PCA.ExcludedColumns)
 		if err != nil {
@@ -161,9 +178,10 @@ func (a *App) RunPCR(request PCRRequest) (response PCRResponse) {
 	}
 
 	return PCRResponse{
-		Success: true,
-		Result:  ConvertPCRResultToJSON(result),
-		Info:    describePCRFit(result, missingInfo),
+		Success:    true,
+		Result:     ConvertPCRResultToJSON(result),
+		Info:       describePCRFit(result, missingInfo),
+		Advisories: advisories,
 	}
 }
 

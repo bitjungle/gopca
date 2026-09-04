@@ -24,7 +24,8 @@ sudo mv pca /usr/local/bin/
 These options apply to all commands:
 
 - `--help, -h` - Show help for any command
-- `--version` - Display version information
+
+The version is a subcommand rather than a flag: `pca version`.
 
 ## Commands
 
@@ -511,7 +512,7 @@ The preprocessing steps are applied in this order:
 - **SNV**: Spectroscopic or similar data
 
 ### Performance Tips
-- Use `--quiet` for scripting and automation
+- Use `--format json` for scripting and automation
 - JSON format is faster to parse programmatically
 - Exclude unnecessary columns to reduce memory usage
 - Pre-filter rows if analyzing subsets
@@ -526,7 +527,7 @@ The preprocessing steps are applied in this order:
 - Verify decimal separator setting
 
 #### "Insufficient numeric columns"
-- Exclude non-numeric columns with `--exclude-cols`
+- Exclude non-numeric columns with `--exclude-columns`
 - Check for columns with all missing values
 - Ensure proper NA value detection
 

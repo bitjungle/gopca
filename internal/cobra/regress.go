@@ -694,41 +694,59 @@ func listResponses(inputFile string, targets map[string][]float64,
 	return nil
 }
 
-// discreteResponseLimit is the largest number of distinct values a response may
-// take before it stops looking like a class code. Ten covers the usual encodings
-// while leaving genuinely coarse measurements alone.
-const discreteResponseLimit = 10
-
-// warnIfResponseLooksCategorical flags a response that is probably a class label
-// stored as a number.
+// warnIfResponseLooksCategorical prints the shared response advisories.
 //
-// A column holding 0, 1 and 2 for three species parses as numeric and regresses
-// without complaint, but the fit asserts that the classes are ordered and equally
-// spaced, which is false. The data cannot distinguish this from a genuinely coarse
-// measurement, so this warns rather than refuses: the user may well know something
-// the file does not record.
+// The detection and the wording live in internal/core so that GoPCA Desktop
+// gives the same caution; they were CLI-only at first, which meant the front end
+// where a reader is likelier to pick a class-coded column by accident was the one
+// that said nothing. This function is now only about presenting them on a
+// terminal.
 func warnIfResponseLooksCategorical(name string, y []float64) {
-	distinct := make(map[float64]struct{}, discreteResponseLimit+1)
-	observed := 0
-	for _, v := range y {
-		if math.IsNaN(v) || math.IsInf(v, 0) {
+	for _, advisory := range core.ResponseAdvisories(name, y) {
+		fmt.Printf("%s\n\n", wrapForTerminal("Warning: "+advisory, terminalWidth, "  "))
+	}
+}
+
+// terminalWidth is the column the CLI's prose wraps at, matching the hand-wrapped
+// explanatory text elsewhere in this file.
+const terminalWidth = 78
+
+// wrapForTerminal breaks a paragraph so that no rendered line exceeds width,
+// indenting every line after the first.
+//
+// The indent counts against the width, and so does whatever the caller has
+// already put on the front of the text. Measuring only the words is the easy
+// mistake: it produces a first line as long as the prefix is wide and
+// continuation lines as long as the indent, which is how this looked before the
+// two were accounted for.
+//
+// The advisories themselves are stored unwrapped, because the desktop lays them
+// out itself; only this side needs fixed columns.
+func wrapForTerminal(text string, width int, indent string) string {
+	words := strings.Fields(text)
+	if len(words) == 0 {
+		return ""
+	}
+	var b strings.Builder
+	line := words[0]
+	wrapped := false
+	for _, w := range words[1:] {
+		used := len(line)
+		if wrapped {
+			used += len(indent)
+		}
+		if used+1+len(w) > width {
+			b.WriteString(line)
+			b.WriteString("\n")
+			b.WriteString(indent)
+			line = w
+			wrapped = true
 			continue
 		}
-		observed++
-		if len(distinct) <= discreteResponseLimit {
-			distinct[v] = struct{}{}
-		}
+		line += " " + w
 	}
-
-	if observed == 0 || len(distinct) > discreteResponseLimit || len(distinct)*10 > observed {
-		return
-	}
-
-	fmt.Printf("Warning: %q takes only %d distinct values across %d rows, which is what a\n"+
-		"  class label encoded as a number looks like. Regression treats those values as\n"+
-		"  ordered and equally spaced. If they are categories the fit is meaningless;\n"+
-		"  predicting a category is classification, which this tool does not do.\n\n",
-		name, len(distinct), observed)
+	b.WriteString(line)
+	return b.String()
 }
 
 func countObserved(values []float64) (observed, total int) {
