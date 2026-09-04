@@ -8,6 +8,12 @@ import { PlotlyScatterChart, PlotlyLineChart } from '@gopca/ui-components';
 import { usePCRContext } from '../../contexts/PCRContext';
 import { useFileDataContext } from '../../contexts/FileDataContext';
 import { sharedDomainFor } from '../../utils/agreementDomain';
+import {
+    selectionMetricOf,
+    selectionCurveOf,
+    metricLabel as labelForMetric,
+    otherMetricLabel
+} from '../../utils/selectionCurve';
 
 /** Formats a number for display, showing a dash where there is nothing to show. */
 function show(value: number | undefined | null, digits = 4): string {
@@ -33,13 +39,19 @@ export const RegressionResultsSection: React.FC = () => {
 
     const result = pcrResponse?.result;
 
+    // Which curve the rule was actually applied to; see utils/selectionCurve.
+    const selectionMetric = selectionMetricOf(result?.cv);
+    const metricLabel = labelForMetric(selectionMetric);
+
+    const selectionValues = useMemo(() => selectionCurveOf(result?.cv), [result]);
+
     const selectionCurve = useMemo(() => {
         if (!result?.cv) return [];
         return result.cv.candidates.map((k, i) => ({
             x: k,
-            y: Number(result.cv!.rmsecv[i])
+            y: Number(selectionValues[i])
         }));
-    }, [result]);
+    }, [result, selectionValues]);
 
     const predictedVsMeasured = useMemo(() => {
         if (!result) return [];
@@ -163,9 +175,12 @@ export const RegressionResultsSection: React.FC = () => {
                     <p>
                         <strong>RMSEC</strong> describes the fit: the model has seen every row it
                         is scored on there, so it is not an estimate of future performance.
-                        <strong> RMSECV</strong> is measured on held-out rows and is what chose the
-                        component count. <strong>RMSEP</strong> would need a test set kept out of
-                        model development entirely, which this screen does not create.
+                        <strong> RMSECV</strong> is measured on held-out rows.{' '}
+                        {selectionMetric === 'mae'
+                            ? 'The component count was chosen on the held-out MAE, which is the metric currently selected, not on RMSECV.'
+                            : 'It is also what chose the component count.'}{' '}
+                        <strong>RMSEP</strong> would need a test set kept out of model development
+                        entirely, which this screen does not create.
                     </p>
                     {result.excluded_rows && result.excluded_rows.length > 0 && (
                         <p className="text-gray-700 dark:text-gray-300">
@@ -193,19 +208,22 @@ export const RegressionResultsSection: React.FC = () => {
                     {passedOverALowerPoint && (
                         <p>
                             The <strong>{result.cv!.rule}</strong> rule chose{' '}
-                            {result.cv!.selected} components. The lowest cross-validated error in
-                            the range was {show(Number(result.cv!.rmsecv[lowestIndex]))} at{' '}
+                            {result.cv!.selected} components. The lowest cross-validated{' '}
+                            {metricLabel} in the range was{' '}
+                            {show(Number(selectionValues[lowestIndex]))} at{' '}
                             {result.cv!.lowest_error} components, against{' '}
-                            {show(Number(result.cv!.rmsecv[selectedIndex]))} here. The rule passes
+                            {show(Number(selectionValues[selectedIndex]))} here. The rule passes
                             over that on purpose; whether the trade is a good one is yours to
                             judge.
                         </p>
                     )}
                     {result.cv && result.cv.selected_by_alternate_metric !== result.cv.selected && (
                         <p>
-                            The other error measure would have chosen{' '}
-                            {result.cv.selected_by_alternate_metric} components. The two disagree
-                            when a few large residuals drive the choice.
+                            Selecting on {otherMetricLabel(selectionMetric)} instead
+                            would have chosen {result.cv.selected_by_alternate_metric} components
+                            rather than {result.cv.selected}. The two disagree when a few large
+                            residuals drive the choice, since RMSECV is moved by the largest
+                            residuals and MAE by the typical one.
                         </p>
                     )}
                 </div>
@@ -214,21 +232,22 @@ export const RegressionResultsSection: React.FC = () => {
             {selectionCurve.length > 0 && (
                 <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-6">
                     <h3 className="text-base font-semibold text-gray-900 dark:text-gray-100 mb-1">
-                        Cross-validated error by component count
+                        Cross-validated {metricLabel} by component count
                     </h3>
                     <p className="text-xs text-gray-500 dark:text-gray-400 mb-3">
-                        {result.components} components suggested by the {result.cv!.rule} rule.
-                        Zero components is the intercept-only baseline, which predicts the
-                        training mean. A selection rule reads the curve and nothing else: the
-                        final count should also rest on what is known about the instrument and
-                        the system being measured, which no statistic in this panel can see.
+                        {result.components} components suggested by the {result.cv!.rule} rule
+                        applied to {metricLabel}. Zero components is the intercept-only baseline,
+                        which predicts the training mean. A selection rule reads the curve and
+                        nothing else: the final count should also rest on what is known about the
+                        instrument and the system being measured, which no statistic in this panel
+                        can see.
                     </p>
                     <PlotlyLineChart
                         data={selectionCurve}
                         dataKey="y"
                         xDataKey="x"
                         xLabel="Components"
-                        yLabel="RMSECV"
+                        yLabel={metricLabel}
                         height={320}
                     />
                 </div>

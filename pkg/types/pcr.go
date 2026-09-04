@@ -57,6 +57,22 @@ const (
 	SelectFirstMin = "first-min"
 )
 
+// Error measures a selection rule can be applied to. See SelectionConfig.Metric
+// and CVReport.Metric.
+//
+// Both are in the units of the response, and they differ in which residuals move
+// them: RMSE is driven by the largest, MAE by the typical one. That is why their
+// disagreement is informative rather than a tie to be broken.
+const (
+	// MetricRMSE selects on the pooled root-mean-square cross-validated error.
+	// The empty string means this, so that a config with no metric set behaves as
+	// the documented default rather than as an error.
+	MetricRMSE = "rmse"
+
+	// MetricMAE selects on the mean absolute cross-validated error.
+	MetricMAE = "mae"
+)
+
 // Cross-validation schemes. Grouping is orthogonal to the scheme and is set
 // through CVConfig.GroupBy.
 const (
@@ -200,6 +216,20 @@ type CVReport struct {
 
 	Selected int    `json:"selected"`
 	Rule     string `json:"rule"`
+
+	// Metric names the curve the rule was applied to, one of the Metric*
+	// constants. Selected, LowestError, CurveStillFalling and OutOfFold all refer
+	// to that curve and to no other.
+	//
+	// Without this field a reader of the report cannot tell which of RMSECV and
+	// MAE produced the numbers beside it, and the natural assumption is RMSECV
+	// because it is listed first and named in most of the documentation. The
+	// desktop panel made exactly that assumption: it plotted RMSECV, said RMSECV
+	// had chosen the count, and compared the selected count against the lowest
+	// point of RMSECV, while all three figures had come from the MAE curve
+	// whenever the user picked MAE in the Metric control. The report has to say
+	// which curve it means, because the consumer cannot infer it.
+	Metric string `json:"metric"`
 
 	// LowestError is the candidate with the smallest error anywhere in the range,
 	// which is not always the one selected. A parsimony rule passes over a deeper

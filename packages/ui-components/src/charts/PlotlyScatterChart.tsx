@@ -25,6 +25,7 @@ import React, { useEffect, useRef, useMemo } from 'react';
 import Plotly from 'plotly.js-dist-min';
 import { ScatterChartProps } from './types';
 import { getPlotlyTheme, mergeLayouts, calculatePlotlyLabels, getPlotlyTextPosition } from './utils';
+import { identityLineEnds } from './utils/identityLine';
 import { useChartTheme } from '../hooks/useChartTheme';
 
 export const PlotlyScatterChart: React.FC<ScatterChartProps> = ({
@@ -157,12 +158,12 @@ return;
     // A y = x reference, for plots comparing two measurements of the same
     // quantity. Judging deviation from the diagonal by eye needs the diagonal
     // drawn and both axes on one scale; see the identityLine prop.
-    if (identityLine) {
-      const values = plotData
-        .flatMap(p => [p.x, p.y])
-        .filter(v => Number.isFinite(v));
-      const from = domain?.x?.[0] ?? Math.min(...values);
-      const to = domain?.x?.[1] ?? Math.max(...values);
+    //
+    // The endpoints, including the empty and non-finite cases, live in
+    // charts/utils/identityLine so they can be tested without rendering Plotly.
+    const ends = identityLine ? identityLineEnds(plotData, domain?.x) : null;
+    if (ends) {
+      const [from, to] = ends;
       traces.push({
         x: [from, to],
         y: [from, to],

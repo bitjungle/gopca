@@ -613,6 +613,104 @@ func TestPCRMAESelectionUsesItsOwnStandardError(t *testing.T) {
 // TestPCRAlternateMetricIsTheOtherOne checks that the reported alternative is
 // genuinely the other measure, whichever was primary. Naming the field after MAE
 // would have made it wrong exactly when MAE was the selection metric.
+// TestCVReportNamesTheCurveItSelectedOn checks that the report says which of the
+// two error curves the rule was applied to.
+//
+// Selected, LowestError, CurveStillFalling and OutOfFold all refer to one curve,
+// and until this field existed a consumer had to guess which. The desktop panel
+// guessed RMSECV, so choosing MAE produced a screen that plotted one curve and
+// credited it with a decision taken on the other. Nothing in the engine's own
+// tests could see that, because the engine was right and only its report was
+// ambiguous.
+func TestCVReportNamesTheCurveItSelectedOn(t *testing.T) {
+	data, y := makeRegressionData(40, 6, 3, 1.0, 7)
+
+	for _, tc := range []struct {
+		metric string
+		want   string
+	}{
+		{types.MetricRMSE, types.MetricRMSE},
+		{types.MetricMAE, types.MetricMAE},
+		{"", types.MetricRMSE}, // unset means RMSE, as SelectionConfig documents
+	} {
+		config := cvConfig(4, 5)
+		config.Selection.Metric = tc.metric
+
+		result, err := NewPCREngine().Fit(data, y, config)
+		if err != nil {
+			t.Fatalf("Fit with metric %q: %v", tc.metric, err)
+		}
+		if result.CV.Metric != tc.want {
+			t.Errorf("metric %q: report says %q, want %q",
+				tc.metric, result.CV.Metric, tc.want)
+		}
+
+		// The name has to match the curve the numbers actually came from, not
+		// merely echo the request. Selected must be reproducible from the curve
+		// the report names.
+		curve, se := result.CV.RMSECV, result.CV.RMSECVSE
+		if result.CV.Metric == types.MetricMAE {
+			curve, se = result.CV.MAE, result.CV.MAESE
+		}
+		want, err := SelectComponents(result.CV.Candidates, curve, se,
+			result.CV.Rule, config.Selection.Tolerance, config.Selection.WoldR)
+		if err != nil {
+			t.Fatalf("SelectComponents: %v", err)
+		}
+		if result.CV.Selected != want {
+			t.Errorf("metric %q: report names %q but Selected=%d, while that curve gives %d",
+				tc.metric, result.CV.Metric, result.CV.Selected, want)
+		}
+	}
+}
+
+// TestCurveStillFallingUsesTheSelectedMetricsSpread checks that the margin
+// deciding "the error was still falling" is drawn from the curve being read.
+//
+// CurveStillFalling compares the last step down against the noise around it. The
+// noise has to be that curve's own: measuring the scatter of RMSE across folds
+// and subtracting it from a step in MAE compares two different quantities, and
+// the RMSE spread is systematically the larger of the two, so the error is not
+// symmetric. It suppresses the advice to raise the ceiling on exactly the runs
+// where the curve really was still descending.
+//
+// The data below is chosen so the two answers differ: the final step is larger
+// than the MAE standard error and smaller than the RMSE one. On quieter data both
+// wirings agree and this test would pass without looking.
+func TestCurveStillFallingUsesTheSelectedMetricsSpread(t *testing.T) {
+	data, y := makeRegressionData(50, 10, 3, 0.5, 57)
+
+	config := cvConfig(6, 5)
+	config.Selection.Metric = types.MetricMAE
+
+	result, err := NewPCREngine().Fit(data, y, config)
+	if err != nil {
+		t.Fatalf("Fit: %v", err)
+	}
+	report := result.CV
+
+	n := len(report.MAE)
+	if n < 2 {
+		t.Fatalf("need at least two candidates, got %d", n)
+	}
+	gap := report.MAE[n-2] - report.MAE[n-1]
+
+	// Guard the fixture before trusting the assertion. If the two standard errors
+	// ever stop straddling the gap, the assertion below holds for both the right
+	// and the wrong wiring and proves nothing.
+	if !(report.MAESE[n-1] < gap && gap < report.RMSECVSE[n-1]) {
+		t.Fatalf("this dataset no longer distinguishes the two spreads "+
+			"(gap %.6g, MAE SE %.6g, RMSE SE %.6g); choose different data",
+			gap, report.MAESE[n-1], report.RMSECVSE[n-1])
+	}
+
+	if !report.CurveStillFalling {
+		t.Error("CurveStillFalling is false, but the final step in the MAE curve " +
+			"exceeds the MAE standard error; the margin appears to have been taken " +
+			"from the RMSE curve, which is not the curve being read")
+	}
+}
+
 func TestPCRAlternateMetricIsTheOtherOne(t *testing.T) {
 	data, y := makeRegressionData(60, 8, 3, 0.6, 103)
 

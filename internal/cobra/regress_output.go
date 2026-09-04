@@ -73,8 +73,19 @@ func outputRegressTable(result *types.PCRResult, data *pkgcsv.Data, opts *Regres
 	if result.CV != nil {
 		i := indexOfCandidate(result.CV, result.Components)
 		if i >= 0 {
-			fmt.Printf("  RMSECV  %12.6g   held out; this is what chose the component count\n",
-				result.CV.RMSECV[i])
+			// Which of the two held-out figures actually drove the choice depends
+			// on --metric. Attributing the selection to RMSECV regardless would
+			// credit a number that was never compared against anything whenever
+			// the user selected on MAE.
+			if result.CV.Metric == types.MetricMAE {
+				fmt.Printf("  RMSECV  %12.6g   held out\n", result.CV.RMSECV[i])
+				fmt.Printf("  MAE     %12.6g   held out; this is what chose the component count\n",
+					result.CV.MAE[i])
+			} else {
+				fmt.Printf("  RMSECV  %12.6g   held out; this is what chose the component count\n",
+					result.CV.RMSECV[i])
+				fmt.Printf("  MAE     %12.6g   held out\n", result.CV.MAE[i])
+			}
 			fmt.Printf("  Q2      %12.6g\n", result.CV.Q2[i])
 			fmt.Printf("  bias    %12.6g   mean signed error; a large value with a small SEP\n",
 				result.CV.Bias[i])
@@ -85,10 +96,10 @@ func outputRegressTable(result *types.PCRResult, data *pkgcsv.Data, opts *Regres
 		if result.CV.GroupBy != "" {
 			fmt.Printf(", grouped by %s", result.CV.GroupBy)
 		}
-		fmt.Printf("\n  Rule    %s\n", result.CV.Rule)
+		fmt.Printf("\n  Rule    %s on %s\n", result.CV.Rule, metricLabel(result.CV.Metric))
 		if result.CV.SelectedByAlternateMetric != result.CV.Selected {
 			other := "MAE"
-			if strings.EqualFold(opts.Metric, "mae") {
+			if result.CV.Metric == types.MetricMAE {
 				other = "RMSE"
 			}
 			fmt.Printf("\n  Note    scoring by %s would have chosen %d components rather than %d.\n"+
@@ -122,15 +133,23 @@ func outputRegressTable(result *types.PCRResult, data *pkgcsv.Data, opts *Regres
 // printSelectionCurve prints the cross-validated error against component count,
 // which is the plot a user would otherwise have to draw to justify the choice.
 func printSelectionCurve(report *types.CVReport) {
+	// The column shown is the one the rule read. Printing RMSECV while marking a
+	// row chosen on MAE would put the selection marker beside a number that had
+	// no part in choosing it.
+	curve, label := report.RMSECV, "RMSECV"
+	if report.Metric == types.MetricMAE {
+		curve, label = report.MAE, "MAE"
+	}
+
 	fmt.Println("\nCross-validated error by component count")
 	fmt.Println("──────────────────────────────────────────────────────────────")
-	fmt.Printf("  %3s %14s %12s %10s\n", "k", "RMSECV", "Q2", "")
+	fmt.Printf("  %3s %14s %12s %10s\n", "k", label, "Q2", "")
 	for i, k := range report.Candidates {
 		marker := ""
 		if k == report.Selected {
 			marker = "  <- selected"
 		}
-		fmt.Printf("  %3d %14.6g %12.4f%s\n", k, report.RMSECV[i], report.Q2[i], marker)
+		fmt.Printf("  %3d %14.6g %12.4f%s\n", k, curve[i], report.Q2[i], marker)
 	}
 	if len(report.Candidates) > 0 && report.Candidates[0] == 0 {
 		fmt.Println("\n  k=0 is the intercept-only baseline: it predicts the training mean.")
@@ -390,4 +409,13 @@ func writeRegressModel(result *types.PCRResult, data *pkgcsv.Data, inputFile str
 	fmt.Printf("Wrote %s\n", path)
 	fmt.Printf("  Apply it with: pca transform %s <new_data.csv>\n", path)
 	return nil
+}
+
+// metricLabel names an error curve as a reader sees it. The report's Metric is
+// the empty string on models written before the field existed, which means RMSE.
+func metricLabel(metric string) string {
+	if metric == types.MetricMAE {
+		return "MAE"
+	}
+	return "RMSECV"
 }

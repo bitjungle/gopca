@@ -311,11 +311,20 @@ func TestRegressReportsMetricDisagreement(t *testing.T) {
 	}
 	data := &pkgcsv.Data{Headers: []string{"a", "b"}, RowNames: []string{"r1", "r2", "r3"}}
 
-	for _, tc := range []struct{ metric, expectNamed string }{
-		{"rmse", "scoring by MAE"},
-		{"mae", "scoring by RMSE"},
+	// The metric is read from the report, not from the flags. A model loaded from
+	// disk carries no RegressOptions, and the report is the only record of which
+	// curve the rule was applied to; taking it from opts would also let the two
+	// disagree, printing a table headed by one metric and a note naming the other.
+	for _, tc := range []struct {
+		metric      string
+		expectNamed string
+		wantColumn  string
+	}{
+		{types.MetricRMSE, "scoring by MAE", "RMSECV"},
+		{types.MetricMAE, "scoring by RMSE", "MAE"},
 	} {
 		t.Run(tc.metric, func(t *testing.T) {
+			report.Metric = tc.metric
 			opts := cornOptions()
 			opts.Metric = tc.metric
 			opts.OutputDir = ""
@@ -332,6 +341,44 @@ func TestRegressReportsMetricDisagreement(t *testing.T) {
 			}
 			if !strings.Contains(output, "would have chosen 1 components rather than 2") {
 				t.Error("the note does not report both counts")
+			}
+
+			// Exactly one of the two held-out figures may claim to have chosen
+			// the count, and it has to be the one named by Metric. Both lines are
+			// printed, so asserting only that the right one carries the phrase
+			// would still pass if the other carried it too.
+			for _, line := range strings.Split(output, "\n") {
+				if !strings.Contains(line, "this is what chose the component count") {
+					continue
+				}
+				if !strings.HasPrefix(strings.TrimSpace(line), tc.wantColumn+" ") {
+					t.Errorf("with metric %q the selection is credited to the wrong figure: %q",
+						tc.metric, strings.TrimSpace(line))
+				}
+			}
+
+			// The curve table has to show the column the rule read, or the
+			// "<- selected" marker sits beside a number that took no part in
+			// choosing it. RMSECV and MAE differ at every candidate above, so
+			// the wrong column cannot pass this by coincidence.
+			header := ""
+			for _, line := range strings.Split(output, "\n") {
+				if strings.HasPrefix(strings.TrimSpace(line), "k ") {
+					header = line
+					break
+				}
+			}
+			if !strings.Contains(header, tc.wantColumn) {
+				t.Errorf("with metric %q the curve table should be headed %q; got header %q in:\n%s",
+					tc.metric, tc.wantColumn, header, output)
+			}
+			wantSelectedValue := "0.4"
+			if tc.metric == types.MetricMAE {
+				wantSelectedValue = "0.3"
+			}
+			if !strings.Contains(output, wantSelectedValue+"       0.8400  <- selected") {
+				t.Errorf("with metric %q the selected row should show %s from the %s curve; got:\n%s",
+					tc.metric, wantSelectedValue, tc.wantColumn, output)
 			}
 		})
 	}

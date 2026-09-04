@@ -83,6 +83,7 @@
         "lowest_error": { "type": "integer", "minimum": 0, "description": "Candidate with the smallest error anywhere in the range, which a parsimony rule may deliberately pass over" },
         "curve_still_falling": { "type": "boolean", "description": "Whether the error was still decreasing at the last candidate evaluated" },
         "rule": { "type": "string" },
+        "metric": { "type": "string", "enum": ["rmse", "mae"], "description": "Which error curve the rule was applied to; selected, lowest_error and curve_still_falling all describe that curve. Absent on models written before this field existed, which means rmse." },
         "out_of_fold_predictions": { "type": "array", "items": { "type": "number" } }
       }
     }
