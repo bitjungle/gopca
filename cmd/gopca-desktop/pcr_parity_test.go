@@ -674,26 +674,44 @@ func captureStdout(t *testing.T, fn func()) string {
 	if err != nil {
 		t.Fatalf("creating a pipe: %v", err)
 	}
-	original := os.Stdout
-	os.Stdout = write
 
-	// Drain concurrently: the CLI writes more than a pipe buffer holds on these
-	// datasets, and reading only after fn returns would deadlock once it filled.
+	// Drain concurrently. The CLI writes more than a pipe buffer holds on these
+	// datasets, so reading only after fn returns would deadlock once it filled.
+	//
+	// The read end is closed here rather than by the caller, because this
+	// goroutine is the only thing that knows when io.Copy has finished with it.
+	// Note what this does and does not buy: os.Pipe installs a finalizer, so a
+	// dropped read end is reclaimed by the garbage collector eventually and the
+	// descriptors do not grow without bound. I could not construct a run that
+	// failed without this close. It is deterministic cleanup rather than a fix
+	// for an observed failure, which is the honest reason to keep it.
 	done := make(chan string, 1)
 	go func() {
 		var buf bytes.Buffer
 		_, _ = io.Copy(&buf, read)
+		_ = read.Close()
 		done <- buf.String()
 	}()
 
-	defer func() {
+	original := os.Stdout
+	os.Stdout = write
+
+	// restore is called twice on the success path and is written to tolerate it:
+	// once explicitly, because io.Copy cannot finish until the write end is
+	// closed and so the receive below would deadlock without it, and once from
+	// the defer, which is what runs if fn calls t.Fatalf and unwinds this
+	// goroutine through runtime.Goexit. Closing an already-closed *os.File
+	// returns an error and does nothing else, and the assignment is idempotent.
+	// Without the deferred call a failing case would leave every later test in
+	// the package writing into a closed pipe.
+	restore := func() {
 		os.Stdout = original
 		_ = write.Close()
-	}()
+	}
+	defer restore()
 
 	fn()
 
-	os.Stdout = original
-	_ = write.Close()
+	restore()
 	return <-done
 }
