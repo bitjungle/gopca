@@ -4,8 +4,14 @@ node_modules/
 # Build outputs  
 dist/
 
-# Wails
-wailsjs/
+# Wails: the generated bindings live at the frontend root and are produced at
+# build time. The pattern must be anchored with a leading slash, because an
+# unanchored `wailsjs/` matches a directory of that name at any depth and so also
+# ignored src/__mocks__/wailsjs — the hand-written test doubles the vitest config
+# aliases every Wails import to. Those mocks were silently absent from the
+# repository for as long as this pattern was unanchored, which nothing noticed
+# while the frontend tests ran only on developer machines.
+/wailsjs/
 
 # Logs
 *.log

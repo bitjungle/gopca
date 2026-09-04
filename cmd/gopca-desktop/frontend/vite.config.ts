@@ -45,6 +45,9 @@ export default defineConfig({
       // Redirect Wails bindings and ui-components to mocks in test environment
       '../wailsjs/go/main/App': path.resolve(__dirname, 'src/__mocks__/wailsjs/go/main/App.ts'),
       '../../wailsjs/go/main/App': path.resolve(__dirname, 'src/__mocks__/wailsjs/go/main/App.ts'),
+      '../wailsjs/go/models': path.resolve(__dirname, 'src/__mocks__/wailsjs/go/models.ts'),
+      '../../wailsjs/go/models': path.resolve(__dirname, 'src/__mocks__/wailsjs/go/models.ts'),
+      '../../../wailsjs/go/models': path.resolve(__dirname, 'src/__mocks__/wailsjs/go/models.ts'),
       '../wailsjs/runtime/runtime': path.resolve(__dirname, 'src/__mocks__/wailsjs/runtime/runtime.ts'),
       '../../wailsjs/runtime/runtime': path.resolve(__dirname, 'src/__mocks__/wailsjs/runtime/runtime.ts'),
       '@gopca/ui-components': path.resolve(__dirname, 'src/__mocks__/@gopca/ui-components.tsx'),
