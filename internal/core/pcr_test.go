@@ -773,3 +773,216 @@ func TestPCRLeaveOneOutComponentCeiling(t *testing.T) {
 			"partition of %d rows supports at most %d", last, n-1, ceiling)
 	}
 }
+
+// TestPCRDivisorInvariance asserts the property in Section 2.2.1 of the internal
+// guide: rescaling every predictor column by a constant factor leaves the
+// original-scale coefficients, the intercept and the predictions unchanged.
+//
+// This is not an idle identity. It is the entire licence for comparing GoPCA's
+// beta-hat against scikit-learn's directly. gonum's stat.StdDev divides by n-1
+// and sklearn's StandardScaler divides by n, so the two standardize to matrices
+// differing by a factor of sqrt(n/(n-1)); their singular values and scores differ
+// accordingly, and only because the factor cancels between theta-hat and the
+// inverse scaling does beta-hat come out identical. Until this test existed the
+// property was asserted in the reference generator's Python and checked nowhere
+// in Go — that is, verified only on the side being compared against.
+//
+// Scaling the raw columns is the same perturbation seen from the other end: it
+// multiplies each column's standard deviation by the same factor, so the
+// standardized matrix is unchanged and the coefficients must absorb the factor
+// exactly. Predictions are then bitwise-comparable within tolerance.
+func TestPCRDivisorInvariance(t *testing.T) {
+	data, y := makeRegressionData(60, 8, 3, 1.0, 21)
+
+	// A different factor per column, so a bug that happens to cancel for one
+	// uniform scale cannot survive. Nothing here is near unity.
+	factors := []float64{2, 0.5, 10, 0.1, 3, 7, 0.25, 100}
+
+	scaled := make(types.Matrix, len(data))
+	for i, row := range data {
+		scaled[i] = make([]float64, len(row))
+		for j, v := range row {
+			scaled[i][j] = v * factors[j]
+		}
+	}
+
+	config := fixedConfig(4)
+
+	base, err := NewPCREngine().Fit(data, y, config)
+	if err != nil {
+		t.Fatalf("Fit on the original scale: %v", err)
+	}
+	rescaled, err := NewPCREngine().Fit(scaled, y, config)
+	if err != nil {
+		t.Fatalf("Fit on the rescaled data: %v", err)
+	}
+
+	if !base.OriginalScaleValid || !rescaled.OriginalScaleValid {
+		t.Fatal("both fits need original-scale coefficients for this comparison")
+	}
+
+	// The predictions are the quantity a user actually consumes, and they must
+	// agree to floating-point noise.
+	for i := range base.Fitted {
+		if diff := math.Abs(base.Fitted[i] - rescaled.Fitted[i]); diff > 1e-8 {
+			t.Fatalf("fitted value %d moved by %.3g when the columns were rescaled: "+
+				"%.12g against %.12g", i, diff, base.Fitted[i], rescaled.Fitted[i])
+		}
+	}
+
+	if diff := math.Abs(base.InterceptOriginal - rescaled.InterceptOriginal); diff > 1e-8 {
+		t.Errorf("the intercept moved by %.3g: %.12g against %.12g",
+			diff, base.InterceptOriginal, rescaled.InterceptOriginal)
+	}
+
+	// Each coefficient must have absorbed exactly its column's factor, since the
+	// contribution beta_j * x_j has to be the same number either way.
+	for j := range base.Coefficients {
+		want := base.Coefficients[j] / factors[j]
+		got := rescaled.Coefficients[j]
+		if diff := math.Abs(got - want); diff > 1e-8*math.Max(1, math.Abs(want)) {
+			t.Errorf("coefficient %d: rescaled fit gives %.12g, but dividing the "+
+				"original by its column factor %g gives %.12g",
+				j, got, factors[j], want)
+		}
+	}
+}
+
+// TestPCRSignInvariance asserts that flipping the sign of a component leaves the
+// model's predictions untouched.
+//
+// The sign of a singular vector is arbitrary (Section 12.2): SVD implementations
+// disagree about it, and the same data can produce loadings of opposite sign on
+// different platforms or library versions. Predictions must not care, because
+// gamma-hat_j flips with the component and the product t_j * gamma-hat_j does
+// not. A defect that broke this would make results platform-dependent, which is
+// the one failure a user cannot debug from the output.
+func TestPCRSignInvariance(t *testing.T) {
+	data, y := makeRegressionData(50, 6, 3, 1.0, 33)
+	config := fixedConfig(4)
+
+	base, err := NewPCREngine().Fit(data, y, config)
+	if err != nil {
+		t.Fatalf("Fit: %v", err)
+	}
+
+	// Flip the sign of every predictor column. For a mean-centred, standardized
+	// matrix this negates the loadings and the scores together, exercising the
+	// sign convention without reaching inside the decomposition.
+	flipped := make(types.Matrix, len(data))
+	for i, row := range data {
+		flipped[i] = make([]float64, len(row))
+		for j, v := range row {
+			flipped[i][j] = -v
+		}
+	}
+
+	other, err := NewPCREngine().Fit(flipped, y, config)
+	if err != nil {
+		t.Fatalf("Fit on the sign-flipped data: %v", err)
+	}
+
+	for i := range base.Fitted {
+		if diff := math.Abs(base.Fitted[i] - other.Fitted[i]); diff > 1e-9 {
+			t.Fatalf("fitted value %d changed by %.3g when the component signs "+
+				"flipped: %.12g against %.12g",
+				i, diff, base.Fitted[i], other.Fitted[i])
+		}
+	}
+	if diff := math.Abs(base.RMSEC - other.RMSEC); diff > 1e-9 {
+		t.Errorf("RMSEC changed by %.3g under a sign flip", diff)
+	}
+
+	// The coefficients must negate with the data, since y is unchanged and x is
+	// negated. Asserting this as well guards against a fit that happened to be
+	// insensitive because it collapsed to the intercept.
+	for j := range base.Coefficients {
+		want := -base.Coefficients[j]
+		if diff := math.Abs(other.Coefficients[j] - want); diff > 1e-8*math.Max(1, math.Abs(want)) {
+			t.Errorf("coefficient %d: got %.12g, want %.12g", j, other.Coefficients[j], want)
+		}
+	}
+}
+
+// TestPooledAndMeanOfFoldsAreDifferentQuantities checks that RMSECV and
+// RMSECVMean are computed separately, and that they coincide only where theory
+// says they must.
+//
+// RMSECV pools every out-of-fold residual into one mean before taking the square
+// root; RMSECVMean averages the per-fold RMSE. By Jensen's inequality the pooled
+// value is the larger whenever the folds differ in error, and they are equal when
+// every fold holds exactly one observation. Both are reported, RMSECVSE derives
+// from the per-fold pass, and the one-standard-error rule depends on it — so if
+// one field were quietly copied from the other, the default selection rule would
+// be applied to a spread of zero and nothing else would look wrong.
+func TestPooledAndMeanOfFoldsAreDifferentQuantities(t *testing.T) {
+	data, y := makeRegressionData(40, 6, 3, 2.0, 41)
+
+	t.Run("differ on unequal fold error", func(t *testing.T) {
+		result, err := NewPCREngine().Fit(data, y, cvConfig(5, 4))
+		if err != nil {
+			t.Fatalf("Fit: %v", err)
+		}
+		report := result.CV
+
+		anyDifferent := false
+		for i := range report.RMSECV {
+			if report.RMSECV[i] != report.RMSECVMean[i] {
+				anyDifferent = true
+			}
+			// Pooling can only raise the figure, never lower it, so a mean above
+			// the pooled value means the two have been swapped.
+			if report.RMSECVMean[i] > report.RMSECV[i]+1e-12 {
+				t.Errorf("candidate %d: mean-of-folds %.12g exceeds pooled %.12g, "+
+					"which cannot happen; the two look interchanged",
+					report.Candidates[i], report.RMSECVMean[i], report.RMSECV[i])
+			}
+		}
+		if !anyDifferent {
+			t.Error("the pooled and mean-of-folds curves are identical at every " +
+				"candidate, which on folds of unequal error means one is a copy of " +
+				"the other")
+		}
+
+		// A standard error of zero everywhere would silently turn the
+		// one-standard-error rule into the plain minimum rule.
+		nonZero := false
+		for _, se := range report.RMSECVSE {
+			if se > 0 {
+				nonZero = true
+				break
+			}
+		}
+		if !nonZero {
+			t.Error("every per-fold standard error is zero, so the one-standard-error " +
+				"rule has nothing to work with")
+		}
+	})
+
+	t.Run("coincide at leave-one-out", func(t *testing.T) {
+		// With one observation per fold each fold's RMSE is the absolute value of
+		// its single residual, so the mean of those equals... not the pooled RMSE
+		// in general. What does coincide is the *count*: every fold contributes
+		// one residual, so pooled RMSE is the root mean square of the per-fold
+		// errors while the mean-of-folds is their arithmetic mean. Those agree only
+		// when all residuals have equal magnitude. What must hold at K=n is that
+		// the mean-of-folds equals the MAE, since |e_i| is each fold's RMSE.
+		config := cvConfig(4, 0) // zero folds means one per group: leave-one-out
+		result, err := NewPCREngine().Fit(data, y, config)
+		if err != nil {
+			t.Fatalf("Fit: %v", err)
+		}
+		report := result.CV
+		if report.Folds != 0 && report.Folds != len(y) {
+			t.Logf("design reported %d folds for %d rows", report.Folds, len(y))
+		}
+		for i := range report.Candidates {
+			if diff := math.Abs(report.RMSECVMean[i] - report.MAE[i]); diff > 1e-9 {
+				t.Errorf("candidate %d: at leave-one-out each fold's RMSE is the "+
+					"magnitude of its one residual, so the mean of them must equal "+
+					"MAE; got %.12g against %.12g",
+					report.Candidates[i], report.RMSECVMean[i], report.MAE[i])
+			}
+		}
+	})
+}

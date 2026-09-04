@@ -121,11 +121,11 @@
         },
         "numericTarget": {
           "type": "object",
-          "description": "Numeric target columns preserved",
+          "description": "Numeric target columns preserved. Null marks a value that was never measured: a calibration set where only part of the samples went for reference analysis is the ordinary case, not an error.",
           "additionalProperties": {
             "type": "array",
             "items": {
-              "type": "number"
+              "type": ["number", "null"]
             }
           }
         }

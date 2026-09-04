@@ -251,7 +251,7 @@ func ConvertToPCAOutputDataWithMetadata(result *types.PCAResult, data *Data, pre
 	if len(categoricalData) > 0 || len(targetData) > 0 {
 		preservedColumns = &types.PreservedColumns{
 			Categorical:   categoricalData,
-			NumericTarget: targetData,
+			NumericTarget: types.ConvertFloat64MapToJSON(targetData),
 		}
 	}
 
