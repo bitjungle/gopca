@@ -512,10 +512,35 @@ func TestSecurityRegression(t *testing.T) {
 		errContains string
 	}{
 		{
-			name: "PathTraversal",
+			// Renamed from "PathTraversal", which asserted a guarantee the CLI
+			// does not make and should not make.
+			//
+			// That case passed "../../../etc/passwd" and expected "not exist". It
+			// only ever passed because the path failed to resolve: the test runs
+			// from a temporary directory, and on macOS those sit deep enough
+			// (/var/folders/../T/TestX/001) that three levels up lands nowhere.
+			// On Linux they sit at /tmp/TestX/001, so three levels up is / and the
+			// path resolves to the real /etc/passwd. The CLI then read it and
+			// failed on "record on line 21: wrong number of fields" — it had not
+			// rejected the traversal at all.
+			//
+			// Nor should it. This is a local command-line tool: the path comes
+			// from the person running it, and reading the file they named is the
+			// job, not a vulnerability. security.ValidateInputPath, which
+			// pkg/csv/reader.go does call, checks that a path resolves to an
+			// existing regular file within the size limit — deliberately not that
+			// it stays inside some root, because there is no root to stay inside.
+			//
+			// So this now asserts what is actually true and is true everywhere: a
+			// path that does not exist produces a clear error rather than a
+			// confusing one. tc.TempDir guarantees the parent exists and the file
+			// does not, on every platform.
+			//
+			// The failure was invisible for as long as it existed because
+			// internal/integration was absent from the CI package list (#836).
+			name: "NonexistentFile",
 			setupFunc: func() string {
-				// Try to use path traversal
-				return "../../../etc/passwd"
+				return filepath.Join(tc.TempDir, "no-such-file.csv")
 			},
 			args:        []string{"analyze", "--method", "svd", "--components", "2", ""},
 			shouldFail:  true,
