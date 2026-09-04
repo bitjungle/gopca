@@ -87,7 +87,7 @@ func TestValidateModel(t *testing.T) {
 			name:    "Invalid JSON",
 			data:    "not json",
 			wantErr: true,
-			errMsg:  "json: cannot unmarshal",
+			errMsg:  "Expected: object, given: string",
 		},
 		{
 			name: "Missing required metadata",
@@ -97,7 +97,7 @@ func TestValidateModel(t *testing.T) {
 				"results":       createValidResults(),
 			},
 			wantErr: true,
-			errMsg:  "missing required field: metadata",
+			errMsg:  "metadata is required",
 		},
 		{
 			name: "Missing required preprocessing",
@@ -107,7 +107,7 @@ func TestValidateModel(t *testing.T) {
 				"results":  createValidResults(),
 			},
 			wantErr: true,
-			errMsg:  "missing required field: preprocessing",
+			errMsg:  "preprocessing is required",
 		},
 		{
 			name: "Invalid metadata structure",
@@ -127,7 +127,7 @@ func TestValidateModel(t *testing.T) {
 				"results":       createValidResults(),
 			},
 			wantErr: true,
-			errMsg:  "software must be 'gopca'",
+			errMsg:  "metadata.software: metadata.software does not match: \"gopca\"",
 		},
 		{
 			name: "Invalid loadings structure",
@@ -145,7 +145,7 @@ func TestValidateModel(t *testing.T) {
 				"results": createValidResults(),
 			},
 			wantErr: true,
-			errMsg:  "loadings must be an array",
+			errMsg:  "model.loadings: Invalid type. Expected: array, given: string",
 		},
 		{
 			name: "Invalid scores structure",
@@ -161,7 +161,7 @@ func TestValidateModel(t *testing.T) {
 				},
 			},
 			wantErr: true,
-			errMsg:  "scores must be an array",
+			errMsg:  "results.samples.scores: Invalid type. Expected: array, given: string",
 		},
 	}
 

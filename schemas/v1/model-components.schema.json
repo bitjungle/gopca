@@ -4,11 +4,18 @@
   "title": "PCA Model Components",
   "description": "Core PCA model components including loadings and variance",
   "type": "object",
-  "required": ["loadings", "explained_variance", "explained_variance_ratio", "cumulative_variance", "component_labels", "feature_labels"],
+  "required": [
+    "loadings",
+    "explained_variance",
+    "explained_variance_ratio",
+    "cumulative_variance",
+    "component_labels",
+    "feature_labels"
+  ],
   "properties": {
     "loadings": {
       "$ref": "common.schema.json#/definitions/Matrix",
-      "description": "Loading matrix (components × features)"
+      "description": "Loading matrix (components \u00d7 features)"
     },
     "explained_variance": {
       "type": "array",
@@ -20,20 +27,20 @@
     },
     "explained_variance_ratio": {
       "type": "array",
-      "description": "Percentage of variance explained by each component",
+      "description": "Percentage of total variance explained by each component, 0-100. Named \"ratio\" for historical reasons; note that scikit-learn's explained_variance_ratio_ is a fraction of 1, so a consumer comparing the two must divide by 100.",
       "items": {
         "type": "number",
         "minimum": 0,
-        "maximum": 1
+        "maximum": 100
       }
     },
     "cumulative_variance": {
       "type": "array",
-      "description": "Cumulative variance explained",
+      "description": "Cumulative percentage of variance explained, 0-100",
       "items": {
         "type": "number",
         "minimum": 0,
-        "maximum": 1
+        "maximum": 100
       }
     },
     "component_labels": {

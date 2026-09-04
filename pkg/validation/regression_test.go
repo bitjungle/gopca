@@ -33,7 +33,8 @@ import (
 // each regression case is built on.
 const baseModel = `{
   "metadata": {
-    "analysis_id": "a", "software_version": "1", "created_at": "2026-01-01T00:00:00Z",
+    "analysis_id": "123e4567-e89b-12d3-a456-426614174000",
+    "software_version": "1", "created_at": "2026-01-01T00:00:00Z",
     "software": "gopca", "config": {"method": "svd", "n_components": 2}
   },
   "preprocessing": {
@@ -130,7 +131,7 @@ func TestValidateRegressionBlock(t *testing.T) {
 			name: "negative component count",
 			regression: `{"response":"y","components":-1,"score_coefficients":[],
 				"intercept":0,"original_scale_valid":false}`,
-			wantErr: "negative",
+			wantErr: "regression.components: Must be greater than or equal to 0",
 		},
 		{
 			name:       "not an object",
@@ -143,7 +144,7 @@ func TestValidateRegressionBlock(t *testing.T) {
 			// a change of meaning, so it is required rather than defaulted.
 			name:       "original_scale_valid absent",
 			regression: `{"response":"y","components":1,"score_coefficients":[1],"intercept":0}`,
-			wantErr:    "missing required field: original_scale_valid",
+			wantErr:    "regression: original_scale_valid is required",
 		},
 		{
 			name: "original_scale_valid not a boolean",
