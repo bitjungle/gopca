@@ -70,7 +70,7 @@ Compounding the problem, many real-world variables are correlated. In wine chemi
 
 PCA addresses these challenges head-on. It finds new variables — principal components — that capture the directions of greatest variation in the data. These components combine correlated variables into single, more informative dimensions, stripping away redundancy and focusing attention on what really matters. Often just a handful of components explain most of the variation across dozens or even hundreds of variables.
 
-The benefits are immediate and tangible. A simple plot of the first two principal components can reveal clusters, trends, or groupings that would be invisible in the raw variables. PCA also prepares your data for downstream tasks. Whether you're running regressions, building classification models, or clustering samples, working in a reduced set of principal components often leads to models that are faster, less noisy, and more interpretable.
+The benefits are immediate and tangible. A simple plot of the first two principal components can reveal clusters, trends, or groupings that would be invisible in the raw variables. PCA also prepares your data for downstream tasks. Whether you're running regressions, building classification models, or clustering samples, working in a reduced set of principal components often leads to models that are faster, less noisy, and more interpretable. That last use has a name — Principal Component Regression — and Section 12 shows how it can also tell you something about the PCA itself.
 
 ---
 
@@ -135,7 +135,7 @@ GoPCA Desktop ships with seven carefully selected sample datasets. Together they
 - What multiplicative scatter looks like in a scores plot and why it is a problem
 - How **SNV (Standard Normal Variate)** preprocessing removes scatter artifacts by normalizing each spectrum row-wise
 - That the choice of preprocessing can completely change what PCA finds
-- How PCA enables calibration: the scores from a well-preprocessed spectral PCA are excellent inputs for predicting composition values
+- How PCA enables calibration: the scores from a spectral PCA are excellent inputs for predicting composition values — and the four `#target` columns let you try it directly (Section 12)
 
 **Preprocessing:** SNV is the key step here, applied before mean centering. The tutorial walks you through what the data looks like without SNV (a single scatter artifact dominates PC1) and then with SNV (genuine compositional variation becomes visible).
 
@@ -392,6 +392,8 @@ PCA essentially rotates your coordinate system to align with the natural "shape"
 
 There is a subtle but important detail in that first step. The line PCA draws is the one that comes as close as possible to the points *taken together* — precisely, the line that makes the **total of the squared perpendicular distances** from the points to the line as small as possible. Two things are worth noticing. First, those distances are measured **perpendicular** to the line, not straight up and down — which is what sets PCA apart from the familiar "line of best fit" from regression, which minimizes only the **vertical** gaps because it treats one variable as the thing to be predicted. Second, PCA plays no favorites: it singles out no variable as the response, measuring how far each data point sits from the line itself. This is, in fact, the original definition of a principal component — Karl Pearson introduced it in 1901 in a paper titled *On Lines and Planes of Closest Fit to Systems of Points in Space*. The axis PCA finds is quite literally Pearson's "line of closest fit."
 
+Notice that this makes PCA and regression complementary rather than rival ideas. Regression needs you to nominate a response and then asks how the other variables predict it; PCA asks what shape the cloud has, with no response in mind at all. Nothing stops you from doing one and then the other — finding the cloud's natural axes first, and *then* regressing against them. That is Principal Component Regression, and Section 12 takes it up.
+
 Projecting onto PC1–PC2 is like shining a light through your data cloud and looking at its 2D shadow — but unlike random projections, this shadow is carefully chosen to preserve as much of the cloud's structure as possible.
 
 ### Geometric Interpretation of Key Concepts
@@ -537,7 +539,7 @@ PCA works best under certain conditions:
 
 **Natural noise filtering:** Systematic patterns concentrate in early components while random noise spreads across all components. Keeping only the major components automatically filters much of the measurement noise.
 
-**Better features for downstream analysis:** PC scores capture coordinated patterns of variation. In machine learning, using PC scores as inputs often improves performance by reducing multicollinearity and overfitting.
+**Better features for downstream analysis:** PC scores capture coordinated patterns of variation. Because the components are uncorrelated by construction, they sidestep the multicollinearity that destabilises ordinary regression on correlated variables — the idea behind Principal Component Regression (Section 12).
 
 **Visualization of the impossible:** We cannot directly picture 13-dimensional wine chemistry, but we can plot PC1 against PC2 — the optimal two-dimensional view that preserves as much variation as possible.
 
@@ -702,7 +704,80 @@ The window length *L* should cover at least 1–2 full periods of the oscillatio
 
 ---
 
-## 12. PCA in Practice: Tips for Effective Use
+## 12. Principal Component Regression: Putting the Components to Work
+
+Every section so far has treated principal components as a destination. **Principal Component Regression (PCR)** treats them as a starting point: run PCA, then regress your response on the component scores instead of on the original variables. William Massy introduced it in 1965, and it is PCA with a least-squares step at the end — everything you have learned about preprocessing, component counts, scores and loadings carries over unchanged.
+
+PCR is not the best predictive method available, and this section says what to reach for instead. But it does two things well: it dissolves a problem that defeats ordinary regression, and it tells you something about your PCA that the PCA alone cannot.
+
+### The Problem PCR Solves: Collinearity
+
+Ordinary Least Squares (OLS) regression has one notorious weakness: **correlated predictors**. When two variables carry nearly the same information, OLS cannot decide how to divide the credit — it will hand you +4,000 on one and −3,950 on the other when either alone would do. The fitted values look fine; the coefficients are nonsense, and liable to swap signs if you add a single sample. This is **multicollinearity**, and it is the normal condition of spectroscopic data, sensor arrays, and any set of measurements describing the same underlying object.
+
+Push a little further and OLS stops working altogether. The Corn NIR dataset has **700 wavelengths and 80 samples**. Infinitely many coefficient vectors reproduce those 80 measurements perfectly, and OLS has no basis for choosing among them. There is no unique answer to be had.
+
+PCR dissolves this, for a reason you already understand: **principal components are uncorrelated by construction**. Section 2 said so in its first bullet — PC2 captures the second-most variation *while being completely uncorrelated with PC1*, and so on. Regress on the scores and there is no credit to divide. The instability has nowhere to live. Truncation does the rest: the directions where collinear data is most degenerate are precisely the low-variance components at the end of the list, and dropping them is the ordinary business of PCA.
+
+> **One honest caveat.** Keep *every* component and PCR is algebraically identical to OLS, instability and all. The stabilisation comes entirely from leaving components out — which is why the choice of how many to keep matters far more here than in exploratory PCA.
+
+### What Regression Tells You About Your PCA
+
+This half has nothing to do with prediction, and may be the more useful one.
+
+PCA orders components by variance, and it is easy to slide from that into assuming the first ones are the *important* ones. Section 8 lists "variance equals importance" as an assumption precisely because it is one — and a regression against a known property is one of the few ways to test it. Try it on the corn spectra, predicting moisture:
+
+```bash
+pca regress --response "Moisture#target" --scale standard \
+    --cv 10 --cv-scheme contiguous --max-components 12 corn.csv
+```
+
+**PC1 explains 97.5% of the spectral variance** — and a model on PC1 alone predicts moisture with a cross-validated R² of just **0.26**. Meanwhile **PC7 carries 0.009% of the variance**, less than one hundredth of one percent, and adding it lifts the cross-validated R² from **0.81 to 0.97**.
+
+That is a finding about the data, not a quirk of the method: almost all the variation between these spectra is *something other than moisture*, and the moisture signal sits in a component any sensible scree plot would have discarded. Ian Jolliffe warned about exactly this in 1982.
+
+**A second lesson from the same data.** Section 4 recommends **SNV** for the corn spectra, and that advice is sound for exploration: it removes the scatter that otherwise dominates PC1. But add `--snv` to the command above and the best cross-validated R² for moisture falls from 0.99 to **0.81**. The likely reason is instructive — SNV normalises each spectrum to a common mean and spread, while water absorbs strongly in the near-infrared and so raises a spectrum's overall level. Some of what SNV removes as a scatter artefact is signal you wanted.
+
+Neither choice is wrong; they answer different questions. Until you fit a model, you have no way to notice they disagree.
+
+> **A caution that comes with it.** If you use the cross-validated error to *choose* your preprocessing, that error becomes an optimistic estimate of future performance — you have fitted the choice to the validation data. When it matters, keep a genuine test set out of development entirely.
+
+### Reading the Error Figures
+
+Three quantities sound alike and mean quite different things. Confusing them is the most common way to overstate a model.
+
+| Figure | Measured on | What it tells you |
+|---|---|---|
+| **RMSEC** | The training samples themselves | How well the model *fits*. Always the most flattering number, and not a performance estimate |
+| **RMSECV** | Held-out samples during cross-validation | An estimate of performance, and what selects the component count |
+| **RMSEP** | An independent test set, never used in development | The honest estimate of future performance |
+
+All three are in the units of your response: corn moisture spans 9.4% to 11.0%, so an RMSECV of 0.031 means predictions typically land within about 0.03 percentage points of the reference. GoPCA also reports **bias** and **SEP** separately, because a model that is precise but consistently 2 units high is repairable with an offset while one that is merely scattered is not. **Q²** is the cross-validated R²; unlike R² it can be negative, meaning you would have done better predicting the average every time.
+
+Cross-validation gives you a curve of error against component count, and GoPCA offers several rules for reading it — the minimum, the simplest model within one standard error of it (the default), a tolerance you name, the first upturn, or Wold's R. But a rule reads the curve and nothing else. **The final decision should also rest on what you know about the instrument and the system being measured**, which no statistic in the panel can see. Treat the curve as evidence, not a verdict.
+
+### Where PCR Sits Among Regression Methods
+
+**Partial Least Squares (PLS)** is the standard tool in chemometrics. Where PCA chooses components capturing the most variance in **X** alone — ignoring your response entirely — PLS chooses components capturing the most *covariance between* **X** and **y**, aiming at the target from the start. It usually reaches comparable accuracy with noticeably fewer components, and is less exposed to the situation the corn data illustrates. Frank and Friedman's 1993 comparison found PCR, PLS and ridge regression broadly similar on predictive accuracy — but PLS gets there more directly.
+
+**Gradient-boosted trees** (XGBoost and relatives) assume no linearity at all, and on tabular data with a few thousand samples and genuinely nonlinear relationships they will usually beat any linear method — but they need far more data than a calibration set of 80 spectra provides, give you no loadings to interpret, and extrapolate badly. **Ridge regression and the lasso** attack collinearity by shrinking coefficients rather than dropping directions.
+
+So why does GoPCA offer PCR? Because this is a PCA toolset and PCR *is* PCA — adding PLS would mean a second decomposition with different components and a different notion of what an axis means. And because a PCR model is a fast, informative first look at what your data can support: predict a property at Q² = 0.97 and the information is unmistakably there; manage only 0.15 and you have learned something valuable cheaply. Often enough, particularly with well-behaved spectroscopic data, PCR is simply good enough for the job.
+
+### Using PCR in GoPCA Suite
+
+Any numeric `#target` column can serve as the response — the same convention that marks a column for colouring plots, now doing double duty. In **GoPCA Desktop**, switch from **Explore** to **Regress** mode: Step 2 stays your familiar PCA configuration, and Step 3 adds the response, the validation design and the selection rule. You get the error curve, a predicted-against-measured plot with its 1:1 line, and the coefficients on the original variable scale — for spectra, the plot showing which wavelength regions the model actually uses.
+
+```bash
+pca regress --list-responses corn.csv                    # what can be a response?
+pca regress --response "Moisture#target" --cv 10 corn.csv
+pca regress --response "Yield#target" --cv loo --cv-group "BatchID" process.csv
+```
+
+Three limitations are worth stating plainly. **Kernel and Temporal PCA cannot be used for PCR** — neither can project a new sample from its variables alone, so a saved model could not predict. Under **SNV or vector normalisation** no fixed per-variable coefficients exist, since those methods scale each sample by a statistic of itself; the model still predicts correctly through the full pipeline, but GoPCA says the coefficient plot is unavailable rather than showing an approximation. And PCR predicts *numbers*: a `#target` column holding 0, 1 and 2 for three species is a class label, and regressing on it asserts the classes are ordered and evenly spaced. Predicting a category is classification, which this suite deliberately does not attempt — GoPCA warns you when a response looks like a class code.
+
+---
+
+## 13. PCA in Practice: Tips for Effective Use
 
 ![A Practical Checklist](images/intro_to_pca_fig_12-01.jpg)
 
@@ -759,6 +834,7 @@ The window length *L* should cover at least 1–2 full periods of the oscillatio
 - Apply SNV preprocessing to remove scatter effects — see the Corn tutorial
 - May need many components (10–20) for calibration tasks
 - Watch for baseline effects dominating PC1
+- If you are heading for a calibration, check the preprocessing against a cross-validated model rather than against the scores plot alone — the two can disagree (Section 12)
 
 **Genomics/Proteomics:**
 - Log-transform count data first
@@ -779,7 +855,7 @@ The window length *L* should cover at least 1–2 full periods of the oscillatio
 
 ---
 
-## 13. Conclusion: Your Path Forward with PCA
+## 14. Conclusion: Your Path Forward with PCA
 
 ![Your Path Forward with PCA](images/intro_to_pca_fig_13-01.jpg)
 
@@ -791,6 +867,7 @@ You've traveled from the basic intuition of PCA through its mathematical foundat
 - **The Mathematics:** From covariance matrices to eigendecomposition, the elegant math that powers PCA
 - **The Practice:** How to preprocess data, choose components, and interpret results
 - **The Variants:** When to use Kernel PCA for nonlinear patterns or Temporal PCA for time series
+- **The Components at Work:** How Principal Component Regression turns the scores into predictions, and what it reveals about the decomposition that produced them
 - **The Limitations:** When PCA shines and when to reach for alternatives
 
 ### Your Next Steps with GoPCA Suite
@@ -814,7 +891,7 @@ Welcome to the community of PCA practitioners. May your principal components be 
 
 ---
 
-## 14. References and Further Reading
+## 15. References and Further Reading
 
 ![References and Further Reading](images/intro_to_pca_fig_14-01.jpg)
 
@@ -840,6 +917,14 @@ Welcome to the community of PCA practitioners. May your principal components be 
 - **Vautard, R., & Ghil, M. (1989).** Singular spectrum analysis in nonlinear dynamics, with applications to paleoclimatic time series. *Physica D: Nonlinear Phenomena*, 35(3), 395–424.
 - **Golyandina, N., Korobeynikov, A., Shlemov, A., & Usevich, K. (2015).** Multivariate and 2D extensions of singular spectrum analysis with the Rssa package. *Journal of Statistical Software*, 67(2), 1–78.
 - **Golyandina, N. (2020).** Particularities and commonalities of singular spectrum analysis as a method of time series analysis and signal processing. *WIREs Computational Statistics*, 12(4), e1487.
+
+### Principal Component Regression and Related Methods
+- **Massy, W. F. (1965).** Principal components regression in exploratory statistical research. *Journal of the American Statistical Association*, 60(309), 234–256. The paper that introduced PCR.
+- **Jolliffe, I. T. (1982).** A note on the use of principal components in regression. *Journal of the Royal Statistical Society, Series C (Applied Statistics)*, 31(3), 300–303. The classic warning that low-variance components can carry the predictive signal — demonstrated on the Corn data in Section 12.
+- **Frank, I. E., & Friedman, J. H. (1993).** A statistical view of some chemometrics regression tools. *Technometrics*, 35(2), 109–135. A careful comparison of PCR, PLS and ridge regression.
+- **Wold, S., Sjöström, M., & Eriksson, L. (2001).** PLS-regression: a basic tool of chemometrics. *Chemometrics and Intelligent Laboratory Systems*, 58(2), 109–130. The standard introduction to the method PCR is most often compared against.
+- **Næs, T., Isaksson, T., Fearn, T., & Davies, T. (2002).** *A User-Friendly Guide to Multivariate Calibration and Classification.* NIR Publications. Practical treatment of RMSEC, RMSECV, RMSEP, bias and SEP.
+- **Chen, T., & Guestrin, C. (2016).** XGBoost: A Scalable Tree Boosting System. *Proceedings of the 22nd ACM SIGKDD International Conference on Knowledge Discovery and Data Mining*, 785–794.
 
 ### Implementation References
 - **Golub, G. H., & Van Loan, C. F. (2013).** *Matrix Computations* (4th ed.). Johns Hopkins University Press.
