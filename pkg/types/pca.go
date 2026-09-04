@@ -44,6 +44,27 @@ const (
 	MissingNative MissingValueStrategy = "native"
 )
 
+// AllMissingValueStrategies lists every strategy the constants above define, in
+// declaration order.
+//
+// It exists so that the JSON schemas have something to be checked against. The
+// schema's missing_strategy enum is a claim about what the software accepts, and
+// for some time it was a false one: the embedded copy omitted "zero" while the
+// code accepted it, and nothing connected the two, so nothing failed. A list the
+// schema test can read turns that from an unverifiable claim into a comparison.
+//
+// TestAllMissingValueStrategiesIsComplete reads the source of this file and
+// fails if a constant is declared and left out here, so the list cannot fall
+// behind the constants it summarises.
+var AllMissingValueStrategies = []MissingValueStrategy{
+	MissingError,
+	MissingDrop,
+	MissingMean,
+	MissingMedian,
+	MissingZero,
+	MissingNative,
+}
+
 // PCAConfig holds configuration for PCA analysis
 type PCAConfig struct {
 	Components      int    `json:"components"`
