@@ -634,7 +634,10 @@ generate-sklearn-reference:
 		cd validation && \
 		python generate_reference_pca.py && \
 		python generate_reference_pcr.py && \
-		echo "Sklearn reference data generated successfully in testdata/validation/reference_results/"
+		python generate_studentt_reference.py && \
+		echo "Reference data generated in testdata/validation/reference_results/" && \
+		echo "These are the same generators CI runs, so a local 'make ci-test' now" && \
+		echo "exercises the same validation a pull request will"
 
 ## fmt: Format all Go code
 fmt:
