@@ -27,6 +27,7 @@ import { CustomSelect } from '@gopca/ui-components';
 import { HelpWrapper } from '../index';
 import { useFileDataContext } from '../../contexts/FileDataContext';
 import { usePCAContext } from '../../contexts/PCAContext';
+import { usePCRContext } from '../../contexts/PCRContext';
 import { useUIContext } from '../../contexts/UIContext';
 import { maxComponentsFor, clampComponentCount } from '../../utils/maxComponents';
 
@@ -46,40 +47,65 @@ interface PCAConfigSectionProps {
 export function PCAConfigSection({ onRunPCA }: PCAConfigSectionProps) {
     const { fileData } = useFileDataContext();
     const { config, setConfig, loading, generateCLICommand } = usePCAContext();
+
+    // In Regress mode this panel configures the decomposition the regression is
+    // built on, so the preprocessing controls still apply. The Go PCA button does
+    // not: it runs a decomposition whose results Regress mode never displays, so
+    // pressing it spent the time and discarded the answer. The command preview is
+    // kept but rebuilt as `pca regress`, since `pca analyze` would not reproduce
+    // what is on screen.
+    const { mode, regressionCLIConfig } = usePCRContext();
+    const regressing = mode === 'regress';
+    const commandLine = regressing
+        ? generateCLICommand(regressionCLIConfig)
+        : generateCLICommand();
     const { showCopied, copyToClipboard } = useUIContext();
 
     if (!fileData) return null;
 
     return (
         <div className="bg-white dark:bg-gray-800 rounded-lg p-6 shadow-lg border border-gray-200 dark:border-gray-700">
-            <h2 className="text-xl font-semibold mb-6">Step 2: Configure PCA</h2>
+            <HelpWrapper helpKey={regressing ? 'configure-pca-for-regression' : 'configure-pca'}>
+                <h2 className="text-xl font-semibold mb-6">
+                    {regressing ? 'Step 2: Configure the PCA Decomposition' : 'Step 2: Configure PCA'}
+                </h2>
+            </HelpWrapper>
 
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
                 {/* Left Column - Core PCA Configuration */}
                 <div className="space-y-4">
-                    <h3 className="text-sm font-semibold text-gray-700 dark:text-gray-300">PCA Options</h3>
+                    <h3 className="text-sm font-semibold text-gray-700 dark:text-gray-300">
+                        {regressing ? 'Decomposition Options' : 'PCA Options'}
+                    </h3>
 
                     <div className="p-3 bg-gray-50 dark:bg-gray-700/50 rounded-lg space-y-4">
-                        <HelpWrapper helpKey="num-components">
-                            <label className="block text-sm font-medium mb-2">
-                                Number of Components
-                            </label>
-                            <input
-                                type="number"
-                                min="1"
-                                max={maxComponentsFor(config.method, fileData.headers.length, fileData.data.length, config.temporalLags)}
-                                value={config.components}
-                                onChange={(e) => setConfig(prev => ({
-                                    ...prev,
-                                    components: clampComponentCount(
-                                        e.target.value,
-                                        prev.components,
-                                        maxComponentsFor(prev.method, fileData.headers.length, fileData.data.length, prev.temporalLags)
-                                    )
-                                }))}
-                                className="w-full px-3 py-2 bg-gray-100 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg text-gray-900 dark:text-white"
-                            />
-                        </HelpWrapper>
+                        {regressing ? (
+                            <p className="text-sm text-gray-500 dark:text-gray-400">
+                                The number of components is set in step 3, where it can also be
+                                chosen by cross-validation.
+                            </p>
+                        ) : (
+                            <HelpWrapper helpKey="num-components">
+                                <label className="block text-sm font-medium mb-2">
+                                    Number of Components
+                                </label>
+                                <input
+                                    type="number"
+                                    min="1"
+                                    max={maxComponentsFor(config.method, fileData.headers.length, fileData.data.length, config.temporalLags)}
+                                    value={config.components}
+                                    onChange={(e) => setConfig(prev => ({
+                                        ...prev,
+                                        components: clampComponentCount(
+                                            e.target.value,
+                                            prev.components,
+                                            maxComponentsFor(prev.method, fileData.headers.length, fileData.data.length, prev.temporalLags)
+                                        )
+                                    }))}
+                                    className="w-full px-3 py-2 bg-gray-100 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg text-gray-900 dark:text-white"
+                                />
+                            </HelpWrapper>
+                        )}
 
                         <HelpWrapper helpKey="pca-method">
                             <label className="block text-sm font-medium mb-2">
@@ -381,18 +407,20 @@ export function PCAConfigSection({ onRunPCA }: PCAConfigSectionProps) {
                 </div>
             </div>
 
-            {/* Go PCA! button */}
-            <div className="mt-6 flex justify-center">
-                <HelpWrapper helpKey="go-pca-button">
-                    <button
-                        onClick={onRunPCA}
-                        disabled={loading}
-                        className="px-6 py-2 bg-blue-600 hover:bg-blue-700 disabled:bg-gray-400 dark:disabled:bg-gray-600 rounded-lg font-medium text-white"
-                    >
-                        {loading ? 'Running...' : 'Go PCA!'}
-                    </button>
-                </HelpWrapper>
-            </div>
+            {/* Go PCA! button, hidden while regressing; Fit regression is the action there */}
+            {!regressing && (
+                <div className="mt-6 flex justify-center">
+                    <HelpWrapper helpKey="go-pca-button">
+                        <button
+                            onClick={onRunPCA}
+                            disabled={loading}
+                            className="px-6 py-2 bg-blue-600 hover:bg-blue-700 disabled:bg-gray-400 dark:disabled:bg-gray-600 rounded-lg font-medium text-white"
+                        >
+                            {loading ? 'Running...' : 'Go PCA!'}
+                        </button>
+                    </HelpWrapper>
+                </div>
+            )}
 
             {/* CLI Command Preview */}
             <div className="mt-4 bg-gray-900 dark:bg-gray-950 rounded-lg p-4 border border-gray-700">
@@ -401,12 +429,12 @@ export function PCAConfigSection({ onRunPCA }: PCAConfigSectionProps) {
                         <span className="text-sm font-medium text-gray-300">Command line:</span>
                         <HelpWrapper helpKey="cli-command-preview">
                             <div className="flex-1 bg-black rounded px-3 py-2 font-mono text-xs text-green-400 overflow-x-auto">
-                                {generateCLICommand()}
+                                {commandLine}
                             </div>
                         </HelpWrapper>
                     </div>
                     <button
-                        onClick={() => copyToClipboard(generateCLICommand())}
+                        onClick={() => copyToClipboard(commandLine)}
                         className="px-2 py-1 bg-gray-700 hover:bg-gray-600 rounded text-white transition-colors flex-shrink-0"
                         title="Copy command"
                     >

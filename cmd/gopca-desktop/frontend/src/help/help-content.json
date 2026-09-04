@@ -37,17 +37,17 @@
     },
     "sample-dataset-cstr": {
       "title": "CSTR Dataset (time series)",
-      "text": "Simulated non-isothermal CSTR with A→B exothermic reaction and PI coolant control. 801 time points (1 min sampling) across 12 process variables. Six operating phases: steady state, feed disturbances, flow oscillation (40-min period), cooling fault, and recovery. Designed for Temporal PCA teaching in chemical engineering.",
+      "text": "Simulated non-isothermal CSTR with PI cooling control: 801 time points, 12 variables, stepping through steady state, feed disturbances, an oscillation and a cooling fault. Built for Temporal PCA.",
       "category": "data-input"
     },
     "sample-dataset-eeg-eye-state": {
       "title": "EEG Eye State Dataset",
-      "text": "117-second EEG recording from one subject using a 14-channel Emotiv neuroheadset. Each row is one time point at 128 Hz. The eye_state label (open/closed) was added from video analysis. Use with Temporal PCA to explore oscillatory brain dynamics.",
+      "text": "117 seconds of 14-channel EEG at 128 Hz from one subject, each row a time point labelled eyes open or closed. Built for Temporal PCA.",
       "category": "data-input"
     },
     "sample-dataset-body-measures": {
       "title": "Body Measures Dataset",
-      "text": "Seven anthropometric measurements (weight, height, and limb lengths and circumferences) for 5,096 US adults from NHANES 2017-2018. A real population sample that shows how PCA separates an overall body-size factor (PC1) from a body-shape factor (PC2). Color by Gender, BMI, or Age.",
+      "text": "Seven body measurements for 5,096 US adults from NHANES 2017-2018. PC1 captures overall body size, PC2 body shape. Colour by Gender, BMI or Age.",
       "category": "data-input"
     },
     "gocsv-integration": {
@@ -67,7 +67,7 @@
     },
     "variable-profile-distribution": {
       "title": "Distribution",
-      "text": "Box = middle 50%, tick = median, whisker = the last value within 1.5\u00d7IQR, dashed tail = outliers beyond it. Each column scaled to its own range.",
+      "text": "Box = middle 50%, tick = median, whisker = the last value within 1.5×IQR, dashed tail = outliers beyond it. Each column scaled to its own range.",
       "category": "data-input"
     },
     "variable-profile-excluded": {
@@ -92,8 +92,8 @@
     },
     "kernel-type": {
       "title": "Kernel Type",
-      "text": "RBF: General nonlinear, most versatile. Linear: Equivalent to standard PCA. Polynomial: Degree-n relationships.",
-      "category": "configuration"
+      "text": "The kernel function used to map data to higher-dimensional space. RBF for non-linear patterns, Linear for linear relationships, Polynomial for curved boundaries.",
+      "category": "results"
     },
     "kernel-gamma": {
       "title": "Gamma Parameter",
@@ -185,11 +185,6 @@
       "text": "Cumulative variance explained by recommended components. Higher percentage means more original information retained.",
       "category": "results"
     },
-    "kernel-type": {
-      "title": "Kernel Type",
-      "text": "The kernel function used to map data to higher-dimensional space. RBF for non-linear patterns, Linear for linear relationships, Polynomial for curved boundaries.",
-      "category": "results"
-    },
     "kernel-components": {
       "title": "Kernel Components",
       "text": "Number of principal components computed. Shows the variance explained by the first component, indicating the main direction of variation in kernel space.",
@@ -276,8 +271,8 @@
       "category": "visualization"
     },
     "group-coloring": {
-      "title": "Color by Group",
-      "text": "Color points by categorical column. Reveals group separation in PC space.",
+      "title": "Color by Column",
+      "text": "Color samples by categorical columns (discrete colors), continuous #target columns (gradient), or Row Index (gradient showing sample order, useful for time series).",
       "category": "visualization"
     },
     "confidence-ellipses": {
@@ -355,11 +350,6 @@
       "text": "Display sample IDs on plots. First column if non-numeric, else row numbers. Useful for identifying specific points.",
       "category": "visualization"
     },
-    "group-coloring": {
-      "title": "Color by Column",
-      "text": "Color samples by categorical columns (discrete colors), continuous #target columns (gradient), or Row Index (gradient showing sample order, useful for time series).",
-      "category": "visualization"
-    },
     "diagnostic-metrics": {
       "title": "Calculate Diagnostic Metrics",
       "text": "Compute T² (Hotelling) and Q (SPE) residuals for outlier detection. Not available for Kernel PCA.",
@@ -429,6 +419,61 @@
       "title": "Screen Reader Support",
       "text": "All interactive elements have ARIA labels. Dynamic updates announced via live regions. Use landmarks to navigate page structure.",
       "category": "interface"
+    },
+    "analysis-mode-explore": {
+      "title": "Explore Mode",
+      "text": "Examine the structure of your data with PCA alone: scores, loadings, variance and diagnostics. This is what GoPCA has always done.",
+      "category": "analysis"
+    },
+    "analysis-mode-regress": {
+      "title": "Regress Mode",
+      "text": "Predict a numeric response from the component scores, using the same preprocessing and decomposition as Explore. Only the question changes.",
+      "category": "analysis"
+    },
+    "pcr-response": {
+      "title": "Response",
+      "text": "The numeric column to predict, marked with a #target suffix. Categorical targets are not offered: predicting a category is classification, not regression.",
+      "category": "analysis"
+    },
+    "pcr-components": {
+      "title": "Components",
+      "text": "How many components the regression uses. Prefer cross-validation: a component explaining little predictor variance can still carry most of the response.",
+      "category": "analysis"
+    },
+    "pcr-cv-folds": {
+      "title": "Validation Folds",
+      "text": "How many parts the data is split into for validation. Leave one out holds back a single sample at a time, and is common for small calibration sets.",
+      "category": "analysis"
+    },
+    "pcr-cv-scheme": {
+      "title": "Fold Layout",
+      "text": "Random suits interchangeable samples. Contiguous blocks suit data whose order matters. Forward chaining never trains on samples later than those predicted.",
+      "category": "analysis"
+    },
+    "pcr-cv-group": {
+      "title": "Keep Together",
+      "text": "Keeps rows sharing a category in one fold. Use for replicates or batches, or the model interpolates between near-duplicates and looks better than it is.",
+      "category": "analysis"
+    },
+    "pcr-select-rule": {
+      "title": "Selection Rule",
+      "text": "How the error curve becomes a count. First minimum stops where the curve first turns up. The final choice should also rest on the instrument and the system.",
+      "category": "analysis"
+    },
+    "pcr-metric": {
+      "title": "Selection Metric",
+      "text": "RMSE is driven by the largest errors, MAE by the typical one. When the two choose different models, a few samples are deciding the result.",
+      "category": "analysis"
+    },
+    "configure-pca": {
+      "title": "Configure PCA",
+      "text": "Choose how many components to compute, which algorithm to use, and how the data is preprocessed before the decomposition.",
+      "category": "configuration"
+    },
+    "configure-pca-for-regression": {
+      "title": "Configure the Decomposition",
+      "text": "These settings shape the components the regression is built on. Switch to Explore to see how they change the decomposition before you fit.",
+      "category": "configuration"
     }
   },
   "categories": {

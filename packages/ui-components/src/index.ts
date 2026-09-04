@@ -125,6 +125,13 @@ export {
   PlotlyBarChart
 } from './charts/PlotlyBarChart';
 
+// PlotlyScatterChart and PlotlyLineChart were implemented and re-exported from
+// charts/index.ts but never from this file, so no application could reach them.
+// The regression views are their first consumer.
+export { PlotlyScatterChart } from './charts/PlotlyScatterChart';
+export { PlotlyLineChart } from './charts/PlotlyLineChart';
+export type { ScatterChartProps, LineChartProps, ChartDataPoint } from './charts/types';
+
 // Plotly Fullscreen Support
 export { PlotlyWithFullscreen, PlotlyFullscreenModal, usePlotlyFullscreen, createFullscreenButton } from './charts/utils/plotlyFullscreen';
 

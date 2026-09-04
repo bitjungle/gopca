@@ -174,9 +174,11 @@ func (p *PCRImpl) crossValidate(data types.Matrix, y []float64, labelled []int,
 	// a threshold that means nothing.
 	curve, curveSE := report.RMSECV, report.RMSECVSE
 	alternative, alternativeSE := report.MAE, report.MAESE
-	if config.Selection.Metric == "mae" {
+	report.Metric = types.MetricRMSE
+	if config.Selection.Metric == types.MetricMAE {
 		curve, curveSE = report.MAE, report.MAESE
 		alternative, alternativeSE = report.RMSECV, report.RMSECVSE
+		report.Metric = types.MetricMAE
 	}
 
 	selected, err := SelectComponents(report.Candidates, curve, curveSE,
@@ -185,6 +187,33 @@ func (p *PCRImpl) crossValidate(data types.Matrix, y []float64, labelled []int,
 		return nil, err
 	}
 	report.Selected = selected
+
+	// Where the lowest point actually is, so a rule that passes over it can be
+	// held to account for the difference.
+	lowest := 0
+	for i := range curve {
+		if curve[i] < curve[lowest] {
+			lowest = i
+		}
+	}
+	report.LowestError = report.Candidates[lowest]
+
+	// Whether the error was still descending when the sweep ran out of room.
+	// Asserting that it was, without checking, would put a claim on screen that
+	// the curve does not support: a minimum landing on the last candidate of a
+	// noisy curve is not evidence that more components would help.
+	//
+	// The margin comes from curveSE, not from RMSECVSE: on an MAE selection the
+	// two are different quantities, and the comment above the curve assignment
+	// says so. Reading the RMSE spread here would compare an MAE step against the
+	// scatter of a curve nobody is looking at.
+	if n := len(curve); n >= 2 {
+		margin := 0.0
+		if len(curveSE) == n {
+			margin = curveSE[n-1]
+		}
+		report.CurveStillFalling = curve[n-1] < curve[n-2]-margin
+	}
 
 	// What the other measure would have chosen. When the two disagree, a few large
 	// residuals are driving the choice, which is worth surfacing rather than

@@ -25,6 +25,7 @@ import React, { useEffect, useRef, useMemo } from 'react';
 import Plotly from 'plotly.js-dist-min';
 import { ScatterChartProps } from './types';
 import { getPlotlyTheme, mergeLayouts, calculatePlotlyLabels, getPlotlyTextPosition } from './utils';
+import { identityLineEnds } from './utils/identityLine';
 import { useChartTheme } from '../hooks/useChartTheme';
 
 export const PlotlyScatterChart: React.FC<ScatterChartProps> = ({
@@ -40,6 +41,7 @@ export const PlotlyScatterChart: React.FC<ScatterChartProps> = ({
   yLabel,
   showGrid = true,
   showReferenceLines = true,
+  identityLine = false,
   fill = '#3b82f6',
   stroke
 }) => {
@@ -108,10 +110,24 @@ return;
 
     // Add reference lines if requested
     if (showReferenceLines) {
+      // The lines have to span something, and without an explicit domain that
+      // was a hardcoded -10 to 10. Plotly's autorange accounts for every trace,
+      // so those lines dragged the view out to at least that span whatever the
+      // data was: a response living between 9.4 and 11.0 was drawn into a corner
+      // of a plot reaching from -10 to 12. Span the data instead, so a reference
+      // line marks the axis without deciding the scale.
+      const xs = plotData.map(p => p.x).filter(v => Number.isFinite(v));
+      const ys = plotData.map(p => p.y).filter(v => Number.isFinite(v));
+      const spanX: [number, number] = domain?.x ?? [
+        Math.min(0, ...xs), Math.max(0, ...xs)
+      ];
+      const spanY: [number, number] = domain?.y ?? [
+        Math.min(0, ...ys), Math.max(0, ...ys)
+      ];
       // Vertical line at x=0
       traces.push({
         x: [0, 0],
-        y: [domain?.y?.[0] ?? -10, domain?.y?.[1] ?? 10],
+        y: spanY,
         mode: 'lines',
         type: 'scatter' as const,
         line: {
@@ -125,7 +141,7 @@ return;
 
       // Horizontal line at y=0
       traces.push({
-        x: [domain?.x?.[0] ?? -10, domain?.x?.[1] ?? 10],
+        x: spanX,
         y: [0, 0],
         mode: 'lines',
         type: 'scatter' as const,
@@ -133,6 +149,30 @@ return;
           color: theme === 'dark' ? '#6b7280' : '#9ca3af',
           width: 1,
           dash: 'solid'
+        },
+        showlegend: false,
+        hoverinfo: 'skip'
+      } as any);
+    }
+
+    // A y = x reference, for plots comparing two measurements of the same
+    // quantity. Judging deviation from the diagonal by eye needs the diagonal
+    // drawn and both axes on one scale; see the identityLine prop.
+    //
+    // The endpoints, including the empty and non-finite cases, live in
+    // charts/utils/identityLine so they can be tested without rendering Plotly.
+    const ends = identityLine ? identityLineEnds(plotData, domain?.x) : null;
+    if (ends) {
+      const [from, to] = ends;
+      traces.push({
+        x: [from, to],
+        y: [from, to],
+        mode: 'lines',
+        type: 'scatter' as const,
+        line: {
+          color: theme === 'dark' ? '#9ca3af' : '#6b7280',
+          width: 1,
+          dash: 'dash'
         },
         showlegend: false,
         hoverinfo: 'skip'
@@ -187,7 +227,7 @@ return;
         Plotly.purge(containerRef.current);
       }
     };
-  }, [data, plotData, labels, textPositions, theme, domain, margin, width, height,
+  }, [data, plotData, labels, textPositions, theme, domain, margin, width, height, identityLine,
       xLabel, yLabel, showGrid, showReferenceLines, fill, stroke]);
 
   return (

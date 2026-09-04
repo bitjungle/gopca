@@ -64,6 +64,12 @@ export interface ScatterChartProps extends BaseChartProps {
   yLabel?: string;
   showGrid?: boolean;
   showReferenceLines?: boolean;
+  /**
+   * Draws a dashed y = x line. Meaningful only when both axes carry the same
+   * quantity on the same scale, as in a predicted-against-measured plot, where
+   * agreement is read as closeness to that diagonal.
+   */
+  identityLine?: boolean;
   tooltip?: ReactNode | ((props: any) => ReactNode);
   dot?: ReactNode | ((props: any) => React.ReactElement);
   fill?: string;

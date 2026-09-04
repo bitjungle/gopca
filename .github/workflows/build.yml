@@ -197,7 +197,7 @@ jobs:
         GOPCA_TEST_TIMEOUT: 60
 
   frontend-lint:
-    name: Frontend Lint
+    name: Frontend Lint and Tests
     runs-on: ubuntu-latest
 
     steps:
@@ -224,6 +224,20 @@ jobs:
 
     - name: Lint GoCSV frontend
       run: npm run lint -w gocsv-frontend
+
+    # Until this step existed, the frontend test suites ran only on developer
+    # machines: CI linted the TypeScript and never executed a single vitest
+    # case. Every guard written for the desktop UI was therefore unenforced on
+    # pull requests, which is the same failure as a package missing from
+    # scripts/ci/test-core.sh -- green for a reason unrelated to the tests.
+    #
+    # gocsv-frontend has no test script yet and is deliberately not listed;
+    # adding it here before it has tests would only add a step that cannot fail.
+    - name: Test shared UI components
+      run: npm run test -w @gopca/ui-components
+
+    - name: Test GoPCA Desktop frontend
+      run: npm run test -w frontend
 
   build-cli:
     name: Build pca CLI
