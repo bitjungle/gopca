@@ -29,7 +29,6 @@ import (
 	"math"
 	"os"
 	"path/filepath"
-	"strings"
 	"testing"
 
 	"github.com/bitjungle/gopca/internal/core"
@@ -458,7 +457,7 @@ func comparePCRCrossValidation(t *testing.T, data types.Matrix, y []float64, ref
 	// design cannot quietly be missing from another. The per-fold statistics were
 	// first compared only in the alternative designs, which meant a defect in
 	// RMSECVMean went undetected here on the very layout most runs use.
-	comparePCRCurve(t, "contiguous", result.CV, reference.Curve, ref.Dataset)
+	comparePCRCurve(t, "contiguous", result.CV, reference.Curve, ref.NFeatures)
 
 	// The identity relating the three error measures must hold at every candidate.
 	for i, k := range result.CV.Candidates {
@@ -519,24 +518,30 @@ func comparePCRCVDesign(t *testing.T, data types.Matrix, y []float64,
 	if result.CV == nil {
 		t.Fatal("no cross-validation report")
 	}
-	if result.CV.Folds != design.NFolds && result.CV.Folds != 0 {
-		t.Errorf("design %s: GoPCA reports %d folds, scikit-learn used %d",
+	// CVReport.Folds now records the number of folds actually built rather than
+	// the number configured, so this comparison means something. It did not
+	// before: the config value is zero for both designs here, and the assertion
+	// carried an "|| Folds != 0" escape hatch that made it unfireable for
+	// exactly the layouts it was written to check.
+	if result.CV.Folds != design.NFolds {
+		t.Errorf("design %s: GoPCA built %d folds, scikit-learn used %d",
 			design.Design, result.CV.Folds, design.NFolds)
 	}
 
-	comparePCRCurve(t, design.Design, result.CV, design.Curve, ref.Dataset)
+	comparePCRCurve(t, design.Design, result.CV, design.Curve, ref.NFeatures)
 }
 
 // comparePCRCurve compares a GoPCA error curve against a reference one, point by
 // point, including the per-fold statistics.
 func comparePCRCurve(t *testing.T, label string, report *types.CVReport,
-	curve []pcrCVPoint, dataset string) {
+	curve []pcrCVPoint, nFeatures int) {
 	t.Helper()
 
-	tolerance := 1e-6
-	if strings.HasPrefix(dataset, "corn") {
-		tolerance = 1e-4
-	}
+	// The same rule the point-fit comparison uses. Selecting the tolerance by
+	// dataset name would drift from it the moment a second high-dimensional
+	// fixture arrives under a different name, and the loosening is a property of
+	// the conditioning rather than of the file.
+	tolerance := cvTolerance(nFeatures)
 
 	index := make(map[int]int, len(report.Candidates))
 	for i, k := range report.Candidates {
@@ -639,10 +644,7 @@ func comparePCRSemiSupervised(t *testing.T, data types.Matrix, y []float64, ref 
 			got, want.NDecompositionRows)
 	}
 
-	tolerance := 1e-6
-	if strings.HasPrefix(ref.Dataset, "corn") {
-		tolerance = 1e-4
-	}
+	tolerance := cvTolerance(ref.NFeatures)
 
 	if d := relativeDifference(result.InterceptOriginal, want.Intercept); d > tolerance {
 		t.Errorf("intercept: Go %.12g, scikit-learn %.12g (relative %.3g)",
@@ -670,4 +672,17 @@ func comparePCRSemiSupervised(t *testing.T, data types.Matrix, y []float64, ref 
 	if worst > tolerance {
 		t.Errorf("worst coefficient disagreement %.3g exceeds tolerance %g", worst, tolerance)
 	}
+}
+
+// cvTolerance loosens the comparison for wide, strongly collinear fixtures.
+//
+// Spectral data with hundreds of correlated columns is ill-conditioned enough
+// that the two implementations' different orderings of the same arithmetic
+// diverge in the last few digits. The threshold matches the one the point-fit
+// comparison uses, so the two cannot drift apart.
+func cvTolerance(nFeatures int) float64 {
+	if nFeatures > 100 {
+		return 1e-4
+	}
+	return 1e-6
 }
