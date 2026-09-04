@@ -251,7 +251,7 @@ func ConvertToPCAOutputDataWithMetadata(result *types.PCAResult, data *Data, pre
 	if len(categoricalData) > 0 || len(targetData) > 0 {
 		preservedColumns = &types.PreservedColumns{
 			Categorical:   categoricalData,
-			NumericTarget: jsonSafeTargets(targetData),
+			NumericTarget: types.ConvertFloat64MapToJSON(targetData),
 		}
 	}
 
@@ -265,26 +265,4 @@ func ConvertToPCAOutputDataWithMetadata(result *types.PCAResult, data *Data, pre
 		Eigencorrelations: result.Eigencorrelations,
 		PreservedColumns:  preservedColumns,
 	}
-}
-
-// jsonSafeTargets converts target columns to the JSON-safe float type.
-//
-// Target columns routinely have gaps, because a calibration set where only some
-// samples were sent for reference analysis is the ordinary case. encoding/json
-// refuses to marshal a NaN, so writing these as plain float64 made a single
-// unmeasured target abort the entire export with "json: unsupported value: NaN"
-// and leave no file behind. JSONFloat64 writes null and reads it back as NaN.
-func jsonSafeTargets(targets map[string][]float64) map[string][]types.JSONFloat64 {
-	if targets == nil {
-		return nil
-	}
-	out := make(map[string][]types.JSONFloat64, len(targets))
-	for name, values := range targets {
-		converted := make([]types.JSONFloat64, len(values))
-		for i, v := range values {
-			converted[i] = types.JSONFloat64(v)
-		}
-		out[name] = converted
-	}
-	return out
 }

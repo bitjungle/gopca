@@ -292,8 +292,8 @@ func runDesktopLeg(t *testing.T, tc parityCase, path string) regressionFacts {
 		PCA: PCARequest{
 			Data:            data,
 			MissingMask:     missingMask,
-			Headers:         stringsFromJS(asSeenByTheFrontend["headers"]),
-			RowNames:        stringsFromJS(asSeenByTheFrontend["rowNames"]),
+			Headers:         stringsFromJS(t, "headers", asSeenByTheFrontend["headers"]),
+			RowNames:        stringsFromJS(t, "rowNames", asSeenByTheFrontend["rowNames"]),
 			Method:          "SVD", // as the frontend spells it; case folding is the backend's job
 			MeanCenter:      true,
 			StandardScale:   tc.scale == "standard",
@@ -535,14 +535,32 @@ func responseFromJS(t *testing.T, doc map[string]any, response string) ([]float6
 	return values, missing
 }
 
-func stringsFromJS(v any) []string {
-	items, ok := v.([]any)
-	if !ok {
+// stringsFromJS converts a JSON array of strings, failing on anything else.
+//
+// It used to coerce quietly: a non-string element became "" and a non-array
+// became nil. That is the wrong instinct in this file. This test exists to catch
+// values that are damaged crossing the JSON boundary, so a helper that repairs
+// damage on the way past is working against it — headers arriving as numbers, or
+// the field missing altogether, would produce a run that compared two models
+// built on nameless columns and reported that they agreed.
+//
+// A missing field is still allowed, because rowNames legitimately may not be
+// present; a field that exists with the wrong shape is not.
+func stringsFromJS(t *testing.T, field string, v any) []string {
+	t.Helper()
+	if v == nil {
 		return nil
 	}
+	items, ok := v.([]any)
+	if !ok {
+		t.Fatalf("%s is %T, not an array of strings", field, v)
+	}
 	out := make([]string, 0, len(items))
-	for _, item := range items {
-		s, _ := item.(string)
+	for i, item := range items {
+		s, ok := item.(string)
+		if !ok {
+			t.Fatalf("%s[%d] is %T, not a string", field, i, item)
+		}
 		out = append(out, s)
 	}
 	return out
