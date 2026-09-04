@@ -120,6 +120,14 @@ jobs:
         echo "Generated reference files:"
         ls -la reference_results/*.json | head -10
       shell: bash
+      env:
+        # The generators print progress with characters outside cp1252, which is
+        # what Python picks for stdout on a Windows runner. Without this the
+        # Student-t generator dies on a U+2192 in a progress line and takes the
+        # whole job with it -- a console encoding deciding whether the build
+        # passes. Forcing UTF-8 output makes that impossible for every generator
+        # rather than for the two that happen to contain such a character today.
+        PYTHONIOENCODING: utf-8
     
     - name: Run tests
       run: |
