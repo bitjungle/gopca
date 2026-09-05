@@ -2,8 +2,13 @@
 """
 Generate reference Kernel PCA results using scikit-learn for validation.
 
-This script generates reference results for Kernel PCA with various kernels
-(RBF, polynomial, sigmoid, linear) to validate our implementation.
+This script generates reference results for Kernel PCA to validate our
+implementation, for the kernels GoPCA implements: RBF, polynomial and linear.
+
+compute_kernel_matrix below still understands 'sigmoid', and the import is kept
+for it, but no sigmoid references are emitted: GoPCA has no sigmoid kernel, so
+such a file could never be consumed by a test (#845). Re-add it to the kernel
+list here if the engine gains one.
 
 References:
 - Mika et al. (1998): Kernel PCA and De-Noising in Feature Spaces
@@ -115,10 +120,51 @@ def generate_kernel_pca_reference(data, n_components=None, kernel='rbf',
         preprocessing_params['means'] = means.tolist()
         
     elif preprocessing == 'standardize':
-        scaler = StandardScaler()
-        X_processed = scaler.fit_transform(X)
-        preprocessing_params['means'] = scaler.mean_.tolist()
-        preprocessing_params['stds'] = scaler.scale_.tolist()
+        # Divide by the sample standard deviation (ddof=1), not the population
+        # one StandardScaler uses.
+        #
+        # For linear PCA the choice does not matter to what we compare: the
+        # factor sqrt(n/(n-1)) cancels between theta and the inverse scaling, so
+        # coefficients and predictions come out identical either way. For a
+        # kernel it does not cancel. gamma multiplies squared distances, so
+        # rescaling the inputs changes exp(-gamma*d^2) non-linearly, and the
+        # eigenvalues move with it -- by about 0.4% on iris, which is far above
+        # floating-point noise and far below anything a loose tolerance would
+        # catch as a bug.
+        #
+        # GoPCA standardizes with ddof=1, so the reference does too. That keeps
+        # the comparison a test of the kernel computation rather than of a
+        # scaling convention neither implementation is wrong about.
+        # Scale without centring, and divide by the sample standard deviation
+        # (ddof=1). This is GoPCA's kernel pipeline, and the reference has to use
+        # the same one or it is describing a different computation.
+        #
+        # Kernel PCA centres in kernel space, so GoPCA deliberately does not
+        # centre the inputs -- see the "Practical Note on Preprocessing" in
+        # docs/intro_to_pca.md. Whether that matters depends entirely on the
+        # kernel:
+        #
+        #   RBF     depends only on ||x-y||, which no common translation changes,
+        #           so centring the inputs makes no difference at all.
+        #   linear  survives either way, because centring the kernel matrix of an
+        #           uncentred linear kernel is the same as the linear kernel of
+        #           centred data.
+        #   poly    does not. (gamma<x,y> + coef0)^d is not translation
+        #           invariant for d > 1, and centring the kernel matrix afterwards
+        #           does not recover it. Centring here moved the leading iris
+        #           eigenvalue from 116550 to 1255 -- a factor of 93, which looks
+        #           like a catastrophic bug and is only a different pipeline.
+        #
+        # ddof=1 matters for a second reason. For linear PCA the factor
+        # sqrt(n/(n-1)) cancels in the quantities worth comparing; for a kernel it
+        # does not, since gamma multiplies squared distances. On iris that
+        # difference alone moved the leading RBF eigenvalue by 0.4%.
+        stds = X.std(axis=0, ddof=1)
+        stds[stds == 0] = 1.0
+        X_processed = X / stds
+        preprocessing_params['stds'] = stds.tolist()
+        preprocessing_params['ddof'] = 1
+        preprocessing_params['centered'] = False
         
     else:  # 'none'
         X_processed = X.copy()
@@ -289,7 +335,8 @@ def main():
         ('rbf', {'gamma': 10.0}),
         ('poly', {'degree': 2, 'gamma': 1.0, 'coef0': 1.0}),
         ('poly', {'degree': 3, 'gamma': 1.0, 'coef0': 0.0}),
-        ('sigmoid', {'gamma': 0.01, 'coef0': 1.0}),
+        # ('sigmoid', ...) omitted: GoPCA implements rbf, linear and poly only,
+        # so a sigmoid reference is a file no test can ever consume (#845).
     ]
     
     for dataset_name, dataset_path, n_components in datasets:
@@ -299,9 +346,18 @@ def main():
         full_path = os.path.join(os.path.dirname(os.path.dirname(__file__)), dataset_path)
         df = pd.read_csv(full_path, index_col=0)
         
-        # Get numeric columns only
+        # Numeric columns, excluding #target columns -- the same convention
+        # generate_reference_pca.py uses and the same one GoPCA applies.
+        #
+        # Without this the reference described a different problem than the one
+        # GoPCA solves: on iris it fed species#target in as a fifth predictor,
+        # which is both a mismatch and, since that column is the class label, a
+        # decomposition of the answer alongside the question. A comparison
+        # against it could never have passed, which is the likeliest reason
+        # nobody ever wired these references up to a test (#845).
         numeric_cols = df.select_dtypes(include=[np.number]).columns
-        X = df[numeric_cols].values
+        feature_cols = [col for col in numeric_cols if not col.endswith('#target')]
+        X = df[feature_cols].values
         
         for kernel, params in kernel_configs:
             kernel_name = f"{kernel}"
