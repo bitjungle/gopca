@@ -74,6 +74,13 @@ echo ""
 #     the app inspects a user-supplied path for a URL scheme (cmd/gocsv/app.go) —
 #     this is not an embedded external endpoint. The fetch only runs on a URL the
 #     user explicitly provides (see cmd/gocsv/fetch.go).
+#   raw\.githubusercontent\.com/bitjungle/gopca: the $schema identifier written into
+#     every model file (pkg/csv/output.go). It is an identifier, not an endpoint:
+#     nothing in the application ever fetches it. Schema validation loads from an
+#     embedded copy, and pkg/validation's TestEveryRefResolvesToAnEmbeddedFile
+#     fails if a $ref could ever send the validator to the network. The v1
+#     identifier was allowed only incidentally, by the github\.com entry below,
+#     and it had the distinction of not resolving at all (#848).
 echo "3. Checking for external URLs in source code..."
 EXTERNAL_URLS=$(grep -r "https://" \
     --include="*.go" \
@@ -89,7 +96,7 @@ EXTERNAL_URLS=$(grep -r "https://" \
     --exclude-dir=".venv" \
     --exclude-dir="testdata" \
     "$PROJECT_ROOT" 2>/dev/null | \
-    grep -vE "github\.com|json-schema\.org|doi\.org|arxiv\.org|npmjs\.com|timestamp\.digicert\.com|wails\.io/docs|reactjs\.org/docs|localhost|127\.0\.0\.1|example\.com|cdn\.jsdelivr\.net/npm/ag-grid|bitjungle\.github\.io/gopca|heroicons\.com|vitejs\.dev/config|HasPrefix.*https://" | \
+    grep -vE "raw\.githubusercontent\.com/bitjungle/gopca|github\.com|json-schema\.org|doi\.org|arxiv\.org|npmjs\.com|timestamp\.digicert\.com|wails\.io/docs|reactjs\.org/docs|localhost|127\.0\.0\.1|example\.com|cdn\.jsdelivr\.net/npm/ag-grid|bitjungle\.github\.io/gopca|heroicons\.com|vitejs\.dev/config|HasPrefix.*https://" | \
     grep -vE "^\s*//" || true)
 
 if [ -n "$EXTERNAL_URLS" ]; then
