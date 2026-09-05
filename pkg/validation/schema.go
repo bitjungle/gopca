@@ -21,344 +21,314 @@
 //
 // See LICENSE for the full license terms.
 
-// Package validation provides JSON schema validation for PCA models
+// Package validation provides JSON schema validation for PCA models.
+//
+// The schemas under schemas/v1 are the definition of a valid model file, and
+// this package enforces them. That was not always so: for a long time the
+// schemas were embedded, two of them were read into strings, neither was ever
+// parsed, and a set of hand-written structural checks stood in their place
+// under a comment reading "Full schema validation would require resolving all
+// $ref references". The schema files therefore constrained nothing at runtime,
+// and editing one had no effect on what pca transform would accept (#834).
+//
+// Resolving the $ref chain turned out to be straightforward. Every schema
+// carries an absolute $id and refers to its neighbours by relative filename, so
+// each reference resolves against the referrer's $id to exactly the $id of the
+// schema being referred to. Pre-loading all seven under their own $id therefore
+// resolves the whole graph without a single network fetch -- which matters,
+// because a validator that reaches the network is one that fails in an air-gapped
+// build and stalls in a slow one.
 package validation
 
 import (
 	"embed"
 	"encoding/json"
 	"fmt"
+	"io/fs"
+	"path"
+	"sort"
 	"strings"
+	"sync"
+
+	"github.com/xeipuuv/gojsonschema"
 )
 
 //go:embed schemas/v1/*.json
 var schemaFS embed.FS
 
-// ModelValidator validates PCA model JSON data against schemas
+// mainSchemaFile is the entry point of the schema graph; every other schema in
+// the directory is reachable from it by $ref.
+const mainSchemaFile = "pca-output.schema.json"
+
+// ModelValidator validates PCA model JSON data against the v1 schemas.
 type ModelValidator struct {
-	mainSchema   string
-	commonSchema string
-	version      string
+	version string
+
+	// compiled is built once and reused. Compiling the graph parses seven
+	// documents, and both callers -- pca transform and the desktop's export --
+	// validate repeatedly within one process.
+	once     sync.Once
+	compiled *gojsonschema.Schema
+	compErr  error
 }
 
-// NewModelValidator creates a new validator for the specified schema version
+// NewModelValidator creates a validator for the given schema version.
+//
+// Compilation is deferred to the first validation so that constructing a
+// validator cannot fail for reasons a caller can do nothing about.
 func NewModelValidator(version string) (*ModelValidator, error) {
 	if version == "" {
 		version = "v1"
 	}
-
-	// Load the main PCA output schema
-	mainSchemaPath := fmt.Sprintf("schemas/%s/pca-output.schema.json", version)
-	mainSchemaData, err := schemaFS.ReadFile(mainSchemaPath)
-	if err != nil {
-		return nil, fmt.Errorf("failed to load main schema: %w", err)
+	dir := path.Join("schemas", version)
+	if _, err := fs.Stat(schemaFS, dir); err != nil {
+		return nil, fmt.Errorf("unknown schema version %q: no embedded schemas at %s", version, dir)
 	}
-
-	// Load common definitions
-	commonSchemaPath := fmt.Sprintf("schemas/%s/common.schema.json", version)
-	commonSchemaData, err := schemaFS.ReadFile(commonSchemaPath)
-	if err != nil {
-		return nil, fmt.Errorf("failed to load common schema: %w", err)
-	}
-
-	return &ModelValidator{
-		mainSchema:   string(mainSchemaData),
-		commonSchema: string(commonSchemaData),
-		version:      version,
-	}, nil
+	return &ModelValidator{version: version}, nil
 }
 
-// ValidateModel validates PCA model JSON data against the schema
-func (v *ModelValidator) ValidateModel(data []byte) error {
-	// Parse JSON to check basic validity
-	var temp interface{}
-	if err := json.Unmarshal(data, &temp); err != nil {
-		return fmt.Errorf("invalid JSON: %w", err)
-	}
-
-	// For now, perform basic structural validation
-	// Full schema validation would require resolving all $ref references
-	var model map[string]interface{}
-	if err := json.Unmarshal(data, &model); err != nil {
-		return fmt.Errorf("failed to parse model: %w", err)
-	}
-
-	// Check for optional $schema field and validate if present
-	if schema, ok := model["$schema"].(string); ok {
-		// Validate that it points to a known schema version
-		validSchemas := []string{
-			"https://github.com/bitjungle/gopca/schemas/v1/pca-output.schema.json",
-			"../schemas/v1/pca-output.schema.json",
-			"./schemas/v1/pca-output.schema.json",
-		}
-		schemaValid := false
-		for _, valid := range validSchemas {
-			if strings.HasSuffix(schema, valid) || schema == valid {
-				schemaValid = true
-				break
-			}
-		}
-		if !schemaValid {
-			return fmt.Errorf("unknown schema version: %s", schema)
-		}
-	}
-
-	// Check required top-level fields
-	requiredFields := []string{"metadata", "preprocessing", "model", "results"}
-	for _, field := range requiredFields {
-		if _, ok := model[field]; !ok {
-			return fmt.Errorf("missing required field: %s", field)
-		}
-	}
-
-	// Validate metadata structure
-	if err := v.validateMetadata(model["metadata"]); err != nil {
-		return fmt.Errorf("metadata validation failed: %w", err)
-	}
-
-	// Validate preprocessing structure
-	if err := v.validatePreprocessing(model["preprocessing"]); err != nil {
-		return fmt.Errorf("preprocessing validation failed: %w", err)
-	}
-
-	// Validate model components
-	if err := v.validateModelComponents(model["model"]); err != nil {
-		return fmt.Errorf("model validation failed: %w", err)
-	}
-
-	// Validate results
-	if err := v.validateResults(model["results"]); err != nil {
-		return fmt.Errorf("results validation failed: %w", err)
-	}
-
-	// The regression block is optional: a model without it is a plain
-	// decomposition, which is what every model produced before principal
-	// component regression existed looks like.
-	if regression, present := model["regression"]; present {
-		if err := v.validateRegression(regression); err != nil {
-			return fmt.Errorf("regression validation failed: %w", err)
-		}
-	}
-
-	return nil
+// schema compiles the schema graph, once.
+func (v *ModelValidator) schema() (*gojsonschema.Schema, error) {
+	v.once.Do(func() {
+		v.compiled, v.compErr = compileSchemaGraph(v.version)
+	})
+	return v.compiled, v.compErr
 }
 
-// validateRegression checks the regression half of a principal component
-// regression model.
+// compileSchemaGraph loads every embedded schema for a version and compiles the
+// main one against them.
 //
-// The checks that matter are the ones a consumer would otherwise discover by
-// producing wrong numbers: a component count that disagrees with the coefficients
-// it indexes, and an original-scale form that claims to be usable while missing
-// the coefficients it needs. Both would predict silently and incorrectly.
-func (v *ModelValidator) validateRegression(data interface{}) error {
-	regression, ok := data.(map[string]interface{})
-	if !ok {
-		return fmt.Errorf("regression must be an object")
+// The referenced schemas are registered before compiling so that gojsonschema
+// resolves each $ref from the pre-loaded set rather than dereferencing the
+// absolute URL in its $id. Nothing here touches the network.
+func compileSchemaGraph(version string) (*gojsonschema.Schema, error) {
+	dir := path.Join("schemas", version)
+	entries, err := fs.ReadDir(schemaFS, dir)
+	if err != nil {
+		return nil, fmt.Errorf("reading embedded schemas: %w", err)
 	}
 
-	for _, field := range []string{
-		"response", "components", "score_coefficients", "intercept", "original_scale_valid",
-	} {
-		if _, present := regression[field]; !present {
-			return fmt.Errorf("missing required field: %s", field)
+	loader := gojsonschema.NewSchemaLoader()
+	var main gojsonschema.JSONLoader
+	var registered []string
+
+	// Sorted, so a compilation failure reports the same schema every time
+	// regardless of directory order.
+	names := make([]string, 0, len(entries))
+	for _, e := range entries {
+		if !e.IsDir() && strings.HasSuffix(e.Name(), ".json") {
+			names = append(names, e.Name())
 		}
 	}
+	sort.Strings(names)
 
-	if _, ok := regression["response"].(string); !ok {
-		return fmt.Errorf("response must be a string")
-	}
-
-	components, ok := regression["components"].(float64)
-	if !ok {
-		return fmt.Errorf("components must be a number")
-	}
-	if components < 0 {
-		return fmt.Errorf("components must not be negative, got %v", components)
-	}
-
-	coefficients, ok := regression["score_coefficients"].([]interface{})
-	if !ok {
-		return fmt.Errorf("score_coefficients must be an array")
-	}
-	if len(coefficients) != int(components) {
-		return fmt.Errorf(
-			"the model declares %d components but carries %d score coefficients: "+
-				"predicting from it would read the wrong number of directions",
-			int(components), len(coefficients))
-	}
-
-	if _, ok := regression["intercept"].(float64); !ok {
-		return fmt.Errorf("intercept must be a number")
-	}
-
-	// original_scale_valid is a promise about the fields beside it, and it is
-	// required rather than optional. Absent, it would unmarshal to false and
-	// silently reclassify a model that does carry a collapsed form as one that
-	// does not, which is a change of meaning rather than a missing convenience.
-	claimed, ok := regression["original_scale_valid"].(bool)
-	if !ok {
-		return fmt.Errorf("original_scale_valid must be a boolean")
-	}
-	if claimed {
-		original, present := regression["coefficients"]
-		if !present {
-			return fmt.Errorf(
-				"original_scale_valid is true but coefficients are absent: " +
-					"the model claims a collapsed form it does not carry")
+	for _, name := range names {
+		raw, err := fs.ReadFile(schemaFS, path.Join(dir, name))
+		if err != nil {
+			return nil, fmt.Errorf("reading %s: %w", name, err)
 		}
-		if _, ok := original.([]interface{}); !ok {
-			return fmt.Errorf("coefficients must be an array")
+		if name == mainSchemaFile {
+			main = gojsonschema.NewBytesLoader(raw)
+			continue
 		}
+		if err := loader.AddSchemas(gojsonschema.NewBytesLoader(raw)); err != nil {
+			return nil, fmt.Errorf("registering %s: %w", name, err)
+		}
+		registered = append(registered, name)
 	}
 
-	return nil
+	if main == nil {
+		return nil, fmt.Errorf("%s is missing from the embedded schemas for %s", mainSchemaFile, version)
+	}
+
+	compiled, err := loader.Compile(main)
+	if err != nil {
+		return nil, fmt.Errorf("compiling %s against %v: %w", mainSchemaFile, registered, err)
+	}
+	return compiled, nil
 }
 
-// validateMetadata validates the metadata structure
-func (v *ModelValidator) validateMetadata(data interface{}) error {
-	metadata, ok := data.(map[string]interface{})
-	if !ok {
-		return fmt.Errorf("metadata must be an object")
-	}
-
-	// Check required fields
-	requiredFields := []string{"analysis_id", "software_version", "created_at", "software", "config"}
-	for _, field := range requiredFields {
-		if _, ok := metadata[field]; !ok {
-			return fmt.Errorf("missing required field: %s", field)
-		}
-	}
-
-	// Validate software field
-	if software, ok := metadata["software"].(string); !ok || software != "gopca" {
-		return fmt.Errorf("software must be 'gopca'")
-	}
-
-	// Validate config
-	if config, ok := metadata["config"].(map[string]interface{}); ok {
-		if _, ok := config["method"]; !ok {
-			return fmt.Errorf("config.method is required")
-		}
-		if _, ok := config["n_components"]; !ok {
-			return fmt.Errorf("config.n_components is required")
-		}
-	} else {
-		return fmt.Errorf("config must be an object")
-	}
-
-	return nil
-}
-
-// validatePreprocessing validates the preprocessing structure
-func (v *ModelValidator) validatePreprocessing(data interface{}) error {
-	preprocessing, ok := data.(map[string]interface{})
-	if !ok {
-		return fmt.Errorf("preprocessing must be an object")
-	}
-
-	// Check required boolean fields
-	boolFields := []string{"mean_center", "standard_scale", "robust_scale", "scale_only", "snv", "vector_norm"}
-	for _, field := range boolFields {
-		if val, ok := preprocessing[field]; ok {
-			if _, isBool := val.(bool); !isBool {
-				return fmt.Errorf("%s must be a boolean", field)
-			}
-		} else {
-			return fmt.Errorf("missing required field: %s", field)
-		}
-	}
-
-	// Check parameters object exists
-	if _, ok := preprocessing["parameters"]; !ok {
-		return fmt.Errorf("missing required field: parameters")
-	}
-
-	return nil
-}
-
-// validateModelComponents validates the model components structure
-func (v *ModelValidator) validateModelComponents(data interface{}) error {
-	model, ok := data.(map[string]interface{})
-	if !ok {
-		return fmt.Errorf("model must be an object")
-	}
-
-	// Check required fields
-	requiredFields := []string{"loadings", "explained_variance", "explained_variance_ratio",
-		"cumulative_variance", "component_labels", "feature_labels"}
-	for _, field := range requiredFields {
-		if _, ok := model[field]; !ok {
-			return fmt.Errorf("missing required field: %s", field)
-		}
-	}
-
-	// Validate loadings is a 2D array
-	if loadings, ok := model["loadings"].([]interface{}); ok {
-		if len(loadings) > 0 {
-			if _, ok := loadings[0].([]interface{}); !ok {
-				return fmt.Errorf("loadings must be a 2D array")
-			}
-		}
-	} else {
-		return fmt.Errorf("loadings must be an array")
-	}
-
-	return nil
-}
-
-// validateResults validates the results structure
-func (v *ModelValidator) validateResults(data interface{}) error {
-	results, ok := data.(map[string]interface{})
-	if !ok {
-		return fmt.Errorf("results must be an object")
-	}
-
-	// Check samples field exists
-	samples, ok := results["samples"]
-	if !ok {
-		return fmt.Errorf("missing required field: samples")
-	}
-
-	// Validate samples structure
-	samplesMap, ok := samples.(map[string]interface{})
-	if !ok {
-		return fmt.Errorf("samples must be an object")
-	}
-
-	// Check required fields in samples
-	requiredFields := []string{"names", "scores"}
-	for _, field := range requiredFields {
-		if _, ok := samplesMap[field]; !ok {
-			return fmt.Errorf("samples.%s is required", field)
-		}
-	}
-
-	// Validate scores is a 2D array
-	if scores, ok := samplesMap["scores"].([]interface{}); ok {
-		if len(scores) > 0 {
-			if _, ok := scores[0].([]interface{}); !ok {
-				return fmt.Errorf("scores must be a 2D array")
-			}
-		}
-	} else {
-		return fmt.Errorf("scores must be an array")
-	}
-
-	return nil
-}
-
-// ValidateWithSchema validates JSON data against a specific schema file
-// This is a simplified version for basic validation
-func ValidateWithSchema(data []byte, schemaName string, version string) error {
-	// Note: version parameter is reserved for future schema versioning
-	// Currently only v1 schemas are supported
-	_ = version // Mark as intentionally unused
-
-	// For now, just ensure valid JSON
-	var temp interface{}
-	if err := json.Unmarshal(data, &temp); err != nil {
+// ValidateModel checks a model file against the v1 schema graph.
+//
+// Errors name the failing path, because "invalid model" tells a user nothing
+// they can act on and a path tells them exactly where to look.
+func (v *ModelValidator) ValidateModel(data []byte) error {
+	var probe interface{}
+	if err := json.Unmarshal(data, &probe); err != nil {
 		return fmt.Errorf("invalid JSON: %w", err)
 	}
 
+	// The $schema field, when present, is a claim about which version wrote the
+	// file. It is checked separately from the shape because a file written
+	// against a future schema should say so rather than producing a list of
+	// shape errors that all stem from the version mismatch.
+	if model, ok := probe.(map[string]interface{}); ok {
+		if declared, ok := model["$schema"].(string); ok {
+			if err := checkSchemaVersion(declared, v.version); err != nil {
+				return err
+			}
+		}
+	}
+
+	schema, err := v.schema()
+	if err != nil {
+		return err
+	}
+
+	result, err := schema.Validate(gojsonschema.NewBytesLoader(data))
+	if err != nil {
+		return fmt.Errorf("validating against the %s schema: %w", v.version, err)
+	}
+	if !result.Valid() {
+		return describeFailures(result.Errors())
+	}
+
+	// The schema has approved the shape. What it cannot judge is whether the
+	// fields agree with each other; see validateSemantics.
+	if model, ok := probe.(map[string]interface{}); ok {
+		return validateSemantics(model)
+	}
 	return nil
+}
+
+// checkSchemaVersion accepts the canonical URL and the relative spellings a file
+// may reasonably carry.
+func checkSchemaVersion(declared, version string) error {
+	suffix := fmt.Sprintf("schemas/%s/%s", version, mainSchemaFile)
+	if strings.HasSuffix(declared, suffix) {
+		return nil
+	}
+	return fmt.Errorf("unknown schema version: %s (this build validates against %s)",
+		declared, suffix)
+}
+
+// maxReportedFailures caps how many problems one error mentions.
+//
+// A model whose shape is badly wrong produces one failure per array element,
+// which on a spectral dataset runs to hundreds of near-identical lines. The
+// first few name the problem; the rest only bury it.
+const maxReportedFailures = 8
+
+func describeFailures(failures []gojsonschema.ResultError) error {
+	var b strings.Builder
+	b.WriteString("model does not match the schema:")
+	for i, f := range failures {
+		if i == maxReportedFailures {
+			fmt.Fprintf(&b, "\n  ... and %d more", len(failures)-maxReportedFailures)
+			break
+		}
+		field := f.Field()
+		if field == "(root)" {
+			fmt.Fprintf(&b, "\n  %s", f.Description())
+			continue
+		}
+		fmt.Fprintf(&b, "\n  %s: %s", field, f.Description())
+	}
+	return fmt.Errorf("%s", b.String())
+}
+
+// ValidateWithSchema validates data against one named schema in the graph,
+// rather than against a whole model file.
+func ValidateWithSchema(data []byte, schemaName string, version string) error {
+	if version == "" {
+		version = "v1"
+	}
+	if !strings.HasSuffix(schemaName, ".json") {
+		schemaName += ".schema.json"
+	}
+
+	raw, err := fs.ReadFile(schemaFS, path.Join("schemas", version, schemaName))
+	if err != nil {
+		return fmt.Errorf("unknown schema %q for version %s", schemaName, version)
+	}
+
+	// The neighbours are registered here too: a fragment schema may still refer
+	// to common.schema.json for a shared definition.
+	loader := gojsonschema.NewSchemaLoader()
+	entries, err := fs.ReadDir(schemaFS, path.Join("schemas", version))
+	if err != nil {
+		return fmt.Errorf("reading embedded schemas: %w", err)
+	}
+	for _, e := range entries {
+		if e.IsDir() || e.Name() == schemaName || !strings.HasSuffix(e.Name(), ".json") {
+			continue
+		}
+		other, err := fs.ReadFile(schemaFS, path.Join("schemas", version, e.Name()))
+		if err != nil {
+			return fmt.Errorf("reading %s: %w", e.Name(), err)
+		}
+		if err := loader.AddSchemas(gojsonschema.NewBytesLoader(other)); err != nil {
+			return fmt.Errorf("registering %s: %w", e.Name(), err)
+		}
+	}
+
+	compiled, err := loader.Compile(gojsonschema.NewBytesLoader(raw))
+	if err != nil {
+		return fmt.Errorf("compiling %s: %w", schemaName, err)
+	}
+
+	result, err := compiled.Validate(gojsonschema.NewBytesLoader(data))
+	if err != nil {
+		return fmt.Errorf("validating against %s: %w", schemaName, err)
+	}
+	if result.Valid() {
+		return nil
+	}
+	return describeFailures(result.Errors())
+}
+
+// --- semantic checks -------------------------------------------------------
+
+// validateSemantics enforces the invariants a JSON Schema cannot state.
+//
+// Draft-07 constrains each value on its own: types, ranges, enums, required
+// keys. It has no way to say that one field's value must agree with another's
+// length, so a model claiming twenty components while carrying two coefficients
+// satisfies the schema completely. Those cross-field agreements are exactly the
+// ones that make a model file self-contradictory rather than merely malformed,
+// and they are the reason this function survives while the rest of the old
+// hand-written validation was deleted in favour of the schema.
+//
+// The boundary is deliberate and worth keeping: shape belongs to the schema,
+// agreement between fields belongs here. Anything expressible in the schema
+// should be moved there, so there is one place to look for each kind of rule.
+func validateSemantics(model map[string]interface{}) error {
+	regression, ok := model["regression"].(map[string]interface{})
+	if !ok {
+		return nil // absent or not an object; the schema has already judged it
+	}
+
+	components, hasComponents := numberField(regression, "components")
+	gamma, hasGamma := arrayField(regression, "score_coefficients")
+
+	if hasComponents && hasGamma && int(components) != len(gamma) {
+		return fmt.Errorf("model does not match the schema:\n  regression: claims %d components "+
+			"but carries %d score coefficients; one per retained component is required",
+			int(components), len(gamma))
+	}
+
+	// A model may legitimately have no collapsed original-scale form, under SNV
+	// or vector normalisation. What it may not do is claim one and omit it: a
+	// consumer trusting original_scale_valid would then read coefficients that
+	// are not there and predict from nothing.
+	if valid, ok := regression["original_scale_valid"].(bool); ok && valid {
+		coefficients, hasCoefficients := arrayField(regression, "coefficients")
+		if !hasCoefficients || len(coefficients) == 0 {
+			return fmt.Errorf("model does not match the schema:\n  regression: " +
+				"original_scale_valid is true but the model does not carry the " +
+				"coefficients that claim promises")
+		}
+	}
+
+	return nil
+}
+
+func numberField(m map[string]interface{}, key string) (float64, bool) {
+	v, ok := m[key].(float64)
+	return v, ok
+}
+
+func arrayField(m map[string]interface{}, key string) ([]interface{}, bool) {
+	v, ok := m[key].([]interface{})
+	return v, ok
 }
