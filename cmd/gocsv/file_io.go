@@ -240,21 +240,53 @@ func (a *App) loadExcel(filePath string) (*FileData, error) {
 	// Parse the CSV content using GoPCA's parser
 	a.logInfo(fmt.Sprintf("Excel data converted to CSV, %d bytes", csvContent.Len()))
 	fileData, err := a.parseCSVContent(csvContent.String(), ".csv")
+	if err == nil && hasNumericColumn(fileData) {
+		return fileData, nil
+	}
+
+	// A sheet whose table sits below a title block parses into nothing usable:
+	// the preamble becomes the header and the first data rows, so no column
+	// reads as a consistent type. Deciding where the real table starts is the
+	// import wizard's job — it has SkipRows and HeaderRow, and guessing here
+	// risks silently discarding a genuine header row that happens to be
+	// narrower than the data. Say what was found and point at the tool that can
+	// express the answer (#799).
+	//
+	// The condition above is what keeps that diagnosis working now that a
+	// text-only file is a valid load (#801). This check used to run only when
+	// parseCSVContent failed, which is exactly what a title block used to
+	// cause; since such a sheet now parses "successfully" into an all-text grid
+	// headed by the title, waiting for a failure would mean never reporting it.
+	//
+	// Requiring a numeric column *here* rather than in parseCSVContent is
+	// deliberate. It is not a claim that spreadsheets must be numeric — a
+	// text-only sheet with no preamble falls through and loads. It is the
+	// discriminator between the two ways a sheet ends up all-text: because it
+	// genuinely is, or because a title block is being read as the header.
+	if preamble := leadingNarrowRows(rows, width); preamble > 0 {
+		return nil, fmt.Errorf("this sheet has %d row(s) above the table, so the data starts at row %d; "+
+			"use Import with Wizard to set the rows to skip", preamble, preamble+1)
+	}
 	if err != nil {
-		// A sheet whose table sits below a title block parses into nothing
-		// usable: the preamble becomes the header and the first data rows, so
-		// no column reads as a consistent type. Deciding where the real table
-		// starts is the import wizard's job — it has SkipRows and HeaderRow,
-		// and guessing here risks silently discarding a genuine header row
-		// that happens to be narrower than the data. Say what was found and
-		// point at the tool that can express the answer (#799).
-		if preamble := leadingNarrowRows(rows, width); preamble > 0 {
-			return nil, fmt.Errorf("this sheet has %d row(s) above the table, so the data starts at row %d; "+
-				"use Import with Wizard to set the rows to skip", preamble, preamble+1)
-		}
 		return nil, err
 	}
 	return fileData, nil
+}
+
+// hasNumericColumn reports whether any column was detected as numeric.
+//
+// Target columns count: they hold numbers and are only separated out by the
+// "#target" suffix convention.
+func hasNumericColumn(data *FileData) bool {
+	if data == nil {
+		return false
+	}
+	for _, columnType := range data.ColumnTypes {
+		if columnType == "numeric" || columnType == "target" {
+			return true
+		}
+	}
+	return false
 }
 
 // ExcelImportSuggestion describes a spreadsheet the plain open path cannot read
@@ -487,11 +519,26 @@ func (a *App) parseCSVContent(content string, ext string) (*FileData, error) {
 	var lastErr error
 	var successfulFormat types.CSVFormat
 
-	// Try each format until one works
+	// Try each format until one works.
+	//
+	// The acceptance test counts every column the parse produced, not just the
+	// numeric ones. Requiring a numeric column meant GoCSV -- a tool whose job is
+	// preparing data -- refused to open any text-only CSV, and told the user the
+	// file contained no data, which was untrue: the parser returns the text
+	// columns as categorical without error (#801). Preparing data for PCA often
+	// starts from a file that is not numeric yet, and with one-hot and ordinal
+	// encoding available that is now a supported way in rather than a dead end.
+	//
+	// This check also doubles as the delimiter heuristic, which is why it is
+	// relaxed rather than removed. A file read with the wrong delimiter either
+	// fails on inconsistent field counts or collapses to a single column that is
+	// then consumed as row names, leaving nothing behind -- so the loop still
+	// falls through to the next format instead of settling for a bad parse.
+	// TestParseCSVContentDelimiterFallback covers both shapes.
 	for _, format := range formats {
 		reader := strings.NewReader(content)
 		data, catData, targetData, err := types.ParseCSVMixedWithTargets(reader, format, nil)
-		if err == nil && data != nil && data.Columns > 0 {
+		if err == nil && data != nil && (data.Columns > 0 || len(catData) > 0 || len(targetData) > 0) {
 			csvData = data
 			categoricalData = catData
 			numericTargetData = targetData
