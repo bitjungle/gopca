@@ -54,12 +54,20 @@ func DefaultCSVFormat() CSVFormat {
 
 // CSVData represents parsed CSV data with metadata
 type CSVData struct {
-	Matrix      Matrix   // The numerical data
-	Headers     []string // Column names (if present)
-	RowNames    []string // Row names (if present)
-	MissingMask [][]bool // Track NaN locations (true = missing)
-	Rows        int      // Number of data rows
-	Columns     int      // Number of data columns
+	Matrix   Matrix   // The numerical data
+	Headers  []string // Column names (if present)
+	RowNames []string // Row names (if present)
+	// RowNamesHeader is the header of the column the row names came from.
+	//
+	// Without it a file round-trips with that column renamed to nothing: read
+	// "Prove,By,Kvalitet" and write ",By,Kvalitet". Many CSVs leave it blank by
+	// convention -- every dataset in this repo's testdata does -- which is why
+	// the loss went unnoticed, but instrument and LIMS exports routinely name
+	// it "Sample" or "SampleID" (#859).
+	RowNamesHeader string
+	MissingMask    [][]bool // Track NaN locations (true = missing)
+	Rows           int      // Number of data rows
+	Columns        int      // Number of data columns
 }
 
 // CSVParser provides methods for parsing CSV files
@@ -109,6 +117,10 @@ func (p *CSVParser) Parse(r io.Reader) (*CSVData, error) {
 
 		if startCol >= len(headerRow) {
 			return nil, fmt.Errorf("no data columns found")
+		}
+
+		if p.format.HasRowNames && len(headerRow) > 0 {
+			data.RowNamesHeader = headerRow[0]
 		}
 
 		data.Headers = make([]string, len(headerRow)-startCol)

@@ -62,6 +62,7 @@ func ParseCSVMixed(r io.Reader, format CSVFormat) (*CSVData, map[string][]string
 
 	startCol := 0
 	rowNames := []string{}
+	rowNamesHeader := ""
 	if format.HasRowNames {
 		startCol = 1
 		// Extract row names
@@ -70,8 +71,9 @@ func ParseCSVMixed(r io.Reader, format CSVFormat) (*CSVData, map[string][]string
 				rowNames = append(rowNames, records[i][0])
 			}
 		}
-		// Remove row name from headers if present
+		// Remove row name from headers if present, keeping its name (#859).
 		if len(headers) > 0 && format.HasHeaders {
+			rowNamesHeader = headers[0]
 			headers = headers[1:]
 		}
 	}
@@ -129,12 +131,13 @@ func ParseCSVMixed(r io.Reader, format CSVFormat) (*CSVData, map[string][]string
 	}
 
 	data := &CSVData{
-		Headers:     numericHeaders,
-		RowNames:    rowNames,
-		Matrix:      make([][]float64, numRows),
-		MissingMask: make([][]bool, numRows),
-		Rows:        numRows,
-		Columns:     len(numericCols),
+		Headers:        numericHeaders,
+		RowNames:       rowNames,
+		RowNamesHeader: rowNamesHeader,
+		Matrix:         make([][]float64, numRows),
+		MissingMask:    make([][]bool, numRows),
+		Rows:           numRows,
+		Columns:        len(numericCols),
 	}
 
 	// Parse numeric columns
@@ -248,6 +251,7 @@ func ParseCSVMixedWithTargets(r io.Reader, format CSVFormat, targetColumns []str
 	// Determine row names
 	startCol := 0
 	rowNames := []string{}
+	rowNamesHeader := ""
 	if format.HasRowNames {
 		startCol = 1
 		for i := startRow; i < len(records); i++ {
@@ -255,8 +259,9 @@ func ParseCSVMixedWithTargets(r io.Reader, format CSVFormat, targetColumns []str
 				rowNames = append(rowNames, records[i][0])
 			}
 		}
-		// Remove row name header if present
+		// Remove row name header if present, keeping its name (#859).
 		if format.HasHeaders && len(headers) > 0 {
+			rowNamesHeader = headers[0]
 			headers = headers[1:]
 		}
 	}
@@ -334,12 +339,13 @@ func ParseCSVMixedWithTargets(r io.Reader, format CSVFormat, targetColumns []str
 	}
 
 	data := &CSVData{
-		Headers:     numericHeaders,
-		RowNames:    rowNames,
-		Matrix:      make([][]float64, numRows),
-		MissingMask: make([][]bool, numRows),
-		Rows:        numRows,
-		Columns:     len(numericDataCols),
+		Headers:        numericHeaders,
+		RowNames:       rowNames,
+		RowNamesHeader: rowNamesHeader,
+		Matrix:         make([][]float64, numRows),
+		MissingMask:    make([][]bool, numRows),
+		Rows:           numRows,
+		Columns:        len(numericDataCols),
 	}
 
 	// Parse numeric data columns

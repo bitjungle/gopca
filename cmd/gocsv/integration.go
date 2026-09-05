@@ -134,7 +134,14 @@ func (a *App) OpenInGoPCA(data *FileData) error {
 	// Write headers with row name column if present
 	headers := data.Headers
 	if len(data.RowNames) > 0 {
-		headers = append([]string{"Row"}, headers...)
+		// Carry the row-name column's own header through to GoPCA. "Row" stays
+		// the fallback for files that had no name there, which is the common
+		// convention and what every dataset in testdata/ uses (#859).
+		rowNameHeader := data.RowNamesHeader
+		if rowNameHeader == "" {
+			rowNameHeader = "Row"
+		}
+		headers = append([]string{rowNameHeader}, headers...)
 	}
 	if err := writer.Write(headers); err != nil {
 		return fmt.Errorf("failed to write headers: %w", err)

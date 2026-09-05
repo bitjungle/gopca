@@ -9,6 +9,8 @@ export function AnalyzeMissingValues(arg1:main.FileData):Promise<dataquality.Mis
 
 export function ApplyTransformation(arg1:main.FileData,arg2:main.TransformOptions):Promise<main.TransformationResult>;
 
+export function CanUseAsRowNames(arg1:main.FileData,arg2:number):Promise<main.RowNameCheck>;
+
 export function CancelZipImport():Promise<void>;
 
 export function CheckGoPCAStatus():Promise<main.GoPCAStatus>;
@@ -34,6 +36,10 @@ export function ExecuteHeaderEdit(arg1:main.FileData,arg2:number,arg3:string,arg
 export function ExecuteInsertColumn(arg1:main.FileData,arg2:number,arg3:string):Promise<main.FileData>;
 
 export function ExecuteInsertRow(arg1:main.FileData,arg2:number):Promise<main.FileData>;
+
+export function ExecuteMoveRowNamesIntoTable(arg1:main.FileData):Promise<main.FileData>;
+
+export function ExecuteSetRowNames(arg1:main.FileData,arg2:number):Promise<main.FileData>;
 
 export function ExecuteToggleTargetColumn(arg1:main.FileData,arg2:number):Promise<main.FileData>;
 

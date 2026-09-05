@@ -69,8 +69,9 @@ func (w *Writer) writeNumericData(writer *csv.Writer, data *Data) error {
 	if w.opts.HasHeaders && len(data.Headers) > 0 {
 		headers := data.Headers
 		if w.opts.HasRowNames && len(data.RowNames) > 0 {
-			// Add empty header for row names column
-			headers = append([]string{""}, headers...)
+			// Restore the row-name column's own header. Blank is the common
+			// convention and remains the result when there was no name (#859).
+			headers = append([]string{data.RowNamesHeader}, headers...)
 		}
 		if err := writer.Write(headers); err != nil {
 			return fmt.Errorf("failed to write headers: %w", err)
@@ -136,8 +137,9 @@ func (w *Writer) writeStringData(writer *csv.Writer, data *Data) error {
 	if w.opts.HasHeaders && len(data.Headers) > 0 {
 		headers := data.Headers
 		if w.opts.HasRowNames && len(data.RowNames) > 0 {
-			// Add empty header for row names column
-			headers = append([]string{""}, headers...)
+			// Restore the row-name column's own header. Blank is the common
+			// convention and remains the result when there was no name (#859).
+			headers = append([]string{data.RowNamesHeader}, headers...)
 		}
 		if err := writer.Write(headers); err != nil {
 			return fmt.Errorf("failed to write headers: %w", err)

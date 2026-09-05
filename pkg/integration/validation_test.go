@@ -359,3 +359,78 @@ func TestValidateForGoPCA_MultipleErrors(t *testing.T) {
 		t.Errorf("expected at least 2 ERROR messages, got: %v", res.Messages)
 	}
 }
+
+// TestValidateWarnsOnNonUniqueRowNames covers the gap between GoCSV's rule and
+// the load path.
+//
+// Promoting a column to row names requires uniqueness (#859), but the loader
+// takes the first column without checking, so a file can arrive with duplicate
+// or empty labels. That must be reported -- and reported as a WARNING, because
+// refusing to analyse a file over ambiguous labels would repeat #801. The
+// numbers are analysable; only the labelling is ambiguous.
+func TestValidateWarnsOnNonUniqueRowNames(t *testing.T) {
+	tests := []struct {
+		name     string
+		rowNames []string
+		wantWarn bool
+		wantHas  string
+	}{
+		{name: "unique names produce no warning", rowNames: []string{"P1", "P2", "P3"}},
+		{
+			name:     "a repeat is warned about",
+			rowNames: []string{"P1", "P2", "P1"},
+			wantWarn: true,
+			wantHas:  "repeated",
+		},
+		{
+			name:     "an empty name is warned about",
+			rowNames: []string{"P1", "", "P3"},
+			wantWarn: true,
+			wantHas:  "empty",
+		},
+		{
+			name:     "whitespace counts as empty",
+			rowNames: []string{"P1", "  ", "P3"},
+			wantWarn: true,
+			wantHas:  "empty",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			in := ValidationInput{
+				Headers:     []string{"A", "B"},
+				Data:        [][]string{{"1", "2"}, {"3", "4"}, {"5", "6"}},
+				ColumnTypes: map[string]string{"A": "numeric", "B": "numeric"},
+				RowNames:    tt.rowNames,
+				Rows:        3,
+				Columns:     2,
+			}
+			res := ValidateForGoPCA(in)
+
+			var warning string
+			for _, m := range res.Messages {
+				if strings.HasPrefix(m, "WARNING:") && strings.Contains(strings.ToLower(m), "row name") {
+					warning = m
+				}
+			}
+
+			if !tt.wantWarn {
+				if warning != "" {
+					t.Errorf("unexpected warning: %q", warning)
+				}
+				return
+			}
+			if warning == "" {
+				t.Fatalf("expected a row-name warning, messages were %v", res.Messages)
+			}
+			if !strings.Contains(warning, tt.wantHas) {
+				t.Errorf("warning %q should mention %q", warning, tt.wantHas)
+			}
+			// Ambiguous labels must not make the file invalid.
+			if !res.IsValid {
+				t.Errorf("duplicate row names should warn, not invalidate: %v", res.Messages)
+			}
+		})
+	}
+}

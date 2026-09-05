@@ -14,6 +14,10 @@ export function ApplyTransformation(arg1, arg2) {
   return window['go']['main']['App']['ApplyTransformation'](arg1, arg2);
 }
 
+export function CanUseAsRowNames(arg1, arg2) {
+  return window['go']['main']['App']['CanUseAsRowNames'](arg1, arg2);
+}
+
 export function CancelZipImport() {
   return window['go']['main']['App']['CancelZipImport']();
 }
@@ -64,6 +68,14 @@ export function ExecuteInsertColumn(arg1, arg2, arg3) {
 
 export function ExecuteInsertRow(arg1, arg2) {
   return window['go']['main']['App']['ExecuteInsertRow'](arg1, arg2);
+}
+
+export function ExecuteMoveRowNamesIntoTable(arg1) {
+  return window['go']['main']['App']['ExecuteMoveRowNamesIntoTable'](arg1);
+}
+
+export function ExecuteSetRowNames(arg1, arg2) {
+  return window['go']['main']['App']['ExecuteSetRowNames'](arg1, arg2);
 }
 
 export function ExecuteToggleTargetColumn(arg1, arg2) {

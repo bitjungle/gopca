@@ -424,7 +424,8 @@ func (a *App) importCSVWithOptions(filePath string, options ImportOptions) (*Fil
 			}
 		}
 
-		// Remove row name column from headers and data
+		// Remove row name column from headers and data, keeping its name (#859).
+		fileData.RowNamesHeader = fileData.Headers[options.RowNameColumn]
 		fileData.Headers = append(fileData.Headers[:options.RowNameColumn], fileData.Headers[options.RowNameColumn+1:]...)
 		for i := range allData {
 			if options.RowNameColumn < len(allData[i]) {
@@ -564,7 +565,8 @@ func (a *App) importExcelWithOptions(filePath string, options ImportOptions) (*F
 			}
 		}
 
-		// Remove row name column
+		// Remove row name column, keeping its name (#859).
+		fileData.RowNamesHeader = fileData.Headers[options.RowNameColumn]
 		fileData.Headers = append(fileData.Headers[:options.RowNameColumn], fileData.Headers[options.RowNameColumn+1:]...)
 		for i := range rows {
 			if options.RowNameColumn < len(rows[i]) {
