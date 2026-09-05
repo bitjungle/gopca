@@ -104,3 +104,76 @@ func TestRowNameHeaderSurvivesRoundTrip(t *testing.T) {
 		})
 	}
 }
+
+// TestExtractRowNameColumnOnRaggedData covers a crash introduced while making
+// the row-name header survive the import wizard.
+//
+// Two lengths have to be kept apart: the data rows say whether the column
+// exists, and the headers say whether it has a name. On a ragged sheet they
+// disagree -- excelize's GetRows trims trailing empty cells, so a short header
+// row leaves fewer headers than data columns -- and indexing the headers by a
+// column number that was validated against the data panics.
+//
+// The CSV path cannot reach this, because encoding/csv enforces a consistent
+// field count and rejects a ragged file first. The Excel path can. Neither
+// import function can be called from a test -- both end by emitting a Wails
+// event, which is fatal without a live runtime -- which is why the logic was
+// lifted into a helper this test can reach.
+func TestExtractRowNameColumnOnRaggedData(t *testing.T) {
+	// Two headers, four data columns: the shape excelize produces for a sheet
+	// whose header row is shorter than its data rows.
+	for _, rowNameColumn := range []int{0, 1, 2, 3} {
+		fileData := &FileData{Headers: []string{"ID", "A"}}
+		data := [][]string{
+			{"S1", "1", "2", "3"},
+			{"S2", "4", "5", "6"},
+		}
+
+		// A panic fails the test by crashing it, which is the guarded behaviour.
+		got := extractRowNameColumn(fileData, data, rowNameColumn)
+
+		if len(fileData.RowNames) != 2 {
+			t.Errorf("rowNameColumn=%d: got %d row names, want 2",
+				rowNameColumn, len(fileData.RowNames))
+		}
+		for i, row := range got {
+			if len(row) != 3 {
+				t.Errorf("rowNameColumn=%d row %d: %d cells left, want 3: %v",
+					rowNameColumn, i, len(row), row)
+			}
+		}
+	}
+}
+
+// TestExtractRowNameColumn covers the ordinary, non-ragged behaviour.
+func TestExtractRowNameColumn(t *testing.T) {
+	fileData := &FileData{Headers: []string{"Prove", "A", "B"}}
+	data := [][]string{{"P1", "1", "2"}, {"P2", "3", "4"}}
+
+	got := extractRowNameColumn(fileData, data, 0)
+
+	if fileData.RowNamesHeader != "Prove" {
+		t.Errorf("RowNamesHeader = %q, want Prove", fileData.RowNamesHeader)
+	}
+	if strings.Join(fileData.RowNames, ",") != "P1,P2" {
+		t.Errorf("RowNames = %v", fileData.RowNames)
+	}
+	if strings.Join(fileData.Headers, ",") != "A,B" {
+		t.Errorf("Headers = %v, want [A B]", fileData.Headers)
+	}
+	if strings.Join(got[0], ",") != "1,2" {
+		t.Errorf("row 0 = %v, want [1 2]", got[0])
+	}
+
+	// A column index outside the data is a no-op, not a panic.
+	untouched := &FileData{Headers: []string{"A"}}
+	if out := extractRowNameColumn(untouched, [][]string{{"1"}}, 5); len(out) != 1 {
+		t.Errorf("out-of-range index changed the data: %v", out)
+	}
+	if len(untouched.RowNames) != 0 {
+		t.Errorf("out-of-range index invented row names: %v", untouched.RowNames)
+	}
+	if out := extractRowNameColumn(untouched, [][]string{{"1"}}, -1); len(out) != 1 {
+		t.Errorf("negative index changed the data: %v", out)
+	}
+}

@@ -376,3 +376,57 @@ func TestMoveRowNamesIntoTableRefusesWhenThereAreNone(t *testing.T) {
 		t.Error("moving row names of a file that has none should fail")
 	}
 }
+
+// TestClassifyColumnOnBlanks covers the two ways a column can contain no
+// numbers.
+//
+// The numeric test used to start from true and skip blanks, so a column of
+// nothing but empty cells never met a value that failed to parse and came out
+// typed numeric. A demoted row-name column can be exactly that -- files whose
+// first column is empty do exist -- and PCA would then be offered a variable
+// with nothing in it.
+func TestClassifyColumnOnBlanks(t *testing.T) {
+	tests := []struct {
+		name   string
+		values []string
+		want   string
+	}{
+		{name: "all blank is not numeric", values: []string{"", "", ""}, want: "categorical"},
+		{name: "whitespace only is not numeric", values: []string{" ", "\t"}, want: "categorical"},
+		{name: "no values at all", values: []string{}, want: "categorical"},
+		{name: "real numbers are numeric", values: []string{"1", "2.5", "-3"}, want: "numeric"},
+		{name: "numbers with a gap are still numeric", values: []string{"1", "", "3"}, want: "numeric"},
+		{name: "text is categorical", values: []string{"a", "b"}, want: "categorical"},
+		{name: "one bad value makes it categorical", values: []string{"1", "2", "x"}, want: "categorical"},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			data := &FileData{ColumnTypes: map[string]string{}}
+			classifyColumn(data, "C", tt.values)
+			if got := data.ColumnTypes["C"]; got != tt.want {
+				t.Errorf("classified as %q, want %q", got, tt.want)
+			}
+		})
+	}
+}
+
+// TestSetRowNamesWithBlankPreviousRowNames is the path that reaches the case
+// above through the command rather than directly.
+func TestSetRowNamesWithBlankPreviousRowNames(t *testing.T) {
+	data := rowNameFixture()
+	data.RowNames = []string{"", "", ""}
+	data.RowNamesHeader = ""
+
+	cmd, err := NewSetRowNamesCommand(&App{}, data, headerIndex(data.Headers, "By"))
+	if err != nil {
+		t.Fatalf("NewSetRowNamesCommand: %v", err)
+	}
+	if err := cmd.Execute(data); err != nil {
+		t.Fatalf("Execute: %v", err)
+	}
+
+	if got := data.ColumnTypes[data.Headers[0]]; got != "categorical" {
+		t.Errorf("a demoted column of blanks was typed %q, want categorical", got)
+	}
+}

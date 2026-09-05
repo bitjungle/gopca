@@ -283,7 +283,11 @@ func classifyColumn(data *FileData, header string, values []string) {
 		data.ColumnTypes = map[string]string{}
 	}
 
-	numeric := len(values) > 0
+	// A column has to contain at least one number to be called numeric. Starting
+	// from true and skipping blanks would type an all-empty column as numeric --
+	// it never meets a value that fails to parse -- and PCA would then be
+	// offered a variable with nothing in it.
+	numeric := false
 	for _, value := range values {
 		trimmed := strings.TrimSpace(value)
 		if trimmed == "" {
@@ -293,6 +297,7 @@ func classifyColumn(data *FileData, header string, values []string) {
 			numeric = false
 			break
 		}
+		numeric = true
 	}
 
 	if numeric {

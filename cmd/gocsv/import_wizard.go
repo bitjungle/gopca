@@ -416,23 +416,7 @@ func (a *App) importCSVWithOptions(filePath string, options ImportOptions) (*Fil
 	}
 
 	// Extract row names if specified
-	if options.RowNameColumn >= 0 && options.RowNameColumn < len(allData[0]) {
-		fileData.RowNames = make([]string, len(allData))
-		for i, row := range allData {
-			if options.RowNameColumn < len(row) {
-				fileData.RowNames[i] = row[options.RowNameColumn]
-			}
-		}
-
-		// Remove row name column from headers and data, keeping its name (#859).
-		fileData.RowNamesHeader = fileData.Headers[options.RowNameColumn]
-		fileData.Headers = append(fileData.Headers[:options.RowNameColumn], fileData.Headers[options.RowNameColumn+1:]...)
-		for i := range allData {
-			if options.RowNameColumn < len(allData[i]) {
-				allData[i] = append(allData[i][:options.RowNameColumn], allData[i][options.RowNameColumn+1:]...)
-			}
-		}
-	}
+	allData = extractRowNameColumn(fileData, allData, options.RowNameColumn)
 
 	// Apply column selection if specified
 	if len(options.SelectedColumns) > 0 {
@@ -557,23 +541,7 @@ func (a *App) importExcelWithOptions(filePath string, options ImportOptions) (*F
 	}
 
 	// Extract row names if specified
-	if options.RowNameColumn >= 0 && len(rows) > 0 && options.RowNameColumn < len(rows[0]) {
-		fileData.RowNames = make([]string, len(rows))
-		for i, row := range rows {
-			if options.RowNameColumn < len(row) {
-				fileData.RowNames[i] = row[options.RowNameColumn]
-			}
-		}
-
-		// Remove row name column, keeping its name (#859).
-		fileData.RowNamesHeader = fileData.Headers[options.RowNameColumn]
-		fileData.Headers = append(fileData.Headers[:options.RowNameColumn], fileData.Headers[options.RowNameColumn+1:]...)
-		for i := range rows {
-			if options.RowNameColumn < len(rows[i]) {
-				rows[i] = append(rows[i][:options.RowNameColumn], rows[i][options.RowNameColumn+1:]...)
-			}
-		}
-	}
+	rows = extractRowNameColumn(fileData, rows, options.RowNameColumn)
 
 	// Apply column selection if specified
 	if len(options.SelectedColumns) > 0 {
@@ -676,4 +644,45 @@ func (a *App) SelectFileForImport() (string, error) {
 	}
 
 	return filePath, nil
+}
+
+// extractRowNameColumn moves one column out of the table and into the row
+// names, returning the remaining data.
+//
+// Both import paths did this with near-identical inline code. It lives here
+// instead because the two length checks it has to get right are easy to
+// conflate, and because neither import function can be called from a test --
+// both end by emitting a Wails event, which is fatal without a live runtime.
+//
+// The two lengths: the data rows say whether the column exists, and the headers
+// say whether it has a name. They disagree on a ragged sheet -- excelize's
+// GetRows trims trailing empty cells, so a short header row leaves fewer
+// headers than data columns -- and indexing the headers by a column number
+// validated against the data then panics.
+func extractRowNameColumn(fileData *FileData, data [][]string, rowNameColumn int) [][]string {
+	if fileData == nil || rowNameColumn < 0 || len(data) == 0 || rowNameColumn >= len(data[0]) {
+		return data
+	}
+
+	fileData.RowNames = make([]string, len(data))
+	for i, row := range data {
+		if rowNameColumn < len(row) {
+			fileData.RowNames[i] = row[rowNameColumn]
+		}
+	}
+
+	// Keep the column's own name so the file writes back as it was read, and so
+	// promoting a column to row names can be undone (#859).
+	if rowNameColumn < len(fileData.Headers) {
+		fileData.RowNamesHeader = fileData.Headers[rowNameColumn]
+		fileData.Headers = append(fileData.Headers[:rowNameColumn:rowNameColumn],
+			fileData.Headers[rowNameColumn+1:]...)
+	}
+
+	for i := range data {
+		if rowNameColumn < len(data[i]) {
+			data[i] = append(data[i][:rowNameColumn:rowNameColumn], data[i][rowNameColumn+1:]...)
+		}
+	}
+	return data
 }
