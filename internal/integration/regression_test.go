@@ -174,96 +174,88 @@ func TestRegressionSuite(t *testing.T) {
 				}
 			},
 		},
-		/*
-			// Skip - CSV export not supported by CLI (only json and table)
-			{
-				Name:        "CSVExport",
-				Description: "CSV export should produce valid CSV files",
-				SetupFunc: func(t *testing.T, tc *TestConfig) string {
-					return tc.CreateTestCSV(t, "csv.csv", GenerateTestMatrix(10, 5, 8.0))
-				},
-				Args:          []string{"analyze", "", "--format", "csv", "--output", ""},
-				ExpectedFiles: []string{"scores.csv", "loadings.csv"},
-				ValidateFunc: func(t *testing.T, output string, outputDir string) {
-					// CSV format outputs multiple files
-					baseName := "csv" // from csv.csv
-					scoresPath := filepath.Join(outputDir, baseName+"_scores.csv")
-					data, err := os.ReadFile(scoresPath)
-					AssertNoError(t, err, "Should read scores CSV")
-
-					if !strings.Contains(string(data), ",") {
-						t.Error("CSV should contain commas")
-					}
-				},
-			},
-		*/
+		// CSVExport was a case here, disabled because "CSV export not supported by CLI
+		// (only json and table)". That reason is still accurate: -f/--format takes
+		// table and json. The block is removed rather than left commented out,
+		// because a disabled block reads identically whether its reason is true or
+		// stale -- and two of the three here had gone stale without anyone noticing
+		// (#850). If CSV export is added, write the case then, against the interface
+		// that actually ships.
 
 		// Diagnostic metrics
-		/*
-			// Skip - Metrics not included in JSON output even with --include-metrics flag
-			{
-				Name:        "DiagnosticMetrics",
-				Description: "Diagnostic metrics calculation",
-				SetupFunc: func(t *testing.T, tc *TestConfig) string {
-					return tc.CreateTestCSV(t, "diag.csv", GenerateTestMatrix(25, 10, 9.0))
-				},
-				Args: []string{"analyze", "--method", "svd", "--include-metrics", "--format", "json", "--output-dir", "", "--components", "2", "--output-all", ""},
-				ValidateFunc: func(t *testing.T, output string, outputDir string) {
-					// The CLI outputs files as {basename}_pca.json
-					baseName := "diag" // from diag.csv
-					jsonPath := filepath.Join(outputDir, baseName+"_pca.json")
-					results := tc.LoadJSONResult(t, jsonPath)
-
-					if resultsData, ok := results["results"].(map[string]interface{}); ok {
-						if metrics, ok := resultsData["metrics"].(map[string]interface{}); ok {
-							if _, ok := metrics["hotellings_t2"]; !ok {
-								t.Error("Metrics should include Hotelling's T² values")
-							}
-							if _, ok := metrics["mahalanobis"]; !ok {
-								t.Error("Metrics should include Mahalanobis distances")
-							}
-						} else {
-							t.Error("Missing metrics section")
-						}
-					} else {
-						t.Error("Missing results section")
-					}
-				},
+		{
+			// Re-enabled. It was disabled with "Metrics not included in JSON output
+			// even with --include-metrics flag", which was never true: the metrics
+			// are emitted under results.samples.metrics, and the key is
+			// hotelling_t2 rather than hotellings_t2. Looking in the wrong place
+			// for a misspelled key produces exactly the symptom the note claimed.
+			Name:        "DiagnosticMetrics",
+			Description: "Diagnostic metrics calculation",
+			SetupFunc: func(t *testing.T, tc *TestConfig) string {
+				return tc.CreateTestCSV(t, "diag.csv", GenerateTestMatrix(25, 10, 9.0))
 			},
-		*/
+			Args: []string{"analyze", "--method", "svd", "--include-metrics", "--format", "json", "--output-dir", "", "--components", "2", "--output-all", ""},
+			ValidateFunc: func(t *testing.T, output string, outputDir string) {
+				jsonPath := filepath.Join(outputDir, "diag_pca.json")
+				results := tc.LoadJSONResult(t, jsonPath)
+
+				resultsData, ok := results["results"].(map[string]interface{})
+				if !ok {
+					t.Fatal("Missing results section")
+				}
+				samples, ok := resultsData["samples"].(map[string]interface{})
+				if !ok {
+					t.Fatal("Missing results.samples section")
+				}
+				metrics, ok := samples["metrics"].(map[string]interface{})
+				if !ok {
+					t.Fatal("Missing results.samples.metrics; --include-metrics should have produced it")
+				}
+				for _, name := range []string{"hotelling_t2", "mahalanobis"} {
+					values, ok := metrics[name].([]interface{})
+					if !ok {
+						t.Errorf("metrics.%s is missing or not an array", name)
+						continue
+					}
+					if len(values) != 25 {
+						t.Errorf("metrics.%s has %d values, expected one per sample (25)",
+							name, len(values))
+					}
+				}
+			},
+		},
 
 		// Model export and transform
-		/*
-			// Skip - Model export/import not yet implemented in CLI
-			{
-				Name:        "ModelExportTransform",
-				Description: "Model export and transform workflow",
-				SetupFunc: func(t *testing.T, tc *TestConfig) string {
-					// Create training data
-					trainPath := tc.CreateTestCSV(t, "train.csv", GenerateTestMatrix(30, 12, 10.0))
-					// Create test data
-					tc.CreateTestCSV(t, "test.csv", GenerateTestMatrix(10, 12, 11.0))
-					return trainPath
-				},
-				Args: []string{"analyze", "", "--export-model", "model.json", "--format", "json", "--output", ""},
-				ValidateFunc: func(t *testing.T, output string, outputDir string) {
-					modelPath := filepath.Join(tc.TempDir, "model.json")
-					CheckFileExists(t, modelPath)
-
-					// Now test transform
-					testPath := filepath.Join(tc.TempDir, "test.csv")
-					transformOut := filepath.Join(tc.TempDir, "transform_out")
-
-					_, err := tc.RunCLI(t, "transform", modelPath, testPath,
-						"--output", transformOut, "--format", "json")
-					AssertNoError(t, err, "Transform should work")
-
-					// Check transform results
-					transformResults := filepath.Join(transformOut, "transform_results.json")
-					CheckFileExists(t, transformResults)
-				},
+		{
+			// Rewritten and re-enabled. It was disabled with "Model export/import
+			// not yet implemented in CLI", which is false -- but the block used a
+			// --export-model flag that does not exist, so it could not have run as
+			// written and the wrong conclusion was easy to reach.
+			//
+			// The real route: analyze -o writes <basename>_pca.json, and transform
+			// reads that model and writes <basename>_transformed.json.
+			Name:        "ModelExportTransform",
+			Description: "Model export and transform workflow",
+			SetupFunc: func(t *testing.T, tc *TestConfig) string {
+				trainPath := tc.CreateTestCSV(t, "train.csv", GenerateTestMatrix(30, 12, 10.0))
+				tc.CreateTestCSV(t, "test.csv", GenerateTestMatrix(10, 12, 11.0))
+				return trainPath
 			},
-		*/
+			Args: []string{"analyze", "--method", "svd", "--components", "3", "--format", "json", "--output-dir", "", ""},
+			ValidateFunc: func(t *testing.T, output string, outputDir string) {
+				modelPath := filepath.Join(outputDir, "train_pca.json")
+				CheckFileExists(t, modelPath)
+
+				testPath := filepath.Join(tc.TempDir, "test.csv")
+				transformOut := filepath.Join(tc.TempDir, "transform_out")
+
+				_, err := tc.RunCLI(t, "transform", modelPath, testPath,
+					"--output", transformOut, "--format", "json")
+				AssertNoError(t, err, "Transform should work")
+
+				CheckFileExists(t, filepath.Join(transformOut, "test_transformed.json"))
+			},
+		},
 
 		// Edge cases from previous bugs
 		{

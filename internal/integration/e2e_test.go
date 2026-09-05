@@ -28,6 +28,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"sort"
 	"strings"
 	"testing"
 )
@@ -520,7 +521,6 @@ func TestE2EErrorHandling(t *testing.T) {
 
 // TestE2EDiagnosticMetrics tests diagnostic metrics calculation
 func TestE2EDiagnosticMetrics(t *testing.T) {
-	t.Skip("Metrics not included in JSON output even with --include-metrics flag")
 	SkipIfShort(t)
 
 	tc := NewTestConfig(t)
@@ -549,27 +549,64 @@ func TestE2EDiagnosticMetrics(t *testing.T) {
 	jsonPath := filepath.Join(outputDir, baseName+"_pca.json")
 	results := tc.LoadJSONResult(t, jsonPath)
 
-	// Check for metrics in results
-	if resultsData, ok := results["results"].(map[string]interface{}); ok {
-		if metrics, ok := resultsData["metrics"].(map[string]interface{}); ok {
-			if _, ok := metrics["hotellings_t2"]; !ok {
-				t.Error("Missing Hotelling's T² values in metrics")
-			}
-
-			if _, ok := metrics["mahalanobis"]; !ok {
-				t.Error("Missing Mahalanobis distances in metrics")
-			}
-
-			// Verify dimensions
-			if tSquared, ok := metrics["hotellings_t2"].([]interface{}); ok {
-				if len(tSquared) != 30 {
-					t.Errorf("Expected 30 T-squared values, got %d", len(tSquared))
-				}
-			}
-		} else {
-			t.Error("Missing metrics section in results")
-		}
-	} else {
-		t.Error("Missing results section")
+	// This test was disabled for a year with the note "Metrics not included in
+	// JSON output even with --include-metrics flag". That was never true. The
+	// metrics are emitted; the assertions looked in the wrong place for them:
+	// under results.metrics rather than results.samples.metrics, and for a key
+	// spelled hotellings_t2 rather than hotelling_t2. Both mistakes produce
+	// exactly the symptom the note described, which is presumably how the wrong
+	// conclusion was reached.
+	resultsData, ok := results["results"].(map[string]interface{})
+	if !ok {
+		t.Fatal("Missing results section")
 	}
+	samples, ok := resultsData["samples"].(map[string]interface{})
+	if !ok {
+		t.Fatal("Missing results.samples section")
+	}
+	metrics, ok := samples["metrics"].(map[string]interface{})
+	if !ok {
+		t.Fatalf("Missing results.samples.metrics; --include-metrics should have "+
+			"produced it. samples carries: %v", keysOf(samples))
+	}
+
+	// Each metric is one value per sample, and the fixture has 30 rows.
+	const wantSamples = 30
+	for _, name := range []string{"hotelling_t2", "mahalanobis", "rss", "is_outlier"} {
+		values, ok := metrics[name].([]interface{})
+		if !ok {
+			t.Errorf("metrics.%s is missing or is not an array; metrics carries: %v",
+				name, keysOf(metrics))
+			continue
+		}
+		if len(values) != wantSamples {
+			t.Errorf("metrics.%s has %d values, expected one per sample (%d)",
+				name, len(values), wantSamples)
+		}
+	}
+
+	// The confidence limits a caller needs to interpret those values. Without
+	// them the metrics are numbers with no threshold to compare against.
+	diagnostics, ok := results["diagnostics"].(map[string]interface{})
+	if !ok {
+		t.Fatal("Missing diagnostics section, which carries the T2 and Q limits")
+	}
+	for _, name := range []string{"t2_limit_95", "t2_limit_99", "q_limit_95", "q_limit_99"} {
+		if _, ok := diagnostics[name]; !ok {
+			t.Errorf("diagnostics.%s is missing; diagnostics carries: %v",
+				name, keysOf(diagnostics))
+		}
+	}
+}
+
+// keysOf lists a map's keys so a failure can say what was actually there. The
+// original version of this test reported "Missing metrics section" without
+// saying what it had found instead, which is why the wrong diagnosis stuck.
+func keysOf(m map[string]interface{}) []string {
+	out := make([]string, 0, len(m))
+	for k := range m {
+		out = append(out, k)
+	}
+	sort.Strings(out)
+	return out
 }
