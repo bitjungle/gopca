@@ -71,6 +71,10 @@ func (p *PCRImpl) crossValidate(data types.Matrix, y []float64, labelled []int,
 	// but never enter a test fold, having nothing to be scored against.
 	unlabelled := complementRows(len(data), labelled)
 
+	// Recorded from the first repeat; every repeat of a design produces the same
+	// number of folds, only different membership.
+	realizedFolds := 0
+
 	// predicted[c] and measured[c] accumulate every out-of-fold pair for candidate
 	// c across all folds and repeats, so the pooled metrics weight each
 	// observation equally regardless of fold size.
@@ -113,6 +117,9 @@ func (p *PCRImpl) crossValidate(data types.Matrix, y []float64, labelled []int,
 		if err != nil {
 			return nil, err
 		}
+		if repeat == 0 {
+			realizedFolds = len(folds)
+		}
 
 		for foldIndex, fold := range folds {
 			usable, err := p.evaluateFold(data, y, fold, unlabelled, config, kMax,
@@ -132,9 +139,14 @@ func (p *PCRImpl) crossValidate(data types.Matrix, y []float64, labelled []int,
 	}
 
 	report := &types.CVReport{
-		Scheme:   schemeName(cv.Scheme),
-		Design:   design,
-		Folds:    cv.Folds,
+		Scheme: schemeName(cv.Scheme),
+		Design: design,
+		// The number of folds that were actually built, not the number asked
+		// for. A configured zero means "one fold per group", so echoing the
+		// request back would put "folds: 0" in a report describing a run that
+		// made eighty of them -- and a reader has no other field to learn it
+		// from, since Design names the layout without counting it.
+		Folds:    realizedFolds,
 		Repeats:  repeats,
 		GroupBy:  cv.GroupBy,
 		Seed:     cv.Seed,

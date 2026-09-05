@@ -94,13 +94,19 @@ jobs:
         
         # Install required packages
         python -m pip install --upgrade pip
-        pip install numpy pandas scikit-learn
+        pip install numpy pandas scikit-learn scipy
         
         # Generate reference results
         cd validation
         echo "Generating PCA reference results..."
         python generate_reference_pca.py
         
+        echo "Generating PCR reference results..."
+        python generate_reference_pcr.py
+
+        echo "Generating Student-t reference results..."
+        python generate_studentt_reference.py
+
         echo "Generating Kernel PCA reference results..."
         python generate_kernel_pca_reference.py
         
@@ -110,10 +116,22 @@ jobs:
           python generate_temporal_pca_reference.py
         fi
         
-        # List generated files for verification
+        # List generated files for verification. No pipe to head: GitHub runs
+        # `shell: bash` with -o pipefail, so once there are more files than head
+        # consumes, ls takes SIGPIPE and the whole step fails on a progress
+        # message. That was latent until the PCR references pushed the count
+        # past ten.
         echo "Generated reference files:"
-        ls -la reference_results/*.json | head -10
+        ls -1 reference_results/
       shell: bash
+      env:
+        # The generators print progress with characters outside cp1252, which is
+        # what Python picks for stdout on a Windows runner. Without this the
+        # Student-t generator dies on a U+2192 in a progress line and takes the
+        # whole job with it -- a console encoding deciding whether the build
+        # passes. Forcing UTF-8 output makes that impossible for every generator
+        # rather than for the two that happen to contain such a character today.
+        PYTHONIOENCODING: utf-8
     
     - name: Run tests
       run: |
@@ -124,10 +142,31 @@ jobs:
           mkdir -p cmd/gocsv/frontend/dist
           echo '<!DOCTYPE html><html><body>Test</body></html>' > cmd/gocsv/frontend/dist/index.html
           
-          # Run tests for all packages with test files
-          # Note: Use explicit list to avoid Windows issues with packages without tests
-          # Skip TestValidateOutputPath on Windows as it uses Unix-specific paths
-          go test -v -race -timeout 10m ./internal/cli ./internal/cobra ./internal/core ./pkg/types ./cmd/gopca-desktop
+          # Derive the package list, exactly as scripts/ci/test-core.sh does for
+          # the other platforms. Windows cannot simply call `make ci-test`, so it
+          # carried a hand-written list instead -- and that list had fallen a long
+          # way behind: pkg/csv, pkg/validation, pkg/transform, pkg/security,
+          # internal/crossval and eight more were tested on Linux and macOS but
+          # not here. CSV parsing is the most platform-sensitive code in the
+          # project, and Windows was the one platform not running its tests.
+          #
+          # The old comment justified the hand-written list as avoiding "Windows
+          # issues with packages without tests". Selecting only packages that
+          # have test files is precisely what removes that problem, so the
+          # property is now enforced rather than remembered.
+          #
+          # node_modules is excluded by path: flatted ships a Go implementation
+          # inside this module's tree, so `go list ./...` descends into it.
+          WIN_PACKAGES=$(go list -f '{{if or .TestGoFiles .XTestGoFiles}}{{.ImportPath}}{{end}}' ./... \
+              | grep -v '/node_modules/' \
+              | grep -v '/internal/utils$' \
+              | tr '\n' ' ')
+          echo "Testing $(echo "$WIN_PACKAGES" | wc -w) packages:"
+          echo "$WIN_PACKAGES" | tr ' ' '\n' | sed '/^$/d'
+
+          # internal/utils is run separately below, because one of its tests
+          # asserts Unix path behaviour and is skipped here.
+          go test -v -race -timeout 10m $WIN_PACKAGES
           
           # Run sklearn validation tests if reference files exist
           if [ -d "testdata/validation/reference_results" ]; then

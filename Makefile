@@ -634,7 +634,16 @@ generate-sklearn-reference:
 		cd validation && \
 		python generate_reference_pca.py && \
 		python generate_reference_pcr.py && \
-		echo "Sklearn reference data generated successfully in testdata/validation/reference_results/"
+		python generate_studentt_reference.py && \
+		echo "Reference data generated in testdata/validation/reference_results/" && \
+		echo "" && \
+		echo "These are the generators whose output the Go tests actually read, so a" && \
+		echo "local 'make ci-test' now runs the same validation a pull request will." && \
+		echo "" && \
+		echo "CI additionally runs generate_kernel_pca_reference.py and (off Windows)" && \
+		echo "generate_temporal_pca_reference.py. They are omitted here on purpose:" && \
+		echo "no Go test reads their output, so running them locally would write 28" && \
+		echo "files nobody looks at. Tracked as issue #845."
 
 ## fmt: Format all Go code
 fmt:

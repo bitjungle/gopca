@@ -39,7 +39,8 @@ import numpy as np
 import pandas as pd
 from sklearn.decomposition import PCA
 from sklearn.linear_model import LinearRegression
-from sklearn.model_selection import KFold, cross_val_predict
+from sklearn.model_selection import (KFold, LeaveOneGroupOut, LeaveOneOut,
+                                     cross_val_predict)
 from sklearn.pipeline import Pipeline
 from sklearn.preprocessing import StandardScaler
 
@@ -172,6 +173,151 @@ def generate_cv_reference(X, y, component_counts, n_folds, preprocessing='standa
     return {"n_folds": int(n_folds), "curve": curve}
 
 
+def _fold_curve(X, y, component_counts, splitter, groups, preprocessing):
+    """Cross-validate over any deterministic sklearn splitter.
+
+    One decomposition per fold serves every candidate count: PCA's leading k
+    components do not depend on how many were requested, so the first k score
+    columns of a full fit are exactly what PCA(n_components=k) would give. This
+    mirrors what GoPCA does internally and makes leave-one-out affordable.
+
+    Returns per-candidate pooled and per-fold statistics. The per-fold ones are
+    the point of this function: GoPCA reports RMSECVMean and RMSECVSE alongside
+    the pooled RMSECV, they feed the one-standard-error selection rule, and
+    nothing compared them against a reference until now.
+    """
+    X = np.asarray(X, dtype=np.float64)
+    y = np.asarray(y, dtype=np.float64)
+    with_std = (preprocessing == 'standardize')
+    kmax = max(component_counts)
+
+    oof = {k: np.empty_like(y) for k in component_counts}
+    fold_rmse = {k: [] for k in component_counts}
+    fold_mae = {k: [] for k in component_counts}
+
+    for train_idx, test_idx in splitter.split(X, y, groups):
+        scaler = StandardScaler(with_mean=True, with_std=with_std).fit(X[train_idx])
+        Xtr, Xte = scaler.transform(X[train_idx]), scaler.transform(X[test_idx])
+        pca = PCA(n_components=min(kmax, len(train_idx) - 1, X.shape[1]),
+                  svd_solver='full').fit(Xtr)
+        Ttr, Tte = pca.transform(Xtr), pca.transform(Xte)
+
+        for k in component_counts:
+            if k == 0:
+                pred = np.full(len(test_idx), y[train_idx].mean())
+            else:
+                kk = min(k, Ttr.shape[1])
+                pred = LinearRegression().fit(Ttr[:, :kk], y[train_idx]).predict(Tte[:, :kk])
+            oof[k][test_idx] = pred
+            resid = pred - y[test_idx]
+            fold_rmse[k].append(float(np.sqrt(np.mean(resid ** 2))))
+            fold_mae[k].append(float(np.mean(np.abs(resid))))
+
+    ss_tot = float(np.sum((y - y.mean()) ** 2))
+    curve = []
+    for k in component_counts:
+        resid = oof[k] - y
+        fr = np.asarray(fold_rmse[k]); fm = np.asarray(fold_mae[k])
+        # Standard error as GoPCA computes it: the sample standard deviation of
+        # the per-fold values (ddof=1) divided by the square root of the count.
+        se = lambda a: float(np.std(a, ddof=1) / np.sqrt(len(a))) if len(a) > 1 else 0.0
+        curve.append({
+            "n_components": int(k),
+            "rmsecv": float(np.sqrt(np.mean(resid ** 2))),
+            "rmsecv_mean": float(np.mean(fr)),
+            "rmsecv_se": se(fr),
+            "bias": float(np.mean(resid)),
+            "sep": float(np.std(resid, ddof=1)),
+            "mae": float(np.mean(np.abs(resid))),
+            "mae_se": se(fm),
+            "q2": float(1 - np.sum(resid ** 2) / ss_tot) if ss_tot > 0 else 0.0,
+        })
+    return curve
+
+
+def generate_cv_designs(X, y, component_counts):
+    """Reference curves for the fold layouts GoPCA supports beyond plain K-fold.
+
+    Only contiguous K-fold was ever validated against scikit-learn. GroupKFold is
+    one code path in GoPCA serving K-fold, leave-one-out, grouped K-fold and
+    leave-one-group-out, so a fold assignment that disagreed with scikit-learn
+    would have shown up in none of the existing assertions.
+
+    Both designs here are chosen because their partition is *unique*. Shuffled
+    K-fold and balanced GroupKFold both depend on assignment heuristics that
+    differ between implementations, so a disagreement would say nothing about
+    the machinery. With one row per fold, or one group per fold, there is only
+    one possible answer and any difference is a real one.
+    """
+    n = X.shape[0]
+    designs = []
+
+    designs.append({
+        "design": "leave_one_out",
+        "n_folds": int(n),
+        "curve": _fold_curve(X, y, component_counts, LeaveOneOut(), None, 'standardize'),
+    })
+
+    # Interleaved groups, deliberately not contiguous blocks: a grouping that
+    # happens to align with row order would be indistinguishable from ordinary
+    # contiguous K-fold and would test nothing about keeping groups together.
+    groups = np.arange(n) % 8
+    designs.append({
+        "design": "leave_one_group_out",
+        "n_folds": 8,
+        "groups": groups.tolist(),
+        "curve": _fold_curve(X, y, component_counts, LeaveOneGroupOut(), groups, 'standardize'),
+    })
+
+    return designs
+
+
+def generate_semisupervised_reference(X, y, n_components, unlabelled_every=3):
+    """Reference for a fit where only some rows carry a response.
+
+    This is the path bronir2 exercises and the one where a leak makes the result
+    *better*, so no ordinary assertion fails when it is present. GoPCA fits the
+    decomposition on the labelled rows plus every unlabelled row -- the
+    predictors of an unmeasured sample still carry usable structure, and PCA
+    never sees the response -- and fits the regression on the labelled rows
+    alone.
+
+    Reproduced here explicitly: scaler and PCA on all rows, LinearRegression on
+    the labelled subset only.
+    """
+    X = np.asarray(X, dtype=np.float64)
+    y = np.asarray(y, dtype=np.float64)
+
+    labelled = np.ones(len(y), dtype=bool)
+    labelled[::unlabelled_every] = False   # deterministic, no RNG to agree about
+
+    scaler = StandardScaler().fit(X)
+    Xs = scaler.transform(X)
+    pca = PCA(n_components=n_components, svd_solver='full').fit(Xs)
+    scores = pca.transform(Xs)
+
+    reg = LinearRegression().fit(scores[labelled], y[labelled])
+    fitted = reg.predict(scores[labelled])
+    resid = fitted - y[labelled]
+
+    theta = pca.components_.T @ reg.coef_
+    beta = theta / scaler.scale_
+    intercept = float(reg.intercept_ - scaler.mean_ @ beta)
+
+    ss_tot = float(np.sum((y[labelled] - y[labelled].mean()) ** 2))
+    return {
+        "n_components": int(n_components),
+        "labelled_rows": [int(i) for i in np.flatnonzero(labelled)],
+        "n_labelled": int(labelled.sum()),
+        "n_decomposition_rows": int(len(y)),
+        "coefficients": beta.tolist(),
+        "intercept": intercept,
+        "fitted": fitted.tolist(),
+        "rmsec": float(np.sqrt(np.mean(resid ** 2))),
+        "r2c": float(1 - np.sum(resid ** 2) / ss_tot) if ss_tot > 0 else 0.0,
+    }
+
+
 def load_dataset(relative_path, response):
     """Load a dataset, splitting numeric predictors from the named response."""
     root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
@@ -253,11 +399,45 @@ def main():
             # A cross-validated curve, so the Go tests can check the fold
             # machinery and not only the point fit.
             if X.shape[0] % 5 == 0:
+                ks = list(range(0, max(component_counts) + 1))
                 payload["cross_validation"] = generate_cv_reference(
-                    X, y, list(range(0, max(component_counts) + 1)), 5, preprocessing)
+                    X, y, ks, 5, preprocessing)
                 cvc = payload["cross_validation"]["curve"]
                 print(f"    CV: RMSECV k=1 {cvc[1]['rmsecv']:.6g}, "
                       f"k={cvc[-1]['n_components']} {cvc[-1]['rmsecv']:.6g}")
+
+                # The per-fold statistics, computed by the same routine the new
+                # designs use. Cross-checked against the pooled figures above,
+                # which come from an independent cross_val_predict path: if the
+                # two disagree the reference itself is wrong, and that must not
+                # be discovered later as an unexplained Go/Python mismatch.
+                fast = _fold_curve(X, y, ks, KFold(n_splits=5, shuffle=False),
+                                   None, preprocessing)
+                for a, b in zip(cvc, fast):
+                    assert abs(a["rmsecv"] - b["rmsecv"]) < 1e-10, (
+                        f"the two reference paths disagree at k={a['n_components']}: "
+                        f"{a['rmsecv']} vs {b['rmsecv']}")
+                    a["rmsecv_mean"] = b["rmsecv_mean"]
+                    a["rmsecv_se"] = b["rmsecv_se"]
+                    a["mae_se"] = b["mae_se"]
+
+            # Alternative fold layouts, and the partially-labelled path. Only
+            # for the standardized variant: these check the fold machinery and
+            # the row filtering, neither of which depends on the scaling choice,
+            # and leave-one-out on 80 spectra is not cheap.
+            if preprocessing == 'standardize':
+                design_ks = [k for k in (0, 1, 3, 7) if k <= min(X.shape[0] - 2, X.shape[1])]
+                payload["cv_designs"] = generate_cv_designs(X, y, design_ks)
+                for d in payload["cv_designs"]:
+                    last = d["curve"][-1]
+                    print(f"    {d['design']}: RMSECV k={last['n_components']} "
+                          f"{last['rmsecv']:.6g} (mean-of-folds {last['rmsecv_mean']:.6g})")
+
+                semi_k = min(5, X.shape[1], X.shape[0] // 2)
+                payload["semi_supervised"] = generate_semisupervised_reference(X, y, semi_k)
+                ss = payload["semi_supervised"]
+                print(f"    semi-supervised: {ss['n_labelled']} labelled of "
+                      f"{ss['n_decomposition_rows']}, RMSEC={ss['rmsec']:.6g}")
 
             output_file = os.path.join(output_dir, f"{name}_pcr_{preprocessing}.json")
             with open(output_file, 'w') as f:

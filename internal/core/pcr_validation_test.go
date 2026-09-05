@@ -65,6 +65,43 @@ type pcrCVPoint struct {
 	SEP         float64 `json:"sep"`
 	MAE         float64 `json:"mae"`
 	Q2          float64 `json:"q2"`
+
+	// The per-fold statistics. RMSECVMean averages the per-fold RMSE where
+	// RMSECV pools every residual first, and RMSECVSE is the spread of those
+	// per-fold values -- the quantity the one-standard-error selection rule
+	// reads. Both were reported by GoPCA and compared against nothing.
+	RMSECVMean float64 `json:"rmsecv_mean"`
+	RMSECVSE   float64 `json:"rmsecv_se"`
+	MAESE      float64 `json:"mae_se"`
+}
+
+// pcrCVDesign is a reference curve for one fold layout.
+//
+// Only contiguous K-fold had a reference. GroupKFold is one code path in GoPCA
+// serving K-fold, leave-one-out, grouped K-fold and leave-one-group-out, so a
+// fold assignment disagreeing with scikit-learn's would have shown up in none
+// of the existing assertions.
+type pcrCVDesign struct {
+	Design string       `json:"design"`
+	NFolds int          `json:"n_folds"`
+	Groups []int        `json:"groups,omitempty"`
+	Curve  []pcrCVPoint `json:"curve"`
+}
+
+// pcrSemiSupervised is a reference for a fit where only some rows carry a
+// response: the decomposition sees every row, the regression only the labelled
+// ones. This is the path where a leak makes the result better rather than
+// worse, so no ordinary assertion fails when one is present.
+type pcrSemiSupervised struct {
+	NComponents        int       `json:"n_components"`
+	LabelledRows       []int     `json:"labelled_rows"`
+	NLabelled          int       `json:"n_labelled"`
+	NDecompositionRows int       `json:"n_decomposition_rows"`
+	Coefficients       []float64 `json:"coefficients"`
+	Intercept          float64   `json:"intercept"`
+	Fitted             []float64 `json:"fitted"`
+	RMSEC              float64   `json:"rmsec"`
+	R2C                float64   `json:"r2c"`
 }
 
 // pcrCVReference is a cross-validated sweep from scikit-learn.
@@ -86,6 +123,9 @@ type pcrReference struct {
 	YChecksum     float64           `json:"y_checksum"`
 	Fits          []pcrReferenceFit `json:"fits"`
 	CrossValid    *pcrCVReference   `json:"cross_validation,omitempty"`
+
+	CVDesigns      []pcrCVDesign      `json:"cv_designs,omitempty"`
+	SemiSupervised *pcrSemiSupervised `json:"semi_supervised,omitempty"`
 }
 
 // TestValidatePCRAgainstSklearn checks the estimator against scikit-learn on real
@@ -140,6 +180,18 @@ func TestValidatePCRAgainstSklearn(t *testing.T) {
 			if ref.CrossValid != nil {
 				t.Run("cross-validation", func(t *testing.T) {
 					comparePCRCrossValidation(t, data, y, ref)
+				})
+			}
+
+			for _, design := range ref.CVDesigns {
+				t.Run(design.Design, func(t *testing.T) {
+					comparePCRCVDesign(t, data, y, ref, design)
+				})
+			}
+
+			if ref.SemiSupervised != nil {
+				t.Run("semi-supervised", func(t *testing.T) {
+					comparePCRSemiSupervised(t, data, y, ref)
 				})
 			}
 		})
@@ -401,45 +453,11 @@ func comparePCRCrossValidation(t *testing.T, data types.Matrix, y []float64, ref
 		t.Fatal("expected a cross-validation report")
 	}
 
-	index := make(map[int]int, len(result.CV.Candidates))
-	for i, k := range result.CV.Candidates {
-		index[k] = i
-	}
-
-	tolerance := 1e-6
-	if ref.NFeatures > 100 {
-		tolerance = 1e-4
-	}
-
-	for _, point := range reference.Curve {
-		i, ok := index[point.NComponents]
-		if !ok {
-			t.Errorf("no result for %d components; the Go sweep covered %v",
-				point.NComponents, result.CV.Candidates)
-			continue
-		}
-
-		if d := relativeDifference(result.CV.RMSECV[i], point.RMSECV); d > tolerance {
-			t.Errorf("k=%d RMSECV: Go %.12g, sklearn %.12g (relative %.3g)",
-				point.NComponents, result.CV.RMSECV[i], point.RMSECV, d)
-		}
-		if d := relativeDifference(result.CV.Bias[i], point.Bias); d > tolerance {
-			t.Errorf("k=%d bias: Go %.12g, sklearn %.12g", point.NComponents,
-				result.CV.Bias[i], point.Bias)
-		}
-		if d := relativeDifference(result.CV.SEP[i], point.SEP); d > tolerance {
-			t.Errorf("k=%d SEP: Go %.12g, sklearn %.12g", point.NComponents,
-				result.CV.SEP[i], point.SEP)
-		}
-		if d := relativeDifference(result.CV.MAE[i], point.MAE); d > tolerance {
-			t.Errorf("k=%d MAE: Go %.12g, sklearn %.12g", point.NComponents,
-				result.CV.MAE[i], point.MAE)
-		}
-		if d := relativeDifference(result.CV.Q2[i], point.Q2); d > tolerance {
-			t.Errorf("k=%d Q2: Go %.12g, sklearn %.12g", point.NComponents,
-				result.CV.Q2[i], point.Q2)
-		}
-	}
+	// One comparison routine serves every fold layout, so a check added for one
+	// design cannot quietly be missing from another. The per-fold statistics were
+	// first compared only in the alternative designs, which meant a defect in
+	// RMSECVMean went undetected here on the very layout most runs use.
+	comparePCRCurve(t, "contiguous", result.CV, reference.Curve, ref.NFeatures)
 
 	// The identity relating the three error measures must hold at every candidate.
 	for i, k := range result.CV.Candidates {
@@ -451,4 +469,220 @@ func comparePCRCrossValidation(t *testing.T, data types.Matrix, y []float64, ref
 			t.Errorf("k=%d: RMSECV^2 = %.15g but bias^2 + (n-1)/n SEP^2 = %.15g", k, want, have)
 		}
 	}
+}
+
+// comparePCRCVDesign checks a fold layout other than plain contiguous K-fold.
+//
+// Both designs the reference carries have a *unique* partition, which is why
+// they are the ones chosen. Shuffled K-fold and balanced GroupKFold depend on
+// assignment heuristics that differ between implementations, so a disagreement
+// there would say nothing about the machinery being tested. With one row per
+// fold, or one group per fold, there is only one possible answer and any
+// difference is a real one.
+//
+// GoPCA expresses both through the same GroupKFold with Folds set to zero,
+// meaning "as many folds as there are groups" -- with the default grouping of
+// one row per group that is leave-one-out, and with an explicit grouping it is
+// leave-one-group-out. That the two designs share a code path is exactly why
+// checking them separately is worth doing.
+func comparePCRCVDesign(t *testing.T, data types.Matrix, y []float64,
+	ref *pcrReference, design pcrCVDesign) {
+	t.Helper()
+
+	maxComponents := design.Curve[len(design.Curve)-1].NComponents
+
+	config := types.PCRConfig{
+		PCA: types.PCAConfig{
+			Components:    maxComponents,
+			MeanCenter:    true,
+			StandardScale: ref.Preprocessing == "standardize",
+			Method:        "svd",
+		},
+		Response: ref.Response,
+		Selection: types.SelectionConfig{
+			Mode:   "cv",
+			Metric: "rmse",
+			Rule:   types.SelectMin,
+			CV: types.CVConfig{
+				Scheme: types.CVContiguous,
+				Folds:  0, // one fold per group
+				Groups: design.Groups,
+			},
+		},
+	}
+
+	result, err := core.NewPCREngine().Fit(data, y, config)
+	if err != nil {
+		t.Fatalf("Fit: %v", err)
+	}
+	if result.CV == nil {
+		t.Fatal("no cross-validation report")
+	}
+	// CVReport.Folds now records the number of folds actually built rather than
+	// the number configured, so this comparison means something. It did not
+	// before: the config value is zero for both designs here, and the assertion
+	// carried an "|| Folds != 0" escape hatch that made it unfireable for
+	// exactly the layouts it was written to check.
+	if result.CV.Folds != design.NFolds {
+		t.Errorf("design %s: GoPCA built %d folds, scikit-learn used %d",
+			design.Design, result.CV.Folds, design.NFolds)
+	}
+
+	comparePCRCurve(t, design.Design, result.CV, design.Curve, ref.NFeatures)
+}
+
+// comparePCRCurve compares a GoPCA error curve against a reference one, point by
+// point, including the per-fold statistics.
+func comparePCRCurve(t *testing.T, label string, report *types.CVReport,
+	curve []pcrCVPoint, nFeatures int) {
+	t.Helper()
+
+	// The same rule the point-fit comparison uses. Selecting the tolerance by
+	// dataset name would drift from it the moment a second high-dimensional
+	// fixture arrives under a different name, and the loosening is a property of
+	// the conditioning rather than of the file.
+	tolerance := cvTolerance(nFeatures)
+
+	index := make(map[int]int, len(report.Candidates))
+	for i, k := range report.Candidates {
+		index[k] = i
+	}
+
+	for _, point := range curve {
+		i, ok := index[point.NComponents]
+		if !ok {
+			t.Errorf("%s: GoPCA has no candidate k=%d", label, point.NComponents)
+			continue
+		}
+		for _, c := range []struct {
+			name string
+			got  float64
+			want float64
+		}{
+			{"rmsecv", report.RMSECV[i], point.RMSECV},
+			{"rmsecv_mean", report.RMSECVMean[i], point.RMSECVMean},
+			{"rmsecv_se", report.RMSECVSE[i], point.RMSECVSE},
+			{"mae", report.MAE[i], point.MAE},
+			{"mae_se", report.MAESE[i], point.MAESE},
+			{"bias", report.Bias[i], point.Bias},
+			{"sep", report.SEP[i], point.SEP},
+			{"q2", report.Q2[i], point.Q2},
+		} {
+			if d := relativeDifference(c.got, c.want); d > tolerance {
+				t.Errorf("%s k=%d %s: Go %.12g, scikit-learn %.12g (relative %.3g)",
+					label, point.NComponents, c.name, c.got, c.want, d)
+			}
+		}
+	}
+}
+
+// comparePCRSemiSupervised checks the partially-labelled fit.
+//
+// The reference masks every third row's response and fits the scaler and the
+// decomposition on all rows, the regression on the labelled rows alone. GoPCA
+// reaches the same arrangement from the other direction: it is handed a
+// response with NaN in those positions and works out which rows are labelled
+// itself.
+//
+// The row counts are asserted before the coefficients, because that is where a
+// disagreement would actually show. A model fitted on the wrong subset produces
+// coefficients that are perfectly self-consistent, and only the count reveals
+// which rows produced them.
+func comparePCRSemiSupervised(t *testing.T, data types.Matrix, y []float64, ref *pcrReference) {
+	t.Helper()
+
+	want := ref.SemiSupervised
+
+	masked := make([]float64, len(y))
+	copy(masked, y)
+	labelled := make(map[int]bool, len(want.LabelledRows))
+	for _, row := range want.LabelledRows {
+		labelled[row] = true
+	}
+	for i := range masked {
+		if !labelled[i] {
+			masked[i] = math.NaN()
+		}
+	}
+
+	config := types.PCRConfig{
+		PCA: types.PCAConfig{
+			Components:    want.NComponents,
+			MeanCenter:    true,
+			StandardScale: true,
+			Method:        "svd",
+		},
+		Response: ref.Response,
+		Selection: types.SelectionConfig{
+			Mode:   "fixed",
+			Fixed:  want.NComponents,
+			Metric: "rmse",
+		},
+	}
+
+	result, err := core.NewPCREngine().Fit(data, masked, config)
+	if err != nil {
+		t.Fatalf("Fit: %v", err)
+	}
+
+	if len(result.LabelledRows) != want.NLabelled {
+		t.Fatalf("GoPCA fitted the regression on %d rows, the reference on %d",
+			len(result.LabelledRows), want.NLabelled)
+	}
+	for i, row := range result.LabelledRows {
+		if row != want.LabelledRows[i] {
+			t.Fatalf("labelled row %d: GoPCA says %d, the reference says %d",
+				i, row, want.LabelledRows[i])
+		}
+	}
+	// Every row must have entered the decomposition, including the unlabelled
+	// ones. Silently dropping them would be a defensible-looking choice that
+	// changes the components and every number downstream.
+	if got := len(result.PCA.Scores); got != want.NDecompositionRows {
+		t.Errorf("the decomposition used %d rows, the reference used %d: an "+
+			"unlabelled sample still carries usable predictor structure",
+			got, want.NDecompositionRows)
+	}
+
+	tolerance := cvTolerance(ref.NFeatures)
+
+	if d := relativeDifference(result.InterceptOriginal, want.Intercept); d > tolerance {
+		t.Errorf("intercept: Go %.12g, scikit-learn %.12g (relative %.3g)",
+			result.InterceptOriginal, want.Intercept, d)
+	}
+	if d := relativeDifference(result.RMSEC, want.RMSEC); d > tolerance {
+		t.Errorf("RMSEC: Go %.12g, scikit-learn %.12g (relative %.3g)",
+			result.RMSEC, want.RMSEC, d)
+	}
+	if d := relativeDifference(result.R2C, want.R2C); d > tolerance {
+		t.Errorf("R2C: Go %.12g, scikit-learn %.12g (relative %.3g)",
+			result.R2C, want.R2C, d)
+	}
+
+	if len(result.Coefficients) != len(want.Coefficients) {
+		t.Fatalf("coefficient counts differ: %d against %d",
+			len(result.Coefficients), len(want.Coefficients))
+	}
+	worst := 0.0
+	for j := range want.Coefficients {
+		if d := relativeDifference(result.Coefficients[j], want.Coefficients[j]); d > worst {
+			worst = d
+		}
+	}
+	if worst > tolerance {
+		t.Errorf("worst coefficient disagreement %.3g exceeds tolerance %g", worst, tolerance)
+	}
+}
+
+// cvTolerance loosens the comparison for wide, strongly collinear fixtures.
+//
+// Spectral data with hundreds of correlated columns is ill-conditioned enough
+// that the two implementations' different orderings of the same arithmetic
+// diverge in the last few digits. The threshold matches the one the point-fit
+// comparison uses, so the two cannot drift apart.
+func cvTolerance(nFeatures int) float64 {
+	if nFeatures > 100 {
+		return 1e-4
+	}
+	return 1e-6
 }
