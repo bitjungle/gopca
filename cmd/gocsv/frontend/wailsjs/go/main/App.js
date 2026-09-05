@@ -58,6 +58,10 @@ export function ExecuteFillMissingValues(arg1, arg2, arg3, arg4) {
   return window['go']['main']['App']['ExecuteFillMissingValues'](arg1, arg2, arg3, arg4);
 }
 
+export function ExecuteFilterRows(arg1, arg2) {
+  return window['go']['main']['App']['ExecuteFilterRows'](arg1, arg2);
+}
+
 export function ExecuteHeaderEdit(arg1, arg2, arg3, arg4) {
   return window['go']['main']['App']['ExecuteHeaderEdit'](arg1, arg2, arg3, arg4);
 }
@@ -132,6 +136,10 @@ export function PeekRemoteURL(arg1) {
 
 export function PreviewFile(arg1, arg2) {
   return window['go']['main']['App']['PreviewFile'](arg1, arg2);
+}
+
+export function PreviewFilter(arg1, arg2) {
+  return window['go']['main']['App']['PreviewFilter'](arg1, arg2);
 }
 
 export function Redo(arg1) {

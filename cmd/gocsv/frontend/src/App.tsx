@@ -23,7 +23,7 @@
 
 import React, { useState, useRef, useEffect } from 'react';
 import './App.css';
-import { CSVGrid, ValidationResults, MissingValueSummary, MissingValueDialog, DataQualityDashboard, UndoRedoControls, ImportWizard, DataTransformDialog, DocumentationViewer, AboutDialog, LoadFromUrlDialog } from './components';
+import { CSVGrid, ValidationResults, MissingValueSummary, MissingValueDialog, DataQualityDashboard, UndoRedoControls, ImportWizard, DataTransformDialog, FilterRowsDialog, DocumentationViewer, AboutDialog, LoadFromUrlDialog } from './components';
 import { ConfirmDialog, ErrorBoundary, ErrorAlert, ThemeProvider, ThemeToggle, HelpProvider, HelpDisplay, HelpWrapper, useHelp } from '@gopca/ui-components';
 import logo from './assets/images/GoCSV-logo-1024-transp.png';
 import helpContent from './help/help-content.json';
@@ -55,6 +55,7 @@ function AppContent() {
     const [wizardInitialFile, setWizardInitialFile] = useState<string | null>(null);
     const [wizardInitialSkipRows, setWizardInitialSkipRows] = useState<number | undefined>(undefined);
     const [showTransformDialog, setShowTransformDialog] = useState(false);
+    const [showFilterDialog, setShowFilterDialog] = useState(false);
     const [showDocumentation, setShowDocumentation] = useState(false);
     const [showAboutDialog, setShowAboutDialog] = useState(false);
     // Transposition rewrites the whole dataset, so it asks first and shows what
@@ -819,6 +820,18 @@ return;
                     onClose={() => setShowTransformDialog(false)}
                     fileData={fileData}
                     onTransformComplete={handleTransformComplete}
+                />
+            )}
+
+            {fileData && (
+                <FilterRowsDialog
+                    isOpen={showFilterDialog}
+                    onClose={() => setShowFilterDialog(false)}
+                    fileData={fileData}
+                    onFilterComplete={(updated) => {
+                        setFileData(updated);
+                        setValidationResult(null);
+                    }}
                 />
             )}
 

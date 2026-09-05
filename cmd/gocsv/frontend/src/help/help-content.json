@@ -30,6 +30,11 @@
       "text": "Replace missing values using mean, median, or custom strategies.",
       "category": "editing"
     },
+    "filter-rows": {
+      "title": "Filter Rows",
+      "text": "Keep or remove rows matching a condition \u2014 drop QC standards, analyse one batch, exclude outliers. The dialog shows how many rows match before you apply it. Empty cells match only \"is empty\", so a negative condition will not remove rows for having no value in that column.",
+      "category": "editing"
+    },
     "transform-data": {
       "title": "Transform Data",
       "text": "Apply data transformations like scaling, normalization, or encoding.",

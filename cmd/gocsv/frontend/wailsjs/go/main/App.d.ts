@@ -31,6 +31,8 @@ export function ExecuteDuplicateRows(arg1:main.FileData,arg2:Array<number>):Prom
 
 export function ExecuteFillMissingValues(arg1:main.FileData,arg2:string,arg3:string,arg4:string):Promise<main.FileData>;
 
+export function ExecuteFilterRows(arg1:main.FileData,arg2:main.FilterCondition):Promise<main.FileData>;
+
 export function ExecuteHeaderEdit(arg1:main.FileData,arg2:number,arg3:string,arg4:string):Promise<main.FileData>;
 
 export function ExecuteInsertColumn(arg1:main.FileData,arg2:number,arg3:string):Promise<main.FileData>;
@@ -68,6 +70,8 @@ export function OpenInGoPCA(arg1:main.FileData):Promise<void>;
 export function PeekRemoteURL(arg1:string):Promise<main.URLPeekResult>;
 
 export function PreviewFile(arg1:string,arg2:main.ImportOptions):Promise<main.FilePreview>;
+
+export function PreviewFilter(arg1:main.FileData,arg2:main.FilterCondition):Promise<main.FilterPreview>;
 
 export function Redo(arg1:main.FileData):Promise<main.FileData>;
 

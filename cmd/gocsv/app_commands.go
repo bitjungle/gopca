@@ -194,6 +194,16 @@ func (a *App) ExecuteTranspose(data *FileData) (*FileData, error) {
 	return a.executeCommand(cmd, data, "transpose")
 }
 
+// ExecuteFilterRows keeps or removes the rows a condition selects, with undo
+// support.
+func (a *App) ExecuteFilterRows(data *FileData, condition FilterCondition) (*FileData, error) {
+	cmd, err := NewFilterRowsCommand(a, data, condition)
+	if err != nil {
+		return nil, fmt.Errorf("filter rows: %w", err)
+	}
+	return a.executeCommand(cmd, data, "filter rows")
+}
+
 // ExecuteDuplicateRows duplicates selected rows with undo support
 func (a *App) ExecuteDuplicateRows(data *FileData, rowIndices []int) (*FileData, error) {
 	if len(rowIndices) == 0 {
