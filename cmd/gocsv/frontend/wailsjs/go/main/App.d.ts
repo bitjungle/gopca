@@ -43,6 +43,8 @@ export function ExecuteSetRowNames(arg1:main.FileData,arg2:number):Promise<main.
 
 export function ExecuteToggleTargetColumn(arg1:main.FileData,arg2:number):Promise<main.FileData>;
 
+export function ExecuteTranspose(arg1:main.FileData):Promise<main.FileData>;
+
 export function FillMissingValues(arg1:main.FileData,arg2:main.FillMissingValuesRequest):Promise<main.FileData>;
 
 export function GetFileInfo(arg1:string):Promise<main.ImportFileInfo>;
@@ -78,6 +80,8 @@ export function SelectFileForImport():Promise<string>;
 export function SuggestCategoryOrder(arg1:main.FileData,arg2:string):Promise<Array<string>>;
 
 export function SuggestImportForFailedLoad():Promise<main.ExcelImportSuggestion>;
+
+export function TransposeWarnings(arg1:main.FileData):Promise<Array<string>>;
 
 export function Undo(arg1:main.FileData):Promise<main.FileData>;
 
