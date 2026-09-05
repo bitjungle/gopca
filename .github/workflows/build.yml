@@ -142,10 +142,31 @@ jobs:
           mkdir -p cmd/gocsv/frontend/dist
           echo '<!DOCTYPE html><html><body>Test</body></html>' > cmd/gocsv/frontend/dist/index.html
           
-          # Run tests for all packages with test files
-          # Note: Use explicit list to avoid Windows issues with packages without tests
-          # Skip TestValidateOutputPath on Windows as it uses Unix-specific paths
-          go test -v -race -timeout 10m ./internal/cli ./internal/cobra ./internal/core ./pkg/types ./cmd/gopca-desktop
+          # Derive the package list, exactly as scripts/ci/test-core.sh does for
+          # the other platforms. Windows cannot simply call `make ci-test`, so it
+          # carried a hand-written list instead -- and that list had fallen a long
+          # way behind: pkg/csv, pkg/validation, pkg/transform, pkg/security,
+          # internal/crossval and eight more were tested on Linux and macOS but
+          # not here. CSV parsing is the most platform-sensitive code in the
+          # project, and Windows was the one platform not running its tests.
+          #
+          # The old comment justified the hand-written list as avoiding "Windows
+          # issues with packages without tests". Selecting only packages that
+          # have test files is precisely what removes that problem, so the
+          # property is now enforced rather than remembered.
+          #
+          # node_modules is excluded by path: flatted ships a Go implementation
+          # inside this module's tree, so `go list ./...` descends into it.
+          WIN_PACKAGES=$(go list -f '{{if or .TestGoFiles .XTestGoFiles}}{{.ImportPath}}{{end}}' ./... \
+              | grep -v '/node_modules/' \
+              | grep -v '/internal/utils$' \
+              | tr '\n' ' ')
+          echo "Testing $(echo "$WIN_PACKAGES" | wc -w) packages:"
+          echo "$WIN_PACKAGES" | tr ' ' '\n' | sed '/^$/d'
+
+          # internal/utils is run separately below, because one of its tests
+          # asserts Unix path behaviour and is skipped here.
+          go test -v -race -timeout 10m $WIN_PACKAGES
           
           # Run sklearn validation tests if reference files exist
           if [ -d "testdata/validation/reference_results" ]; then
