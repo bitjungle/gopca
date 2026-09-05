@@ -46,6 +46,21 @@ func applyMath(data [][]string, columnTypes map[string]string, headers []string,
 			continue
 		}
 
+		// Check the whole column before changing any of it.
+		//
+		// This used to warn about each impossible value and carry on, and the
+		// skip left the original number in the cell. A column with zeros came
+		// out with some cells logged and some raw -- one variable in two
+		// different units, which then went into PCA as though it were fine.
+		// A partially transformed column is harder to notice downstream than a
+		// refused one, so refusing is the safer failure.
+		if rows := valuesOutsideDomain(data, colIndex, opts.Type); len(rows) > 0 {
+			result.Messages = append(result.Messages, fmt.Sprintf(
+				"Column '%s' left unchanged: %s is undefined for %s",
+				colName, opts.Type, describeOffendingRows(rows, opts.Type)))
+			continue
+		}
+
 		transformedCount := 0
 		for i := range data {
 			if colIndex >= len(data[i]) {
@@ -57,6 +72,9 @@ func applyMath(data [][]string, columnTypes map[string]string, headers []string,
 				continue
 			}
 
+			// Values that are not numbers at all are left as they are, the same
+			// as blanks. They were never in the column's units to begin with,
+			// so leaving one does not mix two units the way a skipped zero did.
 			num, err := strconv.ParseFloat(value, 64)
 			if err != nil {
 				continue
@@ -65,16 +83,8 @@ func applyMath(data [][]string, columnTypes map[string]string, headers []string,
 			var transformed float64
 			switch opts.Type {
 			case Log:
-				if num <= 0 {
-					result.Messages = append(result.Messages, fmt.Sprintf("Warning: Non-positive value in row %d, column '%s' - cannot apply log", i+1, colName))
-					continue
-				}
 				transformed = math.Log(num)
 			case Sqrt:
-				if num < 0 {
-					result.Messages = append(result.Messages, fmt.Sprintf("Warning: Negative value in row %d, column '%s' - cannot apply sqrt", i+1, colName))
-					continue
-				}
 				transformed = math.Sqrt(num)
 			case Square:
 				transformed = num * num
@@ -89,4 +99,68 @@ func applyMath(data [][]string, columnTypes map[string]string, headers []string,
 	}
 
 	return nil
+}
+
+// valuesOutsideDomain returns the 1-based row numbers whose value the given
+// transformation is not defined for.
+//
+// Blanks and unparseable cells are not included: they are left alone rather
+// than transformed, so they cannot put the column into mixed units.
+func valuesOutsideDomain(data [][]string, colIndex int, transformType Type) []int {
+	var rows []int
+	for i := range data {
+		if colIndex >= len(data[i]) {
+			continue
+		}
+		value := strings.TrimSpace(data[i][colIndex])
+		if value == "" {
+			continue
+		}
+		num, err := strconv.ParseFloat(value, 64)
+		if err != nil {
+			continue
+		}
+
+		switch transformType {
+		case Log:
+			if num <= 0 {
+				rows = append(rows, i+1)
+			}
+		case Sqrt:
+			if num < 0 {
+				rows = append(rows, i+1)
+			}
+		}
+	}
+	return rows
+}
+
+// describeOffendingRows names what is wrong and where, listing the first few
+// rows so the user can go and look rather than search the column by hand.
+func describeOffendingRows(rows []int, transformType Type) string {
+	const maxListed = 5
+
+	what := "negative values"
+	if transformType == Log {
+		what = "non-positive values"
+	}
+
+	listed := rows
+	suffix := ""
+	if len(rows) > maxListed {
+		listed = rows[:maxListed]
+		suffix = fmt.Sprintf(" and %d more", len(rows)-maxListed)
+	}
+
+	numbers := make([]string, len(listed))
+	for i, row := range listed {
+		numbers[i] = strconv.Itoa(row)
+	}
+
+	noun := "row"
+	if len(rows) != 1 {
+		noun = "rows"
+	}
+	return fmt.Sprintf("the %s in %s %s%s",
+		what, noun, strings.Join(numbers, ", "), suffix)
 }
