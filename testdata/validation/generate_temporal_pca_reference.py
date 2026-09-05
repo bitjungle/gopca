@@ -136,8 +136,14 @@ def generate_temporal_pca_reference(data, window_length, n_components=None,
         preprocessing_params['means'] = means.tolist()
         
     elif preprocessing == 'standardize':
+        # ddof=1, matching GoPCA, which uses the sample standard deviation.
+        # numpy defaults to the population one. The difference is a factor of
+        # sqrt(n/(n-1)) on the inputs and it does not cancel here: it moved the
+        # leading iris singular value by 0.33%, which is well above
+        # floating-point noise and well below what a loosened tolerance would
+        # notice. The same correction was needed in the kernel generator.
         means = X.mean(axis=0)
-        stds = X.std(axis=0)
+        stds = X.std(axis=0, ddof=1)
         stds[stds == 0] = 1.0  # Avoid division by zero
         X_processed = (X - means) / stds
         preprocessing_params['means'] = means.tolist()
