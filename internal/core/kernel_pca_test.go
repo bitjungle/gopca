@@ -101,8 +101,9 @@ func TestKernelPCA_LinearKernel(t *testing.T) {
 
 	// Linear kernel PCA should give similar results to regular PCA for linear data
 	// Check that variance is captured
-	if result.ExplainedVarRatio[0] < 90.0 {
-		t.Errorf("First component should explain most variance, got %.2f%%", result.ExplainedVarRatio[0])
+	if result.ExplainedVarRatio[0] < 0.90 {
+		t.Errorf("First component should explain most of the variance, got %.4f",
+			result.ExplainedVarRatio[0])
 	}
 }
 
@@ -128,8 +129,9 @@ func TestKernelPCA_RBFKernel(t *testing.T) {
 	}
 
 	// RBF kernel should capture non-linear patterns
-	if result.CumulativeVar[1] < 50.0 {
-		t.Errorf("RBF kernel should capture significant variance, got %.2f%%", result.CumulativeVar[1])
+	if result.CumulativeVar[1] < 0.50 {
+		t.Errorf("RBF kernel should capture significant variance, got %.4f",
+			result.CumulativeVar[1])
 	}
 }
 
@@ -279,7 +281,7 @@ func TestKernelPCA_FitTransform(t *testing.T) {
 		totalExplained += v
 	}
 
-	if totalExplained > 100.0 {
+	if totalExplained > 1.0001 {
 		t.Errorf("Explained variance ratios should not exceed 100%%, got %.2f%%", totalExplained)
 	}
 
@@ -373,7 +375,7 @@ func TestKernelPCA_ExplainedVarianceCalculation(t *testing.T) {
 
 	// Check that individual variance ratios are reasonable
 	for i, ratio := range result.ExplainedVarRatio {
-		if ratio > 100.0 {
+		if ratio > 1.0001 {
 			t.Errorf("Component %d has explained variance ratio > 100%%: %.2f%%", i+1, ratio)
 		}
 		if ratio < 0.0 {

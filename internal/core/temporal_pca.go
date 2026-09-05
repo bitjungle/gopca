@@ -53,7 +53,13 @@ type TemporalPCAImpl struct {
 	numLags      int       // Number of time lags (L)
 	origVars     int       // Original number of variables (p)
 	singularVals []float64 // Singular values from SVD
-	explainedVar []float64 // Explained variance ratio for each component
+	explainedVar []float64 // Fraction of total variance per component; drives the VarianceExplained cutoff
+	// eigenvalues holds the raw eigenvalue per component. It is what
+	// PCAResult.ExplainedVar carries, so that field means the same thing here
+	// as it does for linear and kernel PCA. Before V2 the temporal path put
+	// the fraction there instead, so explained_variance meant one thing in two
+	// of GoPCA's three methods and something else in the third.
+	eigenvalues []float64
 
 	// Configuration
 	config types.PCAConfig
@@ -322,6 +328,7 @@ func (t *TemporalPCAImpl) Fit(data types.Matrix, config types.PCAConfig) (*types
 		t.nComponents = 1
 		t.singularVals = []float64{1.0}
 		t.explainedVar = []float64{1.0}
+		t.eigenvalues = []float64{1.0}
 
 		// Single loading vector (normalized row)
 		t.loadings = mat.NewDense(1, laggedCols, nil)
@@ -369,8 +376,8 @@ func (t *TemporalPCAImpl) Fit(data types.Matrix, config types.PCAConfig) (*types
 		return &types.PCAResult{
 			Scores:                     utils.MatrixToSlice(scores),
 			Loadings:                   utils.MatrixToSlice(t.loadings),
-			ExplainedVar:               t.explainedVar,
-			ExplainedVarRatio:          []float64{100.0}, // Single component explains 100%
+			ExplainedVar:               t.eigenvalues,
+			ExplainedVarRatio:          []float64{1.0},   // Single component explains all of it
 			CumulativeVar:              []float64{100.0}, // Cumulative should also be 100%
 			ComponentLabels:            componentLabels,
 			SingularValues:             t.singularVals,
@@ -405,10 +412,24 @@ func (t *TemporalPCAImpl) Fit(data types.Matrix, config types.PCAConfig) (*types
 	svd.UTo(u)
 
 	// Calculate explained variance
-	// Store ALL eigenvalues for proper variance calculation
+	// Store ALL eigenvalues for proper variance calculation.
+	//
+	// The divisor matters for what explained_variance means. Linear PCA reports
+	// lambda = sigma^2/(n-1), the variance along a component, and so does
+	// scikit-learn. Temporal PCA reported sigma^2 instead, so the same field
+	// carried a variance in two of GoPCA's methods and a sum of squares in the
+	// third. Here n is the number of trajectory rows, since that is what the
+	// decomposition actually operated on.
+	//
+	// The ratio and the VarianceExplained cutoff are unaffected: the divisor
+	// cancels in eigenvalue/totalVar.
+	varianceDivisor := float64(effectiveRows - 1)
+	if varianceDivisor <= 0 {
+		varianceDivisor = 1
+	}
 	allEigenvalues := make([]float64, len(s))
 	for i, val := range s {
-		allEigenvalues[i] = val * val
+		allEigenvalues[i] = val * val / varianceDivisor
 	}
 
 	totalVar := 0.0
@@ -417,12 +438,14 @@ func (t *TemporalPCAImpl) Fit(data types.Matrix, config types.PCAConfig) (*types
 	}
 
 	t.explainedVar = make([]float64, len(s))
+	t.eigenvalues = make([]float64, len(s))
 	cumVar := 0.0
 	actualComponents := targetComponents
 
 	for i := range s {
 		variance := allEigenvalues[i] / totalVar
 		t.explainedVar[i] = variance
+		t.eigenvalues[i] = allEigenvalues[i]
 		cumVar += variance
 
 		// If using variance explained criterion, find cutoff
@@ -459,10 +482,10 @@ func (t *TemporalPCAImpl) Fit(data types.Matrix, config types.PCAConfig) (*types
 
 	t.fitted = true
 
-	// Calculate explained variance ratio as percentages
+	// Explained variance ratio, as a fraction of the total (see V2 note below)
 	explainedVarRatio := make([]float64, t.nComponents)
 	for i := 0; i < t.nComponents; i++ {
-		explainedVarRatio[i] = t.explainedVar[i] * 100.0 // Convert to percentage
+		explainedVarRatio[i] = t.explainedVar[i]
 	}
 
 	// Calculate cumulative variance (as cumulative sum of percentages)
@@ -531,7 +554,7 @@ func (t *TemporalPCAImpl) Fit(data types.Matrix, config types.PCAConfig) (*types
 	result := &types.PCAResult{
 		Scores:                     utils.MatrixToSlice(scores),
 		Loadings:                   utils.MatrixToSlice(t.loadings),
-		ExplainedVar:               t.explainedVar[:t.nComponents],
+		ExplainedVar:               t.eigenvalues[:t.nComponents],
 		ExplainedVarRatio:          explainedVarRatio,
 		CumulativeVar:              cumulativeVar,
 		ComponentLabels:            componentLabels,

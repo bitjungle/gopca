@@ -202,8 +202,8 @@ func TestPCAStabilityWithIllConditionedMatrices(t *testing.T) {
 					for _, v := range result.ExplainedVarRatio {
 						totalVar += v
 					}
-					if totalVar > 100.1 { // Allow small numerical error
-						t.Errorf("Total explained variance %.2f%% > 100%% for condition %.2e", totalVar, tc.condition)
+					if totalVar > 1.001 { // Allow small numerical error
+						t.Errorf("Total explained variance %.4f exceeds 1.0 for condition %.2e", totalVar, tc.condition)
 					}
 				}
 			}
@@ -250,8 +250,9 @@ func TestPCAWithNearSingularMatrix(t *testing.T) {
 
 			// First two components should explain nearly all variance
 			totalFirstTwo := result.ExplainedVarRatio[0] + result.ExplainedVarRatio[1]
-			if totalFirstTwo < 99.0 {
-				t.Errorf("First two components explain only %.2f%% (expected >99%%)", totalFirstTwo)
+			if totalFirstTwo < 0.99 {
+				t.Errorf("First two components explain only %.4f of the variance (expected >0.99)",
+					totalFirstTwo)
 			}
 		})
 	}

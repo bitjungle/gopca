@@ -276,7 +276,7 @@ func TestComponentSelectionConsistency(t *testing.T) {
 			// Verify cumulative variance if threshold was set
 			if tt.config.VarianceExplained > 0 {
 				lastCompVariance := result.CumulativeVar[actualComps-1]
-				assert.GreaterOrEqual(t, lastCompVariance, tt.config.VarianceExplained*100,
+				assert.GreaterOrEqual(t, lastCompVariance, tt.config.VarianceExplained,
 					"Cumulative variance should meet threshold")
 			}
 		})

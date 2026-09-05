@@ -292,11 +292,10 @@ func TestValidateAgainstSklearn(t *testing.T) {
 				// Validate explained variance ratios
 				// GoPCA returns percentages (0-100), sklearn returns fractions (0-1)
 				// Convert GoPCA percentages to fractions for comparison
-				explainedVarFractions := make([]float64, len(result.ExplainedVarRatio))
-				for i, v := range result.ExplainedVarRatio {
-					explainedVarFractions[i] = v / 100.0
-				}
-				err = compareVectors(explainedVarFractions, ref.ExplainedVarianceRatio,
+				// Compared directly. Both are fractions of 1 as of V2; GoPCA used
+				// to report percentages here and this comparison divided by 100
+				// to bridge the difference (#848).
+				err = compareVectors(result.ExplainedVarRatio, ref.ExplainedVarianceRatio,
 					tol, "explained_variance_ratio")
 				assert.NoError(t, err)
 
@@ -309,14 +308,8 @@ func TestValidateAgainstSklearn(t *testing.T) {
 					assert.NoError(t, err)
 				}
 
-				// Validate cumulative variance
-				// GoPCA returns percentages (0-100), sklearn returns fractions (0-1)
-				// Convert GoPCA percentages to fractions for comparison
-				cumulativeVarFractions := make([]float64, len(result.CumulativeVar))
-				for i, v := range result.CumulativeVar {
-					cumulativeVarFractions[i] = v / 100.0
-				}
-				err = compareVectors(cumulativeVarFractions, ref.CumulativeVariance,
+				// Validate cumulative variance, likewise directly.
+				err = compareVectors(result.CumulativeVar, ref.CumulativeVariance,
 					tol, "cumulative_variance")
 				assert.NoError(t, err)
 
@@ -326,8 +319,8 @@ func TestValidateAgainstSklearn(t *testing.T) {
 				for _, v := range result.ExplainedVarRatio {
 					totalVar += v
 				}
-				assert.InDelta(t, 100.0, totalVar, tol*100,
-					"Total explained variance should sum to 100%")
+				assert.InDelta(t, 1.0, totalVar, tol,
+					"Total explained variance should sum to 1.0")
 
 				// Log validation success
 				t.Logf("✓ Validated %s with condition number %.2e", testName, ref.ConditionNumber)
@@ -479,14 +472,8 @@ func TestNIPALSValidation(t *testing.T) {
 			// Tolerance may be slightly higher due to iterative nature of NIPALS
 			tol := 1e-5
 
-			// Convert percentages to fractions for comparison
-			explainedVarFractions := make([]float64, len(result.ExplainedVarRatio))
-			for i, v := range result.ExplainedVarRatio {
-				explainedVarFractions[i] = v / 100.0
-			}
-
-			// Validate explained variance ratios
-			err = compareVectors(explainedVarFractions, ref.ExplainedVarianceRatio,
+			// Compared directly: both sides are fractions of 1 as of V2 (#848).
+			err = compareVectors(result.ExplainedVarRatio, ref.ExplainedVarianceRatio,
 				tol, "explained_variance_ratio")
 			assert.NoError(t, err, "NIPALS should match SVD for complete data")
 
@@ -547,8 +534,8 @@ func TestMathematicalProperties(t *testing.T) {
 			totalVar += v
 		}
 		// GoPCA returns percentages, so total should be 100
-		assert.InDelta(t, 100.0, totalVar, 1e-8,
-			"Total explained variance must sum to 100%")
+		assert.InDelta(t, 1.0, totalVar, 1e-8,
+			"Total explained variance must sum to 1.0")
 	})
 
 	// Test 4: Mahalanobis distance relationship

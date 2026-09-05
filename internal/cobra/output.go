@@ -185,18 +185,21 @@ func outputTableFormat(result *types.PCAResult, data *pkgcsv.Data,
 		fmt.Printf("%-15s%15s%15s\n", "Component", "Variance", "Cumulative")
 		fmt.Println("──────────────────────────────────────────────────────────────")
 
+		// The engine reports fractions of 1; a reader wants percentages, so the
+		// conversion happens here at the point of display rather than in the
+		// values themselves (#848).
 		for i := 0; i < len(result.ComponentLabels); i++ {
 			fmt.Printf("%-15s%14.1f%%%14.1f%%\n",
 				result.ComponentLabels[i],
-				result.ExplainedVarRatio[i],
-				result.CumulativeVar[i])
+				result.ExplainedVarRatio[i]*100,
+				result.CumulativeVar[i]*100)
 		}
 
 		// Add feedback when variance explained criterion was used
 		if varianceExplained > 0 {
 			fmt.Printf("\n✓ Selected %d components to achieve %.1f%% cumulative variance (target: %.1f%%)\n",
 				len(result.ComponentLabels),
-				result.CumulativeVar[len(result.ComponentLabels)-1],
+				result.CumulativeVar[len(result.ComponentLabels)-1]*100,
 				varianceExplained*100)
 		}
 	}

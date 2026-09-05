@@ -188,7 +188,7 @@ func TestTemporalPCAFit(t *testing.T) {
 
 	// Cumulative variance should be increasing (now in percentage scale 0-100)
 	assert.Less(t, result.CumulativeVar[0], result.CumulativeVar[1])
-	assert.LessOrEqual(t, result.CumulativeVar[1], 100.0)
+	assert.LessOrEqual(t, result.CumulativeVar[1], 1.0)
 }
 
 // TestTemporalPCAVarianceExplained tests the variance explained criterion
@@ -763,7 +763,7 @@ func TestTemporalPCAEdgeCases(t *testing.T) {
 		for _, v := range result.ExplainedVarRatio {
 			totalVar += v
 		}
-		assert.LessOrEqual(t, totalVar, 100.01) // Allow tiny floating point error
+		assert.LessOrEqual(t, totalVar, 1.0001) // Allow tiny floating point error
 
 		// Cumulative variance should be monotonically increasing
 		for i := 1; i < len(result.CumulativeVar); i++ {

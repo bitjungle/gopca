@@ -221,7 +221,7 @@ func (p *PCAImpl) Fit(data types.Matrix, config types.PCAConfig) (*types.PCAResu
 		cumSum := 0.0
 		for i, v := range eigenvalues {
 			if totalExtractedVar > 0 {
-				explainedVarRatio[i] = v / totalExtractedVar * 100
+				explainedVarRatio[i] = v / totalExtractedVar
 			}
 			cumSum += explainedVarRatio[i]
 			cumulativeVar[i] = cumSum
@@ -244,7 +244,7 @@ func (p *PCAImpl) Fit(data types.Matrix, config types.PCAConfig) (*types.PCAResu
 		cumSum := 0.0
 		for i, v := range eigenvalues {
 			if totalVar > 0 {
-				explainedVarRatio[i] = v / totalVar * 100
+				explainedVarRatio[i] = v / totalVar
 			}
 			cumSum += explainedVarRatio[i]
 			cumulativeVar[i] = cumSum

@@ -265,5 +265,5 @@ func TestKernelPCAVisualizationConsistency(t *testing.T) {
 	for _, v := range result.ExplainedVarRatio {
 		totalVariance += v
 	}
-	assert.LessOrEqual(t, totalVariance, 100.0, "Total explained variance ratio should not exceed 100%")
+	assert.LessOrEqual(t, totalVariance, 1.0, "Total explained variance ratio should not exceed 1.0")
 }

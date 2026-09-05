@@ -46,16 +46,16 @@ func TestMethodConsistencyAcrossDatasets(t *testing.T) {
 			name: "iris",
 			file: "../../testdata/iris/iris.csv",
 			expected: map[string]float64{
-				"svd":    72.9, // Expected ~72.9% for first PC with standardization
-				"nipals": 72.9,
+				"svd":    0.729, // Expected ~72.9% of the variance in the first PC, as a fraction
+				"nipals": 0.729,
 			},
 		},
 		{
 			name: "wine",
 			file: "../../testdata/wine/wine.csv",
 			expected: map[string]float64{
-				"svd":    36.2, // Expected ~36.2% for first PC with standardization
-				"nipals": 36.2,
+				"svd":    0.362, // Expected ~36.2% of the variance in the first PC, as a fraction
+				"nipals": 0.362,
 			},
 		},
 	}
@@ -84,7 +84,7 @@ func TestMethodConsistencyAcrossDatasets(t *testing.T) {
 
 					// Check first component variance is close to expected
 					if expected, ok := dataset.expected[method]; ok {
-						assert.InDelta(t, expected, result.ExplainedVarRatio[0], 1.0,
+						assert.InDelta(t, expected, result.ExplainedVarRatio[0], 0.01,
 							"First component variance should match expected for %s on %s",
 							method, dataset.name)
 					}
@@ -239,8 +239,8 @@ func verifyPCAProperties(t *testing.T, result *types.PCAResult, method, dataset 
 
 	// Check explained variance sums to <= 100
 	totalVar := result.CumulativeVar[len(result.CumulativeVar)-1]
-	assert.LessOrEqual(t, totalVar, 100.0,
-		"%s on %s: Total variance should not exceed 100%%", method, dataset)
+	assert.LessOrEqual(t, totalVar, 1.0,
+		"%s on %s: Total variance should not exceed 1.0", method, dataset)
 
 	// Check explained variance is decreasing
 	for i := 1; i < len(result.ExplainedVar); i++ {

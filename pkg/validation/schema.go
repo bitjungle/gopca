@@ -53,7 +53,7 @@ import (
 	"github.com/xeipuuv/gojsonschema"
 )
 
-//go:embed schemas/v1/*.json
+//go:embed schemas/v1/*.json schemas/v2/*.json
 var schemaFS embed.FS
 
 // mainSchemaFile is the entry point of the schema graph; every other schema in
@@ -64,12 +64,12 @@ const mainSchemaFile = "pca-output.schema.json"
 type ModelValidator struct {
 	version string
 
-	// compiled is built once and reused. Compiling the graph parses seven
+	// compiled caches one graph per schema version. Compiling parses seven
 	// documents, and both callers -- pca transform and the desktop's export --
-	// validate repeatedly within one process.
-	once     sync.Once
-	compiled *gojsonschema.Schema
-	compErr  error
+	// validate repeatedly within one process. A validator may see both versions
+	// in one run, since a v1 model file stays readable.
+	mu       sync.Mutex
+	compiled map[string]*gojsonschema.Schema
 }
 
 // NewModelValidator creates a validator for the given schema version.
@@ -87,12 +87,22 @@ func NewModelValidator(version string) (*ModelValidator, error) {
 	return &ModelValidator{version: version}, nil
 }
 
-// schema compiles the schema graph, once.
-func (v *ModelValidator) schema() (*gojsonschema.Schema, error) {
-	v.once.Do(func() {
-		v.compiled, v.compErr = compileSchemaGraph(v.version)
-	})
-	return v.compiled, v.compErr
+// schema compiles the graph for a version, once per version.
+func (v *ModelValidator) schema(version string) (*gojsonschema.Schema, error) {
+	v.mu.Lock()
+	defer v.mu.Unlock()
+	if v.compiled == nil {
+		v.compiled = make(map[string]*gojsonschema.Schema, len(SupportedSchemaVersions))
+	}
+	if compiled, ok := v.compiled[version]; ok {
+		return compiled, nil
+	}
+	compiled, err := compileSchemaGraph(version)
+	if err != nil {
+		return nil, err
+	}
+	v.compiled[version] = compiled
+	return compiled, nil
 }
 
 // compileSchemaGraph loads every embedded schema for a version and compiles the
@@ -162,22 +172,29 @@ func (v *ModelValidator) ValidateModel(data []byte) error {
 	// file. It is checked separately from the shape because a file written
 	// against a future schema should say so rather than producing a list of
 	// shape errors that all stem from the version mismatch.
+	// A model is judged against the version it declares, not against whatever
+	// this build happens to write. explained_variance_ratio is a percentage in
+	// v1 and a fraction in v2, so the same numbers are valid under one schema
+	// and out of range under the other -- validating a v1 file against v2 would
+	// reject a perfectly good model.
+	version := v.version
 	if model, ok := probe.(map[string]interface{}); ok {
+		version = versionOf(model, v.version)
 		if declared, ok := model["$schema"].(string); ok {
-			if err := checkSchemaVersion(declared, v.version); err != nil {
+			if err := checkSchemaVersion(declared, version); err != nil {
 				return err
 			}
 		}
 	}
 
-	schema, err := v.schema()
+	schema, err := v.schema(version)
 	if err != nil {
 		return err
 	}
 
 	result, err := schema.Validate(gojsonschema.NewBytesLoader(data))
 	if err != nil {
-		return fmt.Errorf("validating against the %s schema: %w", v.version, err)
+		return fmt.Errorf("validating against the %s schema: %w", version, err)
 	}
 	if !result.Valid() {
 		return describeFailures(result.Errors())
@@ -201,6 +218,35 @@ func checkSchemaVersion(declared, version string) error {
 	return fmt.Errorf("unknown schema version: %s (this build validates against %s)",
 		declared, suffix)
 }
+
+// versionOf reads the schema version a model file declares.
+//
+// A v1 model reports explained_variance_ratio as a percentage and a v2 model as
+// a fraction, so the same numbers are valid under one schema and out of range
+// under the other. The file has to be judged against the version it was written
+// for, which is exactly what $schema is there to say.
+//
+// Files with no $schema are treated as the current version. That is the only
+// available guess, and it is the right one for anything this build wrote.
+func versionOf(model map[string]interface{}, fallback string) string {
+	declared, ok := model["$schema"].(string)
+	if !ok {
+		return fallback
+	}
+	for _, candidate := range SupportedSchemaVersions {
+		if strings.Contains(declared, "schemas/"+candidate+"/") {
+			return candidate
+		}
+	}
+	return fallback
+}
+
+// SupportedSchemaVersions are the schema versions this build can validate
+// against, newest first. CurrentSchemaVersion is what it writes.
+var SupportedSchemaVersions = []string{"v2", "v1"}
+
+// CurrentSchemaVersion is the version new model files declare.
+const CurrentSchemaVersion = "v2"
 
 // maxReportedFailures caps how many problems one error mentions.
 //

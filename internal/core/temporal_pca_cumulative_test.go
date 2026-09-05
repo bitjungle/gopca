@@ -78,21 +78,29 @@ func TestTemporalPCACumulativeVariance(t *testing.T) {
 			"Cumulative variance should be monotonically increasing")
 	}
 
-	// Last cumulative variance should be close to 100% (allowing for rounding)
+	// The last cumulative value should account for all the variance.
 	lastCumVar := result.CumulativeVar[len(result.CumulativeVar)-1]
-	assert.InDelta(t, 100.0, lastCumVar, 1.0,
-		"Last cumulative variance should be close to 100%% (got %.2f%%)", lastCumVar)
+	assert.InDelta(t, 1.0, lastCumVar, 0.01,
+		"Last cumulative variance should be close to 1.0 (got %.4f)", lastCumVar)
 
-	// Verify it's NOT the cumulative sum of raw eigenvalues
-	// Raw eigenvalues sum would be much smaller (close to 1.0 or less)
-	wrongCumSum := 0.0
+	// And it must be the normalised quantity, not a running sum of raw
+	// eigenvalues. This guard predates V2 and its polarity has flipped: it used
+	// to assert the value was large, because cumulative variance was a
+	// percentage and raw eigenvalues summed to about 1. Now cumulative variance
+	// is a fraction summing to 1 and the eigenvalues are the large quantity, so
+	// the same confusion shows up the other way round.
+	//
+	// The intent is unchanged: catch the two being swapped. Keeping it requires
+	// the eigenvalue sum to be far from 1, which on this fixture it is.
+	rawEigenvalueSum := 0.0
 	for _, v := range result.ExplainedVar {
-		wrongCumSum += v
+		rawEigenvalueSum += v
 	}
-	// If this was using raw eigenvalues, the sum would be around 1.0
-	// Our correct implementation should give us close to 100
-	assert.Greater(t, lastCumVar, 10.0,
-		"Cumulative variance should be in percentage scale (0-100), not raw eigenvalue scale")
+	assert.Greater(t, rawEigenvalueSum, 10.0,
+		"this fixture's eigenvalues should sum well above 1, or the check below "+
+			"cannot tell a fraction from an eigenvalue sum")
+	assert.Less(t, lastCumVar, 2.0,
+		"Cumulative variance should be a fraction of 1, not a sum of raw eigenvalues")
 }
 
 func TestTemporalPCACumulativeVarianceWithStockData(t *testing.T) {
@@ -123,8 +131,8 @@ func TestTemporalPCACumulativeVarianceWithStockData(t *testing.T) {
 	require.NoError(t, err)
 
 	// For stock data with strong trend, first component should explain majority
-	assert.Greater(t, result.ExplainedVarRatio[0], 50.0,
-		"First component should explain >50%% for trending stock data")
+	assert.Greater(t, result.ExplainedVarRatio[0], 0.5,
+		"First component should explain more than half the variance for trending stock data")
 
 	// Verify cumulative variance calculation
 	for i := range result.CumulativeVar {

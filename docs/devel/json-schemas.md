@@ -14,7 +14,7 @@ The schemas follow JSON Schema Draft-07 specification.
 
 ## Available Schemas
 
-### Core Schema (`v1/pca-output.schema.json`)
+### Core Schema (`v2/pca-output.schema.json`)
 The main schema for complete PCA analysis results. This is the primary format used when:
 - Exporting models from GoPCA Desktop
 - Saving results from CLI with `-f json`
@@ -65,7 +65,7 @@ A valid PCA model contains four required sections and an optional schema referen
 
 ```json
 {
-  "$schema": "https://github.com/bitjungle/gopca/schemas/v1/pca-output.schema.json",
+  "$schema": "https://raw.githubusercontent.com/bitjungle/gopca/main/schemas/v2/pca-output.schema.json",
   "metadata": {
     "analysis_id": "123e4567-e89b-12d3-a456-426614174000",
     "software_version": "1.0.2",
@@ -113,7 +113,7 @@ The `$schema` field is automatically included in exported models to indicate whi
 
 Example:
 ```json
-"$schema": "https://github.com/bitjungle/gopca/schemas/v1/pca-output.schema.json"
+"$schema": "https://raw.githubusercontent.com/bitjungle/gopca/main/schemas/v2/pca-output.schema.json"
 ```
 
 ## Enhanced Metadata Fields
@@ -156,7 +156,7 @@ network operation.
 
 | Layer | Enforces | Lives in |
 |---|---|---|
-| JSON Schema | Shape: types, required keys, ranges, enums, formats | `schemas/v1/*.json` |
+| JSON Schema | Shape: types, required keys, ranges, enums, formats | `schemas/v2/*.json` |
 | Semantic checks | Agreement between fields | `validateSemantics` in `pkg/validation/schema.go` |
 
 Draft-07 constrains each value on its own. It cannot say that `regression.components`
@@ -168,13 +168,35 @@ they are the only things the Go code still checks by hand.
 Keep the boundary: anything expressible in the schema belongs there, so that there is
 one place to look for each kind of rule.
 
-### A naming trap for third-party consumers
+### Schema versions
 
-`explained_variance_ratio` and `cumulative_variance` are **percentages, 0 to 100** —
-corn's first component is `97.495`, not `0.97495`. The name says "ratio" for historical
-reasons, and scikit-learn's `explained_variance_ratio_` is a fraction of 1, so code
-comparing the two must divide by 100. The schema descriptions state this; the field
-names cannot be changed without a `v2`.
+| Version | `explained_variance_ratio` | `$schema` |
+|---|---|---|
+| v1 | percentage, 0–100 | `github.com/bitjungle/gopca/schemas/v1/...` — **does not resolve** |
+| v2 | fraction, 0–1 | `raw.githubusercontent.com/bitjungle/gopca/main/schemas/v2/...` |
+
+GoPCA writes **v2** and validates against whichever version a file declares, so models
+written by earlier releases keep loading. `pkg/validation.SupportedSchemaVersions` is
+the list; the drift and enum tests iterate it, so a future v3 is covered as soon as the
+package can read it.
+
+Two things changed in v2, both because v1 misled consumers:
+
+**`explained_variance_ratio` and `cumulative_variance` are now fractions.** In v1 they
+held percentages despite the name, and scikit-learn's `explained_variance_ratio_` is a
+fraction — so anyone comparing the two was silently out by a factor of 100. They now
+agree exactly: iris PC1 is `0.729624` in both. The user interfaces convert to
+percentages for display, in one place each (`internal/cobra/output.go` for the CLI,
+`utils/variancePercent.ts` for the Desktop).
+
+**The `$schema` URL resolves.** The v1 identifier is a GitHub web-UI path, not a content
+path, and returns 404 — so any third party following `$schema` to fetch the document
+failed. Our own validator never noticed, because it loads from an embedded copy.
+
+A third change is invisible on the wire but worth knowing: `explained_variance` now
+holds the eigenvalue in all three methods. Temporal PCA previously put a fraction there
+while linear and kernel put the eigenvalue, so the same field meant different things
+depending on the method.
 
 ## Version Management
 
@@ -188,7 +210,7 @@ Future versions will be placed in new directories (e.g., `v2/`) with migration g
 ## Contributing
 
 When modifying schemas:
-1. Update the schema files in `schemas/v1/` — this is the source copy, and the one
+1. Update the schema files in `schemas/v2/` — this is the source copy, and the one
    the `$schema` URLs name
 2. Run `make sync-schemas` to copy them over `pkg/validation/schemas/v1/`, which is
    what `//go:embed` picks up. The two directories exist because `//go:embed` cannot
