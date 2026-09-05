@@ -41,8 +41,9 @@ import (
 // test ever opened one (#845). Kernel PCA's only scikit-learn comparison was
 // TestIssue736_ScoresMatchSklearn, which hardcodes expected values for a single
 // six-sample fixture at RBF gamma 0.5 -- a real check, and a narrow one. The
-// references cover iris, wine and the Swiss Roll across linear, sigmoid,
-// polynomial degree 2 and 3, and RBF at gamma from 0.01 to 10.
+// references cover iris, wine and the Swiss Roll across linear, polynomial
+// degree 2 and 3, and RBF at gamma from 0.01 to 10 -- every kernel GoPCA
+// implements.
 //
 // The gamma sweep is the valuable part. Gamma controls how local the kernel is,
 // and 0.01 against 10 are numerically very different regimes; a defect that
@@ -110,10 +111,13 @@ func TestValidateKernelPCAAgainstSklearn(t *testing.T) {
 	}
 
 	refDir := filepath.Join("..", "..", "testdata", "validation", "reference_results")
-	if _, err := os.Stat(filepath.Join(refDir, cases[0].reference)); os.IsNotExist(err) {
-		t.Skip("Kernel PCA reference files not found. Generate them with: " +
-			"cd testdata/validation && python generate_kernel_pca_reference.py")
+	paths := make([]string, 0, len(cases))
+	for _, tc := range cases {
+		paths = append(paths, filepath.Join(refDir, tc.reference))
 	}
+	// Every reference is checked, not just the first: a generator that drops one
+	// kernel would otherwise lose that coverage without anything noticing.
+	requireReferences(t, "Kernel PCA", paths...)
 
 	for _, tc := range cases {
 		t.Run(tc.reference, func(t *testing.T) {
@@ -191,6 +195,17 @@ func compareKernelScores(t *testing.T, ref *kernelReference, result *types.PCARe
 	if len(result.Scores) != len(ref.Scores) {
 		t.Fatalf("GoPCA produced %d score rows, the reference has %d",
 			len(result.Scores), len(ref.Scores))
+	}
+	// Columns as well as rows. Indexing straight into [row][c] would panic on a
+	// short result or a malformed reference, and a panic says less about what
+	// went wrong than a named comparison does.
+	if len(result.Scores) > 0 && len(result.Scores[0]) < ref.NComponents {
+		t.Fatalf("GoPCA returned %d score columns, the reference needs %d",
+			len(result.Scores[0]), ref.NComponents)
+	}
+	if len(ref.Scores) > 0 && len(ref.Scores[0]) < ref.NComponents {
+		t.Fatalf("the reference declares %d components but its scores have %d columns",
+			ref.NComponents, len(ref.Scores[0]))
 	}
 
 	for c := 0; c < ref.NComponents; c++ {

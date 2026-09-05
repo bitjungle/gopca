@@ -159,10 +159,14 @@ func TestValidatePCRAgainstSklearn(t *testing.T) {
 	}
 
 	refDir := filepath.Join("..", "..", "testdata", "validation", "reference_results")
-	if _, err := os.Stat(filepath.Join(refDir, references[0])); os.IsNotExist(err) {
-		t.Skip("PCR reference files not found. Generate them with: " +
-			"cd testdata/validation && python generate_reference_pcr.py")
+	paths := make([]string, 0, len(references))
+	for _, name := range references {
+		paths = append(paths, filepath.Join(refDir, name))
 	}
+	// This test skipped on every CI run from the day it was written, because its
+	// generator was never added to the workflow, and nothing reported it. See
+	// requireReferences.
+	requireReferences(t, "PCR", paths...)
 
 	for _, name := range references {
 		t.Run(name, func(t *testing.T) {

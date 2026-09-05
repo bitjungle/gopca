@@ -2,8 +2,13 @@
 """
 Generate reference Kernel PCA results using scikit-learn for validation.
 
-This script generates reference results for Kernel PCA with various kernels
-(RBF, polynomial, sigmoid, linear) to validate our implementation.
+This script generates reference results for Kernel PCA to validate our
+implementation, for the kernels GoPCA implements: RBF, polynomial and linear.
+
+compute_kernel_matrix below still understands 'sigmoid', and the import is kept
+for it, but no sigmoid references are emitted: GoPCA has no sigmoid kernel, so
+such a file could never be consumed by a test (#845). Re-add it to the kernel
+list here if the engine gains one.
 
 References:
 - Mika et al. (1998): Kernel PCA and De-Noising in Feature Spaces
