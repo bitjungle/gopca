@@ -22,7 +22,7 @@
 // See LICENSE for the full license terms.
 
 import React, { useState, useEffect } from 'react';
-import { ApplyTransformation, GetTransformableColumns } from '../../wailsjs/go/main/App';
+import { ApplyTransformation, GetTransformableColumns, SuggestCategoryOrder } from '../../wailsjs/go/main/App';
 import { main } from '../../wailsjs/go/models';
 
 type FileData = main.FileData;
@@ -35,7 +35,10 @@ interface DataTransformDialogProps {
     onTransformComplete: (data: FileData) => void;
 }
 
-type TransformationType = 'log' | 'sqrt' | 'square' | 'standardize' | 'minmax' | 'bin' | 'onehot';
+// Mirrors the TransformationType constants in cmd/gocsv/transforms.go and the
+// Type constants in pkg/transform/types.go. All three are maintained by hand;
+// adding a transformation means adding it to each.
+type TransformationType = 'log' | 'sqrt' | 'square' | 'standardize' | 'minmax' | 'bin' | 'onehot' | 'ordinal';
 
 interface TransformationInfo {
     type: TransformationType;
@@ -106,6 +109,15 @@ const transformations: TransformationInfo[] = [
         requiresNumeric: false,
         requiresCategorical: true,
         hasOptions: true
+    },
+    {
+        type: 'ordinal',
+        name: 'Ordinal Encode',
+        description: 'Number the categories in an order you choose (label encoding)',
+        category: 'encode',
+        requiresNumeric: false,
+        requiresCategorical: true,
+        hasOptions: true
     }
 ];
 
@@ -130,6 +142,15 @@ export const DataTransformDialog: React.FC<DataTransformDialogProps> = ({
     // Keeping it is the default: GoPCA colours plots by categorical columns,
     // so dropping e.g. "species" silently costs that.
     const [keepOriginal, setKeepOriginal] = useState(true);
+    // Category order per column, for ordinal encoding. Seeded from the backend
+    // suggestion when a column is picked, then reordered by the user.
+    const [categoryOrder, setCategoryOrder] = useState<Record<string, string[]>>({});
+
+    // Above this many distinct values, hand-ordering is not a usable control --
+    // and a column with that many categories is almost certainly nominal, which
+    // ordinal encoding is the wrong tool for. Alphabetical order is used, and
+    // the dialog says so rather than silently offering nothing.
+    const MAX_ORDERABLE_CATEGORIES = 50;
 
     // Load available columns when dialog opens or transform type changes
     useEffect(() => {
@@ -157,6 +178,63 @@ export const DataTransformDialog: React.FC<DataTransformDialogProps> = ({
             setError(null);
         }
     }, [isOpen]);
+
+    // Fetch a suggested order for each newly selected column. Existing entries
+    // are kept, so a user who has reordered a column does not lose that work by
+    // selecting a second one.
+    useEffect(() => {
+        if (selectedTransform !== 'ordinal' || !fileData) {
+            return;
+        }
+        let cancelled = false;
+
+        const load = async () => {
+            const additions: Record<string, string[]> = {};
+            for (const column of selectedColumns) {
+                if (categoryOrder[column]) {
+                    continue;
+                }
+                try {
+                    additions[column] = await SuggestCategoryOrder(fileData, column);
+                } catch (err) {
+                    console.error(`Error suggesting order for ${column}:`, err);
+                    additions[column] = [];
+                }
+            }
+            if (!cancelled && Object.keys(additions).length > 0) {
+                // current wins: a suggestion must never overwrite an order the
+                // user has already arranged. Newly selected columns are absent
+                // from current, so they still come through.
+                setCategoryOrder((current) => ({ ...additions, ...current }));
+            }
+        };
+        void load();
+
+        return () => {
+            cancelled = true;
+        };
+    }, [selectedTransform, selectedColumns, fileData]);
+
+    // Move a category one place up or down in its column's order.
+    const moveCategory = (column: string, index: number, delta: number) => {
+        setCategoryOrder((current) => {
+            const values = current[column];
+            const target = index + delta;
+            if (!values || target < 0 || target >= values.length) {
+                return current;
+            }
+            const reordered = [...values];
+            [reordered[index], reordered[target]] = [reordered[target], reordered[index]];
+            return { ...current, [column]: reordered };
+        });
+    };
+
+    // A previously arranged order belongs to the file it was arranged for.
+    // Carrying it into another file would silently apply one column's scale to
+    // a same-named column holding different categories.
+    useEffect(() => {
+        setCategoryOrder({});
+    }, [fileData]);
 
     const loadAvailableColumns = async () => {
         try {
@@ -186,7 +264,11 @@ export const DataTransformDialog: React.FC<DataTransformDialogProps> = ({
                 binCount: selectedTransform === 'bin' ? binCount : undefined,
                 minValue: selectedTransform === 'minmax' ? minValue : undefined,
                 maxValue: selectedTransform === 'minmax' ? maxValue : undefined,
-                removeOriginal: selectedTransform === 'onehot' ? !keepOriginal : undefined
+                removeOriginal:
+                    selectedTransform === 'onehot' || selectedTransform === 'ordinal'
+                        ? !keepOriginal
+                        : undefined,
+                categoryOrder: selectedTransform === 'ordinal' ? categoryOrder : undefined
             };
 
             const transformResult = await ApplyTransformation(fileData, options);
@@ -323,7 +405,7 @@ return null;
                                         </div>
                                     </div>
                                 )}
-                                {selectedTransform === 'onehot' && (
+                                {(selectedTransform === 'onehot' || selectedTransform === 'ordinal') && (
                                     <div>
                                         <label className="flex items-start gap-2 cursor-pointer">
                                             <input
@@ -335,12 +417,82 @@ return null;
                                             <span className="text-sm text-gray-700 dark:text-gray-300">
                                                 Keep original column
                                                 <span className="block text-xs text-gray-500 dark:text-gray-400">
-                                                    Unchecking removes the source column once the binary
-                                                    columns are created. Keeping it lets GoPCA still colour
-                                                    plots by this category.
+                                                    Unchecking removes the source column once the new
+                                                    {selectedTransform === 'ordinal' ? ' code column is' : ' binary columns are'} created.
+                                                    Keeping it lets GoPCA still colour plots by this category.
                                                 </span>
                                             </span>
                                         </label>
+                                    </div>
+                                )}
+                                {selectedTransform === 'ordinal' && (
+                                    <div className="mt-4">
+                                        {selectedColumns.length === 0 && (
+                                            <p className="text-sm text-gray-500 dark:text-gray-400">
+                                                Select a column to set the order of its categories.
+                                            </p>
+                                        )}
+                                        {selectedColumns.map((column) => {
+                                            const values = categoryOrder[column] || [];
+                                            const tooMany = values.length > MAX_ORDERABLE_CATEGORIES;
+                                            return (
+                                                <div key={column} className="mb-4 last:mb-0">
+                                                    <div className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                                                        Category order for &lsquo;{column}&rsquo;
+                                                    </div>
+                                                    {tooMany ? (
+                                                        <p className="text-xs text-gray-500 dark:text-gray-400">
+                                                            {values.length} distinct values — too many to order by hand,
+                                                            so codes will be assigned alphabetically. A column with this
+                                                            many categories is usually unordered; One-Hot Encode is
+                                                            likely the better fit.
+                                                        </p>
+                                                    ) : (
+                                                        <>
+                                                            <p className="text-xs text-gray-500 dark:text-gray-400 mb-2">
+                                                                Codes are assigned by position. Reorder with the arrows.
+                                                            </p>
+                                                            <ul className="space-y-1">
+                                                                {values.map((value, index) => (
+                                                                    <li
+                                                                        key={value}
+                                                                        className="flex items-center gap-2 text-sm text-gray-800 dark:text-gray-200"
+                                                                    >
+                                                                        <span className="w-10 shrink-0 text-right font-mono text-xs text-gray-500 dark:text-gray-400">
+                                                                            = {index}
+                                                                        </span>
+                                                                        <span className="flex-1 truncate">{value}</span>
+                                                                        <button
+                                                                            type="button"
+                                                                            onClick={() => moveCategory(column, index, -1)}
+                                                                            disabled={index === 0}
+                                                                            aria-label={`Move ${value} up`}
+                                                                            className="px-2 py-0.5 text-xs rounded border border-gray-300 dark:border-gray-600 disabled:opacity-30"
+                                                                        >
+                                                                            ↑
+                                                                        </button>
+                                                                        <button
+                                                                            type="button"
+                                                                            onClick={() => moveCategory(column, index, 1)}
+                                                                            disabled={index === values.length - 1}
+                                                                            aria-label={`Move ${value} down`}
+                                                                            className="px-2 py-0.5 text-xs rounded border border-gray-300 dark:border-gray-600 disabled:opacity-30"
+                                                                        >
+                                                                            ↓
+                                                                        </button>
+                                                                    </li>
+                                                                ))}
+                                                            </ul>
+                                                        </>
+                                                    )}
+                                                </div>
+                                            );
+                                        })}
+                                        <p className="mt-3 text-xs text-gray-500 dark:text-gray-400">
+                                            Only meaningful when the categories have a real order. For unordered
+                                            categories such as species or site, use One-Hot Encode — numbering them
+                                            would tell PCA that the gaps between them are real.
+                                        </p>
                                     </div>
                                 )}
                                 {selectedTransform === 'bin' && (

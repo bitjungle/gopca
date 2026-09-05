@@ -117,3 +117,105 @@ func TestOneHotSourceColumnCrossesTheWire(t *testing.T) {
 		})
 	}
 }
+
+// TestOrdinalCategoryOrderCrossesTheWire follows the category order the dialog
+// sends through to the codes that come out.
+//
+// CategoryOrder is a map copied by hand from TransformOptions into
+// transform.Options, exactly like RemoveOriginal above. Dropping the copy
+// leaves both sides compiling and every unit test on either side green, and
+// the only visible symptom is that the codes come out alphabetical -- which
+// looks like a plausible result rather than a failure.
+func TestOrdinalCategoryOrderCrossesTheWire(t *testing.T) {
+	// What the dialog sends after the user confirms the suggested order.
+	const payload = `{"type":"ordinal","columns":["Quality"],` +
+		`"categoryOrder":{"Quality":["lav","middels","høy"]}}`
+
+	var options TransformOptions
+	if err := json.Unmarshal([]byte(payload), &options); err != nil {
+		t.Fatalf("unmarshalling the dialog payload: %v", err)
+	}
+
+	data := &FileData{
+		Headers:            []string{"Quality"},
+		Data:               [][]string{{"høy"}, {"lav"}, {"middels"}},
+		Rows:               3,
+		Columns:            1,
+		ColumnTypes:        map[string]string{"Quality": "categorical"},
+		CategoricalColumns: map[string][]string{"Quality": {"høy", "lav", "middels"}},
+	}
+
+	app := &App{}
+	res, err := app.applyTransformationInternal(data, options)
+	if err != nil {
+		t.Fatalf("applyTransformationInternal: %v", err)
+	}
+	if res.Data == nil {
+		t.Fatal("transformation returned no data")
+	}
+
+	index := -1
+	for i, h := range res.Data.Headers {
+		if h == "Quality_code" {
+			index = i
+		}
+	}
+	if index == -1 {
+		t.Fatalf("no Quality_code column in %v", res.Data.Headers)
+	}
+
+	// lav=0, middels=1, høy=2. Alphabetically it would be høy=0, lav=1,
+	// middels=2, giving 0,1,2 for these rows -- so the wrong answer is not
+	// obviously wrong from the shape of the column alone.
+	want := []string{"2", "0", "1"}
+	for i, row := range res.Data.Data {
+		if row[index] != want[i] {
+			t.Errorf("row %d (%q): got code %q, want %q; the requested order was "+
+				"lav,middels,høy but the column came out %v",
+				i, data.Data[i][0], row[index], want[i], columnOf(res.Data.Data, index))
+		}
+	}
+}
+
+// TestSuggestCategoryOrderBinding checks what the dialog pre-fills its control
+// with, including the empty cases it would otherwise have to guard.
+func TestSuggestCategoryOrderBinding(t *testing.T) {
+	data := &FileData{
+		Headers:     []string{"Quality"},
+		Data:        [][]string{{"høy"}, {"lav"}, {"lav"}, {"middels"}},
+		Rows:        4,
+		Columns:     1,
+		ColumnTypes: map[string]string{"Quality": "categorical"},
+	}
+
+	app := &App{}
+	got := app.SuggestCategoryOrder(data, "Quality")
+	want := []string{"lav", "middels", "høy"}
+	if len(got) != len(want) {
+		t.Fatalf("got %v, want %v", got, want)
+	}
+	for i := range want {
+		if got[i] != want[i] {
+			t.Errorf("position %d: got %q, want %q; full order %v", i, got[i], want[i], got)
+		}
+	}
+
+	// A missing column and a nil FileData must return an empty list rather than
+	// null, so the dialog has nothing to special-case.
+	if got := app.SuggestCategoryOrder(data, "Nope"); got == nil || len(got) != 0 {
+		t.Errorf("unknown column should give an empty list, got %v", got)
+	}
+	if got := app.SuggestCategoryOrder(nil, "Quality"); got == nil || len(got) != 0 {
+		t.Errorf("nil data should give an empty list, got %v", got)
+	}
+}
+
+func columnOf(data [][]string, index int) []string {
+	out := make([]string, 0, len(data))
+	for _, row := range data {
+		if index < len(row) {
+			out = append(out, row[index])
+		}
+	}
+	return out
+}

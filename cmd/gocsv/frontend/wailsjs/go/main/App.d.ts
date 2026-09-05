@@ -69,6 +69,8 @@ export function SaveExcel(arg1:main.FileData):Promise<void>;
 
 export function SelectFileForImport():Promise<string>;
 
+export function SuggestCategoryOrder(arg1:main.FileData,arg2:string):Promise<Array<string>>;
+
 export function SuggestImportForFailedLoad():Promise<main.ExcelImportSuggestion>;
 
 export function Undo(arg1:main.FileData):Promise<main.FileData>;

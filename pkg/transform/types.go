@@ -41,6 +41,9 @@ const (
 	Bin Type = "bin"
 	// OneHot encodes a categorical column into one binary column per unique value.
 	OneHot Type = "onehot"
+	// Ordinal encodes a categorical column into a single integer column, one
+	// code per unique value, assigned by position in a caller-supplied order.
+	Ordinal Type = "ordinal"
 )
 
 // Options configures a transformation.
@@ -69,6 +72,23 @@ type Options struct {
 	// columns, so encoding "species" removed the ability to colour by it. That
 	// is why testdata/iris/iris.csv ships both species#target and species.
 	RemoveOriginal bool
+
+	// CategoryOrder gives, per column, the category values in the order their
+	// integer codes should follow: the first value encodes to 0, the second to
+	// 1, and so on. Used by Ordinal encoding only.
+	//
+	// A column absent from the map -- or listing only some of its values -- is
+	// completed alphabetically, which is what scikit-learn's LabelEncoder does
+	// unconditionally (its classes_ attribute is sorted). That default is
+	// deliberately not the only option: alphabetical order is wrong for exactly
+	// the data ordinal encoding is appropriate for. "low", "medium", "high"
+	// sorts to high=0, low=1, medium=2, scrambling the order the codes are
+	// supposed to carry.
+	//
+	// Reference: scikit-learn documents LabelEncoder as being for target values
+	// y and not input X, pointing to OrdinalEncoder for features. Everything
+	// this package produces is destined to become X, hence the ordering control.
+	CategoryOrder map[string][]string
 }
 
 // Input carries the tabular data and metadata that transform functions operate on.

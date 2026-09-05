@@ -134,6 +134,10 @@ export function SelectFileForImport() {
   return window['go']['main']['App']['SelectFileForImport']();
 }
 
+export function SuggestCategoryOrder(arg1, arg2) {
+  return window['go']['main']['App']['SuggestCategoryOrder'](arg1, arg2);
+}
+
 export function SuggestImportForFailedLoad() {
   return window['go']['main']['App']['SuggestImportForFailedLoad']();
 }

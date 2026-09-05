@@ -87,6 +87,10 @@ func Apply(in Input, opts Options) (*Result, error) {
 		if err := applyOneHot(data, columnTypes, catCols, &headers, opts, result); err != nil {
 			return nil, err
 		}
+	case Ordinal:
+		if err := applyOrdinal(data, columnTypes, catCols, &headers, opts, result); err != nil {
+			return nil, err
+		}
 	default:
 		return nil, fmt.Errorf("unsupported transformation type: %s", opts.Type)
 	}
@@ -105,7 +109,7 @@ func Apply(in Input, opts Options) (*Result, error) {
 //
 // Mathematical and scaling transforms (Log, Sqrt, Square, Standardize, MinMax,
 // Bin) require numeric columns. Columns with the "#target" suffix are excluded.
-// OneHot requires categorical columns.
+// OneHot and Ordinal require categorical columns.
 func GetTransformableColumns(in Input, transformType Type) []string {
 	columns := []string{}
 
@@ -117,7 +121,7 @@ func GetTransformableColumns(in Input, transformType Type) []string {
 			if colType == "numeric" && !strings.HasSuffix(header, "#target") {
 				columns = append(columns, header)
 			}
-		case OneHot:
+		case OneHot, Ordinal:
 			if colType == "categorical" {
 				columns = append(columns, header)
 			}
