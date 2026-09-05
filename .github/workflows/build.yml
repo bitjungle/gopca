@@ -110,11 +110,19 @@ jobs:
         echo "Generating Kernel PCA reference results..."
         python generate_kernel_pca_reference.py
         
-        # Only generate temporal PCA on non-Windows (issues with some dependencies)
-        if [ "$RUNNER_OS" != "Windows" ]; then
-          echo "Generating Temporal PCA reference results..."
-          python generate_temporal_pca_reference.py
-        fi
+        # Temporal PCA references are generated on every platform.
+        #
+        # This step used to be skipped on Windows with the note "issues with some
+        # dependencies". The generator imports numpy, pandas and scipy, and scipy
+        # was only added to the pip line in #844 -- so the note most likely
+        # recorded a missing dependency rather than a Windows incompatibility, and
+        # stopped being true without anyone revisiting it.
+        #
+        # It matters now: TestValidateTemporalPCAAgainstReference fails rather
+        # than skips when its references are absent, so Windows either generates
+        # them or loses that test entirely (#845).
+        echo "Generating Temporal PCA reference results..."
+        python generate_temporal_pca_reference.py
         
         # List generated files for verification. No pipe to head: GitHub runs
         # `shell: bash` with -o pipefail, so once there are more files than head
