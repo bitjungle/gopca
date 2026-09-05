@@ -138,6 +138,26 @@ export const DataTransformDialog: React.FC<DataTransformDialogProps> = ({
         }
     }, [isOpen, selectedTransform, fileData]);
 
+    // Reset the transient dialog state whenever it is reopened.
+    //
+    // Closing renders null but does not unmount, so every useState above
+    // survives. That made two choices sticky in a way nobody asked for:
+    //
+    //   keepOriginal  unticking it once carried the destructive choice into
+    //                 every later transformation, which defeats the whole point
+    //                 of the default being on.
+    //   result        the footer shows Apply while there is no result and Close
+    //                 once there is one, so a leftover result replaced the Apply
+    //                 button and made the second transformation of a session
+    //                 impossible to start.
+    useEffect(() => {
+        if (isOpen) {
+            setKeepOriginal(true);
+            setResult(null);
+            setError(null);
+        }
+    }, [isOpen]);
+
     const loadAvailableColumns = async () => {
         try {
             const columns = await GetTransformableColumns(fileData, selectedTransform);
