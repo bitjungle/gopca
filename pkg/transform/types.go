@@ -55,6 +55,20 @@ type Options struct {
 	MinValue float64
 	// MaxValue is the upper bound of the target range for MinMax scaling (default: 1).
 	MaxValue float64
+
+	// RemoveOriginal drops the source column after one-hot encoding it.
+	//
+	// The polarity is deliberate: the zero value keeps the column, so a caller
+	// that does not set the field cannot silently lose data. Discarding a column
+	// is the kind of thing that should be asked for rather than defaulted into.
+	//
+	// One-hot encoding used to remove the source unconditionally, which made it
+	// the only transformation in this package to destroy its input -- binning
+	// also derives new columns and has always kept the original. It also cost
+	// something specific in this suite: GoPCA colours plots by categorical
+	// columns, so encoding "species" removed the ability to colour by it. That
+	// is why testdata/iris/iris.csv ships both species#target and species.
+	RemoveOriginal bool
 }
 
 // Input carries the tabular data and metadata that transform functions operate on.

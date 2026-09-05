@@ -119,6 +119,11 @@ Apply transformations in GoCSV when the raw data distribution needs correction b
 | Binning | Discretize continuous variables into categories |
 | One-hot encoding | Expand a categorical column into binary columns |
 
+One-hot encoding keeps the original column by default, and offers a **Keep original column**
+checkbox if you would rather it were removed. Keeping it is usually what you want: GoPCA colours
+scores plots by categorical columns, so a `species` column discarded during encoding is a colouring
+you can no longer apply.
+
 ---
 
 ## 5. Column Management

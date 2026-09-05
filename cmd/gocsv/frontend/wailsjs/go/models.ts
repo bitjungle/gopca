@@ -507,6 +507,7 @@ export namespace main {
 	    binCount?: number;
 	    minValue?: number;
 	    maxValue?: number;
+	    removeOriginal?: boolean;
 	
 	    static createFrom(source: any = {}) {
 	        return new TransformOptions(source);
@@ -519,6 +520,7 @@ export namespace main {
 	        this.binCount = source["binCount"];
 	        this.minValue = source["minValue"];
 	        this.maxValue = source["maxValue"];
+	        this.removeOriginal = source["removeOriginal"];
 	    }
 	}
 	export class TransformationResult {
