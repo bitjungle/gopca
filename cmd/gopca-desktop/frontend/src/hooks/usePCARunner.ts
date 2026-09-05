@@ -22,6 +22,7 @@
 // See LICENSE for the full license terms.
 
 import { useState, useCallback, useRef } from 'react';
+import { asPercentages } from '../utils/variancePercent';
 import { RunPCA } from '../../wailsjs/go/main/App';
 import { FileData, PCARequest, PCAResponse } from '../types';
 import { PCAConfigState } from './usePCAConfig';
@@ -89,7 +90,9 @@ export function usePCARunner(
             const result = await RunPCA(request);
 
             if (result.success) {
-                setPcaResponse(result);
+                // Fractions on the wire, percentages in the UI; see
+                // utils/variancePercent for why this happens exactly once.
+                setPcaResponse(asPercentages(result));
                 setPcaError(null);
                 setPcaHasExclusions(excludedRows.length > 0);
                 setTimeout(() => {

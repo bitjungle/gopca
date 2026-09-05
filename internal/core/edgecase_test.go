@@ -172,8 +172,8 @@ func TestPCAWithSingleRowColumn(t *testing.T) {
 				}
 				if result != nil {
 					// Should have one component that explains all variance
-					if len(result.ExplainedVarRatio) > 0 && result.ExplainedVarRatio[0] < 99.9 {
-						t.Errorf("Single column should explain ~100%% variance, got %.2f%%", result.ExplainedVarRatio[0])
+					if len(result.ExplainedVarRatio) > 0 && result.ExplainedVarRatio[0] < 0.999 {
+						t.Errorf("Single column should explain all the variance (1.0), got %.4f", result.ExplainedVarRatio[0])
 					}
 				}
 			}
@@ -231,8 +231,8 @@ func TestPCAWithConstantColumns(t *testing.T) {
 				for _, v := range result.ExplainedVarRatio {
 					totalVar += v
 				}
-				if totalVar > 100.1 {
-					t.Errorf("Total explained variance %.2f%% > 100%%", totalVar)
+				if totalVar > 1.001 {
+					t.Errorf("Total explained variance %.4f exceeds 1.0", totalVar)
 				}
 			}
 		})

@@ -359,7 +359,7 @@ func (kpca *KernelPCAImpl) Fit(data types.Matrix, config types.PCAConfig) (*type
 
 	for i := 0; i < config.Components; i++ {
 		if totalVar > 0 {
-			explainedVarRatio[i] = eigvals[i] / totalVar * 100
+			explainedVarRatio[i] = eigvals[i] / totalVar
 		}
 		cumSum += explainedVarRatio[i]
 		cumulativeVar[i] = cumSum

@@ -183,12 +183,14 @@ func TestTemporalPCAFit(t *testing.T) {
 	assert.Equal(t, 2, len(result.ExplainedVarRatio))
 	assert.Equal(t, 2, len(result.CumulativeVar))
 
-	// First component should explain most variance for trend data
-	assert.Greater(t, result.ExplainedVar[0], 0.7)
+	// First component should explain most of the variance for trend data.
+	// Asserted on the ratio: as of V2 ExplainedVar holds the eigenvalue, whose
+	// magnitude depends on the data's scale and says nothing about the share.
+	assert.Greater(t, result.ExplainedVarRatio[0], 0.7)
 
-	// Cumulative variance should be increasing (now in percentage scale 0-100)
+	// Cumulative variance should be increasing, as a fraction of 1
 	assert.Less(t, result.CumulativeVar[0], result.CumulativeVar[1])
-	assert.LessOrEqual(t, result.CumulativeVar[1], 100.0)
+	assert.LessOrEqual(t, result.CumulativeVar[1], 1.0)
 }
 
 // TestTemporalPCAVarianceExplained tests the variance explained criterion
@@ -763,7 +765,7 @@ func TestTemporalPCAEdgeCases(t *testing.T) {
 		for _, v := range result.ExplainedVarRatio {
 			totalVar += v
 		}
-		assert.LessOrEqual(t, totalVar, 100.01) // Allow tiny floating point error
+		assert.LessOrEqual(t, totalVar, 1.0001) // Allow tiny floating point error
 
 		// Cumulative variance should be monotonically increasing
 		for i := 1; i < len(result.CumulativeVar); i++ {

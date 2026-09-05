@@ -256,7 +256,7 @@ func ConvertToPCAOutputDataWithMetadata(result *types.PCAResult, data *Data, pre
 	}
 
 	return &types.PCAOutputData{
-		Schema:            "https://github.com/bitjungle/gopca/schemas/v1/pca-output.schema.json",
+		Schema:            schemaURL,
 		Metadata:          metadata,
 		Preprocessing:     preprocessingInfo,
 		Model:             modelComponents,
@@ -266,3 +266,12 @@ func ConvertToPCAOutputDataWithMetadata(result *types.PCAResult, data *Data, pre
 		PreservedColumns:  preservedColumns,
 	}
 }
+
+// schemaURL is the $schema every model file declares.
+//
+// It points at a URL that serves the document. The v1 identifier,
+// github.com/bitjungle/gopca/schemas/v1/..., is a web UI path rather than a
+// content path and returns 404, so any consumer following $schema to validate
+// our output failed (#848). Our own validator never noticed because it loads the
+// schemas from an embedded copy.
+const schemaURL = "https://raw.githubusercontent.com/bitjungle/gopca/main/schemas/v2/pca-output.schema.json"

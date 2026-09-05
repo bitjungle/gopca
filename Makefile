@@ -571,11 +571,14 @@ appimage-gocsv: appimage-tool
 appimage-all: appimage-gopca appimage-gocsv
 	@echo "All AppImages built successfully!"
 
-## sync-schemas: Copy the published v1 schemas over the embedded copy
+## sync-schemas: Copy every published schema version over its embedded copy
 sync-schemas:
-	@echo "Syncing schemas/v1 -> pkg/validation/schemas/v1..."
-	@cp schemas/v1/*.json pkg/validation/schemas/v1/
-	@echo "Done. schemas/v1 is the source: it is what the \$$schema URLs name."
+	@for v in $$(ls -d schemas/v*/ | xargs -n1 basename); do \
+		echo "Syncing schemas/$$v -> pkg/validation/schemas/$$v..."; \
+		mkdir -p pkg/validation/schemas/$$v; \
+		cp schemas/$$v/*.json pkg/validation/schemas/$$v/; \
+	done
+	@echo "Done. schemas/ is the source: it is what the \$$schema URLs name."
 	@echo "The copy exists only because //go:embed cannot reach outside its package."
 
 ## test: Run all tests with coverage

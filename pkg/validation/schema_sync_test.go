@@ -34,16 +34,33 @@ import (
 // remembers when it happened, while `pca analyze --missing-strategy zero` worked
 // the whole time. Nothing failed, because nothing compared them.
 
-const (
-	publishedSchemaDir = "../../schemas/v1"
-	embeddedSchemaDir  = "schemas/v1"
-)
+// The versions to check. Derived from SupportedSchemaVersions rather than
+// listed here, so a v3 is covered the moment the package can validate it --
+// enumerating them by hand is how the CI package list fell thirteen packages
+// behind (#836), and a schema copy that nothing compares is exactly the state
+// #835 was filed about.
+func schemaDirsFor(version string) (published, embedded string) {
+	return filepath.Join("..", "..", "schemas", version), filepath.Join("schemas", version)
+}
 
 // TestSchemaCopiesAreIdentical fails on any difference between the two copies.
 //
 // The published copy is the source: it is the one the $schema URLs name and the
 // one a person edits. `make sync-schemas` copies it over the embedded one.
 func TestSchemaCopiesAreIdentical(t *testing.T) {
+	if len(SupportedSchemaVersions) == 0 {
+		t.Fatal("no supported schema versions, so this test is checking nothing")
+	}
+	for _, version := range SupportedSchemaVersions {
+		t.Run(version, func(t *testing.T) {
+			assertSchemaCopiesMatch(t, version)
+		})
+	}
+}
+
+func assertSchemaCopiesMatch(t *testing.T, version string) {
+	t.Helper()
+	publishedSchemaDir, embeddedSchemaDir := schemaDirsFor(version)
 	published := schemaFilesIn(t, publishedSchemaDir)
 	embedded := schemaFilesIn(t, embeddedSchemaDir)
 
@@ -93,7 +110,12 @@ func TestSchemaCopiesAreIdentical(t *testing.T) {
 // The enum is a claim about what the software accepts, so it is checked against
 // the software.
 func TestSchemaMissingStrategyMatchesTheCode(t *testing.T) {
-	for _, dir := range []string{publishedSchemaDir, embeddedSchemaDir} {
+	var dirs []string
+	for _, version := range SupportedSchemaVersions {
+		published, embedded := schemaDirsFor(version)
+		dirs = append(dirs, published, embedded)
+	}
+	for _, dir := range dirs {
 		t.Run(dir, func(t *testing.T) {
 			raw, err := os.ReadFile(filepath.Join(dir, "common.schema.json"))
 			if err != nil {

@@ -23,6 +23,7 @@
 
 import React, { createContext, useContext, useState, useCallback, useMemo } from 'react';
 import { ExportPCAModel } from '../../wailsjs/go/main/App';
+import { asFractions } from '../utils/variancePercent';
 import { usePCAConfig, PCAConfigState } from '../hooks/usePCAConfig';
 import { usePCARunner } from '../hooks/usePCARunner';
 import { useFileDataContext } from './FileDataContext';
@@ -163,7 +164,9 @@ export const PCAProvider: React.FC<{ children: React.ReactNode }> = ({ children 
                 data: fileData.data,
                 headers: fileData.headers,
                 rowNames: fileData.rowNames,
-                pcaResult: pcaResponse.result,
+                // Back to fractions on the way out: the model file is written by
+                // the same Go code the CLI uses, and must mean the same thing.
+                pcaResult: asFractions(pcaResponse.result),
                 config,
                 excludedRows,
                 excludedColumns,

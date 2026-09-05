@@ -102,8 +102,8 @@ func TestExplainedVariance(t *testing.T) {
 
 	// Total explained variance should be close to 100%
 	totalVar := result.CumulativeVar[len(result.CumulativeVar)-1]
-	if math.Abs(totalVar-100.0) > 5.0 { // Allow 5% tolerance
-		t.Errorf("Total explained variance should be ~100%%, got %.2f%%", totalVar)
+	if math.Abs(totalVar-1.0) > 0.05 { // Allow 5% tolerance, on a fraction
+		t.Errorf("Total explained variance should be ~1.0 (a fraction), got %.4f", totalVar)
 	}
 
 	// Cumulative variance should be monotonically increasing
@@ -236,8 +236,8 @@ func TestPCASVD(t *testing.T) {
 
 	// Check that explained variance sums to ~100%
 	totalVar := result.CumulativeVar[len(result.CumulativeVar)-1]
-	if math.Abs(totalVar-100.0) > 5.0 {
-		t.Errorf("Total explained variance should be ~100%%, got %.2f%%", totalVar)
+	if math.Abs(totalVar-1.0) > 0.05 {
+		t.Errorf("Total explained variance should be ~1.0 (a fraction), got %.4f", totalVar)
 	}
 }
 
