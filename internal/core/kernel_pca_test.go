@@ -282,12 +282,12 @@ func TestKernelPCA_FitTransform(t *testing.T) {
 	}
 
 	if totalExplained > 1.0001 {
-		t.Errorf("Explained variance ratios should not exceed 100%%, got %.2f%%", totalExplained)
+		t.Errorf("Explained variance ratios should not exceed 1.0, got %.4f", totalExplained)
 	}
 
 	// For 2 components out of many samples, explained variance should be less than 100%
-	if totalExplained > 99.0 {
-		t.Errorf("Expected explained variance for 2 components to be less than 99%%, got %.2f%%", totalExplained)
+	if totalExplained > 0.99 {
+		t.Errorf("Expected explained variance for 2 components to be less than 0.99, got %.4f", totalExplained)
 	}
 }
 
@@ -376,7 +376,7 @@ func TestKernelPCA_ExplainedVarianceCalculation(t *testing.T) {
 	// Check that individual variance ratios are reasonable
 	for i, ratio := range result.ExplainedVarRatio {
 		if ratio > 1.0001 {
-			t.Errorf("Component %d has explained variance ratio > 100%%: %.2f%%", i+1, ratio)
+			t.Errorf("Component %d has explained variance ratio above 1.0: %.4f", i+1, ratio)
 		}
 		if ratio < 0.0 {
 			t.Errorf("Component %d has negative explained variance ratio: %.2f%%", i+1, ratio)

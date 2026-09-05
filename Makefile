@@ -571,7 +571,7 @@ appimage-gocsv: appimage-tool
 appimage-all: appimage-gopca appimage-gocsv
 	@echo "All AppImages built successfully!"
 
-## sync-schemas: Copy the published v1 schemas over the embedded copy
+## sync-schemas: Copy every published schema version over its embedded copy
 sync-schemas:
 	@for v in $$(ls -d schemas/v*/ | xargs -n1 basename); do \
 		echo "Syncing schemas/$$v -> pkg/validation/schemas/$$v..."; \

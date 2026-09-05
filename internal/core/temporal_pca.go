@@ -377,8 +377,8 @@ func (t *TemporalPCAImpl) Fit(data types.Matrix, config types.PCAConfig) (*types
 			Scores:                     utils.MatrixToSlice(scores),
 			Loadings:                   utils.MatrixToSlice(t.loadings),
 			ExplainedVar:               t.eigenvalues,
-			ExplainedVarRatio:          []float64{1.0},   // Single component explains all of it
-			CumulativeVar:              []float64{100.0}, // Cumulative should also be 100%
+			ExplainedVarRatio:          []float64{1.0}, // Single component explains all of it
+			CumulativeVar:              []float64{1.0}, // All of it, as a fraction
 			ComponentLabels:            componentLabels,
 			SingularValues:             t.singularVals,
 			Method:                     "temporal",
@@ -488,7 +488,7 @@ func (t *TemporalPCAImpl) Fit(data types.Matrix, config types.PCAConfig) (*types
 		explainedVarRatio[i] = t.explainedVar[i]
 	}
 
-	// Calculate cumulative variance (as cumulative sum of percentages)
+	// Cumulative variance, as a running sum of the fractions
 	cumulativeVar := make([]float64, t.nComponents)
 	cumSum := 0.0
 	for i := 0; i < t.nComponents; i++ {

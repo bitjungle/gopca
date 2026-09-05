@@ -60,7 +60,13 @@ var schemaFS embed.FS
 // the directory is reachable from it by $ref.
 const mainSchemaFile = "pca-output.schema.json"
 
-// ModelValidator validates PCA model JSON data against the v1 schemas.
+// ModelValidator validates PCA model JSON data against the embedded schemas.
+//
+// It holds every supported version, not one. A model is judged against the
+// version its $schema declares, because the same numbers can be valid under one
+// and out of range under another: explained_variance_ratio is a percentage in
+// v1 and a fraction in v2, so validating a v1 file against v2 would reject a
+// perfectly good model.
 type ModelValidator struct {
 	version string
 
