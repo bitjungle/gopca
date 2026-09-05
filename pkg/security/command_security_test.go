@@ -433,12 +433,21 @@ func TestValidateAppLocation(t *testing.T) {
 	}{
 		{
 			name:    "user applications",
-			path:    filepath.Join("/Users/test/Applications", "GoPCA"),
+			path:    userAppPath(),
 			wantErr: false,
 		},
 		{
+			// The path has to be one the running platform actually treats as a
+			// system directory. This case used to hardcode /usr/bin/gopca, which
+			// is right on Unix and meaningless on Windows: filepath.Abs turns it
+			// into something like D:\usr\bin\gopca, which matches none of
+			// WindowsSystemDirectories, so validateAppLocation correctly returned
+			// nil and the test failed.
+			//
+			// It went unnoticed because Windows CI did not run pkg/security at
+			// all until the package list was derived rather than hand-written.
 			name:    "system directory",
-			path:    "/usr/bin/gopca",
+			path:    systemAppPath(),
 			wantErr: true,
 		},
 	}
@@ -451,4 +460,24 @@ func TestValidateAppLocation(t *testing.T) {
 			}
 		})
 	}
+}
+
+// userAppPath returns a location the platform does not consider a system
+// directory, for the case that must be accepted.
+func userAppPath() string {
+	if runtime.GOOS == "windows" {
+		return filepath.Join(`C:\Users\test\AppData\Local`, "GoPCA")
+	}
+	return filepath.Join("/Users/test/Applications", "GoPCA")
+}
+
+// systemAppPath returns a location the platform does consider a system
+// directory, for the case that must be rejected. Both values come from the
+// lists validateAppLocation itself consults, so the test cannot drift from the
+// implementation by naming a directory that has since been removed.
+func systemAppPath() string {
+	if runtime.GOOS == "windows" {
+		return filepath.Join(WindowsSystemDirectories[0], "gopca.exe")
+	}
+	return filepath.Join(SystemDirectories[0], "gopca")
 }
