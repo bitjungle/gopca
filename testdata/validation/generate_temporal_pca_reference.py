@@ -202,7 +202,15 @@ def generate_temporal_pca_reference(data, window_length, n_components=None,
     hankel_structure_check = verify_hankel_structure(trajectory_matrix, X_processed, window_length)
     
     # Create result dictionary
+    # The input series travels with the result.
+    #
+    # Without it these references are unusable: the synthetic series are built
+    # from numpy expressions with a seeded RNG, so a Go test has no way to
+    # reconstruct the exact input and therefore nothing to compare against. That
+    # is the structural reason no consuming test was ever written for them, and
+    # it costs a few hundred floats to remove.
     result = {
+        "input_series": X.tolist() if hasattr(X, 'tolist') else X,
         'method': 'temporal_pca_ssa',
         'window_length': window_length,
         'preprocessing': preprocessing,
@@ -430,7 +438,11 @@ def main():
     
     if os.path.exists(iris_path):
         df = pd.read_csv(iris_path, index_col=0)
-        numeric_cols = df.select_dtypes(include=[np.number]).columns
+        # Exclude #target columns, matching GoPCA and the other generators.
+        # Without this the iris reference embedded species#target as a fifth
+        # variable -- the same defect the kernel generator carried (#845).
+        numeric_cols = [c for c in df.select_dtypes(include=[np.number]).columns
+                        if not c.endswith('#target')]
         X = df[numeric_cols].values
         
         # Treat as multivariate time series
