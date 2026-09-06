@@ -234,7 +234,11 @@ func TestPreviewFilter(t *testing.T) {
 }
 
 func TestFilterValidation(t *testing.T) {
-	app := &App{}
+	// NewApp rather than &App{}: ExecuteFilterRows reaches executeCommand, which
+	// dereferences a.history. On a zero App that is a nil pointer, so a
+	// regression in the validation would crash the test binary -- taking every
+	// other test in the package with it -- instead of failing this test.
+	app := NewApp()
 	data := filterFixture()
 
 	tests := []struct {
@@ -276,5 +280,90 @@ func TestFilterValidation(t *testing.T) {
 				t.Errorf("a refused filter modified the data: %d rows", len(data.Data))
 			}
 		})
+	}
+}
+
+// TestFilterDescriptionReadsAsEnglish covers the undo-history entry.
+//
+// The history is read by people. Internal identifiers like "not_equals", and a
+// trailing empty value on an operator that takes none, make an entry that
+// describes the operation worse than one that just names it.
+func TestFilterDescriptionReadsAsEnglish(t *testing.T) {
+	tests := []struct {
+		name      string
+		condition FilterCondition
+		want      string
+		reject    string
+	}{
+		{
+			name:      "value operator",
+			condition: FilterCondition{Column: "Region", Operator: FilterNotEquals, Value: "Nord", Mode: "remove"},
+			want:      `Removed rows where Region is not "Nord"`,
+			reject:    "not_equals",
+		},
+		{
+			name:      "valueless operator omits the value",
+			condition: FilterCondition{Column: "Region", Operator: FilterIsEmpty, Mode: "remove"},
+			want:      "Removed rows where Region is empty",
+			reject:    `""`,
+		},
+		{
+			name:      "keep reads as kept",
+			condition: FilterCondition{Column: "Score", Operator: FilterGreaterEqual, Value: "20", Mode: "keep"},
+			want:      `Kept rows where Score is at least "20"`,
+			reject:    "greater_equal",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			data := filterFixture()
+			cmd, err := NewFilterRowsCommand(NewApp(), data, tt.condition)
+			if err != nil {
+				t.Fatalf("NewFilterRowsCommand: %v", err)
+			}
+			if err := cmd.Execute(data); err != nil {
+				t.Fatalf("Execute: %v", err)
+			}
+
+			got := cmd.GetDescription()
+			if !strings.Contains(got, tt.want) {
+				t.Errorf("description = %q, want it to contain %q", got, tt.want)
+			}
+			if strings.Contains(got, tt.reject) {
+				t.Errorf("description = %q, should not contain %q", got, tt.reject)
+			}
+		})
+	}
+}
+
+// TestFilterTreatsMissingTokensAsValues pins a decision rather than a fix.
+//
+// Copilot asked whether tokens like NA and N/A should count as missing, since
+// the CSV format lists them in NullValues and negative operators will otherwise
+// match them. They are deliberately treated as ordinary values, for one reason:
+// the loader does not normalise them in categorical columns. "NA" reaches
+// FileData.Data verbatim and the grid displays it, so the filter agreeing with
+// what is on screen is the coherent rule -- and the alternative would make a
+// visible value unselectable, since equals would then fail to match the "NA"
+// the user can see. It would also misfire on data where NA is a real category,
+// which "North America" is in plenty of business data.
+//
+// Blanks are different, and are protected, because a blank is genuinely the
+// absence of an answer rather than a value the user can point at. Numeric
+// columns get that protection automatically: missing values there route through
+// MissingMask and arrive empty.
+func TestFilterTreatsMissingTokensAsValues(t *testing.T) {
+	c := FilterCondition{Operator: FilterEquals, Value: "NA"}
+	if !c.matches("NA") {
+		t.Error(`equals "NA" must match a visible "NA", or those rows cannot be selected at all`)
+	}
+
+	notNord := FilterCondition{Operator: FilterNotEquals, Value: "Nord"}
+	if !notNord.matches("NA") {
+		t.Error(`"NA" is a displayed value, so it is not equal to "Nord"`)
+	}
+	if notNord.matches("") {
+		t.Error("a blank is the absence of an answer and must stay protected from negations")
 	}
 }

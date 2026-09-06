@@ -308,12 +308,48 @@ func (c *FilterRowsCommand) Undo(data *FileData) error {
 	return nil
 }
 
+// operatorLabels renders each operator as the dialog shows it. The undo history
+// is read by people, and "not_equals" is an identifier, not a description.
+var operatorLabels = map[FilterOperator]string{
+	FilterEquals:       "is",
+	FilterNotEquals:    "is not",
+	FilterContains:     "contains",
+	FilterNotContains:  "does not contain",
+	FilterGreater:      "is greater than",
+	FilterGreaterEqual: "is at least",
+	FilterLess:         "is less than",
+	FilterLessEqual:    "is at most",
+	FilterIsEmpty:      "is empty",
+	FilterIsNotEmpty:   "is not empty",
+}
+
+// takesValue reports whether an operator compares against anything. is_empty
+// and is_not_empty do not, and appending an empty value to those reads as a
+// truncated sentence.
+func (o FilterOperator) takesValue() bool {
+	return o != FilterIsEmpty && o != FilterIsNotEmpty
+}
+
 // GetDescription implements Command.
 func (c *FilterRowsCommand) GetDescription() string {
-	verb := "Keep"
+	verb := "Kept"
 	if c.condition.Mode == "remove" {
-		verb = "Remove"
+		verb = "Removed"
 	}
-	return fmt.Sprintf("%s rows where %s %s %s (%d removed)",
-		verb, c.condition.Column, c.condition.Operator, c.condition.Value, c.removed)
+
+	label, known := operatorLabels[c.condition.Operator]
+	if !known {
+		label = string(c.condition.Operator)
+	}
+
+	criterion := fmt.Sprintf("%s %s", c.condition.Column, label)
+	if c.condition.Operator.takesValue() {
+		criterion = fmt.Sprintf("%s %q", criterion, c.condition.Value)
+	}
+
+	noun := "rows"
+	if c.removed == 1 {
+		noun = "row"
+	}
+	return fmt.Sprintf("%s rows where %s (%d %s removed)", verb, criterion, c.removed, noun)
 }
