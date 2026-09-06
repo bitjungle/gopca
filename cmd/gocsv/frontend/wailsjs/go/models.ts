@@ -433,6 +433,42 @@ export namespace main {
 	        this.value = source["value"];
 	    }
 	}
+	export class FilterCondition {
+	    column: string;
+	    operator: string;
+	    value: string;
+	    mode: string;
+	
+	    static createFrom(source: any = {}) {
+	        return new FilterCondition(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.column = source["column"];
+	        this.operator = source["operator"];
+	        this.value = source["value"];
+	        this.mode = source["mode"];
+	    }
+	}
+	export class FilterPreview {
+	    matched: number;
+	    total: number;
+	    remaining: number;
+	    error?: string;
+	
+	    static createFrom(source: any = {}) {
+	        return new FilterPreview(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.matched = source["matched"];
+	        this.total = source["total"];
+	        this.remaining = source["remaining"];
+	        this.error = source["error"];
+	    }
+	}
 	export class GoPCAStatus {
 	    installed: boolean;
 	    path: string;
