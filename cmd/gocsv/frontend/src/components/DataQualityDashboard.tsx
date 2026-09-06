@@ -320,7 +320,10 @@ export const DataQualityDashboard: React.FC<DataQualityDashboardProps> = ({ repo
         >
                 {/* Header */}
                 <div className="flex items-center justify-between p-6 border-b border-gray-200 dark:border-gray-700">
-                    <h2 className="text-2xl font-semibold text-gray-800 dark:text-gray-200">
+                    <h2
+                        id="data-quality-title"
+                        className="text-2xl font-semibold text-gray-800 dark:text-gray-200"
+                    >
                         Data Quality Report
                     </h2>
                     <button

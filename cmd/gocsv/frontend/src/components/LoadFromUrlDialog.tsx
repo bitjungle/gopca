@@ -208,7 +208,10 @@ setPeekResult({
 
                 {/* Header */}
                 <div className="flex items-center justify-between p-4 border-b border-gray-200 dark:border-gray-700">
-                    <h2 className="text-lg font-semibold text-gray-900 dark:text-white">
+                    <h2
+                        id="load-url-title"
+                        className="text-lg font-semibold text-gray-900 dark:text-white"
+                    >
                         Load from URL
                     </h2>
                     <button

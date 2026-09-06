@@ -53,7 +53,10 @@ export const MissingValueSummary: React.FC<MissingValueSummaryProps> = ({ stats,
             className="max-h-[90vh] overflow-hidden"
         >
                 <div className="flex items-center justify-between p-4 border-b border-gray-200 dark:border-gray-700">
-                    <h2 className="text-xl font-semibold text-gray-800 dark:text-gray-200">
+                    <h2
+                        id="missing-summary-title"
+                        className="text-xl font-semibold text-gray-800 dark:text-gray-200"
+                    >
                         Missing Value Analysis
                     </h2>
                     <button
