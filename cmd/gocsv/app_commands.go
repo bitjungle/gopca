@@ -162,6 +162,29 @@ func (a *App) ExecuteToggleTargetColumn(data *FileData, colIndex int) (*FileData
 	return a.executeCommand(cmd, data, "toggle target column")
 }
 
+// ExecuteSetRowNames makes a column the row-name column, with undo support.
+//
+// The uniqueness requirement is enforced here rather than only in the dialog,
+// so it holds for any caller. The frontend disables the menu item with the same
+// reason via CanUseAsRowNames, but that is a courtesy, not the guard.
+func (a *App) ExecuteSetRowNames(data *FileData, colIndex int) (*FileData, error) {
+	cmd, err := NewSetRowNamesCommand(a, data, colIndex)
+	if err != nil {
+		return nil, fmt.Errorf("set row names: %w", err)
+	}
+	return a.executeCommand(cmd, data, "set row names")
+}
+
+// ExecuteMoveRowNamesIntoTable turns the row-name column back into an ordinary
+// column, with undo support.
+func (a *App) ExecuteMoveRowNamesIntoTable(data *FileData) (*FileData, error) {
+	cmd, err := NewMoveRowNamesIntoTableCommand(a, data)
+	if err != nil {
+		return nil, fmt.Errorf("move row names into table: %w", err)
+	}
+	return a.executeCommand(cmd, data, "move row names into table")
+}
+
 // ExecuteDuplicateRows duplicates selected rows with undo support
 func (a *App) ExecuteDuplicateRows(data *FileData, rowIndices []int) (*FileData, error) {
 	if len(rowIndices) == 0 {

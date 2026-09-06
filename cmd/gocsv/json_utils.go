@@ -30,8 +30,12 @@ import (
 // FileData represents the structure of loaded file data
 // This version uses JSONFloat64 to handle NaN values safely
 type FileData struct {
-	Headers              []string                       `json:"headers"`
-	RowNames             []string                       `json:"rowNames,omitempty"`
+	Headers  []string `json:"headers"`
+	RowNames []string `json:"rowNames,omitempty"`
+	// RowNamesHeader is the header of the column the row names came from.
+	// Carried so the file writes back with that column named as it was read,
+	// and so promoting a column to row names can be undone (#859).
+	RowNamesHeader       string                         `json:"rowNamesHeader,omitempty"`
 	Data                 [][]string                     `json:"data"`
 	Rows                 int                            `json:"rows"`
 	Columns              int                            `json:"columns"`

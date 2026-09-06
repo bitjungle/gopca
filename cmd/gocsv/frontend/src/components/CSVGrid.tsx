@@ -27,13 +27,14 @@ import { ColDef, GridReadyEvent, CellValueChangedEvent, GridApi, ColumnApi, Colu
 import 'ag-grid-community/styles/ag-grid.css';
 import 'ag-grid-community/styles/ag-theme-quartz.css';
 import { useTheme } from '@gopca/ui-components';
-import { ExecuteDeleteRows, ExecuteDeleteColumns, ExecuteInsertRow, ExecuteInsertColumn, ExecuteToggleTargetColumn, ExecuteDuplicateRows } from '../../wailsjs/go/main/App';
+import { ExecuteDeleteRows, ExecuteDeleteColumns, ExecuteInsertRow, ExecuteInsertColumn, ExecuteToggleTargetColumn, ExecuteDuplicateRows, ExecuteSetRowNames, ExecuteMoveRowNamesIntoTable, CanUseAsRowNames } from '../../wailsjs/go/main/App';
 import { RenameDialog } from './RenameDialog';
 import { ConfirmDialog } from '@gopca/ui-components';
 import {
     TargetColumnIcon,
     CategoryColumnIcon,
     TargetColumnMenuIcon,
+    RowNameMenuIcon,
     PencilIcon,
     ArrowLeftIcon,
     ArrowRightIcon,
@@ -47,6 +48,7 @@ interface CSVGridProps {
     data: string[][];
     headers: string[];
     rowNames?: string[];
+    rowNamesHeader?: string;
     fileData: any; // The full FileData object for operations
     onDataChange?: (rowIndex: number, colIndex: number, newValue: string) => void;
     onHeaderChange?: (colIndex: number, newHeader: string) => void;
@@ -60,6 +62,9 @@ interface ContextMenuItem {
     action?: () => void;
     icon?: string | React.ReactNode;
     separator?: boolean;
+    // A disabled item stays visible and carries its reason in the label, so an
+    // unavailable operation explains itself instead of quietly not being there.
+    disabled?: boolean;
 }
 
 interface ContextMenuProps {
@@ -96,11 +101,20 @@ const ContextMenu: React.FC<ContextMenuProps> = ({ x, y, items, onClose }) => {
                 return (
                     <button
                         key={index}
+                        disabled={item.disabled}
+                        title={item.disabled ? item.label : undefined}
                         onClick={() => {
+                            if (item.disabled) {
+                                return;
+                            }
                             item.action?.();
                             onClose();
                         }}
-                        className="w-full px-4 py-2 text-left text-sm hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center gap-2"
+                        className={`w-full px-4 py-2 text-left text-sm flex items-center gap-2 ${
+                            item.disabled
+                                ? 'opacity-50 cursor-not-allowed'
+                                : 'hover:bg-gray-100 dark:hover:bg-gray-700'
+                        }`}
                     >
                         {item.icon && (
                             typeof item.icon === 'string' ?
@@ -132,6 +146,7 @@ export const CSVGrid = forwardRef<any, CSVGridProps>(({
     data,
     headers,
     rowNames,
+    rowNamesHeader,
     fileData,
     onDataChange,
     onHeaderChange,
@@ -194,14 +209,62 @@ return 'text';
     }, [data]);
 
     // Declare context menu handlers early
-    const handleHeaderContextMenu = useCallback((event: React.MouseEvent, colIndex: number) => {
+    const handleHeaderContextMenu = useCallback(async (event: React.MouseEvent, colIndex: number) => {
         event.preventDefault();
 
         const header = headers[colIndex];
         const isTargetColumn = header.toLowerCase().endsWith('#target') ||
                               header.toLowerCase().endsWith('# target');
 
+        // Whether this column can serve as row names is a property of its
+        // values, so ask the backend rather than guessing here. The same check
+        // is enforced in ExecuteSetRowNames; this only lets the menu explain
+        // itself before the click instead of after.
+        let rowNameCheck: { ok: boolean; reason?: string } = { ok: false, reason: 'no data' };
+        if (fileData) {
+            try {
+                rowNameCheck = await CanUseAsRowNames(fileData, colIndex);
+            } catch (error) {
+                console.error('Error checking row-name candidacy:', error);
+            }
+        }
+        const hasRowNames = Boolean(rowNames && rowNames.length > 0);
+
         const items: ContextMenuItem[] = [
+            {
+                label: rowNameCheck.ok
+                    ? 'Use as Row Names'
+                    : `Use as Row Names — ${rowNameCheck.reason}`,
+                disabled: !rowNameCheck.ok,
+                action: async () => {
+                    if (fileData && rowNameCheck.ok) {
+                        try {
+                            const updatedData = await ExecuteSetRowNames(fileData, colIndex);
+                            onRefresh?.(updatedData);
+                        } catch (error) {
+                            console.error('Error setting row names:', error);
+                        }
+                    }
+                },
+                icon: <RowNameMenuIcon />
+            },
+            ...(hasRowNames
+                ? [{
+                    label: 'Move Row Names into Table',
+                    action: async () => {
+                        if (fileData) {
+                            try {
+                                const updatedData = await ExecuteMoveRowNamesIntoTable(fileData);
+                                onRefresh?.(updatedData);
+                            } catch (error) {
+                                console.error('Error moving row names into table:', error);
+                            }
+                        }
+                    },
+                    icon: <RowNameMenuIcon />
+                }]
+                : []),
+            { separator: true },
             {
                 label: isTargetColumn ? 'Remove Target Flag' : 'Mark as Target Column',
                 action: async () => {
@@ -272,7 +335,7 @@ return 'text';
         ];
 
         setContextMenu({ x: event.clientX, y: event.clientY, items });
-    }, [fileData, headers, onRefresh]);
+    }, [fileData, headers, rowNames, onRefresh]);
 
     const handleRowContextMenu = useCallback((event: React.MouseEvent, rowIndex: number) => {
         event.preventDefault();
@@ -357,7 +420,10 @@ return 'text';
         if (rowNames && rowNames.length > 0) {
             cols.push({
                 field: 'rowName',
-                headerName: '',
+                // The row-name column's own header, now that it survives the
+                // load (#859). Blank remains correct for the many files that
+                // leave it empty by convention.
+                headerName: rowNamesHeader || '',
                 editable: true,
                 sortable: true,
                 filter: true,
@@ -455,7 +521,7 @@ classes.push('target-header');
         });
 
         return cols;
-    }, [headers, detectColumnType, rowNames, theme, handleHeaderContextMenu]);
+    }, [headers, detectColumnType, rowNames, rowNamesHeader, theme, handleHeaderContextMenu]);
 
     // Convert data to row format for ag-Grid
     const rowData = useMemo(() => {

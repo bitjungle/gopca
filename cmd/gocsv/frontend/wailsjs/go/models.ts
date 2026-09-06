@@ -368,6 +368,7 @@ export namespace main {
 	export class FileData {
 	    headers: string[];
 	    rowNames?: string[];
+	    rowNamesHeader?: string;
 	    data: string[][];
 	    rows: number;
 	    columns: number;
@@ -383,6 +384,7 @@ export namespace main {
 	        if ('string' === typeof source) source = JSON.parse(source);
 	        this.headers = source["headers"];
 	        this.rowNames = source["rowNames"];
+	        this.rowNamesHeader = source["rowNamesHeader"];
 	        this.data = source["data"];
 	        this.rows = source["rows"];
 	        this.columns = source["columns"];
@@ -499,6 +501,20 @@ export namespace main {
 	        this.skipRows = source["skipRows"];
 	        this.maxRows = source["maxRows"];
 	        this.selectedColumns = source["selectedColumns"];
+	    }
+	}
+	export class RowNameCheck {
+	    ok: boolean;
+	    reason?: string;
+	
+	    static createFrom(source: any = {}) {
+	        return new RowNameCheck(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.ok = source["ok"];
+	        this.reason = source["reason"];
 	    }
 	}
 	export class TransformOptions {

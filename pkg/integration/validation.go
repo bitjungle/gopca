@@ -163,6 +163,33 @@ func ValidateForGoPCA(in ValidationInput) *ValidationResult {
 	// Row names present.
 	if len(in.RowNames) > 0 {
 		messages = append(messages, "INFO: Row names detected in first column")
+
+		// Row names identify rows: they label the points in a scores plot, so
+		// two rows sharing a name are indistinguishable there and a row with no
+		// name is unlabelled. GoCSV enforces this when a column is promoted to
+		// row names, but the load path assigns the first column without
+		// checking, so a file can arrive in this state (#859).
+		//
+		// A warning, not an error. Refusing to open or analyse a file over
+		// duplicate labels would be the mistake #801 was filed about; the
+		// numbers are still perfectly analysable, only the labelling is
+		// ambiguous, and the user is the one who can say whether that matters.
+		if duplicates, blanks := countRowNameProblems(in.RowNames); duplicates > 0 || blanks > 0 {
+			switch {
+			case duplicates > 0 && blanks > 0:
+				messages = append(messages, fmt.Sprintf(
+					"WARNING: Row names are not unique identifiers (%d repeated, %d empty) - "+
+						"points sharing a label cannot be told apart in plots", duplicates, blanks))
+			case duplicates > 0:
+				messages = append(messages, fmt.Sprintf(
+					"WARNING: %d row name(s) are repeated - points sharing a label cannot be "+
+						"told apart in plots", duplicates))
+			default:
+				messages = append(messages, fmt.Sprintf(
+					"WARNING: %d row name(s) are empty - those points will be unlabelled in plots",
+					blanks))
+			}
+		}
 	}
 
 	// Validity: any ERROR message makes the result invalid.
@@ -175,4 +202,26 @@ func ValidateForGoPCA(in ValidationInput) *ValidationResult {
 	}
 
 	return &ValidationResult{IsValid: isValid, Messages: messages}
+}
+
+// countRowNameProblems counts repeated and empty row names.
+//
+// Repeats are counted as the number of values appearing more than once, not the
+// number of excess rows, so three rows called "P1" report one repeated name.
+// Comparison is on the trimmed value, matching checkRowNameCandidate in GoCSV:
+// two labels that render identically are the same label.
+func countRowNameProblems(rowNames []string) (duplicates, blanks int) {
+	seen := make(map[string]int, len(rowNames))
+	for _, name := range rowNames {
+		trimmed := strings.TrimSpace(name)
+		if trimmed == "" {
+			blanks++
+			continue
+		}
+		seen[trimmed]++
+		if seen[trimmed] == 2 {
+			duplicates++
+		}
+	}
+	return duplicates, blanks
 }

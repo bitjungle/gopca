@@ -594,6 +594,7 @@ func (a *App) parseCSVContent(content string, ext string) (*FileData, error) {
 	fileData := &FileData{
 		Headers:              csvData.Headers,
 		RowNames:             csvData.RowNames,
+		RowNamesHeader:       csvData.RowNamesHeader,
 		Data:                 stringData,
 		Rows:                 csvData.Rows,
 		Columns:              csvData.Columns,
@@ -613,6 +614,7 @@ func (a *App) parseCSVContent(content string, ext string) (*FileData, error) {
 		fileData = &FileData{
 			Headers:              combined.Headers,
 			RowNames:             combined.RowNames,
+			RowNamesHeader:       csvData.RowNamesHeader,
 			Data:                 combined.Data,
 			Rows:                 combined.Rows,
 			Columns:              combined.Columns,
@@ -661,11 +663,12 @@ func (a *App) SaveCSV(data *FileData) error {
 
 	// Convert FileData to pkg/csv.Data
 	csvData := &pkgcsv.Data{
-		Headers:    data.Headers,
-		RowNames:   data.RowNames,
-		StringData: data.Data,
-		Rows:       data.Rows,
-		Columns:    data.Columns,
+		Headers:        data.Headers,
+		RowNames:       data.RowNames,
+		RowNamesHeader: data.RowNamesHeader,
+		StringData:     data.Data,
+		Rows:           data.Rows,
+		Columns:        data.Columns,
 	}
 
 	// Use pkg/csv writer with appropriate options
@@ -717,8 +720,14 @@ func (a *App) SaveExcel(data *FileData) error {
 	// Write headers with row names if present
 	headers := data.Headers
 	if len(data.RowNames) > 0 {
-		// Add row name header
-		headers = append([]string{"RowName"}, headers...)
+		// Carry the row-name column's own header through. "RowName" stays the
+		// fallback for files that had no name there, so existing exports of the
+		// blank-header convention are unchanged (#859).
+		rowNameHeader := data.RowNamesHeader
+		if rowNameHeader == "" {
+			rowNameHeader = "RowName"
+		}
+		headers = append([]string{rowNameHeader}, headers...)
 	}
 
 	for i, header := range headers {

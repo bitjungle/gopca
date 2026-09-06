@@ -606,6 +606,7 @@ return;
                                         data={fileData.data}
                                         headers={fileData.headers}
                                         rowNames={fileData.rowNames}
+                                        rowNamesHeader={fileData.rowNamesHeader}
                                         fileData={fileData}
                                         onDataChange={handleDataChange}
                                         onHeaderChange={handleHeaderChange}

@@ -107,12 +107,16 @@ func TabDelimitedOptions() Options {
 // Data represents parsed CSV data with support for different data types
 type Data struct {
 	// Core numeric data (always present for PCA)
-	Matrix      types.Matrix // Numeric data matrix
-	Headers     []string     // Column names
-	RowNames    []string     // Row names
-	MissingMask [][]bool     // Track missing values (true = missing)
-	Rows        int          // Number of data rows
-	Columns     int          // Number of data columns
+	Matrix   types.Matrix // Numeric data matrix
+	Headers  []string     // Column names
+	RowNames []string     // Row names
+	// RowNamesHeader is the header of the column the row names came from, so a
+	// file can be written back with that column named as it was read (#859).
+	// Empty is a legitimate value: many CSVs leave the cell blank by convention.
+	RowNamesHeader string
+	MissingMask    [][]bool // Track missing values (true = missing)
+	Rows           int      // Number of data rows
+	Columns        int      // Number of data columns
 
 	// Additional data types (optional)
 	StringData           [][]string           // Raw string data (for GoCSV)
