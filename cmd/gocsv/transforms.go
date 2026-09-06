@@ -51,6 +51,11 @@ type TransformOptions struct {
 	BinCount int                `json:"binCount,omitempty"` // For binning
 	MinValue float64            `json:"minValue,omitempty"` // For min-max scaling
 	MaxValue float64            `json:"maxValue,omitempty"` // For min-max scaling
+
+	// RemoveOriginal drops the source column after one-hot encoding it.
+	// Absent from the JSON payload means false, i.e. the column is kept --
+	// see transform.Options for why the flag is spelled this way round.
+	RemoveOriginal bool `json:"removeOriginal,omitempty"` // For one-hot encoding
 }
 
 // TransformationResult represents the result of a transformation
@@ -100,6 +105,8 @@ func (a *App) applyTransformationInternal(data *FileData, options TransformOptio
 		BinCount: options.BinCount,
 		MinValue: options.MinValue,
 		MaxValue: options.MaxValue,
+
+		RemoveOriginal: options.RemoveOriginal,
 	}
 
 	res, err := transform.Apply(in, opts)

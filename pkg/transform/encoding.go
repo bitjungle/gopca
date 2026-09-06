@@ -30,9 +30,9 @@ import (
 )
 
 // applyOneHot performs one-hot encoding on the specified categorical columns.
-// For each column, K new binary columns are added (one per unique value), then
-// the original column is removed. Column order in headers and data is updated
-// accordingly.
+// For each column, K new binary columns are added, one per unique value. The
+// source column is kept unless opts.RemoveOriginal is set, in which case it is
+// removed and the column order in headers and data is updated accordingly.
 //
 // Columns with more than 20 unique non-missing values are skipped to avoid
 // combinatorial explosion.
@@ -94,14 +94,23 @@ func applyOneHot(data [][]string, columnTypes map[string]string, catCols map[str
 			}
 		}
 
-		// Remove the original column from headers and each row.
-		*headers = append((*headers)[:colIndex], (*headers)[colIndex+1:]...)
-		delete(columnTypes, colName)
-		delete(catCols, colName)
+		// The source column stays unless removal was asked for. Keeping it is
+		// what lets GoPCA still colour plots by the category after encoding it.
+		//
+		// Guarded rather than skipped with continue: the bookkeeping below
+		// records the transformation either way, and jumping past it would make
+		// the encoding invisible to the caller in exactly the case that is now
+		// the default.
+		if opts.RemoveOriginal {
+			// Remove the original column from headers and each row.
+			*headers = append((*headers)[:colIndex], (*headers)[colIndex+1:]...)
+			delete(columnTypes, colName)
+			delete(catCols, colName)
 
-		for i := range data {
-			if colIndex < len(data[i]) {
-				data[i] = append(data[i][:colIndex], data[i][colIndex+1:]...)
+			for i := range data {
+				if colIndex < len(data[i]) {
+					data[i] = append(data[i][:colIndex], data[i][colIndex+1:]...)
+				}
 			}
 		}
 

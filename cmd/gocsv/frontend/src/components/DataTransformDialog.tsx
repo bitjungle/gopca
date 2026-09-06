@@ -101,10 +101,11 @@ const transformations: TransformationInfo[] = [
     {
         type: 'onehot',
         name: 'One-Hot Encode',
-        description: 'Create binary columns for each category',
+        description: 'Create binary columns for each category, keeping the original',
         category: 'encode',
         requiresNumeric: false,
-        requiresCategorical: true
+        requiresCategorical: true,
+        hasOptions: true
     }
 ];
 
@@ -125,6 +126,10 @@ export const DataTransformDialog: React.FC<DataTransformDialogProps> = ({
     const [binCount, setBinCount] = useState(5);
     const [minValue, setMinValue] = useState(0);
     const [maxValue, setMaxValue] = useState(1);
+    // One-hot encoding used to discard the source column unconditionally.
+    // Keeping it is the default: GoPCA colours plots by categorical columns,
+    // so dropping e.g. "species" silently costs that.
+    const [keepOriginal, setKeepOriginal] = useState(true);
 
     // Load available columns when dialog opens or transform type changes
     useEffect(() => {
@@ -132,6 +137,26 @@ export const DataTransformDialog: React.FC<DataTransformDialogProps> = ({
             loadAvailableColumns();
         }
     }, [isOpen, selectedTransform, fileData]);
+
+    // Reset the transient dialog state whenever it is reopened.
+    //
+    // Closing renders null but does not unmount, so every useState above
+    // survives. That made two choices sticky in a way nobody asked for:
+    //
+    //   keepOriginal  unticking it once carried the destructive choice into
+    //                 every later transformation, which defeats the whole point
+    //                 of the default being on.
+    //   result        the footer shows Apply while there is no result and Close
+    //                 once there is one, so a leftover result replaced the Apply
+    //                 button and made the second transformation of a session
+    //                 impossible to start.
+    useEffect(() => {
+        if (isOpen) {
+            setKeepOriginal(true);
+            setResult(null);
+            setError(null);
+        }
+    }, [isOpen]);
 
     const loadAvailableColumns = async () => {
         try {
@@ -160,7 +185,8 @@ export const DataTransformDialog: React.FC<DataTransformDialogProps> = ({
                 columns: selectedColumns,
                 binCount: selectedTransform === 'bin' ? binCount : undefined,
                 minValue: selectedTransform === 'minmax' ? minValue : undefined,
-                maxValue: selectedTransform === 'minmax' ? maxValue : undefined
+                maxValue: selectedTransform === 'minmax' ? maxValue : undefined,
+                removeOriginal: selectedTransform === 'onehot' ? !keepOriginal : undefined
             };
 
             const transformResult = await ApplyTransformation(fileData, options);
@@ -295,6 +321,26 @@ return null;
                                                 className="w-full px-3 py-2 text-sm border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100"
                                             />
                                         </div>
+                                    </div>
+                                )}
+                                {selectedTransform === 'onehot' && (
+                                    <div>
+                                        <label className="flex items-start gap-2 cursor-pointer">
+                                            <input
+                                                type="checkbox"
+                                                checked={keepOriginal}
+                                                onChange={(e) => setKeepOriginal(e.target.checked)}
+                                                className="mt-0.5 h-4 w-4 rounded border-gray-300 dark:border-gray-600"
+                                            />
+                                            <span className="text-sm text-gray-700 dark:text-gray-300">
+                                                Keep original column
+                                                <span className="block text-xs text-gray-500 dark:text-gray-400">
+                                                    Unchecking removes the source column once the binary
+                                                    columns are created. Keeping it lets GoPCA still colour
+                                                    plots by this category.
+                                                </span>
+                                            </span>
+                                        </label>
                                     </div>
                                 )}
                                 {selectedTransform === 'bin' && (
