@@ -508,6 +508,7 @@ export namespace main {
 	    minValue?: number;
 	    maxValue?: number;
 	    removeOriginal?: boolean;
+	    categoryOrder?: Record<string, Array<string>>;
 	
 	    static createFrom(source: any = {}) {
 	        return new TransformOptions(source);
@@ -521,6 +522,7 @@ export namespace main {
 	        this.minValue = source["minValue"];
 	        this.maxValue = source["maxValue"];
 	        this.removeOriginal = source["removeOriginal"];
+	        this.categoryOrder = source["categoryOrder"];
 	    }
 	}
 	export class TransformationResult {

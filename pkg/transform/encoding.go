@@ -49,17 +49,7 @@ func applyOneHot(data [][]string, columnTypes map[string]string, catCols map[str
 			continue
 		}
 
-		// Gather unique non-empty values.
-		uniqueSet := make(map[string]bool)
-		for i := range data {
-			if colIndex >= len(data[i]) {
-				continue
-			}
-			v := strings.TrimSpace(data[i][colIndex])
-			if v != "" {
-				uniqueSet[v] = true
-			}
-		}
+		uniqueSet := uniqueValues(data, colIndex)
 
 		if len(uniqueSet) == 0 {
 			result.Messages = append(result.Messages, fmt.Sprintf("Column '%s' has no values", colName))
@@ -102,16 +92,7 @@ func applyOneHot(data [][]string, columnTypes map[string]string, catCols map[str
 		// the encoding invisible to the caller in exactly the case that is now
 		// the default.
 		if opts.RemoveOriginal {
-			// Remove the original column from headers and each row.
-			*headers = append((*headers)[:colIndex], (*headers)[colIndex+1:]...)
-			delete(columnTypes, colName)
-			delete(catCols, colName)
-
-			for i := range data {
-				if colIndex < len(data[i]) {
-					data[i] = append(data[i][:colIndex], data[i][colIndex+1:]...)
-				}
-			}
+			removeColumn(data, columnTypes, catCols, headers, colName, colIndex)
 		}
 
 		result.TransformedColumns = append(result.TransformedColumns, colName)
@@ -120,4 +101,22 @@ func applyOneHot(data [][]string, columnTypes map[string]string, catCols map[str
 	}
 
 	return nil
+}
+
+// removeColumn drops a column from the headers, the metadata maps, and every
+// row. Shared by the encoders, which both offer to discard their source.
+//
+// The row loop is the part that is easy to omit: a removal that updates the
+// headers alone shifts every subsequent column by one, silently, and only in
+// the data.
+func removeColumn(data [][]string, columnTypes map[string]string, catCols map[string][]string, headers *[]string, colName string, colIndex int) {
+	*headers = append((*headers)[:colIndex], (*headers)[colIndex+1:]...)
+	delete(columnTypes, colName)
+	delete(catCols, colName)
+
+	for i := range data {
+		if colIndex < len(data[i]) {
+			data[i] = append(data[i][:colIndex], data[i][colIndex+1:]...)
+		}
+	}
 }

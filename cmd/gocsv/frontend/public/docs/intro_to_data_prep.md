@@ -118,11 +118,39 @@ Apply transformations in GoCSV when the raw data distribution needs correction b
 | Min-max scaling | Scale to [0, 1] or a custom range |
 | Binning | Discretize continuous variables into categories |
 | One-hot encoding | Expand a categorical column into binary columns |
+| Ordinal encoding | Number the categories of a column in an order you choose |
 
-One-hot encoding keeps the original column by default, and offers a **Keep original column**
-checkbox if you would rather it were removed. Keeping it is usually what you want: GoPCA colours
-scores plots by categorical columns, so a `species` column discarded during encoding is a colouring
-you can no longer apply.
+Both encoders keep the original column by default, and offer a **Keep original column** checkbox if
+you would rather it were removed. Keeping it is usually what you want: GoPCA colours scores plots by
+categorical columns, so a `species` column discarded during encoding is a colouring you can no
+longer apply.
+
+### Which encoder?
+
+The two are not interchangeable, and the choice is a statement about your data.
+
+**One-hot encoding** makes no claim about order. Each category gets its own column, and PCA treats
+them as equally distant from one another. This is the right choice for unordered categories —
+species, site, operator, instrument.
+
+**Ordinal encoding** replaces the categories with the numbers 0, 1, 2, … in an order you set. Use it
+only when the categories genuinely form a scale: `lav, middels, høy`, or `never, rarely, sometimes,
+often, always`. The dialog lists the values with arrows to reorder them, and recognises common
+scales in English and Norwegian, so `lav / middels / høy` comes up already in the right order rather
+than alphabetically.
+
+Numbering unordered categories is the mistake worth avoiding. Encoding `species` as setosa = 0,
+versicolor = 1, virginica = 2 tells PCA that virginica is three times setosa, and that versicolor
+sits exactly halfway between them. None of that is true, and PCA has no way to know — it is a
+covariance method, so it will use those invented distances as though they were measurements. The
+resulting component will look perfectly ordinary. If your categories have no order, reach for
+one-hot encoding.
+
+> **A note on ordering.** If you have used scikit-learn's `LabelEncoder`, it assigns codes in
+> alphabetical order. For an ordered scale that is usually wrong: `low, medium, high` becomes
+> `high = 0, low = 1, medium = 2`, scrambling the very ordering the numbers are meant to carry.
+> Leaving GoCSV's list untouched gives you the same alphabetical result; the arrows are there so you
+> do not have to accept it.
 
 ---
 
