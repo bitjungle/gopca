@@ -24,7 +24,6 @@
 package main
 
 import (
-	"fmt"
 	"strings"
 	"testing"
 )
@@ -307,4 +306,42 @@ func TestTransposeWarnings(t *testing.T) {
 	}
 }
 
-var _ = fmt.Sprintf
+// TestTransposeWideDatasetHeadersUnique exercises the suffixing at the scale
+// this feature exists for, in its worst case.
+//
+// Transposition is for wide files -- a 2000-column spectrum becomes 2000 rows
+// -- and every generated header has to be checked against every other. With
+// every row name identical, the suffix search is maximally contended. The
+// original implementation rebuilt its lookup map on each of those 2000 calls.
+func TestTransposeWideDatasetHeadersUnique(t *testing.T) {
+	const n = 2000
+	rows := make([][]string, n)
+	names := make([]string, n)
+	for i := range rows {
+		rows[i] = []string{"1"}
+		names[i] = "dup"
+	}
+	data := &FileData{
+		Headers: []string{"A"}, RowNames: names, Data: rows,
+		Rows: n, Columns: 1, ColumnTypes: map[string]string{"A": "numeric"},
+	}
+
+	cmd, err := NewTransposeCommand(&App{}, data)
+	if err != nil {
+		t.Fatalf("NewTransposeCommand: %v", err)
+	}
+	if err := cmd.Execute(data); err != nil {
+		t.Fatalf("Execute: %v", err)
+	}
+
+	seen := map[string]bool{}
+	for _, header := range data.Headers {
+		if seen[header] {
+			t.Fatalf("duplicate header %q after transposing %d identical row names", header, n)
+		}
+		seen[header] = true
+	}
+	if len(data.Headers) != n {
+		t.Errorf("got %d headers, want %d", len(data.Headers), n)
+	}
+}

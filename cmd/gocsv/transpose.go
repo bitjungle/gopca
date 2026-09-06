@@ -73,7 +73,13 @@ func (c *TransposeCommand) Execute(data *FileData) error {
 	// The new headers come from the old row names. A file with none gets
 	// generated names rather than an empty header row, because a blank column
 	// header cannot be selected in a dialog or named in a message.
+	// One map for the whole loop. uniqueHeader rebuilds its lookup from the
+	// slice it is given, which is quadratic when called once per column -- and
+	// the files this feature exists for are the wide ones, where a 2000-column
+	// spectrum becomes 2000 rows.
 	newHeaders := make([]string, 0, len(source.Data))
+	taken := make(map[string]bool, len(source.Data))
+	nextSuffix := make(map[string]int, len(source.Data))
 	for i := range source.Data {
 		name := ""
 		if i < len(source.RowNames) {
@@ -86,7 +92,17 @@ func (c *TransposeCommand) Execute(data *FileData) error {
 		// first column without checking (#859) -- but headers addressed by name
 		// must be. Suffix collisions rather than refusing: the user asked to
 		// transpose, and a duplicate label is not a reason to decline.
-		newHeaders = append(newHeaders, uniqueHeader(newHeaders, name))
+		// nextSuffix remembers where the last search for this name ended, so a
+		// column of identical row names does not rescan the suffixes it has
+		// already used. The membership test stays, because a generated name can
+		// still collide with a literal one somewhere else in the file.
+		unique := name
+		for taken[unique] {
+			nextSuffix[name]++
+			unique = fmt.Sprintf("%s_%d", name, nextSuffix[name]+1)
+		}
+		taken[unique] = true
+		newHeaders = append(newHeaders, unique)
 	}
 
 	// The new row names come from the old headers, which were already unique.
