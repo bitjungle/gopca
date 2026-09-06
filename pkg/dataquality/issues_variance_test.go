@@ -201,3 +201,58 @@ func TestVarianceIssuesSkipsZeroMean(t *testing.T) {
 		t.Errorf("an all-zero column is constant and should be reported, got %s", describe(got))
 	}
 }
+
+// TestQualityScoreAccountsForConstantColumns closes a contradiction that
+// reporting constant columns created.
+//
+// The score deducted for missing values, duplicates and outliers but knew
+// nothing about constant columns, so a dataset with half its variables
+// carrying no information scored 100 and read "excellent" while the issues
+// list said those columns contribute nothing to any component. A headline that
+// disagrees with the detail is worse than either alone.
+//
+// Weighted like missing data, and for the same reason: a constant column
+// carries as little information as an empty one.
+func TestQualityScoreAccountsForConstantColumns(t *testing.T) {
+	varying := func(name string) ColumnAnalysis {
+		return numericCol(name, 10, 2.5, 4, 16, 100)
+	}
+	constant := func(name string) ColumnAnalysis {
+		return numericCol(name, 7, 0, 7, 7, 100)
+	}
+
+	clean := &DataQualityReport{
+		ColumnAnalysis: []ColumnAnalysis{varying("A"), varying("B"), varying("C"), varying("D")},
+		DataProfile:    DataProfile{Rows: 100, NumericColumns: 4},
+	}
+	half := &DataQualityReport{
+		ColumnAnalysis: []ColumnAnalysis{varying("A"), varying("B"), constant("C"), constant("D")},
+		DataProfile:    DataProfile{Rows: 100, NumericColumns: 4},
+	}
+
+	cleanScore := calculateQualityScore(clean)
+	halfScore := calculateQualityScore(half)
+
+	if cleanScore != 100 {
+		t.Errorf("a clean dataset scored %.1f, want 100", cleanScore)
+	}
+	if halfScore >= cleanScore {
+		t.Errorf("half the columns constant scored %.1f, not below the clean %.1f",
+			halfScore, cleanScore)
+	}
+
+	// Proportional: one dead column among many should barely register.
+	many := make([]ColumnAnalysis, 0, 200)
+	for i := 0; i < 199; i++ {
+		many = append(many, varying("v"))
+	}
+	many = append(many, constant("dead"))
+	sparse := calculateQualityScore(&DataQualityReport{
+		ColumnAnalysis: many,
+		DataProfile:    DataProfile{Rows: 100, NumericColumns: 200},
+	})
+	if sparse < 99 {
+		t.Errorf("one constant column in 200 cost %.2f points, which is disproportionate",
+			100-sparse)
+	}
+}

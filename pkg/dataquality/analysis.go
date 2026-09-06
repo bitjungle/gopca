@@ -374,12 +374,32 @@ func estimateMemorySize(rows, cols int) string {
 }
 
 // calculateQualityScore computes an overall quality score (0–100) for the
-// dataset, deducting points for missing values, duplicates, outliers, and
-// insufficient numeric columns.
+// dataset, deducting points for missing values, constant columns, duplicates,
+// outliers, and insufficient numeric columns.
 func calculateQualityScore(report *DataQualityReport) float64 {
 	score := 100.0
 
 	score -= report.DataProfile.MissingPercent * 0.5
+
+	// Constant columns, weighted like missing data and for the same reason: a
+	// column whose every value is identical carries as little information as
+	// one that is empty. Without this the headline contradicted the report --
+	// a dataset with half its variables constant scored 100 and read
+	// "excellent" while the issues list said those columns contribute nothing
+	// to any component (#867).
+	//
+	// Proportional, so one dead column among two hundred spectral channels
+	// costs almost nothing while half the table costs a great deal.
+	if len(report.ColumnAnalysis) > 0 {
+		constant := 0
+		for _, col := range report.ColumnAnalysis {
+			if isConstantColumn(col) {
+				constant++
+			}
+		}
+		constantPct := float64(constant) / float64(len(report.ColumnAnalysis)) * 100
+		score -= constantPct * 0.5
+	}
 
 	if report.DataProfile.Rows > 0 {
 		dupPct := float64(report.DataProfile.DuplicateRows) / float64(report.DataProfile.Rows) * 100
