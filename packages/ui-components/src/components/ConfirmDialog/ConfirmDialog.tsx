@@ -21,7 +21,8 @@
 //
 // See LICENSE for the full license terms.
 
-import React, { useEffect, useCallback } from 'react';
+import React, { useEffect, useCallback, useRef } from 'react';
+import { useFocusManagement, useFocusRestore } from '../../hooks/useFocusManagement';
 
 export interface ConfirmDialogProps {
   isOpen: boolean;
@@ -78,6 +79,22 @@ return;
 return null;
 }
 
+  // Trap focus inside the dialog while it is open, and restore it on close.
+  // Without this a keyboard user can Tab straight out of the dialog into the
+  // page behind it, which is the same gap #874 covers for GoCSV's dialogs.
+  const panelRef = useRef<HTMLDivElement>(null);
+  const { trapFocus, focusFirst } = useFocusManagement();
+  useFocusRestore();
+
+  useEffect(() => {
+    if (!isOpen || !panelRef.current) {
+      return;
+    }
+    focusFirst(panelRef.current);
+    const release = trapFocus(panelRef.current);
+    return release;
+  }, [isOpen, trapFocus, focusFirst]);
+
   const defaultConfirmClass = destructive
     ? 'bg-red-600 hover:bg-red-700 text-white'
     : 'bg-blue-600 hover:bg-blue-700 text-white';
@@ -92,7 +109,10 @@ return null;
         aria-hidden="true"
       />
 
-      <div className={containerClassName || 'relative bg-white dark:bg-gray-800 rounded-lg shadow-xl p-6 w-96 max-w-[90vw]'}>
+      <div
+        ref={panelRef}
+        className={containerClassName || 'relative bg-white dark:bg-gray-800 rounded-lg shadow-xl p-6 w-96 max-w-[90vw]'}
+      >
         <h3 className="text-lg font-semibold mb-4 text-gray-900 dark:text-gray-100">
           {title}
         </h3>

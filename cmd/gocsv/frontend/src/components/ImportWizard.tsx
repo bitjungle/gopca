@@ -24,7 +24,7 @@
 import React, { useState, useEffect } from 'react';
 import { SelectFileForImport, GetFileInfo, PreviewFile, ImportFile } from '../../wailsjs/go/main/App';
 import { main } from '../../wailsjs/go/models';
-import { FileSelector, ProgressIndicator } from '@gopca/ui-components';
+import { FileSelector, ProgressIndicator, Dialog } from '@gopca/ui-components';
 import { FormatOptions } from './FormatOptions';
 import { DataPreview } from './DataPreview';
 
@@ -179,25 +179,28 @@ return;
         }
     };
 
-    if (!isOpen) {
-return null;
-}
+    // Dialog owns the isOpen check; unmounting from here would skip its
+    // focus-restore cleanup.
 
     return (
-        <div className="fixed inset-0 z-50 overflow-y-auto">
-            <div className="flex items-center justify-center min-h-screen px-4 pt-4 pb-20 text-center sm:block sm:p-0">
-                {/* Background overlay */}
-                <div
-                    className="fixed inset-0 transition-opacity bg-gray-500 bg-opacity-75 dark:bg-gray-900 dark:bg-opacity-75"
-                    onClick={currentStep !== 'importing' ? onClose : undefined}
-                />
-
-                {/* Modal panel */}
-                <div className="inline-block w-full max-w-4xl my-8 text-left align-middle transition-all transform bg-white dark:bg-gray-800 shadow-xl rounded-lg">
+        <Dialog
+            isOpen={isOpen}
+            onClose={onClose}
+            width="w-full max-w-4xl"
+            padded={false}
+            ariaLabelledBy="import-wizard-title"
+            className="max-h-[90vh] overflow-y-auto text-left"
+            // An import in flight must not be dismissed by a stray click or key.
+            closeOnBackdropClick={currentStep !== 'importing'}
+            closeOnEscape={currentStep !== 'importing'}
+        >
                     {/* Header */}
                     <div className="px-6 py-4 border-b border-gray-200 dark:border-gray-700">
                         <div className="flex items-center justify-between">
-                            <h2 className="text-lg font-semibold text-gray-900 dark:text-white">
+                            <h2
+                                id="import-wizard-title"
+                                className="text-lg font-semibold text-gray-900 dark:text-white"
+                            >
                                 Import Data Wizard
                             </h2>
                             {currentStep !== 'importing' && (
@@ -375,8 +378,6 @@ return 'Finalizing import...';
                             </div>
                         </div>
                     )}
-                </div>
-            </div>
-        </div>
+        </Dialog>
     );
 };

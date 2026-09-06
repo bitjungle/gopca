@@ -35,6 +35,20 @@ export interface DialogProps {
     showCloseButton?: boolean;
     closeOnBackdropClick?: boolean;
     closeOnEscape?: boolean;
+    /**
+     * Whether the dialog supplies its own padding (default true).
+     *
+     * Set false when the caller lays out its own bordered header, body and
+     * footer sections, which several GoCSV dialogs do. Without this the shared
+     * padding would sit outside those borders and change how every one of them
+     * looks -- migrating a dialog for its focus handling should not restyle it.
+     */
+    padded?: boolean;
+    /**
+     * Id of the element naming this dialog, for callers that render their own
+     * header instead of passing `title`. Ignored when `title` is set.
+     */
+    ariaLabelledBy?: string;
 }
 
 /**
@@ -50,7 +64,9 @@ export const Dialog: React.FC<DialogProps> = ({
     width = 'w-96',
     showCloseButton = false,
     closeOnBackdropClick = true,
-    closeOnEscape = true
+    closeOnEscape = true,
+    padded = true,
+    ariaLabelledBy
 }) => {
     const dialogRef = useRef<HTMLDivElement>(null);
     const { trapFocus, focusFirst } = useFocusManagement();
@@ -97,10 +113,10 @@ return null;
             {/* Dialog */}
             <div
                 ref={dialogRef}
-                className={`relative bg-white dark:bg-gray-800 rounded-lg shadow-xl p-6 ${width} max-w-[90vw] ${className}`}
+                className={`relative bg-white dark:bg-gray-800 rounded-lg shadow-xl ${padded ? 'p-6' : ''} ${width} max-w-[90vw] ${className}`}
                 role="dialog"
                 aria-modal="true"
-                aria-labelledby={title ? 'dialog-title' : undefined}
+                aria-labelledby={title ? 'dialog-title' : ariaLabelledBy}
             >
                 {/* Header */}
                 {(title || showCloseButton) && (
