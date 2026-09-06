@@ -124,6 +124,23 @@ export const FilterRowsDialog: React.FC<FilterRowsDialogProps> = ({
         };
     }, [isOpen, fileData, column, operator, value, mode, needsValue]);
 
+    // Escape closes, as it does for the shared ConfirmDialog this app already
+    // uses. GoCSV's hand-rolled dialogs do not do this and should (#874); a new
+    // one need not repeat the omission, and the behaviour is invisible until
+    // someone reaches for the key that every other modal in the suite honours.
+    useEffect(() => {
+        if (!isOpen) {
+            return;
+        }
+        const onKeyDown = (e: KeyboardEvent) => {
+            if (e.key === 'Escape') {
+                onClose();
+            }
+        };
+        window.addEventListener('keydown', onKeyDown);
+        return () => window.removeEventListener('keydown', onKeyDown);
+    }, [isOpen, onClose]);
+
     if (!isOpen) {
         return null;
     }
@@ -152,10 +169,18 @@ export const FilterRowsDialog: React.FC<FilterRowsDialogProps> = ({
     const operatorOptions = operators.map((o) => ({ value: o.value, label: o.label }));
 
     return (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+        <div
+            className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50"
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="filter-rows-title"
+        >
             <div className="bg-white dark:bg-gray-800 rounded-lg shadow-xl w-[32rem]">
                 <div className="flex items-center justify-between p-4 border-b border-gray-200 dark:border-gray-700">
-                    <h2 className="text-lg font-semibold text-gray-800 dark:text-gray-200">
+                    <h2
+                        id="filter-rows-title"
+                        className="text-lg font-semibold text-gray-800 dark:text-gray-200"
+                    >
                         Filter Rows
                     </h2>
                     <button
