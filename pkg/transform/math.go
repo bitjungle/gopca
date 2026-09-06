@@ -140,9 +140,14 @@ func valuesOutsideDomain(data [][]string, colIndex int, transformType Type) []in
 func describeOffendingRows(rows []int, transformType Type) string {
 	const maxListed = 5
 
-	what := "negative values"
+	// Singular and plural both occur, and "the non-positive values in row 3"
+	// reads as a mistake rather than a message.
+	what := "negative value"
 	if transformType == Log {
-		what = "non-positive values"
+		what = "non-positive value"
+	}
+	if len(rows) != 1 {
+		what += "s"
 	}
 
 	listed := rows

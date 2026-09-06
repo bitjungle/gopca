@@ -412,3 +412,51 @@ func TestApply_Math_RefusalLeavesOtherColumnsAlone(t *testing.T) {
 		t.Errorf("TransformedColumns = %v, want [Good]", res.TransformedColumns)
 	}
 }
+
+// TestApply_Math_RefusalMessageReadsNaturally covers the singular case.
+//
+// One offending row is as common as several, and "the non-positive values in
+// row 3" reads as a mistake in the software rather than a report about the data.
+func TestApply_Math_RefusalMessageReadsNaturally(t *testing.T) {
+	tests := []struct {
+		name   string
+		values []string
+		want   string
+		reject string
+	}{
+		{
+			name:   "one offending row",
+			values: []string{"1", "0", "3"},
+			want:   "non-positive value in row 2",
+			reject: "values in row",
+		},
+		{
+			name:   "several offending rows",
+			values: []string{"1", "0", "-1"},
+			want:   "non-positive values in rows 2, 3",
+			reject: "value in rows",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			rows := make([][]string, len(tt.values))
+			for i, v := range tt.values {
+				rows[i] = []string{v}
+			}
+			in := makeInput(rows, []string{"X"}, map[string]string{"X": "numeric"})
+
+			res, err := Apply(in, Options{Type: Log, Columns: []string{"X"}})
+			if err != nil {
+				t.Fatalf("Apply: %v", err)
+			}
+			joined := strings.Join(res.Messages, " ")
+			if !strings.Contains(joined, tt.want) {
+				t.Errorf("message should contain %q, got %v", tt.want, res.Messages)
+			}
+			if strings.Contains(joined, tt.reject) {
+				t.Errorf("message should not contain %q, got %v", tt.reject, res.Messages)
+			}
+		})
+	}
+}
