@@ -434,3 +434,89 @@ func TestValidateWarnsOnNonUniqueRowNames(t *testing.T) {
 		})
 	}
 }
+
+// TestValidateReportsConstantColumns covers #867 at the point the user sees it.
+//
+// A constant column contributes nothing to any component. PCA handles it
+// cleanly -- standardization turns it into zeros rather than NaN -- so it is a
+// warning, not an error: the data is analysable, one variable just carries no
+// information, and whether that matters is the user's call.
+func TestValidateReportsConstantColumns(t *testing.T) {
+	tests := []struct {
+		name     string
+		headers  []string
+		data     [][]string
+		wantCols []string
+	}{
+		{
+			name:     "one constant numeric column",
+			headers:  []string{"A", "Fixed", "B"},
+			data:     [][]string{{"1", "7", "2"}, {"3", "7", "4"}, {"5", "7", "6"}},
+			wantCols: []string{"Fixed"},
+		},
+		{
+			name:     "several are named together",
+			headers:  []string{"A", "F1", "F2"},
+			data:     [][]string{{"1", "7", "x"}, {"3", "7", "x"}},
+			wantCols: []string{"F1", "F2"},
+		},
+		{
+			name:    "a varying column is not reported",
+			headers: []string{"A", "B"},
+			data:    [][]string{{"1", "2"}, {"3", "4"}},
+		},
+		{
+			name:     "gaps do not make a column vary",
+			headers:  []string{"A", "Fixed"},
+			data:     [][]string{{"1", "7"}, {"2", ""}, {"3", "7"}},
+			wantCols: []string{"Fixed"},
+		},
+		{
+			name:    "an empty column is empty, not constant",
+			headers: []string{"A", "Blank"},
+			data:    [][]string{{"1", ""}, {"2", ""}},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			types := map[string]string{}
+			for _, h := range tt.headers {
+				types[h] = "numeric"
+			}
+			res := ValidateForGoPCA(ValidationInput{
+				Headers:     tt.headers,
+				Data:        tt.data,
+				ColumnTypes: types,
+				Rows:        len(tt.data),
+				Columns:     len(tt.headers),
+			})
+
+			var warning string
+			for _, m := range res.Messages {
+				if strings.HasPrefix(m, "WARNING:") && strings.Contains(m, "no variation") {
+					warning = m
+				}
+			}
+
+			if len(tt.wantCols) == 0 {
+				if warning != "" {
+					t.Errorf("unexpected warning: %q", warning)
+				}
+				return
+			}
+			if warning == "" {
+				t.Fatalf("expected a constant-column warning, messages were %v", res.Messages)
+			}
+			for _, name := range tt.wantCols {
+				if !strings.Contains(warning, name) {
+					t.Errorf("warning should name %q, got %q", name, warning)
+				}
+			}
+			// Warning, not error: the numbers are still analysable.
+			if !res.IsValid {
+				t.Errorf("a constant column should warn, not invalidate: %v", res.Messages)
+			}
+		})
+	}
+}
