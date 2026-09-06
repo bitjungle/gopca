@@ -91,6 +91,14 @@ func Apply(in Input, opts Options) (*Result, error) {
 		if err := applyOrdinal(data, columnTypes, catCols, &headers, opts, result); err != nil {
 			return nil, err
 		}
+	case Split:
+		if err := applySplit(data, columnTypes, catCols, &headers, opts, result); err != nil {
+			return nil, err
+		}
+	case Combine:
+		if err := applyCombine(data, columnTypes, catCols, &headers, opts, result); err != nil {
+			return nil, err
+		}
 	default:
 		return nil, fmt.Errorf("unsupported transformation type: %s", opts.Type)
 	}
@@ -109,7 +117,8 @@ func Apply(in Input, opts Options) (*Result, error) {
 //
 // Mathematical and scaling transforms (Log, Sqrt, Square, Standardize, MinMax,
 // Bin) require numeric columns. Columns with the "#target" suffix are excluded.
-// OneHot and Ordinal require categorical columns.
+// OneHot and Ordinal require categorical columns. Split and Combine accept any
+// column, being string operations.
 func GetTransformableColumns(in Input, transformType Type) []string {
 	columns := []string{}
 
@@ -125,6 +134,11 @@ func GetTransformableColumns(in Input, transformType Type) []string {
 			if colType == "categorical" {
 				columns = append(columns, header)
 			}
+		case Split, Combine:
+			// Any column. Both are string operations, and a structured
+			// identifier is as likely to be typed numeric as categorical --
+			// "20240115_A" is text, but a plain lot number is not.
+			columns = append(columns, header)
 		}
 	}
 

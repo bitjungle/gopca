@@ -561,6 +561,9 @@ export namespace main {
 	    maxValue?: number;
 	    removeOriginal?: boolean;
 	    categoryOrder?: Record<string, Array<string>>;
+	    delimiter?: string;
+	    separator?: string;
+	    newColumnName?: string;
 	
 	    static createFrom(source: any = {}) {
 	        return new TransformOptions(source);
@@ -575,6 +578,9 @@ export namespace main {
 	        this.maxValue = source["maxValue"];
 	        this.removeOriginal = source["removeOriginal"];
 	        this.categoryOrder = source["categoryOrder"];
+	        this.delimiter = source["delimiter"];
+	        this.separator = source["separator"];
+	        this.newColumnName = source["newColumnName"];
 	    }
 	}
 	export class TransformationResult {
