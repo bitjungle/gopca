@@ -35,6 +35,11 @@
       "text": "Apply data transformations like scaling, normalization, or encoding.",
       "category": "editing"
     },
+    "transpose": {
+      "title": "Transpose",
+      "text": "Swap rows and columns. Use this when your file has samples across the top and variables down the side, which is how many instruments export. PCA needs the opposite. Column types are recalculated afterwards, and any #target marking no longer applies, because a target has to be a column.",
+      "category": "editing"
+    },
     "browse-file": {
       "title": "Browse for File",
       "text": "Select CSV, TSV, or Excel file from your computer.",

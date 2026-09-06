@@ -27,7 +27,7 @@ import { CSVGrid, ValidationResults, MissingValueSummary, MissingValueDialog, Da
 import { ConfirmDialog, ErrorBoundary, ErrorAlert, ThemeProvider, ThemeToggle, HelpProvider, HelpDisplay, HelpWrapper, useHelp } from '@gopca/ui-components';
 import logo from './assets/images/GoCSV-logo-1024-transp.png';
 import helpContent from './help/help-content.json';
-import { LoadCSV, SuggestImportForFailedLoad, SaveCSV, SaveExcel, ValidateForGoPCA, AnalyzeMissingValues, FillMissingValues, AnalyzeDataQuality, CheckGoPCAStatus, OpenInGoPCA, DownloadGoPCA, ExecuteCellEdit, ExecuteHeaderEdit, ClearHistory, GetVersion } from '../wailsjs/go/main/App';
+import { LoadCSV, SuggestImportForFailedLoad, SaveCSV, SaveExcel, ValidateForGoPCA, AnalyzeMissingValues, FillMissingValues, AnalyzeDataQuality, CheckGoPCAStatus, OpenInGoPCA, DownloadGoPCA, ExecuteCellEdit, ExecuteHeaderEdit, ExecuteTranspose, TransposeWarnings, ClearHistory, GetVersion } from '../wailsjs/go/main/App';
 import { EventsOn, OnFileDrop, OnFileDropOff } from '../wailsjs/runtime/runtime';
 import { main, dataquality } from '../wailsjs/go/models';
 
@@ -57,6 +57,10 @@ function AppContent() {
     const [showTransformDialog, setShowTransformDialog] = useState(false);
     const [showDocumentation, setShowDocumentation] = useState(false);
     const [showAboutDialog, setShowAboutDialog] = useState(false);
+    // Transposition rewrites the whole dataset, so it asks first and shows what
+    // the change will cost -- lost #target markings, suffixed duplicate names,
+    // the new shape.
+    const [transposeConfirm, setTransposeConfirm] = useState<string[] | null>(null);
     const [showDownloadConfirm, setShowDownloadConfirm] = useState(false);
     const [showLoadFromUrl, setShowLoadFromUrl] = useState(false);
     const [version, setVersion] = useState<string>('');
@@ -574,6 +578,29 @@ return;
                                             </span>
                                         </button>
                                     </HelpWrapper>
+                                    <HelpWrapper helpKey="transpose">
+                                        <button
+                                            onClick={async () => {
+                                                if (!fileData) {
+                                                    return;
+                                                }
+                                                try {
+                                                    setTransposeConfirm(await TransposeWarnings(fileData));
+                                                } catch (error) {
+                                                    console.error('Error preparing transpose:', error);
+                                                }
+                                            }}
+                                            className="px-3 py-1.5 text-sm bg-white dark:bg-gray-600 text-gray-700 dark:text-gray-300 rounded hover:bg-gray-100 dark:hover:bg-gray-500 transition-colors border border-gray-300 dark:border-gray-500"
+                                        >
+                                            <span className="flex items-center gap-2">
+                                                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 4h6v6H4V4zm0 10h6v6H4v-6zm10-10h6v6h-6V4z" />
+                                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M14 14l6 6m0-6l-6 6" />
+                                                </svg>
+                                                Transpose
+                                            </span>
+                                        </button>
+                                    </HelpWrapper>
                                     <HelpWrapper helpKey="transform-data">
                                         <button
                                             onClick={() => setShowTransformDialog(true)}
@@ -806,6 +833,29 @@ return;
                 isOpen={showAboutDialog}
                 onClose={() => setShowAboutDialog(false)}
                 version={version}
+            />
+
+            {/* Transpose confirmation, carrying what the change will cost */}
+            <ConfirmDialog
+                isOpen={transposeConfirm !== null}
+                onClose={() => setTransposeConfirm(null)}
+                onConfirm={async () => {
+                    setTransposeConfirm(null);
+                    if (!fileData) {
+                        return;
+                    }
+                    try {
+                        const updated = await ExecuteTranspose(fileData);
+                        setFileData(updated);
+                        setValidationResult(null);
+                    } catch (error) {
+                        console.error('Error transposing:', error);
+                    }
+                }}
+                title="Transpose rows and columns"
+                message={(transposeConfirm || []).join('\n\n')}
+                confirmText="Transpose"
+                cancelText="Cancel"
             />
 
             {/* Download GoPCA Confirmation */}

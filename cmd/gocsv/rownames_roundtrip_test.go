@@ -177,3 +177,39 @@ func TestExtractRowNameColumn(t *testing.T) {
 		t.Errorf("negative index changed the data: %v", out)
 	}
 }
+
+// TestExtractRowNameColumnFirstRowShorter covers a column that exists in the
+// data but not in the first row.
+//
+// excelize's GetRows trims trailing empty cells per row, so a sheet whose first
+// data row happens to end early is narrower than the ones below it. Testing the
+// column number against data[0] alone would silently ignore a row-name column
+// that is genuinely present, doing nothing and reporting nothing.
+func TestExtractRowNameColumnFirstRowShorter(t *testing.T) {
+	fileData := &FileData{Headers: []string{"A", "B", "C"}}
+	data := [][]string{
+		{"1", "2"},       // short: no third cell
+		{"3", "4", "P2"}, // the row-name column lives here
+		{"5", "6", "P3"},
+	}
+
+	got := extractRowNameColumn(fileData, data, 2)
+
+	if len(fileData.RowNames) != 3 {
+		t.Fatalf("expected 3 row names, got %v -- the column was ignored because "+
+			"the first row is shorter than the rest", fileData.RowNames)
+	}
+	if fileData.RowNames[0] != "" || fileData.RowNames[1] != "P2" {
+		t.Errorf("row names = %q, want [\"\" P2 P3]", fileData.RowNames)
+	}
+	if fileData.RowNamesHeader != "C" {
+		t.Errorf("RowNamesHeader = %q, want C", fileData.RowNamesHeader)
+	}
+	if strings.Join(fileData.Headers, ",") != "A,B" {
+		t.Errorf("headers = %v, want [A B]", fileData.Headers)
+	}
+	// The short row must not have a cell removed it never had.
+	if strings.Join(got[0], ",") != "1,2" {
+		t.Errorf("short row = %v, want [1 2]", got[0])
+	}
+}

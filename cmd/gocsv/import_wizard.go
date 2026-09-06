@@ -660,7 +660,11 @@ func (a *App) SelectFileForImport() (string, error) {
 // headers than data columns -- and indexing the headers by a column number
 // validated against the data then panics.
 func extractRowNameColumn(fileData *FileData, data [][]string, rowNameColumn int) [][]string {
-	if fileData == nil || rowNameColumn < 0 || len(data) == 0 || rowNameColumn >= len(data[0]) {
+	// The column has to exist in *some* row, not specifically the first.
+	// excelize's GetRows trims trailing empty cells per row, so on a ragged
+	// sheet the first row can be shorter than later ones -- and testing only
+	// data[0] would silently ignore a row-name column that is genuinely there.
+	if fileData == nil || rowNameColumn < 0 || len(data) == 0 || rowNameColumn >= widestRow(data) {
 		return data
 	}
 
@@ -685,4 +689,15 @@ func extractRowNameColumn(fileData *FileData, data [][]string, rowNameColumn int
 		}
 	}
 	return data
+}
+
+// widestRow returns the length of the longest row.
+func widestRow(data [][]string) int {
+	widest := 0
+	for _, row := range data {
+		if len(row) > widest {
+			widest = len(row)
+		}
+	}
+	return widest
 }

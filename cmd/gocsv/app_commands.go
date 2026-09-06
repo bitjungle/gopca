@@ -185,6 +185,15 @@ func (a *App) ExecuteMoveRowNamesIntoTable(data *FileData) (*FileData, error) {
 	return a.executeCommand(cmd, data, "move row names into table")
 }
 
+// ExecuteTranspose exchanges rows and columns, with undo support.
+func (a *App) ExecuteTranspose(data *FileData) (*FileData, error) {
+	cmd, err := NewTransposeCommand(a, data)
+	if err != nil {
+		return nil, fmt.Errorf("transpose: %w", err)
+	}
+	return a.executeCommand(cmd, data, "transpose")
+}
+
 // ExecuteDuplicateRows duplicates selected rows with undo support
 func (a *App) ExecuteDuplicateRows(data *FileData, rowIndices []int) (*FileData, error) {
 	if len(rowIndices) == 0 {

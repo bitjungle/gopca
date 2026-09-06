@@ -82,6 +82,10 @@ export function ExecuteToggleTargetColumn(arg1, arg2) {
   return window['go']['main']['App']['ExecuteToggleTargetColumn'](arg1, arg2);
 }
 
+export function ExecuteTranspose(arg1) {
+  return window['go']['main']['App']['ExecuteTranspose'](arg1);
+}
+
 export function FillMissingValues(arg1, arg2) {
   return window['go']['main']['App']['FillMissingValues'](arg1, arg2);
 }
@@ -152,6 +156,10 @@ export function SuggestCategoryOrder(arg1, arg2) {
 
 export function SuggestImportForFailedLoad() {
   return window['go']['main']['App']['SuggestImportForFailedLoad']();
+}
+
+export function TransposeWarnings(arg1) {
+  return window['go']['main']['App']['TransposeWarnings'](arg1);
 }
 
 export function Undo(arg1) {
