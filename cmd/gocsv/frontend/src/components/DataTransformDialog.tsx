@@ -556,6 +556,12 @@ export const DataTransformDialog: React.FC<DataTransformDialogProps> = ({
                                             with fewer parts leaves its later columns empty rather than
                                             shifting values across.
                                         </p>
+                                        <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
+                                            Not seeing the ID you want to split? The first column is
+                                            loaded as row names, so it is not in this list. Right-click
+                                            any column header and choose “Move Row Names into Table” to
+                                            bring it back.
+                                        </p>
                                     </div>
                                 )}
                                 {selectedTransform === 'combine' && (

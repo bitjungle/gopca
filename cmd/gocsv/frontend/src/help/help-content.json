@@ -42,7 +42,7 @@
     },
     "split-column": {
       "title": "Split Column",
-      "text": "Divide a column on a delimiter into several. Useful when a grouping is buried in a sample ID \u2014 splitting B3_S12_r1 on _ gives you the batch as its own column, which is what PCR's grouped cross-validation needs.",
+      "text": "Divide a column on a delimiter into several. Useful when a grouping is buried in a sample ID \u2014 splitting B3_S12_r1 on _ gives you the batch as its own column, which is what PCR's grouped cross-validation needs. If the ID you want to split is the row-name column, right-click any header and choose Move Row Names into Table first, so it becomes a column you can select.",
       "category": "editing"
     },
     "combine-columns": {
