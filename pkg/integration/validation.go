@@ -160,6 +160,26 @@ func ValidateForGoPCA(in ValidationInput) *ValidationResult {
 		messages = append(messages, fmt.Sprintf("INFO: Large dataset detected (%d rows) - processing may take time", in.Rows))
 	}
 
+	// Constant columns.
+	//
+	// A column whose every value is identical contributes nothing to any
+	// component. It is not an error -- PCA handles it cleanly, scaling it to
+	// zeros rather than producing NaN -- but it is silent dead weight: it
+	// inflates the variable count and sits at the origin of every loadings
+	// plot, where a reader may take its position as meaningful rather than as
+	// an artefact of having no variance at all (#867).
+	//
+	// Reported, never removed. Whether it matters is the user's judgement.
+	if constant := constantColumns(in); len(constant) > 0 {
+		noun, verb := "Column", "has"
+		if len(constant) > 1 {
+			noun, verb = "Columns", "have"
+		}
+		messages = append(messages, fmt.Sprintf(
+			"WARNING: %s %s %s no variation and will contribute nothing to any component",
+			noun, strings.Join(constant, ", "), verb))
+	}
+
 	// Row names present.
 	if len(in.RowNames) > 0 {
 		messages = append(messages, "INFO: Row names detected in first column")
@@ -224,4 +244,53 @@ func countRowNameProblems(rowNames []string) (duplicates, blanks int) {
 		}
 	}
 	return duplicates, blanks
+}
+
+// constantColumns returns the names of columns whose every present value is
+// identical, in the order the columns appear.
+//
+// Comparison is on the trimmed string rather than a parsed number, so it works
+// for categorical and numeric columns alike and needs no tolerance: "1.0" and
+// "1.00" are different strings but would be the same number, and reporting a
+// column that merely looks constant is worse than staying quiet. Blanks are
+// skipped -- a column of one value and some gaps is still constant in the sense
+// that matters, since the gaps carry no variation either.
+func constantColumns(in ValidationInput) []string {
+	var constant []string
+
+	for colIndex, header := range in.Headers {
+		seen := ""
+		found := false
+		varies := false
+
+		for _, row := range in.Data {
+			if colIndex >= len(row) {
+				continue
+			}
+			value := strings.TrimSpace(row[colIndex])
+			// Use this file's own notion of missing, not just the empty
+			// string. ValidateForGoPCA already treats NA, null, NaN and the
+			// rest as missing, so a column of nothing but those is empty --
+			// and calling it "constant" would report the wrong thing about it.
+			if missingValueTokens[value] {
+				continue
+			}
+			if !found {
+				seen, found = value, true
+				continue
+			}
+			if value != seen {
+				varies = true
+				break
+			}
+		}
+
+		// A column with nothing in it is empty, not constant; the missing-data
+		// checks above already cover that case.
+		if found && !varies {
+			constant = append(constant, header)
+		}
+	}
+
+	return constant
 }
