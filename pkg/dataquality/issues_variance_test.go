@@ -256,3 +256,30 @@ func TestQualityScoreAccountsForConstantColumns(t *testing.T) {
 			100-sparse)
 	}
 }
+
+// TestColumnQualityScoreIsScaleFree covers the second copy of the defect.
+//
+// The absolute StdDev < 0.01 test existed twice: in the issues list and in the
+// per-column quality score. Fixing only the first would have left the report
+// disagreeing with itself — the same column called degenerate by its score and
+// ordinary by the issues list, depending on nothing but the unit it happened to
+// be recorded in.
+func TestColumnQualityScoreIsScaleFree(t *testing.T) {
+	inKilometres := numericCol("Distance_km", 2.0, 0.005, 1.99, 2.01, 100)
+	inMetres := numericCol("Distance_m", 2000.0, 5.0, 1990, 2010, 100)
+
+	km := calculateColumnQualityScore(inKilometres)
+	m := calculateColumnQualityScore(inMetres)
+
+	if km != m {
+		t.Errorf("the same data in different units scored %.1f and %.1f", km, m)
+	}
+	if km != 100 {
+		t.Errorf("real variation scored %.1f, want 100 -- 5 m in 2 km is 0.25%%", km)
+	}
+
+	// A genuinely constant column must still lose points.
+	if got := calculateColumnQualityScore(numericCol("Fixed", 7, 0, 7, 7, 100)); got >= 100 {
+		t.Errorf("a constant column scored %.1f, want a deduction", got)
+	}
+}

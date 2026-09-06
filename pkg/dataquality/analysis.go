@@ -447,8 +447,21 @@ func calculateColumnQualityScore(analysis ColumnAnalysis) float64 {
 		score -= outlierPct * 0.3
 	}
 
-	if analysis.Type == "numeric" && analysis.Stats.StdDev != nil && *analysis.Stats.StdDev < 0.01 {
-		score -= 10.0
+	// Low variation, judged the same way the issues list judges it.
+	//
+	// This was a second copy of the absolute StdDev < 0.01 test, and fixing
+	// only the issues list would have left the report disagreeing with itself:
+	// the same column called degenerate by its score and ordinary by the issue
+	// list, or the reverse, depending on the unit it happened to be recorded
+	// in. Both now use isConstantColumn and the coefficient of variation.
+	if isConstantColumn(analysis) {
+		score -= 15.0
+	} else if analysis.Type == "numeric" && analysis.Stats.StdDev != nil && analysis.Stats.Mean != nil {
+		mean := math.Abs(*analysis.Stats.Mean)
+		if mean > 0 && !math.IsNaN(mean) && !math.IsInf(mean, 0) &&
+			*analysis.Stats.StdDev/mean < nearConstantCV {
+			score -= 10.0
+		}
 	}
 
 	if score < 0 {

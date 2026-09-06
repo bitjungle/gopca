@@ -268,7 +268,11 @@ func constantColumns(in ValidationInput) []string {
 				continue
 			}
 			value := strings.TrimSpace(row[colIndex])
-			if value == "" {
+			// Use this file's own notion of missing, not just the empty
+			// string. ValidateForGoPCA already treats NA, null, NaN and the
+			// rest as missing, so a column of nothing but those is empty --
+			// and calling it "constant" would report the wrong thing about it.
+			if missingValueTokens[value] {
 				continue
 			}
 			if !found {

@@ -520,3 +520,40 @@ func TestValidateReportsConstantColumns(t *testing.T) {
 		})
 	}
 }
+
+// TestConstantColumnsUsesTheFileMissingTokens covers a column that is empty
+// rather than constant.
+//
+// ValidateForGoPCA already treats NA, null, NaN and the rest as missing. A
+// column of nothing but those is empty, and reporting it as "constant" would
+// state the wrong thing about it — the missing-data checks are what should
+// speak up, not the variance one.
+func TestConstantColumnsUsesTheFileMissingTokens(t *testing.T) {
+	res := ValidateForGoPCA(ValidationInput{
+		Headers: []string{"A", "AllMissing", "Fixed"},
+		// The same token throughout, deliberately. Three *different* missing
+		// tokens would make the column look varying under either rule, so the
+		// test would pass whether or not the tokens are recognised as missing
+		// -- it would assert nothing.
+		Data:        [][]string{{"1", "NA", "7"}, {"2", "NA", "7"}, {"3", "NA", "7"}},
+		ColumnTypes: map[string]string{"A": "numeric", "AllMissing": "numeric", "Fixed": "numeric"},
+		Rows:        3,
+		Columns:     3,
+	})
+
+	var warning string
+	for _, m := range res.Messages {
+		if strings.Contains(m, "no variation") {
+			warning = m
+		}
+	}
+	if warning == "" {
+		t.Fatalf("expected the constant column to be reported, got %v", res.Messages)
+	}
+	if strings.Contains(warning, "AllMissing") {
+		t.Errorf("a column of missing tokens is empty, not constant: %q", warning)
+	}
+	if !strings.Contains(warning, "Fixed") {
+		t.Errorf("the genuinely constant column should still be named: %q", warning)
+	}
+}
