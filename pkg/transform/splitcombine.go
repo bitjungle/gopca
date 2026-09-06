@@ -142,6 +142,21 @@ func applyCombine(data [][]string, columnTypes map[string]string, catCols map[st
 		return fmt.Errorf("combining needs at least two columns, got %d", len(opts.Columns))
 	}
 
+	// A repeated column is refused rather than quietly de-duplicated.
+	//
+	// Joining a column to itself produces nothing a user wants, and with
+	// RemoveOriginal it destroys data: the same index is removed twice, and the
+	// second removal takes whichever column has shifted into its place. Asking
+	// for ["A", "A"] used to delete both A and its neighbour.
+	seen := make(map[string]bool, len(opts.Columns))
+	for _, colName := range opts.Columns {
+		if seen[colName] {
+			return fmt.Errorf("column %q is listed more than once; each column can "+
+				"appear in a combination only once", colName)
+		}
+		seen[colName] = true
+	}
+
 	indices := make([]int, 0, len(opts.Columns))
 	for _, colName := range opts.Columns {
 		colIndex := findColumn(*headers, colName)

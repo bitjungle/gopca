@@ -363,15 +363,60 @@ func TestApply_Combine_RemoveOriginal(t *testing.T) {
 	}
 }
 
+// TestApply_Combine_RejectsDuplicateColumns guards against silent data loss.
+//
+// Joining a column to itself produces nothing a user wants, and with
+// RemoveOriginal it destroyed data: the same index was removed twice, and the
+// second removal took whichever column had shifted into its place. Asking for
+// ["A", "A"] deleted both A and its neighbour, leaving headers [C A_A] from
+// [A B C] with no indication anything had gone.
+func TestApply_Combine_RejectsDuplicateColumns(t *testing.T) {
+	in := Input{
+		Data:        [][]string{{"a", "b", "c"}, {"d", "e", "f"}},
+		Headers:     []string{"A", "B", "C"},
+		ColumnTypes: map[string]string{"A": "categorical", "B": "categorical", "C": "categorical"},
+		Rows:        2,
+		Columns:     3,
+	}
+
+	_, err := Apply(in, Options{
+		Type: Combine, Columns: []string{"A", "A"}, Separator: "_", RemoveOriginal: true})
+	if err == nil {
+		t.Fatal("combining a column with itself was accepted; with RemoveOriginal this " +
+			"deletes a second, unrelated column")
+	}
+	if !strings.Contains(err.Error(), "more than once") {
+		t.Errorf("the error should say what is wrong, got %v", err)
+	}
+
+	// The input must be untouched by the refusal.
+	if len(in.Headers) != 3 || in.Data[0][1] != "b" {
+		t.Errorf("a refused combination modified the input: %v / %v", in.Headers, in.Data)
+	}
+}
+
+// TestGetTransformableColumns_SplitCombine checks which columns are offered.
+//
+// Targets are excluded for the same reason the numeric transforms exclude them:
+// "#target" marks a column as reference information rather than a measurement,
+// and restructuring one silently breaks that role -- with RemoveOriginal it
+// would delete the target outright.
 func TestGetTransformableColumns_SplitCombine(t *testing.T) {
 	in := Input{
-		Headers:     []string{"Cat", "Num"},
-		ColumnTypes: map[string]string{"Cat": "categorical", "Num": "numeric"},
+		Headers: []string{"Cat", "Num", "Yield#target"},
+		ColumnTypes: map[string]string{
+			"Cat": "categorical", "Num": "numeric", "Yield#target": "numeric",
+		},
 	}
 	for _, transformType := range []Type{Split, Combine} {
 		got := GetTransformableColumns(in, transformType)
 		if len(got) != 2 {
-			t.Errorf("%s should accept any column, got %v", transformType, got)
+			t.Errorf("%s offered %v, want the two non-target columns", transformType, got)
+		}
+		for _, name := range got {
+			if strings.HasSuffix(name, "#target") {
+				t.Errorf("%s offered the target column %q", transformType, name)
+			}
 		}
 	}
 }

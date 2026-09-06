@@ -135,10 +135,18 @@ func GetTransformableColumns(in Input, transformType Type) []string {
 				columns = append(columns, header)
 			}
 		case Split, Combine:
-			// Any column. Both are string operations, and a structured
-			// identifier is as likely to be typed numeric as categorical --
-			// "20240115_A" is text, but a plain lot number is not.
-			columns = append(columns, header)
+			// Any column except a target. Both are string operations, and a
+			// structured identifier is as likely to be typed numeric as
+			// categorical -- "20240115_A" is text, but a plain lot number is
+			// not -- so neither type is excluded.
+			//
+			// Targets are, for the same reason the numeric transforms exclude
+			// them: "#target" marks a column as reference information rather
+			// than a measurement, and restructuring one silently breaks that
+			// role. With RemoveOriginal it would delete the target outright.
+			if !strings.HasSuffix(header, "#target") {
+				columns = append(columns, header)
+			}
 		}
 	}
 
