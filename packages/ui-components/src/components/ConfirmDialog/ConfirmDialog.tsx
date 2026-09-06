@@ -22,7 +22,7 @@
 // See LICENSE for the full license terms.
 
 import React, { useEffect, useCallback, useRef } from 'react';
-import { useFocusManagement, useFocusRestore } from '../../hooks/useFocusManagement';
+import { useFocusManagement } from '../../hooks/useFocusManagement';
 
 export interface ConfirmDialogProps {
   isOpen: boolean;
@@ -75,25 +75,41 @@ return;
     };
   }, [handleKeyDown]);
 
-  if (!isOpen) {
-return null;
-}
-
-  // Trap focus inside the dialog while it is open, and restore it on close.
+  // Trap focus inside the dialog while it is open, and hand it back on close.
   // Without this a keyboard user can Tab straight out of the dialog into the
   // page behind it, which is the same gap #874 covers for GoCSV's dialogs.
+  //
+  // These hooks run on every render, above the early return. Placing them after
+  // it violates the Rules of Hooks and throws "Rendered fewer hooks than
+  // expected" the moment isOpen toggles; the effect is guarded on isOpen
+  // instead.
   const panelRef = useRef<HTMLDivElement>(null);
   const { trapFocus, focusFirst } = useFocusManagement();
-  useFocusRestore();
+  const restoreTo = useRef<HTMLElement | null>(null);
 
   useEffect(() => {
-    if (!isOpen || !panelRef.current) {
+    if (!isOpen) {
       return;
     }
-    focusFirst(panelRef.current);
-    const release = trapFocus(panelRef.current);
-    return release;
+    // Remembered here rather than with useFocusRestore, which saves on mount
+    // and restores on unmount. This component stays mounted while isOpen
+    // toggles, so that hook would never restore anything.
+    restoreTo.current = document.activeElement as HTMLElement | null;
+    const panel = panelRef.current;
+    if (!panel) {
+      return;
+    }
+    focusFirst(panel);
+    const release = trapFocus(panel);
+    return () => {
+      release();
+      restoreTo.current?.focus?.();
+    };
   }, [isOpen, trapFocus, focusFirst]);
+
+  if (!isOpen) {
+    return null;
+  }
 
   const defaultConfirmClass = destructive
     ? 'bg-red-600 hover:bg-red-700 text-white'

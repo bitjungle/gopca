@@ -22,7 +22,7 @@
 // See LICENSE for the full license terms.
 
 import React, { useEffect, useRef } from 'react';
-import { useFocusManagement, useFocusRestore } from '../../hooks/useFocusManagement';
+import { useFocusManagement } from '../../hooks/useFocusManagement';
 import { useEscapeKey } from '../../hooks/useKeyboardShortcuts';
 
 export interface DialogProps {
@@ -70,9 +70,7 @@ export const Dialog: React.FC<DialogProps> = ({
 }) => {
     const dialogRef = useRef<HTMLDivElement>(null);
     const { trapFocus, focusFirst } = useFocusManagement();
-
-    // Save and restore focus when dialog opens/closes
-    useFocusRestore();
+    const restoreTo = useRef<HTMLElement | null>(null);
 
     // Handle Escape key
     useEscapeKey(() => {
@@ -83,6 +81,16 @@ onClose();
 
     useEffect(() => {
         if (isOpen && dialogRef.current) {
+            // Remember what had focus so it can be handed back on close.
+            //
+            // Done here rather than with useFocusRestore, which saves on mount
+            // and restores on unmount. A Dialog usually stays mounted and only
+            // toggles isOpen -- it returns null when closed -- so that hook
+            // would save whatever happened to be focused at mount and restore
+            // it only when the whole component went away. In the common usage
+            // it restored nothing at all.
+            restoreTo.current = document.activeElement as HTMLElement | null;
+
             // Focus the dialog and trap focus within it
             focusFirst(dialogRef.current);
             const cleanup = trapFocus(dialogRef.current);
@@ -93,6 +101,7 @@ onClose();
             return () => {
                 cleanup();
                 document.body.style.overflow = 'unset';
+                restoreTo.current?.focus?.();
             };
         }
     }, [isOpen, trapFocus, focusFirst]);
