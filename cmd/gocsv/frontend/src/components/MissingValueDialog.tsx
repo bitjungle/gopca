@@ -22,7 +22,7 @@
 // See LICENSE for the full license terms.
 
 import React, { useState } from 'react';
-import { CustomSelect } from '@gopca/ui-components';
+import { CustomSelect, Dialog } from '@gopca/ui-components';
 
 interface MissingValueDialogProps {
     isOpen: boolean;
@@ -43,9 +43,8 @@ export const MissingValueDialog: React.FC<MissingValueDialogProps> = ({
     const [selectedColumn, setSelectedColumn] = useState('');
     const [customValue, setCustomValue] = useState('');
 
-    if (!isOpen) {
-return null;
-}
+    // Dialog owns the isOpen check; unmounting from here would skip its
+    // focus-restore cleanup.
 
     const handleFill = () => {
         onFill(strategy, selectedColumn, strategy === 'custom' ? customValue : undefined);
@@ -69,10 +68,18 @@ return null;
     const strategies = getAvailableStrategies();
 
     return (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-            <div className="bg-white dark:bg-gray-800 rounded-lg shadow-xl w-96">
+        <Dialog
+            isOpen={isOpen}
+            onClose={onClose}
+            width="w-96"
+            padded={false}
+            ariaLabelledBy="missing-value-title"
+        >
                 <div className="flex items-center justify-between p-4 border-b border-gray-200 dark:border-gray-700">
-                    <h2 className="text-lg font-semibold text-gray-800 dark:text-gray-200">
+                    <h2
+                        id="missing-value-title"
+                        className="text-lg font-semibold text-gray-800 dark:text-gray-200"
+                    >
                         Fill Missing Values
                     </h2>
                     <button
@@ -174,7 +181,6 @@ return null;
                         Fill Values
                     </button>
                 </div>
-            </div>
-        </div>
+        </Dialog>
     );
 };

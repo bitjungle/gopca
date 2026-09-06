@@ -21,6 +21,7 @@
 //
 // See LICENSE for the full license terms.
 
+import { Dialog } from '@gopca/ui-components';
 import React, { useState, useEffect } from 'react';
 import { ApplyTransformation, GetTransformableColumns, SuggestCategoryOrder } from '../../wailsjs/go/main/App';
 import { main } from '../../wailsjs/go/models';
@@ -302,27 +303,27 @@ export const DataTransformDialog: React.FC<DataTransformDialogProps> = ({
         setSelectedColumns([]);
     };
 
-    if (!isOpen) {
-return null;
-}
+    // Dialog owns the isOpen check; unmounting from here would skip its
+    // focus-restore cleanup.
 
     const currentTransform = transformations.find(t => t.type === selectedTransform);
 
     return (
-        <div className="fixed inset-0 z-50 overflow-y-auto">
-            <div className="flex items-center justify-center min-h-screen px-4 pt-4 pb-20 text-center sm:block sm:p-0">
-                {/* Background overlay */}
-                <div
-                    className="fixed inset-0 transition-opacity bg-gray-500 bg-opacity-75 dark:bg-gray-900 dark:bg-opacity-75"
-                    onClick={onClose}
-                />
-
-                {/* Modal panel */}
-                <div className="inline-block w-full max-w-2xl my-8 text-left align-middle transition-all transform bg-white dark:bg-gray-800 shadow-xl rounded-lg">
+        <Dialog
+            isOpen={isOpen}
+            onClose={onClose}
+            width="w-full max-w-2xl"
+            padded={false}
+            ariaLabelledBy="data-transform-title"
+            className="max-h-[90vh] overflow-y-auto text-left"
+        >
                     {/* Header */}
                     <div className="px-6 py-4 border-b border-gray-200 dark:border-gray-700">
                         <div className="flex items-center justify-between">
-                            <h2 className="text-lg font-semibold text-gray-900 dark:text-white">
+                            <h2
+                                id="data-transform-title"
+                                className="text-lg font-semibold text-gray-900 dark:text-white"
+                            >
                                 Data Transformations
                             </h2>
                             <button
@@ -602,8 +603,6 @@ return null;
                             )}
                         </div>
                     </div>
-                </div>
-            </div>
-        </div>
+        </Dialog>
     );
 };

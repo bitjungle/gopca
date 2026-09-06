@@ -21,7 +21,8 @@
 //
 // See LICENSE for the full license terms.
 
-import React, { useState } from 'react';
+import { Dialog } from '@gopca/ui-components';
+import React, { useState, useEffect } from 'react';
 import { dataquality } from '../../wailsjs/go/models';
 import { PlotlyDistributionChart } from './PlotlyDistributionChart';
 // import { CorrelationMatrix } from './CorrelationMatrix'; // Removed: unused import
@@ -309,11 +310,20 @@ export const DataQualityDashboard: React.FC<DataQualityDashboardProps> = ({ repo
     );
 
     return (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-            <div className="bg-white dark:bg-gray-800 rounded-lg shadow-xl w-full max-w-6xl max-h-[90vh] overflow-hidden">
+        <Dialog
+            isOpen={isOpen}
+            onClose={onClose}
+            width="w-full max-w-6xl"
+            padded={false}
+            ariaLabelledBy="data-quality-title"
+            className="max-h-[90vh] overflow-hidden"
+        >
                 {/* Header */}
                 <div className="flex items-center justify-between p-6 border-b border-gray-200 dark:border-gray-700">
-                    <h2 className="text-2xl font-semibold text-gray-800 dark:text-gray-200">
+                    <h2
+                        id="data-quality-title"
+                        className="text-2xl font-semibold text-gray-800 dark:text-gray-200"
+                    >
                         Data Quality Report
                     </h2>
                     <button
@@ -362,8 +372,7 @@ export const DataQualityDashboard: React.FC<DataQualityDashboardProps> = ({ repo
                     {selectedTab === 'issues' && renderIssuesTab()}
                     {selectedTab === 'recommendations' && renderRecommendationsTab()}
                 </div>
-            </div>
-        </div>
+        </Dialog>
     );
 };
 
@@ -373,12 +382,41 @@ interface ColumnDetailsModalProps {
     onClose: () => void;
 }
 
+// Deliberately not migrated to the shared Dialog (#874).
+//
+// This modal opens on top of the dashboard, which is itself a Dialog, and the
+// shared component cannot stack: its wrapper is fixed at z-50 with no way to
+// raise it, and trapFocus would fight itself. The outer trap collects its
+// focusable elements from the whole panel subtree, which contains this modal,
+// so tabbing to the outer dialog's last control would pull focus out of this
+// one. Stacking support belongs in Dialog before this can move.
+//
+// It still gets the parts that do not depend on stacking: the ARIA attributes
+// that make a screen reader announce it as modal, and Escape to close.
 const ColumnDetailsModal: React.FC<ColumnDetailsModalProps> = ({ column, onClose }) => {
+    useEffect(() => {
+        const onKeyDown = (e: KeyboardEvent) => {
+            if (e.key === 'Escape') {
+                onClose();
+            }
+        };
+        window.addEventListener('keydown', onKeyDown);
+        return () => window.removeEventListener('keydown', onKeyDown);
+    }, [onClose]);
+
     return (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-60">
+        <div
+            className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-60"
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="column-details-title"
+        >
             <div className="bg-white dark:bg-gray-800 rounded-lg shadow-xl w-full max-w-4xl max-h-[80vh] overflow-hidden">
                 <div className="flex items-center justify-between p-4 border-b border-gray-200 dark:border-gray-700">
-                    <h3 className="text-lg font-semibold text-gray-800 dark:text-gray-200">
+                    <h3
+                        id="column-details-title"
+                        className="text-lg font-semibold text-gray-800 dark:text-gray-200"
+                    >
                         Column Details: {column.name}
                     </h3>
                     <button

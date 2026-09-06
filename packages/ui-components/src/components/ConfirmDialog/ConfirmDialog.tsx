@@ -21,7 +21,8 @@
 //
 // See LICENSE for the full license terms.
 
-import React, { useEffect, useCallback } from 'react';
+import React, { useEffect, useCallback, useRef } from 'react';
+import { useFocusManagement } from '../../hooks/useFocusManagement';
 
 export interface ConfirmDialogProps {
   isOpen: boolean;
@@ -74,9 +75,41 @@ return;
     };
   }, [handleKeyDown]);
 
+  // Trap focus inside the dialog while it is open, and hand it back on close.
+  // Without this a keyboard user can Tab straight out of the dialog into the
+  // page behind it, which is the same gap #874 covers for GoCSV's dialogs.
+  //
+  // These hooks run on every render, above the early return. Placing them after
+  // it violates the Rules of Hooks and throws "Rendered fewer hooks than
+  // expected" the moment isOpen toggles; the effect is guarded on isOpen
+  // instead.
+  const panelRef = useRef<HTMLDivElement>(null);
+  const { trapFocus, focusFirst } = useFocusManagement();
+  const restoreTo = useRef<HTMLElement | null>(null);
+
+  useEffect(() => {
+    if (!isOpen) {
+      return;
+    }
+    // Remembered here rather than with useFocusRestore, which saves on mount
+    // and restores on unmount. This component stays mounted while isOpen
+    // toggles, so that hook would never restore anything.
+    restoreTo.current = document.activeElement as HTMLElement | null;
+    const panel = panelRef.current;
+    if (!panel) {
+      return;
+    }
+    focusFirst(panel);
+    const release = trapFocus(panel);
+    return () => {
+      release();
+      restoreTo.current?.focus?.();
+    };
+  }, [isOpen, trapFocus, focusFirst]);
+
   if (!isOpen) {
-return null;
-}
+    return null;
+  }
 
   const defaultConfirmClass = destructive
     ? 'bg-red-600 hover:bg-red-700 text-white'
@@ -92,7 +125,10 @@ return null;
         aria-hidden="true"
       />
 
-      <div className={containerClassName || 'relative bg-white dark:bg-gray-800 rounded-lg shadow-xl p-6 w-96 max-w-[90vw]'}>
+      <div
+        ref={panelRef}
+        className={containerClassName || 'relative bg-white dark:bg-gray-800 rounded-lg shadow-xl p-6 w-96 max-w-[90vw]'}
+      >
         <h3 className="text-lg font-semibold mb-4 text-gray-900 dark:text-gray-100">
           {title}
         </h3>

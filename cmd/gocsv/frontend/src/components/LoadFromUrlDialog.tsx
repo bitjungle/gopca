@@ -21,6 +21,7 @@
 //
 // See LICENSE for the full license terms.
 
+import { Dialog } from '@gopca/ui-components';
 import React, { useState, useRef, useCallback } from 'react';
 import {
     PeekRemoteURL,
@@ -197,12 +198,20 @@ setPeekResult({
     if (!isOpen) return null;
 
     return (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-            <div className="bg-white dark:bg-gray-800 rounded-lg shadow-xl w-full max-w-lg mx-4">
+        <Dialog
+            isOpen={isOpen}
+            onClose={onClose}
+            width="w-full max-w-lg mx-4"
+            padded={false}
+            ariaLabelledBy="load-url-title"
+        >
 
                 {/* Header */}
                 <div className="flex items-center justify-between p-4 border-b border-gray-200 dark:border-gray-700">
-                    <h2 className="text-lg font-semibold text-gray-900 dark:text-white">
+                    <h2
+                        id="load-url-title"
+                        className="text-lg font-semibold text-gray-900 dark:text-white"
+                    >
                         Load from URL
                     </h2>
                     <button
@@ -386,7 +395,6 @@ setPeekResult({
                     )}
                 </div>
 
-            </div>
-        </div>
+        </Dialog>
     );
 };
