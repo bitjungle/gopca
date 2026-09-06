@@ -40,6 +40,16 @@
       "text": "Apply data transformations like scaling, normalization, or encoding.",
       "category": "editing"
     },
+    "split-column": {
+      "title": "Split Column",
+      "text": "Divide a column on a delimiter into several. Useful when a grouping is buried in a sample ID \u2014 splitting B3_S12_r1 on _ gives you the batch as its own column, which is what PCR's grouped cross-validation needs. If the ID you want to split is the row-name column, right-click any header and choose Move Row Names into Table first, so it becomes a column you can select.",
+      "category": "editing"
+    },
+    "combine-columns": {
+      "title": "Combine Columns",
+      "text": "Join several columns into one, in the order you tick them. Site then Year gives Oslo_2024; Year then Site gives 2024_Oslo. Useful for building a grouping key from parts you already have.",
+      "category": "editing"
+    },
     "transpose": {
       "title": "Transpose",
       "text": "Swap rows and columns. Use this when your file has samples across the top and variables down the side, which is how many instruments export. PCA needs the opposite. Column types are recalculated afterwards, and any #target marking no longer applies, because a target has to be a column.",

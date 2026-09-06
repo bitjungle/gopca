@@ -43,6 +43,8 @@ const (
 	TransformBin         TransformationType = "bin"
 	TransformOneHot      TransformationType = "onehot"
 	TransformOrdinal     TransformationType = "ordinal"
+	TransformSplit       TransformationType = "split"
+	TransformCombine     TransformationType = "combine"
 )
 
 // TransformOptions represents options for data transformation
@@ -61,6 +63,13 @@ type TransformOptions struct {
 	// CategoryOrder maps a column name to its category values in the order
 	// their integer codes should follow. For ordinal encoding.
 	CategoryOrder map[string][]string `json:"categoryOrder,omitempty"`
+
+	// Delimiter is the literal string Split divides on.
+	Delimiter string `json:"delimiter,omitempty"`
+	// Separator joins the values Combine produces; empty is a valid choice.
+	Separator string `json:"separator,omitempty"`
+	// NewColumnName names Combine's result; empty means generate one.
+	NewColumnName string `json:"newColumnName,omitempty"`
 }
 
 // TransformationResult represents the result of a transformation
@@ -113,6 +122,10 @@ func (a *App) applyTransformationInternal(data *FileData, options TransformOptio
 
 		RemoveOriginal: options.RemoveOriginal,
 		CategoryOrder:  options.CategoryOrder,
+
+		Delimiter:     options.Delimiter,
+		Separator:     options.Separator,
+		NewColumnName: options.NewColumnName,
 	}
 
 	res, err := transform.Apply(in, opts)

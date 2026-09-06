@@ -44,6 +44,10 @@ const (
 	// Ordinal encodes a categorical column into a single integer column, one
 	// code per unique value, assigned by position in a caller-supplied order.
 	Ordinal Type = "ordinal"
+	// Split divides a column on a delimiter into one new column per part.
+	Split Type = "split"
+	// Combine joins several columns into one, separated by a separator.
+	Combine Type = "combine"
 )
 
 // Options configures a transformation.
@@ -89,6 +93,18 @@ type Options struct {
 	// y and not input X, pointing to OrdinalEncoder for features. Everything
 	// this package produces is destined to become X, hence the ordering control.
 	CategoryOrder map[string][]string
+
+	// Delimiter is the string Split divides on. Required for Split; a literal,
+	// not a pattern, because a user typing "." into a dialog means a full stop.
+	Delimiter string
+
+	// Separator joins the values Combine produces. May be empty, which is a
+	// legitimate choice for stitching fragments back together.
+	Separator string
+
+	// NewColumnName is the name Combine gives its result. A generated name is
+	// used when this is empty.
+	NewColumnName string
 }
 
 // Input carries the tabular data and metadata that transform functions operate on.

@@ -39,13 +39,13 @@ interface DataTransformDialogProps {
 // Mirrors the TransformationType constants in cmd/gocsv/transforms.go and the
 // Type constants in pkg/transform/types.go. All three are maintained by hand;
 // adding a transformation means adding it to each.
-type TransformationType = 'log' | 'sqrt' | 'square' | 'standardize' | 'minmax' | 'bin' | 'onehot' | 'ordinal';
+type TransformationType = 'log' | 'sqrt' | 'square' | 'standardize' | 'minmax' | 'bin' | 'onehot' | 'ordinal' | 'split' | 'combine';
 
 interface TransformationInfo {
     type: TransformationType;
     name: string;
     description: string;
-    category: 'math' | 'scale' | 'encode';
+    category: 'math' | 'scale' | 'encode' | 'restructure';
     requiresNumeric: boolean;
     requiresCategorical: boolean;
     hasOptions?: boolean;
@@ -119,6 +119,24 @@ const transformations: TransformationInfo[] = [
         requiresNumeric: false,
         requiresCategorical: true,
         hasOptions: true
+    },
+    {
+        type: 'split',
+        name: 'Split Column',
+        description: 'Divide a column on a delimiter, e.g. B3_S12_r1 into three',
+        category: 'restructure',
+        requiresNumeric: false,
+        requiresCategorical: false,
+        hasOptions: true
+    },
+    {
+        type: 'combine',
+        name: 'Combine Columns',
+        description: 'Join several columns into one, in the order you select them',
+        category: 'restructure',
+        requiresNumeric: false,
+        requiresCategorical: false,
+        hasOptions: true
     }
 ];
 
@@ -143,6 +161,9 @@ export const DataTransformDialog: React.FC<DataTransformDialogProps> = ({
     // Keeping it is the default: GoPCA colours plots by categorical columns,
     // so dropping e.g. "species" silently costs that.
     const [keepOriginal, setKeepOriginal] = useState(true);
+    const [delimiter, setDelimiter] = useState('_');
+    const [separator, setSeparator] = useState('_');
+    const [newColumnName, setNewColumnName] = useState('');
     // Category order per column, for ordinal encoding. Seeded from the backend
     // suggestion when a column is picked, then reordered by the user.
     const [categoryOrder, setCategoryOrder] = useState<Record<string, string[]>>({});
@@ -175,6 +196,9 @@ export const DataTransformDialog: React.FC<DataTransformDialogProps> = ({
     useEffect(() => {
         if (isOpen) {
             setKeepOriginal(true);
+            setDelimiter('_');
+            setSeparator('_');
+            setNewColumnName('');
             setResult(null);
             setError(null);
         }
@@ -266,10 +290,13 @@ export const DataTransformDialog: React.FC<DataTransformDialogProps> = ({
                 minValue: selectedTransform === 'minmax' ? minValue : undefined,
                 maxValue: selectedTransform === 'minmax' ? maxValue : undefined,
                 removeOriginal:
-                    selectedTransform === 'onehot' || selectedTransform === 'ordinal'
+                    ['onehot', 'ordinal', 'split', 'combine'].includes(selectedTransform)
                         ? !keepOriginal
                         : undefined,
-                categoryOrder: selectedTransform === 'ordinal' ? categoryOrder : undefined
+                categoryOrder: selectedTransform === 'ordinal' ? categoryOrder : undefined,
+                delimiter: selectedTransform === 'split' ? delimiter : undefined,
+                separator: selectedTransform === 'combine' ? separator : undefined,
+                newColumnName: selectedTransform === 'combine' ? newColumnName : undefined
             };
 
             const transformResult = await ApplyTransformation(fileData, options);
@@ -345,10 +372,16 @@ export const DataTransformDialog: React.FC<DataTransformDialogProps> = ({
                                 Transformation Type
                             </label>
                             <div className="grid grid-cols-1 gap-2">
-                                {['math', 'scale', 'encode'].map(category => (
+                                {['math', 'scale', 'encode', 'restructure'].map(category => (
                                     <div key={category}>
                                         <div className="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase mb-1">
-                                            {category === 'math' ? 'Mathematical' : category === 'scale' ? 'Scaling' : 'Encoding'}
+                                            {category === 'math'
+                                                ? 'Mathematical'
+                                                : category === 'scale'
+                                                    ? 'Scaling'
+                                                    : category === 'encode'
+                                                        ? 'Encoding'
+                                                        : 'Restructure'}
                                         </div>
                                         <div className="space-y-1">
                                             {transformations
@@ -406,7 +439,7 @@ export const DataTransformDialog: React.FC<DataTransformDialogProps> = ({
                                         </div>
                                     </div>
                                 )}
-                                {(selectedTransform === 'onehot' || selectedTransform === 'ordinal') && (
+                                {['onehot', 'ordinal', 'split', 'combine'].includes(selectedTransform) && (
                                     <div>
                                         <label className="flex items-start gap-2 cursor-pointer">
                                             <input
@@ -419,7 +452,13 @@ export const DataTransformDialog: React.FC<DataTransformDialogProps> = ({
                                                 Keep original column
                                                 <span className="block text-xs text-gray-500 dark:text-gray-400">
                                                     Unchecking removes the source column once the new
-                                                    {selectedTransform === 'ordinal' ? ' code column is' : ' binary columns are'} created.
+                                                    {selectedTransform === 'ordinal'
+                                                        ? ' code column is'
+                                                        : selectedTransform === 'split'
+                                                            ? ' columns are'
+                                                            : selectedTransform === 'combine'
+                                                                ? ' column is'
+                                                                : ' binary columns are'} created.
                                                     Keeping it lets GoPCA still colour plots by this category.
                                                 </span>
                                             </span>
@@ -494,6 +533,86 @@ export const DataTransformDialog: React.FC<DataTransformDialogProps> = ({
                                             categories such as species or site, use One-Hot Encode — numbering them
                                             would tell PCA that the gaps between them are real.
                                         </p>
+                                    </div>
+                                )}
+                                {selectedTransform === 'split' && (
+                                    <div>
+                                        <label
+                                            htmlFor="split-delimiter"
+                                            className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1"
+                                        >
+                                            Split on
+                                        </label>
+                                        <input
+                                            id="split-delimiter"
+                                            type="text"
+                                            value={delimiter}
+                                            onChange={(e) => setDelimiter(e.target.value)}
+                                            className="w-full px-3 py-2 text-sm border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100"
+                                        />
+                                        <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
+                                            Typed exactly, not as a pattern — a full stop means a full
+                                            stop. One new column per part, named after the source. A row
+                                            with fewer parts leaves its later columns empty rather than
+                                            shifting values across.
+                                        </p>
+                                        <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
+                                            Not seeing the ID you want to split? The first column is
+                                            loaded as row names, so it is not in this list. Right-click
+                                            any column header and choose “Move Row Names into Table” to
+                                            bring it back.
+                                        </p>
+                                    </div>
+                                )}
+                                {selectedTransform === 'combine' && (
+                                    <div className="space-y-3">
+                                        <div>
+                                            <label
+                                                htmlFor="combine-separator"
+                                                className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1"
+                                            >
+                                                Join with
+                                            </label>
+                                            <input
+                                                id="combine-separator"
+                                                type="text"
+                                                value={separator}
+                                                onChange={(e) => setSeparator(e.target.value)}
+                                                className="w-full px-3 py-2 text-sm border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100"
+                                            />
+                                        </div>
+                                        <div>
+                                            <label
+                                                htmlFor="combine-name"
+                                                className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1"
+                                            >
+                                                New column name
+                                            </label>
+                                            <input
+                                                id="combine-name"
+                                                type="text"
+                                                value={newColumnName}
+                                                placeholder={selectedColumns.join('_') || 'generated from the columns'}
+                                                onChange={(e) => setNewColumnName(e.target.value)}
+                                                className="w-full px-3 py-2 text-sm border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100"
+                                            />
+                                        </div>
+                                        {/* Order is the order columns were ticked, which decides the
+                                            result -- Site_Year and Year_Site are different keys. Showing
+                                            it keeps that from being a hidden behaviour. */}
+                                        <div className="text-xs text-gray-500 dark:text-gray-400">
+                                            {selectedColumns.length >= 2 ? (
+                                                <>
+                                                    Result:{' '}
+                                                    <span className="font-mono text-gray-700 dark:text-gray-300">
+                                                        {selectedColumns.join(separator)}
+                                                    </span>{' '}
+                                                    — columns join in the order you tick them.
+                                                </>
+                                            ) : (
+                                                'Select at least two columns. They join in the order you tick them.'
+                                            )}
+                                        </div>
                                     </div>
                                 )}
                                 {selectedTransform === 'bin' && (
