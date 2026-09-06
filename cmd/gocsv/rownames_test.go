@@ -245,7 +245,11 @@ func TestSetRowNamesRefusesNonUniqueColumn(t *testing.T) {
 	}
 	data.Columns = len(data.Headers)
 
-	app := &App{}
+	// NewApp rather than &App{}: ExecuteSetRowNames reaches executeCommand,
+	// which dereferences a.history. With a zero App that is a nil pointer, so a
+	// regression in the validation would crash the test binary rather than fail
+	// this test -- and a crash takes every other test in the package with it.
+	app := NewApp()
 	_, err := app.ExecuteSetRowNames(data, headerIndex(data.Headers, "Region"))
 	if err == nil {
 		t.Fatal("a column with a repeated value was accepted as row names")
@@ -372,7 +376,8 @@ func TestMoveRowNamesIntoTableRefusesWhenThereAreNone(t *testing.T) {
 	data := rowNameFixture()
 	data.RowNames = nil
 
-	if _, err := (&App{}).ExecuteMoveRowNamesIntoTable(data); err == nil {
+	// NewApp for the same reason as above: this goes through executeCommand.
+	if _, err := NewApp().ExecuteMoveRowNamesIntoTable(data); err == nil {
 		t.Error("moving row names of a file that has none should fail")
 	}
 }
