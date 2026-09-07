@@ -77,8 +77,11 @@ type SavGolConfig struct {
 	WindowLength int
 	// PolyOrder is the degree of the polynomial fitted within each window.
 	PolyOrder int
-	// Deriv is the derivative order to evaluate: 0 smooths, 1 and 2 are the
-	// first and second derivatives.
+	// Deriv is the derivative order to evaluate: 0 smooths without
+	// differentiating. Any order up to and including PolyOrder is accepted,
+	// matching scipy.signal.savgol_filter; 0, 1 and 2 are the ones reached for
+	// in practice, since a spectrum rarely carries usable structure in its
+	// third derivative.
 	Deriv int
 }
 
