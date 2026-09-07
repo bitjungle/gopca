@@ -232,7 +232,8 @@ func (c *AggregateRowsCommand) Execute(data *FileData) error {
 		for j, header := range data.Headers {
 			switch {
 			case j == colIndex:
-				// The grouping value identifies the group, so it is the value.
+				// Written here and removed with the column below, so the loop
+				// stays a simple pass over the original headers.
 				out[j] = key
 
 			case data.ColumnTypes[header] == "numeric" || data.ColumnTypes[header] == "target":
@@ -264,6 +265,14 @@ func (c *AggregateRowsCommand) Execute(data *FileData) error {
 	// row. It is unique by construction, which is what row names require (#859).
 	data.RowNames = newRowNames
 	data.RowNamesHeader = c.options.GroupBy
+
+	// The grouping column is then taken out of the table, because it now holds
+	// exactly the row names and under the same heading. Leaving it produced two
+	// columns with identical headers and identical values, which reads as a
+	// mistake rather than as thoroughness. Nothing is lost: the values are the
+	// row names, and "Move Row Names into Table" puts them back as a column.
+	removeColumnAt(data, colIndex)
+	delete(data.ColumnTypes, c.options.GroupBy)
 
 	// The per-row maps are rebuilt from the collapsed table rather than
 	// filtered, since their rows have been combined rather than removed.

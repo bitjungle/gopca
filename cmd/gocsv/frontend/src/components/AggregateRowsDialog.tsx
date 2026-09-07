@@ -205,8 +205,8 @@ export const AggregateRowsDialog: React.FC<AggregateRowsDialogProps> = ({
                     </div>
 
                     <div className="text-xs text-gray-500 dark:text-gray-400">
-                        Row names become the group values, since the rows they named no longer exist.
-                        Missing numbers are skipped rather than counted as zero.
+                        The grouping column becomes the row names, since the rows they named no
+                        longer exist. Missing numbers are skipped rather than counted as zero.
                     </div>
                 </div>
 

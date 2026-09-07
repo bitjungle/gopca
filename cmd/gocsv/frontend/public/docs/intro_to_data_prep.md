@@ -165,7 +165,7 @@ Three things it will not do quietly:
 - **Where a group disagrees on a text value, the cell is cleared** and the count reported. Picking one of the competing values would assert something about the aggregated sample that no row actually said.
 - **Rows with no group value stop the operation.** A blank is not a group: averaging the unlabelled rows together would invent a sample, and dropping them would lose data. Remove or label them first — Filter Rows does it in one step.
 
-Row names become the group values afterwards, since the rows they named no longer exist. They are unique by construction, which is exactly what row names need to be.
+The grouping column becomes the row-name column afterwards, since the rows it identified no longer exist and the group value is what identifies the new one. Those names are unique by construction, which is exactly what row names need to be — and **Move Row Names into Table** puts them back as a column if you want them there.
 
 > **The grouping column often has to be made first.** If your replicate structure is buried in a sample ID like `B3_S12_r1`, split it on `_` and group by the batch part.
 

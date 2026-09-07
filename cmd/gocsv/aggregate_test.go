@@ -83,8 +83,18 @@ func TestAggregateAveragesReplicates(t *testing.T) {
 	if data.Rows != 2 || len(data.Data) != 2 {
 		t.Fatalf("expected 2 rows, got %d", len(data.Data))
 	}
-	if got := strings.Join(cellsOf(t, data, "SampleID"), ","); got != "S1,S2" {
-		t.Errorf("group column = %s, want S1,S2", got)
+	// The grouping column is taken out of the table: it now holds exactly the
+	// row names, under the same heading, so leaving it gave two columns with
+	// identical headers and identical values.
+	if findColumnIndex(data.Headers, "SampleID") != -1 {
+		t.Errorf("the grouping column should have moved into the row names, headers are %v",
+			data.Headers)
+	}
+	for i, row := range data.Data {
+		if len(row) != len(data.Headers) {
+			t.Errorf("row %d has %d cells but there are %d headers: %v",
+				i, len(row), len(data.Headers), row)
+		}
 	}
 	if got := strings.Join(cellsOf(t, data, "Abs1"), ","); got != "15,40" {
 		t.Errorf("Abs1 = %s, want 15,40", got)
@@ -364,5 +374,39 @@ func TestDeleteRowsKeepsPerRowMapsAligned(t *testing.T) {
 	}
 	if got := strings.Join(data.RowNames, ","); got != "r1,r3,r4" {
 		t.Errorf("row names = %s, want r1,r3,r4", got)
+	}
+}
+
+// TestAggregateKeepsColumnCountConsistent guards a count that is easy to leave
+// behind.
+//
+// removeColumnAt and insertColumnAt now maintain FileData.Columns themselves.
+// Every earlier caller happened to set it just afterwards, so the obligation
+// was invisible until aggregation did not — and the grid then reported four
+// columns over three headers.
+func TestAggregateKeepsColumnCountConsistent(t *testing.T) {
+	data := replicateFixture()
+	cmd, _ := NewAggregateRowsCommand(NewApp(), data,
+		AggregateOptions{GroupBy: "SampleID", Func: AggregateMean})
+	if err := cmd.Execute(data); err != nil {
+		t.Fatalf("Execute: %v", err)
+	}
+
+	if data.Columns != len(data.Headers) {
+		t.Errorf("Columns = %d but there are %d headers: %v",
+			data.Columns, len(data.Headers), data.Headers)
+	}
+	for i, row := range data.Data {
+		if len(row) != data.Columns {
+			t.Errorf("row %d has %d cells but Columns says %d", i, len(row), data.Columns)
+		}
+	}
+
+	if err := cmd.Undo(data); err != nil {
+		t.Fatalf("Undo: %v", err)
+	}
+	if data.Columns != len(data.Headers) {
+		t.Errorf("after undo Columns = %d but there are %d headers",
+			data.Columns, len(data.Headers))
 	}
 }
