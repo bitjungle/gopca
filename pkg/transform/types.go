@@ -48,6 +48,8 @@ const (
 	Split Type = "split"
 	// Combine joins several columns into one, separated by a separator.
 	Combine Type = "combine"
+	// CLR applies the centred log-ratio transform to compositional data.
+	CLR Type = "clr"
 )
 
 // Options configures a transformation.
@@ -105,6 +107,20 @@ type Options struct {
 	// NewColumnName is the name Combine gives its result. A generated name is
 	// used when this is empty.
 	NewColumnName string
+
+	// ZeroReplacement is the value substituted for zeros before the centred
+	// log-ratio transform, which is undefined at zero.
+	//
+	// Zero means no substitution: a column containing zeros is refused, naming
+	// the rows. That is the default on purpose. Replacing a zero invents a
+	// measurement that was not made, and in trace-element data the difference
+	// between "absent" and "below the detection limit" is a scientific
+	// judgement the software has no basis for. It must be asked for.
+	//
+	// Reference: Martín-Fernández, Barceló-Vidal & Pawlowsky-Glahn (2003),
+	// Dealing with Zeros and Missing Values in Compositional Data Sets Using
+	// Nonparametric Imputation, Mathematical Geology 35(3).
+	ZeroReplacement float64
 }
 
 // Input carries the tabular data and metadata that transform functions operate on.

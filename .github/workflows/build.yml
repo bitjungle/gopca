@@ -109,6 +109,9 @@ jobs:
 
         echo "Generating Kernel PCA reference results..."
         python generate_kernel_pca_reference.py
+
+        echo "Generating CLR reference results..."
+        python generate_clr_reference.py
         
         # Temporal PCA references are generated on every platform.
         #
