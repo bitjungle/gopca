@@ -269,6 +269,28 @@ jobs:
     - name: Build shared UI components (provides types for lint)
       run: npm run build-ui
 
+    # GoPCA Desktop's frontend/wailsjs/ is gitignored (GoCSV's is committed), so
+    # a fresh checkout has no Go bindings and every `import ... from
+    # '../wailsjs/go/main/App'` fails to resolve. tsc then reports TS2307 for
+    # each import plus a cascade of TS7006 on the now-untyped values -- which is
+    # exactly how the first attempt at the type-check steps below failed in CI
+    # while passing locally, where the bindings happen to exist on disk.
+    #
+    # Generating them here is what the Build jobs get for free from `wails
+    # build`. It is also the only way this job can type-check the real code
+    # rather than a checkout that is missing a third of its declarations.
+    - name: Set up Go (for Wails binding generation)
+      uses: actions/setup-go@v5
+      with:
+        go-version: ${{ env.GO_VERSION }}
+
+    - name: Install Wails CLI
+      run: go install github.com/wailsapp/wails/v2/cmd/wails@v2.13.0
+
+    - name: Generate GoPCA Desktop Wails bindings
+      working-directory: cmd/gopca-desktop
+      run: $(go env GOPATH)/bin/wails generate module
+
     - name: Lint shared UI components
       run: npm run lint -w @gopca/ui-components
 
