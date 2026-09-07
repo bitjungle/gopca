@@ -97,10 +97,14 @@ function AppContent() {
             if (paths.length > 0) {
                 const filePath = paths[0];
                 // Only accept supported file types
-                if (filePath.match(/\.(csv|tsv|xlsx|xls)$/i)) {
+                // Parquet belongs here too: the file dialog accepts it, Load
+                // from URL accepts it, loadParquet exists and is tested, and
+                // the documentation says it is supported. Only the most
+                // natural gesture for opening a file refused it (#879).
+                if (filePath.match(/\.(csv|tsv|xlsx|xls|parquet)$/i)) {
                     await handleDroppedFile(filePath);
                 } else {
-                    setErrorMessage('Unsupported file type. Please drop a CSV, TSV, or Excel file.');
+                    setErrorMessage('Unsupported file type. Please drop a CSV, TSV, Excel, or Parquet file.');
                 }
             }
         }, false);
@@ -188,7 +192,7 @@ function AppContent() {
                 setDataQualityReport(null);
                 setValidationResult(null);
             } else {
-                setErrorMessage('Could not load file — the file appears to be empty or invalid. Is it a valid CSV, TSV, or Excel file?');
+                setErrorMessage('Could not load file — the file appears to be empty or invalid. Is it a valid CSV, TSV, Excel, or Parquet file?');
             }
         } catch (error: any) {
             console.error('Error loading dropped file:', error);
@@ -437,7 +441,7 @@ return;
                                         Drag and drop your file here
                                     </span>
                                     <br />
-                                    <span className="text-xs">CSV, TSV, or Excel files</span>
+                                    <span className="text-xs">CSV, TSV, Excel, or Parquet files</span>
                                 </p>
                             </div>
 

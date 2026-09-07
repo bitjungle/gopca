@@ -57,7 +57,7 @@
     },
     "browse-file": {
       "title": "Browse for File",
-      "text": "Select CSV, TSV, or Excel file from your computer.",
+      "text": "Select a CSV, TSV, Excel, or Parquet file from your computer.",
       "category": "data-input"
     },
     "import-wizard": {
