@@ -266,9 +266,6 @@ jobs:
     - name: Install dependencies (monorepo)
       run: npm ci
 
-    - name: Build shared UI components (provides types for lint)
-      run: npm run build-ui
-
     # Both apps' frontend/wailsjs/ are gitignored and generated at build time,
     # so the type check below needs Go and the Wails CLI to produce the
     # declarations tsc resolves the `wailsjs` imports against.
@@ -279,15 +276,6 @@ jobs:
 
     - name: Install Wails CLI
       run: go install github.com/wailsapp/wails/v2/cmd/wails@v2.13.0
-
-    - name: Lint shared UI components
-      run: npm run lint -w @gopca/ui-components
-
-    - name: Lint GoPCA Desktop frontend
-      run: npm run lint -w frontend
-
-    - name: Lint GoCSV frontend
-      run: npm run lint -w gocsv-frontend
 
     # Type-check every frontend.
     #
@@ -308,6 +296,20 @@ jobs:
     # not describe. One entry point means a local pass is evidence about CI.
     - name: Type-check all frontends
       run: make typecheck
+
+    # After the type check, not before: `make typecheck` builds the shared UI
+    # package, and eslint is type-aware here (.eslintrc.json sets
+    # parserOptions.project), so it wants those declarations present. Running it
+    # in this order means the package is built once rather than by both steps,
+    # and a type error is reported before the lint noise it usually causes.
+    - name: Lint shared UI components
+      run: npm run lint -w @gopca/ui-components
+
+    - name: Lint GoPCA Desktop frontend
+      run: npm run lint -w frontend
+
+    - name: Lint GoCSV frontend
+      run: npm run lint -w gocsv-frontend
 
     # Until this step existed, the frontend test suites ran only on developer
     # machines: CI linted the TypeScript and never executed a single vitest

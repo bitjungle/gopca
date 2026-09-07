@@ -31,6 +31,23 @@ set -euo pipefail
 cd "$(dirname "$0")/../.."
 ROOT="$(pwd)"
 
+# Check the prerequisites separately, so the error names the dependency that is
+# actually missing. Without the Go check, a machine with no Go at all reports
+# "Wails CLI is not installed" -- `go env GOPATH` fails, the substitution yields
+# an empty string, and the lookup falls through to the wrong branch.
+if ! command -v go &> /dev/null; then
+    echo "ERROR: Go is not installed, and the frontends cannot be type-checked"
+    echo "without the Wails bindings it generates from the app's Go source."
+    echo "Install Go 1.26 or later: https://go.dev/dl/"
+    exit 1
+fi
+
+if ! command -v npx &> /dev/null; then
+    echo "ERROR: Node.js is not installed. Install Node.js 24 or later:"
+    echo "https://nodejs.org/"
+    exit 1
+fi
+
 # Locate the Wails CLI, following the same convention as build-desktop.sh.
 if ! command -v wails &> /dev/null; then
     if [ -x "$(go env GOPATH)/bin/wails" ]; then
