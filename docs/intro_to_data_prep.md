@@ -2,43 +2,58 @@
 
 ## Overview
 
-GoCSV Desktop prepares your data for analysis. It handles the tasks that come before PCA: loading different file formats, cleaning missing values, removing irrelevant columns, detecting outliers, and transferring clean data to GoPCA Desktop. GoPCA handles PCA-specific preprocessing (centering, scaling) — GoCSV focuses on everything before that.
+Real data rarely arrives ready for analysis. It comes with a title block above the table, samples running across the top instead of down the side, a sample ID that hides the batch number inside it, blank cells, and a column that turns out to hold the same value in every row.
+
+GoCSV Desktop is where you sort all of that out. It handles everything that comes *before* PCA — opening awkward files, fixing the shape of the table, filling or removing gaps, reshaping variables — and then hands clean data to GoPCA Desktop.
+
+One division is worth fixing in your mind from the start:
+
+> **GoCSV prepares the data. GoPCA preprocesses it.**
+>
+> Centering and scaling belong to the analysis, not to the file, because they depend on which samples you are analysing. GoPCA applies them at analysis time and can undo them. Do not apply them here.
+
+| Task | Where |
+|------|-------|
+| Open CSV, Excel, TSV, Parquet | GoCSV |
+| Fix the table's shape (transpose, row names) | GoCSV |
+| Handle missing values | GoCSV |
+| Choose rows and columns | GoCSV |
+| Encode categories, split or combine columns | GoCSV |
+| Log / square-root transforms | GoCSV |
+| Mark group variables (`#target`) | GoCSV |
+| **Mean centering** | **GoPCA** |
+| **Scaling (autoscaling, Pareto, SNV…)** | **GoPCA** |
+| PCA computation and visualisation | GoPCA |
 
 ---
 
-## Supported File Formats
+## 1. Getting your data in
 
-GoCSV can open and save the following formats:
+### Supported formats
 
 | Format | Extension | Notes |
 |--------|-----------|-------|
-| CSV | `.csv` | Comma-separated; auto-detects delimiter and decimal separator |
+| CSV | `.csv` | Delimiter and decimal separator are detected automatically |
 | TSV | `.tsv` | Tab-separated |
-| Excel | `.xlsx`, `.xls` | The first sheet opens directly; use the Import Wizard to choose another sheet, or when the table does not start at the first row |
-| Parquet | `.parquet` | Columnar format used by Kaggle, Hugging Face, OWID, and similar data sources |
+| Excel | `.xlsx`, `.xls` | The first sheet opens directly; use the Import Wizard for another sheet |
+| Parquet | `.parquet` | Columnar format used by Kaggle, Hugging Face, Our World in Data and similar sources |
 
-**Parquet import details:**
-- A `Sample_ID` column (1, 2, 3 …) is added automatically as a unique row identifier, since Parquet files have no built-in row index
-- String columns (e.g. country, category, label) are imported as `column_name#target` — making them available as group variables in GoPCA's scores plot
-- Numeric columns (float, integer) import directly into the data grid
-- Null values become empty cells
+You can save as **CSV** or **Excel**.
 
-**Export formats:** CSV, Excel (.xlsx), TSV
+**A note on Parquet.** These files have no row index, so GoCSV adds a `Sample_ID` column (1, 2, 3 …) to give every row a unique identifier. String columns arrive marked as `column_name#target`, which makes them available as group variables for colouring plots in GoPCA. Numeric columns come in directly, and nulls become empty cells.
 
----
+### When a file will not open on its own
 
-## Opening Files: Direct Open and the Import Wizard
+Most files open with **Choose File**. Two situations need more control, and **Import with Wizard** handles both.
 
-Most files open directly — choose **Open**, and GoCSV reads the whole file. Two situations call for more control, and the **Import Wizard** handles both.
+**The table does not start at the first row.** Spreadsheets are often written for people rather than programs — a report title, a date, a blank row, and only then the real headers. GoCSV recognises this and offers the Import Wizard with the right number of rows already skipped. Check the preview and import.
 
-**The table does not start at the first row.** Spreadsheets are often written for people rather than programs: a report title, a date, a blank row or two, and only then the real column headers. GoCSV detects this layout and opens the Import Wizard for you, with the right number of rows already skipped. Check the preview and import.
-
-**You want to choose what comes in.** The wizard lets you pick the sheet, say which row holds the headers, and select the columns you actually need.
+**You want to choose what comes in.** The wizard lets you pick the sheet, say which row holds the headers, and select only the columns you need.
 
 | Option | Applies to | What it does |
 |--------|-----------|--------------|
-| Sheet | Excel | Choose which sheet to read; every sheet in the file is listed |
-| Delimiter | CSV / TSV | Comma, semicolon, tab, or pipe |
+| Sheet | Excel | Which sheet to read |
+| Delimiter | CSV / TSV | Comma, semicolon, tab or pipe |
 | First row contains headers | All | Uncheck for files with no header row |
 | Header Row | All | Which row holds the column names (0-based) |
 | Skip Rows from Top | All | Discard rows above the table — pre-filled when a title block is detected |
@@ -46,173 +61,198 @@ Most files open directly — choose **Open**, and GoCSV reads the whole file. Tw
 | Row Names Column | All | Which column holds sample names (−1 for none) |
 | Column selection | All | Tick the columns to import, in the preview step |
 
-The final step shows exactly what will be imported, so you can confirm the headers and the first rows before committing to them.
+> **If a spreadsheet refuses to open,** the cause is almost always that the data does not begin at the first row. **Skip Rows from Top** in the Import Wizard is nearly always the answer.
 
-> **Tip:** If a spreadsheet refuses to open, the usual cause is that the data does not begin at the first row. The Import Wizard, with **Skip Rows from Top**, is almost always the answer.
+### A file with no numbers in it is still a valid file
 
----
+You do not need numeric columns to open a file. A table of nothing but text — sample names, sites, categories — opens perfectly well. Preparing data for PCA often *starts* from something that is not numeric yet, and the encoders in section 5 are how you make it numeric.
 
-## 1. Data Structure
-
-GoCSV expects data in standard matrix form:
-- **Rows** = samples or observations
-- **Columns** = variables or measurements
-
-**Row identifiers:** If the first column contains non-numeric labels (sample names, IDs), GoCSV detects it automatically and uses it as the row name — it is shown in the grid but excluded from numerical analysis. For Parquet files, the auto-generated `Sample_ID` column serves this purpose.
-
-**Column types** are detected automatically:
-- **Numeric** — values that parse as numbers (used in PCA)
-- **Categorical** — repeated string values; available as a group variable in GoPCA
-- **Target (`#target`)** — a column marked for use as a class label or group variable in GoPCA
-
-You can toggle any column between numeric and target using the column header menu.
+GoCSV will tell you the file is not ready for PCA yet, which is true and useful. It will not refuse to let you work on it.
 
 ---
 
-## 2. Missing Data
+## 2. Getting the shape right
 
-**Detection:** The Data Quality Dashboard shows missing percentages per column and highlights empty cells in the grid.
+PCA expects a specific arrangement, and this is worth checking before anything else:
 
-**Strategies:**
+- **Rows are samples** — the things you measured
+- **Columns are variables** — the things you measured *about* them
 
-| Strategy | When to use |
-|----------|-------------|
-| Row deletion | Missing completely at random; data is plentiful |
-| Column deletion | Variable has high missing percentage or is not essential |
-| Mean / median imputation | Random missingness; preserves sample count |
-| Forward / backward fill | Time-ordered or sequential data |
-| Custom value | You know what the missing value represents (e.g. zero, detection limit) |
+### Your instrument probably disagrees
 
-> **Note:** GoPCA's NIPALS algorithm can handle moderate missing data without imputation. For SVD or Kernel PCA, all values must be present.
+Spectrometers, chromatographs and sequencers commonly export the other way round: one **column** per sample, one **row** per wavelength or channel. That is the transpose of what PCA needs.
 
----
+Use **Transpose** in the toolbar. It swaps rows and columns, turning your headers into row names and your row names into headers. It tells you what the result will be before it does anything, and it undoes cleanly if the answer surprises you.
 
-## 3. Data Quality Dashboard
+Two things happen that are worth expecting:
 
-Run this first — it gives you an overview before making any changes.
+- **Column types are recalculated.** A transposed table has entirely different columns, so a row that mixed text and numbers becomes a column that does.
+- **Any `#target` marking stops applying.** A target has to be a column; after transposing it is a row.
 
-**Dataset level:**
-- Dimensions (rows × columns)
-- Overall missing percentage
-- Duplicate row count
-- Numeric vs. categorical column counts
+### Row names: which column identifies your samples
 
-**Per-column:**
-- Mean, median, std dev, quartiles
-- Missing percentage
-- Outlier count (IQR and z-score methods)
-- Quality score (0–100) based on completeness and consistency
+The first column of your file becomes the row-name column. It is shown down the left of the grid, kept out of the numbers, and used to label points in GoPCA's plots.
+
+This happens **whether or not the first column looks like an identifier** — if your file begins with a measurement, that measurement becomes row names. Two fixes, both on the right-click menu of any column header:
+
+- **Use as Row Names** — promote a different column. Whatever was serving as row names comes back into the table, so nothing is lost.
+- **Move Row Names into Table** — put the row names back as an ordinary column and leave the table without any.
+
+**Row names must be unique.** GoCSV will not let you promote a column with repeated or empty values, and will tell you which value is the problem. The reason is worth knowing: row names label the points in a scores plot, so two samples sharing a name are indistinguishable exactly where you would most want to tell them apart.
+
+If a file *arrives* with duplicate row names, GoCSV warns you rather than refusing it. The numbers are still analysable; only the labelling is ambiguous, and whether that matters is your call.
 
 ---
 
-## 4. Transformations
+## 3. Looking before you leap
 
-Apply transformations in GoCSV when the raw data distribution needs correction before PCA. Do **not** apply mean centering here — let GoPCA handle that.
+Open the **Data Quality Report** first, before changing anything. It is quicker to read than the grid and it will often decide what you do next.
+
+**For the dataset:** dimensions, overall missing percentage, duplicate rows, and how many columns are numeric against categorical.
+
+**For each column:** mean, median, standard deviation, quartiles, missing percentage, outlier counts, and a quality score.
+
+Two things it flags are worth acting on:
+
+**Columns with no variation at all.** Every value identical. Such a column contributes exactly nothing to any component — but it is not harmless, because it sits at the origin of every loadings plot where its position can be read as meaningful. Instrument settings, a constant temperature, a batch code that never changed: all common, all worth removing.
+
+**Columns that barely vary.** Reported as a fraction of the column's own level, so the judgement does not depend on whether you recorded metres or kilometres. Below a tenth of a percent, standardisation will scale that column to unit variance anyway — which can turn measurement noise into an apparent component.
+
+Neither is removed for you. Whether a quiet variable matters is a question about your experiment, not about the numbers.
+
+---
+
+## 4. Missing values
+
+**Finding them:** the Data Quality Report gives percentages per column, and empty cells are highlighted in the grid.
+
+**Filling them:** the **Fill Missing Values** dialog works one column at a time.
+
+| Strategy | When to use it |
+|----------|----------------|
+| Mean | Roughly symmetric numeric data |
+| Median | Skewed numeric data, or when outliers are present |
+| Mode | The most frequent value — the only sensible choice for categorical columns |
+| Forward fill | Time-ordered data; carry the last observation forward |
+| Backward fill | Time-ordered data; carry the next observation back |
+| Custom value | You know what the gap means — zero, a detection limit, "Unknown" |
+
+Removing rows or columns is the other option, and often the better one: use **Filter Rows** (section 5) or delete the column outright when a variable is mostly empty.
+
+> **You may not need to fill anything.** GoPCA's **NIPALS** algorithm handles moderate missing data directly, without imputation. SVD and Kernel PCA need every value present. If your gaps are few and scattered, choosing NIPALS in GoPCA is more honest than inventing values here.
+
+---
+
+## 5. Choosing and shaping what you analyse
+
+### Choosing rows
+
+**Filter Rows** keeps or removes the rows matching a condition — drop the QC standards, analyse one batch, exclude samples you have decided are unusable.
+
+It shows how many rows match, and how many would remain, *before* you apply it. A filter that would empty the table says so.
+
+One rule is worth knowing because it protects you: **blank cells match only "is empty"**. A negative condition will never sweep up rows for having *no* value in that column. Asking to remove rows where `Region is not Nord` removes the ones you can see are not Nord, not the ones whose region was never recorded. Deciding a sample's fate on a missing value should be something you ask for deliberately, which is what the "is empty" condition is for.
+
+### Choosing columns
+
+- **Delete columns** — remove what you are not analysing: record numbers, timestamps, operator codes
+- **Insert Column Before / After** — add an empty column to fill in yourself
+- **Rename column** — give variables names you will recognise in a loadings plot
+- **Mark as Target Column** — see below
+
+Worth considering for removal: columns with no or almost no variation (section 3), and near-duplicate columns that correlate almost perfectly with another variable.
+
+### Splitting and combining columns
+
+Sample identifiers often carry structure. `B3_S12_r1` means batch 3, sample 12, replicate 1 — three facts stuffed into one string.
+
+**Split Column** divides a column on a delimiter, giving one new column per part. Splitting that ID on `_` gives you the batch as a column of its own, which is exactly what PCR's grouped cross-validation needs and what you would group on to average replicates.
+
+**Combine Columns** does the reverse, joining several into one. Columns join **in the order you tick them**, so `Site` then `Year` gives `Oslo_2024` while `Year` then `Site` gives `2024_Oslo`. The dialog shows the result as you go.
+
+> **The ID you want to split is probably your row-name column,** and row names are not in the selection list. Right-click any header, choose **Move Row Names into Table**, and it becomes a column you can split.
+
+### Making categories numeric
+
+PCA works on numbers. A categorical column has to be encoded before it can take part — and *how* you encode it is a statement about your data, not a formatting choice.
+
+**One-Hot Encode** makes no claim about order. Each category becomes its own column, and PCA treats them as equally distant from one another. This is right for unordered categories: species, site, operator, instrument.
+
+**Ordinal Encode** replaces categories with 0, 1, 2 … in an order you set. Use it only when the categories genuinely form a scale — `lav, middels, høy`, or `never, rarely, sometimes, often, always`. The dialog lists the values with arrows to reorder them, and recognises common scales in English and Norwegian, so `lav / middels / høy` comes up already in the right order.
+
+Both keep the original column by default. Keeping it is usually what you want, because GoPCA colours scores plots by categorical columns — encoding `species` and discarding it costs you a colouring you would probably have wanted.
+
+**The mistake worth avoiding.** Numbering unordered categories tells PCA something untrue. Encoding `species` as setosa = 0, versicolor = 1, virginica = 2 asserts that virginica is three times setosa and that versicolor sits exactly halfway between them. None of that is true, and PCA cannot know — it is a covariance method, so it consumes those invented distances as though they were measurements. The resulting component will look perfectly ordinary. If your categories have no order, reach for one-hot encoding.
+
+> **If you have used scikit-learn's `LabelEncoder`,** it assigns codes alphabetically. For an ordered scale that is usually wrong: `low, medium, high` becomes `high = 0, low = 1, medium = 2`, scrambling the very order the numbers are supposed to carry. Leaving GoCSV's list untouched gives you that same alphabetical result — the arrows exist so you do not have to accept it.
+
+### Target columns
+
+**Mark as Target Column** appends `#target` to a column name. A numeric column marked this way is held back from the PCA itself and offered instead as a reference variable — for colouring a scores plot, or as the response in a PCR model.
+
+Categorical columns are already excluded from the PCA and already available for colouring, so marking one changes its name without changing what it does.
+
+---
+
+## 6. Transformations
+
+Transform in GoCSV when the *distribution* of a variable needs correcting. Leave centering and scaling to GoPCA.
 
 | Transformation | Use case |
 |----------------|----------|
-| Log | Right-skewed data (concentrations, counts, income) |
-| Square root | Count data or moderate skew |
+| Log | Right-skewed data — concentrations, counts, incomes |
+| Square root | Count data, or moderate skew |
 | Square | Left-skewed data |
-| Standardization (z-score) | General scaling; note that GoPCA can do this too |
-| Min-max scaling | Scale to [0, 1] or a custom range |
-| Binning | Discretize continuous variables into categories |
-| One-hot encoding | Expand a categorical column into binary columns |
-| Ordinal encoding | Number the categories of a column in an order you choose |
+| Standardisation (z-score) | General scaling — though GoPCA can do this at analysis time |
+| Min-max scaling | Scale to [0, 1] or a range you choose |
+| Binning | Turn a continuous variable into categories |
 
-Both encoders keep the original column by default, and offer a **Keep original column** checkbox if
-you would rather it were removed. Keeping it is usually what you want: GoPCA colours scores plots by
-categorical columns, so a `species` column discarded during encoding is a colouring you can no
-longer apply.
+**A column is transformed completely or not at all.** `log` is undefined at zero and below, and `sqrt` at negatives. If any value in a column is outside the range, GoCSV leaves the whole column untouched and tells you which rows are the problem.
 
-### Which encoder?
-
-The two are not interchangeable, and the choice is a statement about your data.
-
-**One-hot encoding** makes no claim about order. Each category gets its own column, and PCA treats
-them as equally distant from one another. This is the right choice for unordered categories —
-species, site, operator, instrument.
-
-**Ordinal encoding** replaces the categories with the numbers 0, 1, 2, … in an order you set. Use it
-only when the categories genuinely form a scale: `lav, middels, høy`, or `never, rarely, sometimes,
-often, always`. The dialog lists the values with arrows to reorder them, and recognises common
-scales in English and Norwegian, so `lav / middels / høy` comes up already in the right order rather
-than alphabetically.
-
-Numbering unordered categories is the mistake worth avoiding. Encoding `species` as setosa = 0,
-versicolor = 1, virginica = 2 tells PCA that virginica is three times setosa, and that versicolor
-sits exactly halfway between them. None of that is true, and PCA has no way to know — it is a
-covariance method, so it will use those invented distances as though they were measurements. The
-resulting component will look perfectly ordinary. If your categories have no order, reach for
-one-hot encoding.
-
-> **A note on ordering.** If you have used scikit-learn's `LabelEncoder`, it assigns codes in
-> alphabetical order. For an ordered scale that is usually wrong: `low, medium, high` becomes
-> `high = 0, low = 1, medium = 2`, scrambling the very ordering the numbers are meant to carry.
-> Leaving GoCSV's list untouched gives you the same alphabetical result; the arrows are there so you
-> do not have to accept it.
+This matters more than it sounds. Transforming the valid values and skipping the rest would leave one variable holding two different scales — some cells in log units, some raw — and nothing downstream could detect it. Zeros in concentration and count data are normal, not exotic, so this is a case you are likely to meet. When you do, decide what the zeros mean before transforming: a true zero, a value below the detection limit, and a missing measurement are three different things.
 
 ---
 
-## 5. Column Management
+## 7. Outliers
 
-- **Delete columns** — remove irrelevant variables (IDs, timestamps, metadata)
-- **Insert columns** — add derived variables
-- **Rename columns** — use consistent, descriptive names
-- **Toggle target** — mark/unmark a column as `#target` for use as a group label in GoPCA
-- **Reorder columns** — drag to rearrange
+The Data Quality Report flags unusual values two ways:
 
-**Variables to consider removing:**
-- Zero or near-zero variance (flagged by the Data Quality Dashboard)
-- Near-duplicate columns (high correlation with another variable)
-- Administrative fields (record numbers, timestamps, operator codes)
+- **IQR** — beyond 1.5 × the interquartile range from the quartiles. Robust, and assumes nothing about the distribution.
+- **Z-score** — beyond ±3 standard deviations. Assumes the variable is roughly normal.
 
----
+GoCSV shows you where they are; what to do about them is a judgement it cannot make for you.
 
-## 6. Outlier Detection and Treatment
+- **Correct it** — if you can check the original record and the value is wrong, fix the cell
+- **Remove the sample** — if it is confirmed as an error, use Filter Rows or delete the row
+- **Transform** — a log or square-root transform reduces the leverage of extreme values without discarding them
+- **Keep it** — a genuine extreme value is data, not noise
 
-GoCSV flags outliers using two methods:
-- **IQR method** — beyond 1.5 × IQR from the quartiles (robust, distribution-free)
-- **Z-score method** — beyond ±3 standard deviations (assumes approximate normality)
-
-**Handling options:**
-- **Correct** — if you can verify the true value
-- **Delete row** — if confirmed as an error
-- **Transform** — log or root transform reduces outlier leverage
-- **Keep** — valid extreme values should not be removed automatically
-
-> Investigate before deleting. Outliers are sometimes the most scientifically interesting observations.
+> Investigate before deleting. In a scores plot an outlier is often the most interesting point on the chart, and "unusual" is not the same as "wrong".
 
 ---
 
-## 7. Export and Transfer to GoPCA
+## 8. Handing over to GoPCA
 
-**Direct transfer:**
-Click **Open in GoPCA Desktop** to validate and pass your data directly to GoPCA without an intermediate file.
+**Direct transfer:** click **Open in GoPCA**. The data is validated and passed across without an intermediate file.
 
-**Manual export:**
-- CSV — most compatible format; preserves `#target` column markers
-- Excel (.xlsx) — for sharing or further editing in spreadsheet tools
-- TSV — tab-delimited for other tools
+**Or export:** CSV keeps `#target` markers and is the most portable; Excel is convenient for sharing.
 
-**Pre-export checklist:**
-- [ ] Rows = samples, columns = variables
-- [ ] Missing values addressed
-- [ ] Irrelevant columns removed
-- [ ] Target / group columns marked with `#target`
+**Before you hand over:**
+
+- [ ] Rows are samples, columns are variables — transpose if not
+- [ ] The row-name column identifies your samples, and its values are unique
+- [ ] Missing values dealt with, or NIPALS chosen in GoPCA
+- [ ] Columns with no variation removed
+- [ ] Categorical variables encoded, if you want them in the analysis
+- [ ] Group and response variables marked with `#target`
 - [ ] No duplicate column names
 
+**Validate for GoPCA** checks most of this and explains anything it finds. A warning is not a refusal — it tells you something about your data that you may already know and have a reason for.
+
 ---
 
-## Division of Responsibility
+## Where to go next
 
-| Task | Where to do it |
-|------|---------------|
-| Load files (CSV, Excel, Parquet) | GoCSV |
-| Handle missing values | GoCSV |
-| Remove irrelevant columns | GoCSV |
-| Apply log / root transforms | GoCSV |
-| Mark group variables (#target) | GoCSV |
-| Mean centering | GoPCA |
-| Scaling (autoscaling, Pareto, etc.) | GoPCA |
-| PCA computation and visualization | GoPCA |
+- [Introduction to PCA](intro_to_pca.md) — what the analysis actually does, and how to read the plots
+- [CLI reference](cli_reference.md) — the same preparation and analysis from the command line
+- [Troubleshooting](troubleshooting.md) — when something does not behave as you expect
