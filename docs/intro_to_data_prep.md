@@ -222,11 +222,35 @@ Transform in GoCSV when the *distribution* of a variable needs correcting. Leave
 | Standardisation (z-score) | General scaling — though GoPCA can do this at analysis time |
 | Min-max scaling | Scale to [0, 1] or a range you choose |
 | Binning | Turn a continuous variable into categories |
+| Box-Cox | Right-skewed data, with the strength of the correction fitted to the column |
+| Yeo-Johnson | The same, but defined at zero and for negative values |
 | Centred log-ratio (CLR) | Compositional data — percentages, assays, parts of a whole |
 
 **A column is transformed completely or not at all.** `log` is undefined at zero and below, and `sqrt` at negatives. If any value in a column is outside the range, GoCSV leaves the whole column untouched and tells you which rows are the problem.
 
 This matters more than it sounds. Transforming the valid values and skipping the rest would leave one variable holding two different scales — some cells in log units, some raw — and nothing downstream could detect it. Zeros in concentration and count data are normal, not exotic, so this is a case you are likely to meet. When you do, decide what the zeros mean before transforming: a true zero, a value below the detection limit, and a missing measurement are three different things.
+
+### Letting the data choose the transform
+
+`log`, `square root` and `square` all ask you to guess how skewed a variable is. **Box-Cox** and **Yeo-Johnson** fit the exponent instead, by maximum likelihood, so the strength of the correction comes from the column rather than from your judgement about it.
+
+Both belong to one family:
+
+```
+                (xᵏ − 1) / k    for k ≠ 0
+Box-Cox(x) =
+                ln(x)           for k = 0
+```
+
+The logarithm is not a special case bolted on — it is the k = 0 member, which the formula approaches smoothly. So "should I take logs, or a square root, or neither?" becomes one question with one answer: what value of k best symmetrises this column?
+
+**Which of the two?** Box-Cox needs every value strictly above zero. **Yeo-Johnson** extends the same idea to zero and negative values, which is precisely where `log` and `sqrt` refuse — so it is the answer for zero-inflated concentration and count data, and the one to reach for when Box-Cox declines your column.
+
+**The fitted λ is reported afterwards**, because a transform whose parameter you cannot see is one you cannot quote in a paper or reproduce anywhere else. You can also supply λ yourself: a validation set should be transformed the same way as its training set, not fitted to its own optimum.
+
+> **Not about normality.** PCA makes no assumption that your variables are normally distributed, so this is not a box to tick before analysis. The reason to reduce skew is more concrete: a variable with a long tail exerts leverage out of proportion to its information, because a handful of large values sit far from the mean and a covariance method notices distance. Reducing the skew reduces that pull. If a variable is not skewed, leave it alone — a fitted λ near 1 is the transform telling you exactly that.
+
+**References:** Box & Cox (1964), *An Analysis of Transformations*, JRSS B 26(2). Yeo & Johnson (2000), *A New Family of Power Transformations to Improve Normality or Symmetry*, Biometrika 87(4).
 
 ### Compositional data: parts of a whole
 

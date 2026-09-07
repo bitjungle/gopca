@@ -103,6 +103,10 @@ func Apply(in Input, opts Options) (*Result, error) {
 		if err := applyCLR(data, columnTypes, catCols, &headers, opts, result); err != nil {
 			return nil, err
 		}
+	case BoxCox, YeoJohnson:
+		if err := applyPower(data, columnTypes, headers, opts, result); err != nil {
+			return nil, err
+		}
 	default:
 		return nil, fmt.Errorf("unsupported transformation type: %s", opts.Type)
 	}
@@ -130,7 +134,7 @@ func GetTransformableColumns(in Input, transformType Type) []string {
 		colType := in.ColumnTypes[header]
 
 		switch transformType {
-		case Log, Sqrt, Square, Standardize, MinMax, Bin, CLR:
+		case Log, Sqrt, Square, Standardize, MinMax, Bin, CLR, BoxCox, YeoJohnson:
 			if colType == "numeric" && !strings.HasSuffix(header, "#target") {
 				columns = append(columns, header)
 			}

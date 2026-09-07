@@ -296,7 +296,9 @@ Beyond basic centering and scaling, GoPCA Suite offers specialized preprocessing
 
 2. **Spectroscopic Preprocessing:**
    - **SNV (Standard Normal Variate)**: Row-wise normalization that removes multiplicative scatter effects in spectroscopic data
-   - **Vector Normalization**: Normalizes each sample to unit length, useful for compositional data
+   - **Vector Normalization**: Scales each sample to unit length (`x / ‖x‖`), removing differences in overall magnitude between samples while keeping the shape of each one. Useful for spectra, where overall intensity varies for reasons that are not chemical.
+
+> **A caution about compositional data.** Vector normalization is sometimes described as the answer for data whose columns are *parts of a whole* — percentages, mineral assays, food composition. It is not. It removes magnitude differences, but the problem with compositional data is the **constant-sum constraint**: if the parts must add to 100, one rising forces the others to fall, whatever the underlying chemistry. That makes the covariance matrix singular and the correlations between parts spuriously negative, so the components describe the constraint as much as the samples. The remedy is a **log-ratio transform**, which analyses the ratios between parts rather than their amounts — available as **Centred Log-Ratio (CLR)** in GoCSV Desktop, applied before the data reaches GoPCA. See [Data Preparation](intro_to_data_prep.md).
 
 **In GoPCA Suite:** Both the pca CLI and GoPCA Desktop provide simple options for all preprocessing methods. GoPCA Desktop offers intuitive checkboxes, while the pca CLI uses flags like `--no-mean-centering`, `--scale` (with options: none, standard, or robust), `--scale-only` (variance scaling without centering), `--snv`, and `--vector-norm`.
 
@@ -577,7 +579,10 @@ Be aware that excluding variables is never free. Removing a region removes whate
 - **Always center** your data
 - **Scale** when variables have different units or vastly different ranges
 - **Use robust scaling** when outliers are present but genuine
-- **Consider SNV or vector normalization** for spectroscopic or compositional data
+- **Consider SNV or vector normalization** for spectroscopic data
+- **Consider a log-ratio transform** when your columns are parts of a whole
+
+**A note on strongly skewed variables.** PCA assumes nothing about the shape of your distributions, so there is no normality requirement to satisfy. But a variable with a long right tail exerts leverage out of proportion to what it tells you: a few large values sit far from the mean, and a covariance method notices distance. If one skewed variable is dominating a component for that reason rather than a scientific one, a **Box-Cox** or **Yeo-Johnson** transform in GoCSV Desktop will reduce the skew — with the exponent fitted to the data rather than guessed. See [Data Preparation](intro_to_data_prep.md).
 
 > **Pro Tip:** When in doubt, try both scaled and unscaled PCA. If results differ dramatically, consider which makes more scientific sense for your application.
 
