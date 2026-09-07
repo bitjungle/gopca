@@ -638,6 +638,7 @@ generate-sklearn-reference:
 		python generate_reference_pca.py && \
 		python generate_reference_pcr.py && \
 		python generate_studentt_reference.py && \
+		python generate_savgol_reference.py && \
 		echo "Reference data generated in testdata/validation/reference_results/" && \
 		echo "" && \
 		echo "These are the generators whose output the Go tests actually read, so a" && \

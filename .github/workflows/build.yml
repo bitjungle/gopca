@@ -115,6 +115,9 @@ jobs:
 
         echo "Generating power transform reference results..."
         python generate_power_transform_reference.py
+
+        echo "Generating Savitzky-Golay reference results..."
+        python generate_savgol_reference.py
         
         # Temporal PCA references are generated on every platform.
         #
