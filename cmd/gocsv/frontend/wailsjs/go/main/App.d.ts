@@ -43,6 +43,8 @@ export function ExecuteInsertRow(arg1:main.FileData,arg2:number):Promise<main.Fi
 
 export function ExecuteMoveRowNamesIntoTable(arg1:main.FileData):Promise<main.FileData>;
 
+export function ExecuteReorderColumns(arg1:main.FileData,arg2:Array<number>):Promise<main.FileData>;
+
 export function ExecuteSetRowNames(arg1:main.FileData,arg2:number):Promise<main.FileData>;
 
 export function ExecuteToggleTargetColumn(arg1:main.FileData,arg2:number):Promise<main.FileData>;

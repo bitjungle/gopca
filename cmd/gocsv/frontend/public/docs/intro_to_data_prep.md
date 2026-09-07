@@ -174,6 +174,7 @@ The grouping column becomes the row-name column afterwards, since the rows it id
 - **Delete columns** — remove what you are not analysing: record numbers, timestamps, operator codes
 - **Insert Column Before / After** — add an empty column to fill in yourself
 - **Rename column** — give variables names you will recognise in a loadings plot
+- **Reorder columns** — drag a column header. The move is applied to the data, so it survives export and reaches GoPCA, and Undo reverses it like any other edit
 - **Mark as Target Column** — see below
 
 Worth considering for removal: columns with no or almost no variation (section 3), and near-duplicate columns that correlate almost perfectly with another variable.

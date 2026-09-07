@@ -27,7 +27,7 @@ import { ColDef, GridReadyEvent, CellValueChangedEvent, GridApi, ColumnApi, Colu
 import 'ag-grid-community/styles/ag-grid.css';
 import 'ag-grid-community/styles/ag-theme-quartz.css';
 import { useTheme } from '@gopca/ui-components';
-import { ExecuteDeleteRows, ExecuteDeleteColumns, ExecuteInsertRow, ExecuteInsertColumn, ExecuteToggleTargetColumn, ExecuteDuplicateRows, ExecuteSetRowNames, ExecuteMoveRowNamesIntoTable, CanUseAsRowNames } from '../../wailsjs/go/main/App';
+import { ExecuteDeleteRows, ExecuteDeleteColumns, ExecuteInsertRow, ExecuteInsertColumn, ExecuteToggleTargetColumn, ExecuteDuplicateRows, ExecuteSetRowNames, ExecuteMoveRowNamesIntoTable, CanUseAsRowNames, ExecuteReorderColumns } from '../../wailsjs/go/main/App';
 import { RenameDialog } from './RenameDialog';
 import { ConfirmDialog } from '@gopca/ui-components';
 import {
@@ -542,6 +542,54 @@ classes.push('target-header');
     }, [data, headers, rowNames]);
 
     // Grid ready event
+    // Persist a column drag to the data.
+    //
+    // Column order is a property of the data, not the view: it decides the order
+    // of an export, the order GoPCA receives, and the order a loadings plot
+    // lists variables in. AG Grid columns are movable by default, so before this
+    // a drag moved the column on screen and was discarded at the next render
+    // (#878).
+    //
+    // Driven from dragStopped rather than columnMoved, which fires repeatedly
+    // during the drag and would send a command per pixel.
+    //
+    // The grid is the source of the *intent* and the data is the source of
+    // truth. Once the data is reordered, columnDefs are rebuilt in the new
+    // order and AG Grid adopts them, so the two agree without the grid's own
+    // move being applied a second time.
+    const onDragStopped = useCallback(async () => {
+        if (!columnApi || !fileData || !onRefresh) {
+            return;
+        }
+
+        // The row-name column is pinned and locked, so it never takes part.
+        const displayed = columnApi
+            .getAllDisplayedColumns()
+            .map((column) => column.getColId())
+            .filter((colId) => colId !== 'rowName');
+
+        const order = displayed
+            .map((colId) => parseInt(colId.replace('col', ''), 10))
+            .filter((index) => !Number.isNaN(index));
+
+        // Nothing to do unless this is a full permutation in a new order. A
+        // partial list would mean columns are hidden or the grid is mid-update,
+        // and reordering from it would drop the ones missing.
+        if (order.length !== headers.length) {
+            return;
+        }
+        if (order.every((from, to) => from === to)) {
+            return;
+        }
+
+        try {
+            const updated = await ExecuteReorderColumns(fileData, order);
+            onRefresh(updated);
+        } catch (error) {
+            console.error('Error reordering columns:', error);
+        }
+    }, [columnApi, fileData, onRefresh, headers.length]);
+
     const onGridReady = useCallback((params: GridReadyEvent) => {
         setGridApi(params.api);
         setColumnApi(params.columnApi);
@@ -778,6 +826,7 @@ return;
                     defaultColDef={defaultColDef}
                     onGridReady={onGridReady}
                     onCellValueChanged={onCellValueChanged}
+                    onDragStopped={onDragStopped}
                     onCellContextMenu={onCellContextMenu}
                     onColumnResized={(event: ColumnResizedEvent) => {
                         if (event.finished) {
