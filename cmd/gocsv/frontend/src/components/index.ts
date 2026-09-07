@@ -35,6 +35,7 @@ export { FormatOptions } from './FormatOptions';
 export { DataPreview } from './DataPreview';
 export { DataTransformDialog } from './DataTransformDialog';
 export { FilterRowsDialog } from './FilterRowsDialog';
+export { AggregateRowsDialog } from './AggregateRowsDialog';
 export { DocumentationViewer } from './DocumentationViewer';
 export { RenameDialog } from './RenameDialog';
 export { AboutDialog } from './AboutDialog';

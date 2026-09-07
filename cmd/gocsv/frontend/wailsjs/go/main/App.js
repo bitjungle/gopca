@@ -38,6 +38,10 @@ export function DownloadGoPCA() {
   return window['go']['main']['App']['DownloadGoPCA']();
 }
 
+export function ExecuteAggregateRows(arg1, arg2) {
+  return window['go']['main']['App']['ExecuteAggregateRows'](arg1, arg2);
+}
+
 export function ExecuteCellEdit(arg1, arg2, arg3, arg4, arg5) {
   return window['go']['main']['App']['ExecuteCellEdit'](arg1, arg2, arg3, arg4, arg5);
 }
@@ -132,6 +136,10 @@ export function OpenInGoPCA(arg1) {
 
 export function PeekRemoteURL(arg1) {
   return window['go']['main']['App']['PeekRemoteURL'](arg1);
+}
+
+export function PreviewAggregate(arg1, arg2) {
+  return window['go']['main']['App']['PreviewAggregate'](arg1, arg2);
 }
 
 export function PreviewFile(arg1, arg2) {

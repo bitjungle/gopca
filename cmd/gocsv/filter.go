@@ -258,45 +258,7 @@ func (c *FilterRowsCommand) Execute(data *FileData) error {
 	}
 	c.removed = len(data.Data) - len(keep)
 
-	newData := make([][]string, 0, len(keep))
-	for _, i := range keep {
-		newData = append(newData, data.Data[i])
-	}
-	data.Data = newData
-
-	if len(data.RowNames) > 0 {
-		newNames := make([]string, 0, len(keep))
-		for _, i := range keep {
-			if i < len(data.RowNames) {
-				newNames = append(newNames, data.RowNames[i])
-			}
-		}
-		data.RowNames = newNames
-	}
-
-	// The categorical and target maps hold one entry per row, parallel to Data.
-	// Dropping rows without dropping the matching entries leaves them longer
-	// than the table and silently misaligned -- every value attached to the
-	// wrong row from the first deletion onwards.
-	for column, values := range data.CategoricalColumns {
-		filtered := make([]string, 0, len(keep))
-		for _, i := range keep {
-			if i < len(values) {
-				filtered = append(filtered, values[i])
-			}
-		}
-		data.CategoricalColumns[column] = filtered
-	}
-	for column, values := range data.NumericTargetColumns {
-		filtered := make([]types.JSONFloat64, 0, len(keep))
-		for _, i := range keep {
-			if i < len(values) {
-				filtered = append(filtered, values[i])
-			}
-		}
-		data.NumericTargetColumns[column] = filtered
-	}
-
+	keepRows(data, keep)
 	data.Rows = len(data.Data)
 	return nil
 }
@@ -352,4 +314,59 @@ func (c *FilterRowsCommand) GetDescription() string {
 		noun = "row"
 	}
 	return fmt.Sprintf("%s rows where %s (%d %s removed)", verb, criterion, c.removed, noun)
+}
+
+// keepRows reduces a dataset to the given row indices, in the order supplied.
+//
+// Every per-row structure has to move together. Data and RowNames are the
+// obvious ones; CategoricalColumns and NumericTargetColumns are the ones that
+// get forgotten, because they are maps and do not look like rows. They hold one
+// entry per row, parallel to Data, so dropping rows without dropping their
+// entries leaves them longer than the table and misaligned from the first
+// deletion onwards -- every value attached to the wrong row, with nothing to
+// show for it.
+//
+// Shared by every operation that removes rows, so that a new one cannot repeat
+// the omission. DeleteRowsCommand did exactly that: it updated Data and
+// RowNames and left the maps behind (#871).
+func keepRows(data *FileData, keep []int) {
+	newData := make([][]string, 0, len(keep))
+	for _, i := range keep {
+		if i >= 0 && i < len(data.Data) {
+			newData = append(newData, data.Data[i])
+		}
+	}
+	data.Data = newData
+
+	if len(data.RowNames) > 0 {
+		names := make([]string, 0, len(keep))
+		for _, i := range keep {
+			if i >= 0 && i < len(data.RowNames) {
+				names = append(names, data.RowNames[i])
+			}
+		}
+		data.RowNames = names
+	}
+
+	for column, values := range data.CategoricalColumns {
+		kept := make([]string, 0, len(keep))
+		for _, i := range keep {
+			if i >= 0 && i < len(values) {
+				kept = append(kept, values[i])
+			}
+		}
+		data.CategoricalColumns[column] = kept
+	}
+
+	for column, values := range data.NumericTargetColumns {
+		kept := make([]types.JSONFloat64, 0, len(keep))
+		for _, i := range keep {
+			if i >= 0 && i < len(values) {
+				kept = append(kept, values[i])
+			}
+		}
+		data.NumericTargetColumns[column] = kept
+	}
+
+	data.Rows = len(data.Data)
 }

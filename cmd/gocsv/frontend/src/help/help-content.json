@@ -30,6 +30,11 @@
       "text": "Replace missing values using mean, median, or custom strategies.",
       "category": "editing"
     },
+    "average-replicates": {
+      "title": "Average Replicates",
+      "text": "Collapse repeated measurements of the same sample into one row. Group by the column that identifies the sample, and the numeric columns are averaged. This also removes a hazard: replicates left as separate rows leak between cross-validation folds, so the same sample appears in both training and validation.",
+      "category": "editing"
+    },
     "filter-rows": {
       "title": "Filter Rows",
       "text": "Keep or remove rows matching a condition \u2014 drop QC standards, analyse one batch, exclude outliers. The dialog shows how many rows match before you apply it. Empty cells match only \"is empty\", so a negative condition will not remove rows for having no value in that column.",

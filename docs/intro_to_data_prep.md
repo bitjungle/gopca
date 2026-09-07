@@ -153,6 +153,22 @@ It shows how many rows match, and how many would remain, *before* you apply it. 
 
 One rule is worth knowing because it protects you: **blank cells match only "is empty"**. A negative condition will never sweep up rows for having *no* value in that column. Asking to remove rows where `Region is not Nord` removes the ones you can see are not Nord, not the ones whose region was never recorded. Deciding a sample's fate on a missing value should be something you ask for deliberately, which is what the "is empty" condition is for.
 
+### Averaging replicates
+
+Measuring each sample two or three times is good practice, but those repeats should usually become **one row** before analysis. **Average Replicates** does that: group by the column identifying the sample, and the numeric columns are combined — mean by default, or median, sum, or first value.
+
+It also removes a hazard rather than working around one. Replicates left as separate rows **leak between cross-validation folds**: the same sample lands in both training and validation, and the model looks better than it is. Averaging first prevents that; the alternative is remembering to set `--cv-group` on every PCR run.
+
+Three things it will not do quietly:
+
+- **Missing numbers are skipped, not counted as zero.** Averaging a gap in as zero would drag the result towards zero in proportion to how much data is absent — a silent bias rather than a visible gap. A group with nothing present stays empty.
+- **Where a group disagrees on a text value, the cell is cleared** and the count reported. Picking one of the competing values would assert something about the aggregated sample that no row actually said.
+- **Rows with no group value stop the operation.** A blank is not a group: averaging the unlabelled rows together would invent a sample, and dropping them would lose data. Remove or label them first — Filter Rows does it in one step.
+
+Row names become the group values afterwards, since the rows they named no longer exist. They are unique by construction, which is exactly what row names need to be.
+
+> **The grouping column often has to be made first.** If your replicate structure is buried in a sample ID like `B3_S12_r1`, split it on `_` and group by the batch part.
+
 ### Choosing columns
 
 - **Delete columns** — remove what you are not analysing: record numbers, timestamps, operator codes
@@ -275,6 +291,7 @@ GoCSV shows you where they are; what to do about them is a judgement it cannot m
 - [ ] Columns with no variation removed
 - [ ] Categorical variables encoded, if you want them in the analysis
 - [ ] Compositional data transformed with CLR, if your columns are parts of a whole
+- [ ] Replicates averaged, or `--cv-group` planned for if you are heading to PCR
 - [ ] Group and response variables marked with `#target`
 - [ ] No duplicate column names
 

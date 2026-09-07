@@ -204,6 +204,15 @@ func (a *App) ExecuteFilterRows(data *FileData, condition FilterCondition) (*Fil
 	return a.executeCommand(cmd, data, "filter rows")
 }
 
+// ExecuteAggregateRows collapses each group of rows to one, with undo support.
+func (a *App) ExecuteAggregateRows(data *FileData, options AggregateOptions) (*FileData, error) {
+	cmd, err := NewAggregateRowsCommand(a, data, options)
+	if err != nil {
+		return nil, fmt.Errorf("aggregate rows: %w", err)
+	}
+	return a.executeCommand(cmd, data, "aggregate rows")
+}
+
 // ExecuteDuplicateRows duplicates selected rows with undo support
 func (a *App) ExecuteDuplicateRows(data *FileData, rowIndices []int) (*FileData, error) {
 	if len(rowIndices) == 0 {

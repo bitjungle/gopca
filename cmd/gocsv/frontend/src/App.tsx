@@ -23,7 +23,7 @@
 
 import React, { useState, useRef, useEffect } from 'react';
 import './App.css';
-import { CSVGrid, ValidationResults, MissingValueSummary, MissingValueDialog, DataQualityDashboard, UndoRedoControls, ImportWizard, DataTransformDialog, FilterRowsDialog, DocumentationViewer, AboutDialog, LoadFromUrlDialog } from './components';
+import { CSVGrid, ValidationResults, MissingValueSummary, MissingValueDialog, DataQualityDashboard, UndoRedoControls, ImportWizard, DataTransformDialog, FilterRowsDialog, AggregateRowsDialog, DocumentationViewer, AboutDialog, LoadFromUrlDialog } from './components';
 import { ConfirmDialog, ErrorBoundary, ErrorAlert, ThemeProvider, ThemeToggle, HelpProvider, HelpDisplay, HelpWrapper, useHelp } from '@gopca/ui-components';
 import logo from './assets/images/GoCSV-logo-1024-transp.png';
 import helpContent from './help/help-content.json';
@@ -56,6 +56,7 @@ function AppContent() {
     const [wizardInitialSkipRows, setWizardInitialSkipRows] = useState<number | undefined>(undefined);
     const [showTransformDialog, setShowTransformDialog] = useState(false);
     const [showFilterDialog, setShowFilterDialog] = useState(false);
+    const [showAggregateDialog, setShowAggregateDialog] = useState(false);
     const [showDocumentation, setShowDocumentation] = useState(false);
     const [showAboutDialog, setShowAboutDialog] = useState(false);
     // Transposition rewrites the whole dataset, so it asks first and shows what
@@ -596,6 +597,20 @@ return;
                                             </span>
                                         </button>
                                     </HelpWrapper>
+                                    <HelpWrapper helpKey="average-replicates">
+                                        <button
+                                            onClick={() => setShowAggregateDialog(true)}
+                                            className="px-3 py-1.5 text-sm bg-white dark:bg-gray-600 text-gray-700 dark:text-gray-300 rounded hover:bg-gray-100 dark:hover:bg-gray-500 transition-colors border border-gray-300 dark:border-gray-500"
+                                        >
+                                            <span className="flex items-center gap-2">
+                                                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 6h16M4 10h16M4 14h10M4 18h6" />
+                                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M16 16l3 3 3-5" />
+                                                </svg>
+                                                Average Replicates
+                                            </span>
+                                        </button>
+                                    </HelpWrapper>
                                     <HelpWrapper helpKey="transpose">
                                         <button
                                             onClick={async () => {
@@ -837,6 +852,18 @@ return;
                     onClose={() => setShowTransformDialog(false)}
                     fileData={fileData}
                     onTransformComplete={handleTransformComplete}
+                />
+            )}
+
+            {fileData && (
+                <AggregateRowsDialog
+                    isOpen={showAggregateDialog}
+                    onClose={() => setShowAggregateDialog(false)}
+                    fileData={fileData}
+                    onAggregateComplete={(updated) => {
+                        setFileData(updated);
+                        setValidationResult(null);
+                    }}
                 />
             )}
 

@@ -539,20 +539,26 @@ func (c *DeleteRowsCommand) Execute(data *FileData) error {
 		return fmt.Errorf("data is nil")
 	}
 
-	// Delete rows in descending order to maintain indices
+	// Build the set of rows to drop, then keep the rest.
+	//
+	// This used to splice Data and RowNames directly and leave
+	// CategoricalColumns and NumericTargetColumns behind. Those hold one entry
+	// per row, so after a deletion they were longer than the table and
+	// misaligned from that row onwards (#871). keepRows moves every per-row
+	// structure together, so a future row-removing operation cannot repeat the
+	// omission by forgetting the two that look like maps rather than rows.
+	drop := make(map[int]bool, len(c.rowIndices))
 	for _, idx := range c.rowIndices {
-		if idx >= 0 && idx < len(data.Data) {
-			data.Data = append(data.Data[:idx], data.Data[idx+1:]...)
-
-			// Update row names if present
-			if data.RowNames != nil && idx < len(data.RowNames) {
-				data.RowNames = append(data.RowNames[:idx], data.RowNames[idx+1:]...)
-			}
-		}
+		drop[idx] = true
 	}
 
-	// Update row count
-	data.Rows = len(data.Data)
+	keep := make([]int, 0, len(data.Data))
+	for i := range data.Data {
+		if !drop[i] {
+			keep = append(keep, i)
+		}
+	}
+	keepRows(data, keep)
 
 	return nil
 }
