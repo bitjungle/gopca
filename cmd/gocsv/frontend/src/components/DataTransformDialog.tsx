@@ -39,7 +39,7 @@ interface DataTransformDialogProps {
 // Mirrors the TransformationType constants in cmd/gocsv/transforms.go and the
 // Type constants in pkg/transform/types.go. All three are maintained by hand;
 // adding a transformation means adding it to each.
-type TransformationType = 'log' | 'sqrt' | 'square' | 'standardize' | 'minmax' | 'bin' | 'onehot' | 'ordinal' | 'split' | 'combine' | 'clr';
+type TransformationType = 'log' | 'sqrt' | 'square' | 'standardize' | 'minmax' | 'bin' | 'onehot' | 'ordinal' | 'split' | 'combine' | 'clr' | 'boxcox' | 'yeojohnson';
 
 interface TransformationInfo {
     type: TransformationType;
@@ -139,6 +139,24 @@ const transformations: TransformationInfo[] = [
         hasOptions: true
     },
     {
+        type: 'boxcox',
+        name: 'Box-Cox',
+        description: 'Power transform with a fitted exponent; needs positive values',
+        category: 'math',
+        requiresNumeric: true,
+        requiresCategorical: false,
+        hasOptions: true
+    },
+    {
+        type: 'yeojohnson',
+        name: 'Yeo-Johnson',
+        description: 'Like Box-Cox, but defined at zero and for negative values',
+        category: 'math',
+        requiresNumeric: true,
+        requiresCategorical: false,
+        hasOptions: true
+    },
+    {
         type: 'clr',
         name: 'Centred Log-Ratio (CLR)',
         description: 'For parts of a whole — percentages, assays, compositions',
@@ -174,6 +192,7 @@ export const DataTransformDialog: React.FC<DataTransformDialogProps> = ({
     const [separator, setSeparator] = useState('_');
     const [newColumnName, setNewColumnName] = useState('');
     const [zeroReplacement, setZeroReplacement] = useState('');
+    const [lambda, setLambda] = useState('');
     // Category order per column, for ordinal encoding. Seeded from the backend
     // suggestion when a column is picked, then reordered by the user.
     const [categoryOrder, setCategoryOrder] = useState<Record<string, string[]>>({});
@@ -210,6 +229,7 @@ export const DataTransformDialog: React.FC<DataTransformDialogProps> = ({
             setSeparator('_');
             setNewColumnName('');
             setZeroReplacement('');
+            setLambda('');
             setResult(null);
             setError(null);
         }
@@ -285,6 +305,18 @@ export const DataTransformDialog: React.FC<DataTransformDialogProps> = ({
 
     // Parsed once, and null unless it is a finite number above zero. A
     // replacement of zero or below is not a replacement.
+    // Nil unless the user typed a finite number. Zero is a legitimate lambda —
+    // it is the logarithm — so an empty field cannot be represented as 0.
+    const isPowerTransform = selectedTransform === 'boxcox' || selectedTransform === 'yeojohnson';
+    const parsedLambda = (() => {
+        const trimmed = lambda.trim();
+        if (trimmed === '') {
+            return null;
+        }
+        const value = Number(trimmed);
+        return Number.isFinite(value) ? value : null;
+    })();
+
     const parsedZeroReplacement = (() => {
         const trimmed = zeroReplacement.trim();
         if (trimmed === '') {
@@ -323,6 +355,7 @@ export const DataTransformDialog: React.FC<DataTransformDialogProps> = ({
                 // which JSON serialises as null and Go unmarshals as zero — so a
                 // typo would silently read as "no replacement" and the user would
                 // get an error about zeros rather than about what they typed.
+                lambda: isPowerTransform && parsedLambda !== null ? parsedLambda : undefined,
                 zeroReplacement:
                     selectedTransform === 'clr' && parsedZeroReplacement !== null
                         ? parsedZeroReplacement
@@ -645,6 +678,44 @@ export const DataTransformDialog: React.FC<DataTransformDialogProps> = ({
                                                 'Select at least two columns. They join in the order you tick them.'
                                             )}
                                         </div>
+                                    </div>
+                                )}
+                                {isPowerTransform && (
+                                    <div className="space-y-2">
+                                        <label
+                                            htmlFor="power-lambda"
+                                            className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1"
+                                        >
+                                            λ (leave empty to fit from the data)
+                                        </label>
+                                        <input
+                                            id="power-lambda"
+                                            type="text"
+                                            inputMode="decimal"
+                                            value={lambda}
+                                            placeholder="fitted by maximum likelihood"
+                                            onChange={(e) => setLambda(e.target.value)}
+                                            className="w-full px-3 py-2 text-sm border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100"
+                                        />
+                                        <p className="text-xs text-gray-500 dark:text-gray-400">
+                                            Normally left empty: the exponent is fitted to each column,
+                                            and the value used is reported afterwards so you can quote
+                                            it. Supply one to re-apply a λ fitted on other data — a
+                                            validation set should be transformed like its training set,
+                                            not to its own optimum.
+                                        </p>
+                                        {lambda.trim() !== '' && parsedLambda === null && (
+                                            <p className="text-xs text-red-600 dark:text-red-400">
+                                                “{lambda}” is not a number, so it will be ignored and λ
+                                                fitted instead.
+                                            </p>
+                                        )}
+                                        {selectedTransform === 'boxcox' && (
+                                            <p className="text-xs text-gray-500 dark:text-gray-400">
+                                                Box-Cox needs every value above zero. For columns with
+                                                zeros or negatives, use Yeo-Johnson.
+                                            </p>
+                                        )}
                                     </div>
                                 )}
                                 {selectedTransform === 'clr' && (

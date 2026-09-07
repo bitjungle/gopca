@@ -45,6 +45,11 @@
       "text": "Apply data transformations like scaling, normalization, or encoding.",
       "category": "editing"
     },
+    "power-transform": {
+      "title": "Box-Cox and Yeo-Johnson",
+      "text": "Power transforms whose exponent is fitted to the column by maximum likelihood, rather than guessed as with log or square root. Box-Cox needs strictly positive values; Yeo-Johnson also handles zero and negatives. The fitted \u03bb is reported so you can quote it. PCA assumes no normality \u2014 the point is to stop a long-tailed variable dominating a component through leverage alone.",
+      "category": "editing"
+    },
     "clr-transform": {
       "title": "Centred Log-Ratio (CLR)",
       "text": "For data whose columns are parts of a whole \u2014 percentages, mineral assays, compositions. A constant sum forces spurious negative correlations between parts, so PCA on raw closed data describes the constraint as much as the samples. CLR analyses the ratios instead. Select every part together. Zeros are refused unless you supply a replacement below your detection limit.",

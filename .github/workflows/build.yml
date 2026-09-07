@@ -112,6 +112,9 @@ jobs:
 
         echo "Generating CLR reference results..."
         python generate_clr_reference.py
+
+        echo "Generating power transform reference results..."
+        python generate_power_transform_reference.py
         
         # Temporal PCA references are generated on every platform.
         #

@@ -46,6 +46,8 @@ const (
 	TransformSplit       TransformationType = "split"
 	TransformCombine     TransformationType = "combine"
 	TransformCLR         TransformationType = "clr"
+	TransformBoxCox      TransformationType = "boxcox"
+	TransformYeoJohnson  TransformationType = "yeojohnson"
 )
 
 // TransformOptions represents options for data transformation
@@ -74,6 +76,9 @@ type TransformOptions struct {
 	// ZeroReplacement substitutes zeros before the CLR transform. Zero or
 	// absent means refuse rather than substitute.
 	ZeroReplacement float64 `json:"zeroReplacement,omitempty"`
+	// Lambda fixes the power-transform parameter. Nil estimates it; zero is a
+	// meaningful value (the logarithm), so a pointer is required.
+	Lambda *float64 `json:"lambda,omitempty"`
 }
 
 // TransformationResult represents the result of a transformation
@@ -132,6 +137,7 @@ func (a *App) applyTransformationInternal(data *FileData, options TransformOptio
 		NewColumnName: options.NewColumnName,
 
 		ZeroReplacement: options.ZeroReplacement,
+		Lambda:          options.Lambda,
 	}
 
 	res, err := transform.Apply(in, opts)

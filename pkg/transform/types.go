@@ -50,6 +50,11 @@ const (
 	Combine Type = "combine"
 	// CLR applies the centred log-ratio transform to compositional data.
 	CLR Type = "clr"
+	// BoxCox applies the Box-Cox power transform. Requires positive values.
+	BoxCox Type = "boxcox"
+	// YeoJohnson applies the Yeo-Johnson power transform, which is defined for
+	// zero and negative values as well.
+	YeoJohnson Type = "yeojohnson"
 )
 
 // Options configures a transformation.
@@ -121,6 +126,16 @@ type Options struct {
 	// Dealing with Zeros and Missing Values in Compositional Data Sets Using
 	// Nonparametric Imputation, Mathematical Geology 35(3).
 	ZeroReplacement float64
+
+	// Lambda fixes the power-transform parameter instead of estimating it.
+	//
+	// A pointer rather than a value because zero is a meaningful lambda -- it
+	// is the logarithm -- so there is no number free to mean "not set". Nil
+	// estimates lambda from the column by maximum likelihood, which is the
+	// usual case; supplying one re-applies a lambda fitted elsewhere, which is
+	// what a validation set needs if it is to be transformed like the training
+	// set rather than to its own optimum.
+	Lambda *float64
 }
 
 // Input carries the tabular data and metadata that transform functions operate on.
