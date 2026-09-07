@@ -214,6 +214,18 @@ Categorical columns are already excluded from the PCA and already available for 
 
 Transform in GoCSV when the *distribution* of a variable needs correcting. Leave centering and scaling to GoPCA.
 
+### Which one, and when
+
+Most datasets need none of these. Reach for a transformation when you have a reason, and the reason is usually one of three:
+
+**"One variable has a long tail."** A few large values sit far from the mean, and PCA is a covariance method — it notices distance. That variable will pull a component towards itself for reasons of shape rather than substance. Use **Box-Cox** if every value is above zero, **Yeo-Johnson** if any are zero or negative. Let them fit the exponent; that is what they are for.
+
+**"My columns are parts of a whole."** Percentages, assays, anything summing to 100. Use **CLR**, and read the section below first — this is a correctness problem, not a tidiness one.
+
+**"I know the mechanism."** Log for a process that is multiplicative rather than additive, square root for counts that behave like a Poisson, square for a left skew. These are claims about how your measurement works, and if you can make one, a fixed transform is more defensible than a fitted one because you can say why you chose it.
+
+If none of those applies, **do nothing here.** Centering and scaling in GoPCA handle differences of unit and range, which is what most preparation actually needs.
+
 | Transformation | Use case |
 |----------------|----------|
 | Log | Right-skewed data — concentrations, counts, incomes |
@@ -229,6 +241,25 @@ Transform in GoCSV when the *distribution* of a variable needs correcting. Leave
 **A column is transformed completely or not at all.** `log` is undefined at zero and below, and `sqrt` at negatives. If any value in a column is outside the range, GoCSV leaves the whole column untouched and tells you which rows are the problem.
 
 This matters more than it sounds. Transforming the valid values and skipping the rest would leave one variable holding two different scales — some cells in log units, some raw — and nothing downstream could detect it. Zeros in concentration and count data are normal, not exotic, so this is a case you are likely to meet. When you do, decide what the zeros mean before transforming: a true zero, a value below the detection limit, and a missing measurement are three different things.
+
+### The order you do things in changes the answer
+
+This is the part that is easy to get wrong, because every individual step looks correct.
+
+**Filter before you transform.** Box-Cox and Yeo-Johnson fit their exponent to the values present. Remove a batch afterwards and the exponent was fitted partly to rows you have discarded — harmless in most cases, wrong if the batch you removed was the skewed one.
+
+**Decide about replicates before you transform, not after.** Averaging and transforming do not commute, and the difference is not small. Two replicates of a concentration, 10 and 100:
+
+| Order | Result | What it means |
+|-------|--------|---------------|
+| Average, then log | `log(55.0) = 4.007` | The **arithmetic** mean of the measurements |
+| Log, then average | `mean(log) = 3.454` | `log(31.6)` — the **geometric** mean |
+
+Both are defensible; they answer different questions. If your measurement error is additive, average first. If it is multiplicative — as it usually is for concentrations spanning orders of magnitude — transform first, so you are averaging on the scale where the error is symmetric. What you should not do is pick by accident.
+
+**Do not stack distribution transforms.** Log followed by Box-Cox is Box-Cox applied to data that has already been corrected, and the fitted λ will reflect that. Choose one.
+
+**Apply CLR to raw compositional data**, before anything else touches those columns. It works on the ratios between parts; transforming the parts individually first destroys the very relationship it is reading.
 
 ### Letting the data choose the transform
 
@@ -247,6 +278,18 @@ The logarithm is not a special case bolted on — it is the k = 0 member, which 
 **Which of the two?** Box-Cox needs every value strictly above zero. **Yeo-Johnson** extends the same idea to zero and negative values, which is precisely where `log` and `sqrt` refuse — so it is the answer for zero-inflated concentration and count data, and the one to reach for when Box-Cox declines your column.
 
 **The fitted λ is reported afterwards**, because a transform whose parameter you cannot see is one you cannot quote in a paper or reproduce anywhere else. You can also supply λ yourself: a validation set should be transformed the same way as its training set, not fitted to its own optimum.
+
+**What it looks like.** A right-skewed concentration column, and what Box-Cox does to it:
+
+| Input | 0.4 | 0.7 | 1.1 | 1.8 | 3.2 | 6.5 | 14.0 | 31.0 |
+|-------|-----|-----|-----|-----|-----|-----|------|------|
+| **Output** | −0.97 | −0.36 | 0.09 | 0.57 | 1.08 | 1.67 | 2.26 | 2.81 |
+
+> `Box-Cox applied to 'Conc' (λ = −0.1214, fitted by maximum likelihood)`
+
+Read the gaps rather than the numbers. In the input, the last two values are 17 units apart while the first two are 0.3 apart — a ratio of nearly sixty. After transforming, those gaps are 0.55 and 0.60: comparable. The largest sample no longer sits at a distance that would dominate a component on its own.
+
+Note also that λ came out at −0.12, close to zero — which is the logarithm. For data generated by a multiplicative process the estimator tends to find its way there by itself, which is a useful check that it is doing something sensible rather than something arbitrary.
 
 > **Not about normality.** PCA makes no assumption that your variables are normally distributed, so this is not a box to tick before analysis. The reason to reduce skew is more concrete: a variable with a long tail exerts leverage out of proportion to its information, because a handful of large values sit far from the mean and a covariance method notices distance. Reducing the skew reduces that pull. If a variable is not skewed, leave it alone — a fitted λ near 1 is the transform telling you exactly that.
 
@@ -270,6 +313,15 @@ Select **every part of the composition together** — all the oxides, all the pe
 
 - **The values describe ratios, not amounts.** A row of `[2, 3, 5]` and a row of `[2000, 3000, 5000]` transform identically, because they are the same composition measured in different units.
 - **Each transformed row sums to zero.** That is inherent to centring on the geometric mean, not a sign of anything wrong.
+
+**What it looks like.** Two samples, three parts, percentages:
+
+| | A | B | C | | A_clr | B_clr | C_clr |
+|---|---|---|---|---|---|---|---|
+| Sample 1 | 60 | 30 | 10 | → | 0.828 | 0.135 | −0.963 |
+| Sample 2 | 20 | 20 | 60 | → | −0.366 | −0.366 | 0.732 |
+
+Sample 2 shows the reading most clearly: A and B are equal, so they take the same value, and it is *negative* — meaning both sit below the geometric mean of that row. C is above it. The numbers say "this part is large or small relative to the rest of this sample", which is the only thing a composition can honestly tell you. And each row sums to zero, as it must.
 
 CLR keeps one output column per input column, so a loadings plot still names your variables — which is why it is the sensible choice here over ILR, whose coordinates are no longer per-variable, or ALR, which needs you to nominate one part as a denominator.
 
