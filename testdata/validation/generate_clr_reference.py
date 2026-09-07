@@ -66,9 +66,6 @@ def build_cases():
     # Equal parts: every clr value must be exactly zero, whatever the level.
     cases.append(("equal_parts", np.array([
         [1.0, 1.0, 1.0],
-        [25.0, 25.0, 25.0, ],
-    ], dtype=object) if False else np.array([
-        [1.0, 1.0, 1.0],
         [25.0, 25.0, 25.0],
     ])))
 

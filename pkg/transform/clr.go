@@ -230,7 +230,7 @@ func replaceZeros(parts [][]float64, opts Options, result *Result) error {
 			zeroCount, describeRows(affectedRows))
 	}
 
-	for _, row := range parts {
+	for i, row := range parts {
 		zeros := 0
 		total := 0.0
 		for _, value := range row {
@@ -242,7 +242,21 @@ func replaceZeros(parts [][]float64, opts Options, result *Result) error {
 		if zeros == 0 {
 			continue
 		}
-		if opts.ZeroReplacement*float64(zeros) >= total && total > 0 {
+
+		// A row that is entirely zeros has no composition to preserve, and
+		// substituting every part would invent one. Worse, it would invent a
+		// convincing one: replacing every part with the same value gives a
+		// clr of all zeros, which is exactly what a perfectly equal
+		// composition looks like. A row where nothing was measured would
+		// arrive in the analysis indistinguishable from a real sample.
+		if total == 0 {
+			return fmt.Errorf("row %d has no measured parts at all. Multiplicative "+
+				"replacement rescales the parts that were measured, and there are "+
+				"none here, so there is nothing to preserve -- remove the row rather "+
+				"than substituting a composition for it", i+1)
+		}
+
+		if opts.ZeroReplacement*float64(zeros) >= total {
 			return fmt.Errorf("the replacement value %g is too large: %d zeros would "+
 				"account for the whole of a row summing to %g",
 				opts.ZeroReplacement, zeros, total)
@@ -252,10 +266,7 @@ func replaceZeros(parts [][]float64, opts Options, result *Result) error {
 		// row total is unchanged, which keeps the ratios among them exactly as
 		// they were. Simply substituting would inflate the total and shift
 		// every ratio in the row.
-		scale := 1.0
-		if total > 0 {
-			scale = 1 - opts.ZeroReplacement*float64(zeros)/total
-		}
+		scale := 1 - opts.ZeroReplacement*float64(zeros)/total
 		for j, value := range row {
 			if value == 0 {
 				row[j] = opts.ZeroReplacement

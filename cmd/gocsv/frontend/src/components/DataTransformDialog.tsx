@@ -283,6 +283,17 @@ export const DataTransformDialog: React.FC<DataTransformDialogProps> = ({
         }
     };
 
+    // Parsed once, and null unless it is a finite number above zero. A
+    // replacement of zero or below is not a replacement.
+    const parsedZeroReplacement = (() => {
+        const trimmed = zeroReplacement.trim();
+        if (trimmed === '') {
+            return null;
+        }
+        const value = Number(trimmed);
+        return Number.isFinite(value) && value > 0 ? value : null;
+    })();
+
     const handleApplyTransform = async () => {
         if (selectedColumns.length === 0) {
             setError('Please select at least one column');
@@ -308,9 +319,13 @@ export const DataTransformDialog: React.FC<DataTransformDialogProps> = ({
                 delimiter: selectedTransform === 'split' ? delimiter : undefined,
                 separator: selectedTransform === 'combine' ? separator : undefined,
                 newColumnName: selectedTransform === 'combine' ? newColumnName : undefined,
+                // Only send a finite, positive number. parseFloat('abc') is NaN,
+                // which JSON serialises as null and Go unmarshals as zero — so a
+                // typo would silently read as "no replacement" and the user would
+                // get an error about zeros rather than about what they typed.
                 zeroReplacement:
-                    selectedTransform === 'clr' && zeroReplacement.trim() !== ''
-                        ? parseFloat(zeroReplacement)
+                    selectedTransform === 'clr' && parsedZeroReplacement !== null
+                        ? parsedZeroReplacement
                         : undefined
             };
 
@@ -664,6 +679,12 @@ export const DataTransformDialog: React.FC<DataTransformDialogProps> = ({
                                                 each row total is unchanged. This invents a measurement
                                                 that was not made, so it is deliberately your decision.
                                             </p>
+                                            {zeroReplacement.trim() !== '' && parsedZeroReplacement === null && (
+                                                <p className="mt-1 text-xs text-red-600 dark:text-red-400">
+                                                    “{zeroReplacement}” is not a positive number, so it
+                                                    will be ignored and zeros refused.
+                                                </p>
+                                            )}
                                         </div>
                                     </div>
                                 )}

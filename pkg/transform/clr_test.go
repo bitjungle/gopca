@@ -180,6 +180,18 @@ func TestCLRRefusals(t *testing.T) {
 			opts:    func(o *Options) { o.ZeroReplacement = 5 },
 			wantErr: "too large",
 		},
+		{
+			// A row of nothing but zeros has no composition to preserve, and
+			// substituting every part invents a convincing one: every part
+			// equal gives a clr of all zeros, which is exactly what a real
+			// sample with equal parts looks like. Such a row would reach the
+			// analysis indistinguishable from a measured one.
+			name:    "a row with no measured parts at all",
+			rows:    [][]string{{"50", "30", "20"}, {"0", "0", "0"}},
+			columns: []string{"A", "B", "C"},
+			opts:    func(o *Options) { o.ZeroReplacement = 0.01 },
+			wantErr: "no measured parts at all",
+		},
 	}
 
 	for _, tt := range tests {
