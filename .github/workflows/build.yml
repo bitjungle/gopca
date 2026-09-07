@@ -287,6 +287,17 @@ jobs:
     - name: Install Wails CLI
       run: go install github.com/wailsapp/wails/v2/cmd/wails@v2.13.0
 
+    # `wails generate module` runs `go build -tags bindings` on the app and
+    # executes the result, and main.go carries `//go:embed all:frontend/dist`.
+    # frontend/dist is a build artifact and is not in the repository, so the
+    # build fails with "pattern all:frontend/dist: no matching files found".
+    # An empty placeholder satisfies the embed -- the `all:` prefix means the
+    # dotfile counts as a match -- and the bindings do not depend on its
+    # contents. Building the real dist here is not an option: `npm run build`
+    # is `tsc && vite build`, and tsc is what needs the bindings.
+    - name: Placeholder frontend/dist for the embed directive
+      run: mkdir -p cmd/gopca-desktop/frontend/dist && touch cmd/gopca-desktop/frontend/dist/.gitkeep
+
     - name: Generate GoPCA Desktop Wails bindings
       working-directory: cmd/gopca-desktop
       run: $(go env GOPATH)/bin/wails generate module
