@@ -564,6 +564,7 @@ export namespace main {
 	    delimiter?: string;
 	    separator?: string;
 	    newColumnName?: string;
+	    zeroReplacement?: number;
 	
 	    static createFrom(source: any = {}) {
 	        return new TransformOptions(source);
@@ -581,6 +582,7 @@ export namespace main {
 	        this.delimiter = source["delimiter"];
 	        this.separator = source["separator"];
 	        this.newColumnName = source["newColumnName"];
+	        this.zeroReplacement = source["zeroReplacement"];
 	    }
 	}
 	export class TransformationResult {

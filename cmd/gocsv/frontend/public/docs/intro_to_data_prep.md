@@ -206,10 +206,40 @@ Transform in GoCSV when the *distribution* of a variable needs correcting. Leave
 | Standardisation (z-score) | General scaling — though GoPCA can do this at analysis time |
 | Min-max scaling | Scale to [0, 1] or a range you choose |
 | Binning | Turn a continuous variable into categories |
+| Centred log-ratio (CLR) | Compositional data — percentages, assays, parts of a whole |
 
 **A column is transformed completely or not at all.** `log` is undefined at zero and below, and `sqrt` at negatives. If any value in a column is outside the range, GoCSV leaves the whole column untouched and tells you which rows are the problem.
 
 This matters more than it sounds. Transforming the valid values and skipping the rest would leave one variable holding two different scales — some cells in log units, some raw — and nothing downstream could detect it. Zeros in concentration and count data are normal, not exotic, so this is a case you are likely to meet. When you do, decide what the zeros mean before transforming: a true zero, a value below the detection limit, and a missing measurement are three different things.
+
+### Compositional data: parts of a whole
+
+Some measurements only make sense relative to each other. Mineral assays, food composition, soil fractions, percentage breakdowns — each row describes how a whole divides into parts, and the parts add up to 100 (or 1, or a fixed total).
+
+**This breaks PCA in a way that is easy to miss.** If the parts must sum to a constant, then one part rising forces the others to fall, whatever the underlying chemistry. That is not a fact about your samples; it is arithmetic. The covariance matrix becomes singular, correlations between parts come out spuriously negative, and the components you get describe the constant-sum constraint as much as the material.
+
+The fix is over a century old in outline and standard since Aitchison: stop analysing the amounts and start analysing the *ratios* between them.
+
+**Centred Log-Ratio (CLR)** does this. Each part is replaced by the logarithm of its ratio to the geometric mean of the whole row:
+
+```
+clr(x)ᵢ = ln( xᵢ / geometric mean of the row )
+```
+
+Select **every part of the composition together** — all the oxides, all the percentages — and each becomes a new `_clr` column. Two things follow from the definition and are worth recognising:
+
+- **The values describe ratios, not amounts.** A row of `[2, 3, 5]` and a row of `[2000, 3000, 5000]` transform identically, because they are the same composition measured in different units.
+- **Each transformed row sums to zero.** That is inherent to centring on the geometric mean, not a sign of anything wrong.
+
+CLR keeps one output column per input column, so a loadings plot still names your variables — which is why it is the sensible choice here over ILR, whose coordinates are no longer per-variable, or ALR, which needs you to nominate one part as a denominator.
+
+> **Zeros need a decision from you.** The logarithm is undefined at zero, and zeros are routine in trace-element work. GoCSV refuses the transform by default and tells you which rows are affected.
+>
+> If you want to proceed, give a **replacement value** below your detection limit. The other parts in that row are scaled down so the row total is unchanged, which keeps the ratios among the parts you actually measured intact. This is the standard remedy (Martín-Fernández et al., 2003) — but it invents a measurement that was not made, and "absent" and "below the detection limit" are different claims. That is why GoCSV makes you ask rather than doing it quietly.
+
+You do not need a closed composition. A **subcomposition** — a subset of the parts — is still compositional and is analysed this way routinely. GoCSV tells you which case you are in: whether the columns you selected sum to a constant in every row, or vary. If they vary when you expected them not to, you have probably missed a part.
+
+**References:** Aitchison, J. (1986), *The Statistical Analysis of Compositional Data*, Chapman & Hall, Ch. 4. Egozcue et al. (2003), *Isometric Logratio Transformations for Compositional Data Analysis*, Mathematical Geology 35(3).
 
 ---
 
@@ -244,6 +274,7 @@ GoCSV shows you where they are; what to do about them is a judgement it cannot m
 - [ ] Missing values dealt with, or NIPALS chosen in GoPCA
 - [ ] Columns with no variation removed
 - [ ] Categorical variables encoded, if you want them in the analysis
+- [ ] Compositional data transformed with CLR, if your columns are parts of a whole
 - [ ] Group and response variables marked with `#target`
 - [ ] No duplicate column names
 

@@ -39,13 +39,13 @@ interface DataTransformDialogProps {
 // Mirrors the TransformationType constants in cmd/gocsv/transforms.go and the
 // Type constants in pkg/transform/types.go. All three are maintained by hand;
 // adding a transformation means adding it to each.
-type TransformationType = 'log' | 'sqrt' | 'square' | 'standardize' | 'minmax' | 'bin' | 'onehot' | 'ordinal' | 'split' | 'combine';
+type TransformationType = 'log' | 'sqrt' | 'square' | 'standardize' | 'minmax' | 'bin' | 'onehot' | 'ordinal' | 'split' | 'combine' | 'clr';
 
 interface TransformationInfo {
     type: TransformationType;
     name: string;
     description: string;
-    category: 'math' | 'scale' | 'encode' | 'restructure';
+    category: 'math' | 'scale' | 'encode' | 'restructure' | 'compositional';
     requiresNumeric: boolean;
     requiresCategorical: boolean;
     hasOptions?: boolean;
@@ -137,6 +137,15 @@ const transformations: TransformationInfo[] = [
         requiresNumeric: false,
         requiresCategorical: false,
         hasOptions: true
+    },
+    {
+        type: 'clr',
+        name: 'Centred Log-Ratio (CLR)',
+        description: 'For parts of a whole — percentages, assays, compositions',
+        category: 'compositional',
+        requiresNumeric: true,
+        requiresCategorical: false,
+        hasOptions: true
     }
 ];
 
@@ -164,6 +173,7 @@ export const DataTransformDialog: React.FC<DataTransformDialogProps> = ({
     const [delimiter, setDelimiter] = useState('_');
     const [separator, setSeparator] = useState('_');
     const [newColumnName, setNewColumnName] = useState('');
+    const [zeroReplacement, setZeroReplacement] = useState('');
     // Category order per column, for ordinal encoding. Seeded from the backend
     // suggestion when a column is picked, then reordered by the user.
     const [categoryOrder, setCategoryOrder] = useState<Record<string, string[]>>({});
@@ -199,6 +209,7 @@ export const DataTransformDialog: React.FC<DataTransformDialogProps> = ({
             setDelimiter('_');
             setSeparator('_');
             setNewColumnName('');
+            setZeroReplacement('');
             setResult(null);
             setError(null);
         }
@@ -290,13 +301,17 @@ export const DataTransformDialog: React.FC<DataTransformDialogProps> = ({
                 minValue: selectedTransform === 'minmax' ? minValue : undefined,
                 maxValue: selectedTransform === 'minmax' ? maxValue : undefined,
                 removeOriginal:
-                    ['onehot', 'ordinal', 'split', 'combine'].includes(selectedTransform)
+                    ['onehot', 'ordinal', 'split', 'combine', 'clr'].includes(selectedTransform)
                         ? !keepOriginal
                         : undefined,
                 categoryOrder: selectedTransform === 'ordinal' ? categoryOrder : undefined,
                 delimiter: selectedTransform === 'split' ? delimiter : undefined,
                 separator: selectedTransform === 'combine' ? separator : undefined,
-                newColumnName: selectedTransform === 'combine' ? newColumnName : undefined
+                newColumnName: selectedTransform === 'combine' ? newColumnName : undefined,
+                zeroReplacement:
+                    selectedTransform === 'clr' && zeroReplacement.trim() !== ''
+                        ? parseFloat(zeroReplacement)
+                        : undefined
             };
 
             const transformResult = await ApplyTransformation(fileData, options);
@@ -372,7 +387,7 @@ export const DataTransformDialog: React.FC<DataTransformDialogProps> = ({
                                 Transformation Type
                             </label>
                             <div className="grid grid-cols-1 gap-2">
-                                {['math', 'scale', 'encode', 'restructure'].map(category => (
+                                {['math', 'scale', 'encode', 'restructure', 'compositional'].map(category => (
                                     <div key={category}>
                                         <div className="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase mb-1">
                                             {category === 'math'
@@ -381,7 +396,9 @@ export const DataTransformDialog: React.FC<DataTransformDialogProps> = ({
                                                     ? 'Scaling'
                                                     : category === 'encode'
                                                         ? 'Encoding'
-                                                        : 'Restructure'}
+                                                        : category === 'restructure'
+                                                            ? 'Restructure'
+                                                            : 'Compositional'}
                                         </div>
                                         <div className="space-y-1">
                                             {transformations
@@ -439,7 +456,7 @@ export const DataTransformDialog: React.FC<DataTransformDialogProps> = ({
                                         </div>
                                     </div>
                                 )}
-                                {['onehot', 'ordinal', 'split', 'combine'].includes(selectedTransform) && (
+                                {['onehot', 'ordinal', 'split', 'combine', 'clr'].includes(selectedTransform) && (
                                     <div>
                                         <label className="flex items-start gap-2 cursor-pointer">
                                             <input
@@ -612,6 +629,41 @@ export const DataTransformDialog: React.FC<DataTransformDialogProps> = ({
                                             ) : (
                                                 'Select at least two columns. They join in the order you tick them.'
                                             )}
+                                        </div>
+                                    </div>
+                                )}
+                                {selectedTransform === 'clr' && (
+                                    <div className="space-y-3">
+                                        <p className="text-xs text-gray-600 dark:text-gray-400">
+                                            Select every part of the composition together — all the
+                                            oxides, all the percentages. Each selected column becomes a
+                                            <span className="font-mono"> _clr </span>column describing
+                                            that part relative to the geometric mean of the whole.
+                                        </p>
+                                        <div>
+                                            <label
+                                                htmlFor="clr-zero"
+                                                className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1"
+                                            >
+                                                Replace zeros with (optional)
+                                            </label>
+                                            <input
+                                                id="clr-zero"
+                                                type="text"
+                                                inputMode="decimal"
+                                                value={zeroReplacement}
+                                                placeholder="leave empty to refuse zeros"
+                                                onChange={(e) => setZeroReplacement(e.target.value)}
+                                                className="w-full px-3 py-2 text-sm border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100"
+                                            />
+                                            <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
+                                                The logarithm is undefined at zero. Left empty, a
+                                                composition containing zeros is refused and the rows are
+                                                named. Give a value below your detection limit to
+                                                substitute them instead — the other parts are scaled so
+                                                each row total is unchanged. This invents a measurement
+                                                that was not made, so it is deliberately your decision.
+                                            </p>
                                         </div>
                                     </div>
                                 )}
