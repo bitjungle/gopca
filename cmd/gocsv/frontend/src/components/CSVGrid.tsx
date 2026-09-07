@@ -558,12 +558,16 @@ classes.push('target-header');
     // order and AG Grid adopts them, so the two agree without the grid's own
     // move being applied a second time.
     const onDragStopped = useCallback(async () => {
-        if (!columnApi || !fileData || !onRefresh) {
+        if (!gridApi || !fileData || !onRefresh) {
             return;
         }
 
         // The row-name column is pinned and locked, so it never takes part.
-        const displayed = columnApi
+        //
+        // Read through gridApi rather than columnApi: AG Grid 31 moved these
+        // onto the grid API and warns on the old path. The surrounding code
+        // still uses columnApi in places, but new code need not add to that.
+        const displayed = gridApi
             .getAllDisplayedColumns()
             .map((column) => column.getColId())
             .filter((colId) => colId !== 'rowName');
@@ -588,7 +592,7 @@ classes.push('target-header');
         } catch (error) {
             console.error('Error reordering columns:', error);
         }
-    }, [columnApi, fileData, onRefresh, headers.length]);
+    }, [gridApi, fileData, onRefresh, headers.length]);
 
     const onGridReady = useCallback((params: GridReadyEvent) => {
         setGridApi(params.api);

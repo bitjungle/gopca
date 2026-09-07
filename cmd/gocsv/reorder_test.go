@@ -174,3 +174,61 @@ func TestReorderRaggedRows(t *testing.T) {
 		}
 	}
 }
+
+// TestDeepCopyCarriesRowNamesHeader covers a field that every undo depends on.
+//
+// deepCopyFileData copies fields by name, and it predates RowNamesHeader
+// (#859). So every command that undoes through it — filtering, deleting rows,
+// aggregating, reordering — silently blanked the header of the row-name column,
+// and an export afterwards wrote ",By,Score" instead of "Prove,By,Score". That
+// is exactly the loss #859 existed to prevent, reintroduced by an undo.
+//
+// Found by looking at the grid after an undo, not by a failing test: the order
+// was restored correctly and the corner label had quietly gone.
+func TestDeepCopyCarriesRowNamesHeader(t *testing.T) {
+	data := reorderFixture()
+	data.RowNamesHeader = "Prove"
+
+	clone := deepCopyFileData(data)
+	if clone.RowNamesHeader != "Prove" {
+		t.Errorf("RowNamesHeader = %q after a deep copy, want Prove", clone.RowNamesHeader)
+	}
+
+	// And through an actual undo, which is how a user meets it.
+	cmd, err := NewReorderColumnsCommand(NewApp(), data, []int{2, 0, 1})
+	if err != nil {
+		t.Fatalf("NewReorderColumnsCommand: %v", err)
+	}
+	if err := cmd.Execute(data); err != nil {
+		t.Fatalf("Execute: %v", err)
+	}
+	if err := cmd.Undo(data); err != nil {
+		t.Fatalf("Undo: %v", err)
+	}
+	if data.RowNamesHeader != "Prove" {
+		t.Errorf("RowNamesHeader = %q after undo, want Prove — the row-name column "+
+			"lost its name and an export would write it blank", data.RowNamesHeader)
+	}
+}
+
+// TestFilterUndoCarriesRowNamesHeader shows the same fault reached an already
+// merged feature, so the fix belongs in the shared helper rather than here.
+func TestFilterUndoCarriesRowNamesHeader(t *testing.T) {
+	data := reorderFixture()
+	data.RowNamesHeader = "Prove"
+
+	cmd, err := NewFilterRowsCommand(NewApp(), data, FilterCondition{
+		Column: "A", Operator: FilterIsNotEmpty, Mode: "keep"})
+	if err != nil {
+		t.Fatalf("NewFilterRowsCommand: %v", err)
+	}
+	if err := cmd.Execute(data); err != nil {
+		t.Fatalf("Execute: %v", err)
+	}
+	if err := cmd.Undo(data); err != nil {
+		t.Fatalf("Undo: %v", err)
+	}
+	if data.RowNamesHeader != "Prove" {
+		t.Errorf("RowNamesHeader = %q after undoing a filter, want Prove", data.RowNamesHeader)
+	}
+}
