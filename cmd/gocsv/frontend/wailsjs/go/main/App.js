@@ -82,6 +82,10 @@ export function ExecuteMoveRowNamesIntoTable(arg1) {
   return window['go']['main']['App']['ExecuteMoveRowNamesIntoTable'](arg1);
 }
 
+export function ExecuteReorderColumns(arg1, arg2) {
+  return window['go']['main']['App']['ExecuteReorderColumns'](arg1, arg2);
+}
+
 export function ExecuteSetRowNames(arg1, arg2) {
   return window['go']['main']['App']['ExecuteSetRowNames'](arg1, arg2);
 }

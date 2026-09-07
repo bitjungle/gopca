@@ -42,6 +42,13 @@ func deepCopyFileData(data *FileData) *FileData {
 	copied := &FileData{
 		Rows:    data.Rows,
 		Columns: data.Columns,
+		// The header of the row-name column. Added by #859 and missed here,
+		// because this helper predates it and copies fields by name rather
+		// than wholesale -- so every command that undoes through it silently
+		// blanked the row-name header, and an export afterwards wrote
+		// ",By,Score" instead of "Prove,By,Score". That is precisely the loss
+		// #859 existed to fix, reintroduced by an undo.
+		RowNamesHeader: data.RowNamesHeader,
 	}
 
 	// Deep copy headers

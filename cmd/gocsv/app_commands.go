@@ -213,6 +213,18 @@ func (a *App) ExecuteAggregateRows(data *FileData, options AggregateOptions) (*F
 	return a.executeCommand(cmd, data, "aggregate rows")
 }
 
+// ExecuteReorderColumns rearranges the columns, with undo support.
+//
+// order[i] is the index, in the columns as they are now, of the column that
+// should end up at position i.
+func (a *App) ExecuteReorderColumns(data *FileData, order []int) (*FileData, error) {
+	cmd, err := NewReorderColumnsCommand(a, data, order)
+	if err != nil {
+		return nil, fmt.Errorf("reorder columns: %w", err)
+	}
+	return a.executeCommand(cmd, data, "reorder columns")
+}
+
 // ExecuteDuplicateRows duplicates selected rows with undo support
 func (a *App) ExecuteDuplicateRows(data *FileData, rowIndices []int) (*FileData, error) {
 	if len(rowIndices) == 0 {
