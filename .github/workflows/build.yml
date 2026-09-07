@@ -324,13 +324,13 @@ jobs:
     # variancePercent.test.ts read a property off a value cast to `never` and
     # broke the GoPCA Desktop build for everyone until it was noticed by hand.
     - name: Type-check shared UI components
-      run: npx tsc --noEmit -p packages/ui-components/tsconfig.json
+      run: npx --no-install tsc --noEmit -p packages/ui-components/tsconfig.json
 
     - name: Type-check GoPCA Desktop frontend
-      run: npx tsc --noEmit -p cmd/gopca-desktop/frontend/tsconfig.json
+      run: npx --no-install tsc --noEmit -p cmd/gopca-desktop/frontend/tsconfig.json
 
     - name: Type-check GoCSV frontend
-      run: npx tsc --noEmit -p cmd/gocsv/frontend/tsconfig.json
+      run: npx --no-install tsc --noEmit -p cmd/gocsv/frontend/tsconfig.json
 
     # Until this step existed, the frontend test suites ran only on developer
     # machines: CI linted the TypeScript and never executed a single vitest
