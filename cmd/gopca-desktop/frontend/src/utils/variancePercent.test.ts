@@ -8,6 +8,7 @@
 
 import { describe, it, expect } from 'vitest';
 import { asPercentages, asFractions } from './variancePercent';
+import type { PCAResponse } from '../types';
 
 // The backend reports fractions as of V2; the UI renders percentages. This
 // module is the only place that bridges the two, so it is the only place a
@@ -22,7 +23,11 @@ const response = (ratio: number[], cumulative: number[]) =>
             scores: [[1, 2]],
             loadings: [[0.7, 0.7]]
         }
-    }) as never;
+        // Cast to PCAResponse, not to never. `as never` silences the
+        // structural mismatch of a partial result, but it also makes the value
+        // unusable: reading a property off `never` is an error, which is what
+        // broke `tsc` for anything holding the helper's return directly.
+    }) as unknown as PCAResponse;
 
 describe('variancePercent', () => {
     it('scales the iris profile to the percentages the UI labels expect', () => {
@@ -39,15 +44,15 @@ describe('variancePercent', () => {
 
     it('does not mutate the response it was given', () => {
         const original = response([0.5], [0.5]);
-        const before = [...original.result.explained_variance_ratio];
+        const before = [...original.result!.explained_variance_ratio];
         asPercentages(original);
-        expect(original.result.explained_variance_ratio).toEqual(before);
+        expect(original.result!.explained_variance_ratio).toEqual(before);
     });
 
     // A failed run carries no result, and the export path can be reached before
     // one exists. Neither may throw.
     it('passes a resultless response through', () => {
-        const failed = { success: false, error: 'boom' } as never;
+        const failed = { success: false, error: 'boom' } as PCAResponse;
         expect(asPercentages(failed)).toBe(failed);
     });
 

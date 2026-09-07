@@ -278,6 +278,27 @@ jobs:
     - name: Lint GoCSV frontend
       run: npm run lint -w gocsv-frontend
 
+    # Type-check every frontend.
+    #
+    # Nothing in this job did, and nothing else in a pull request did either.
+    # eslint does not type-check, and `vitest run` transpiles with esbuild,
+    # which strips types without checking them. The only step that ran tsc was
+    # `npm run build` inside the Build jobs -- and those are gated on a push to
+    # main or develop, so they are skipped on every pull request.
+    #
+    # A type error could therefore pass a completely green PR and only appear
+    # when a developer ran `make pca-dev`, which is exactly what happened:
+    # variancePercent.test.ts read a property off a value cast to `never` and
+    # broke the GoPCA Desktop build for everyone until it was noticed by hand.
+    - name: Type-check shared UI components
+      run: npx tsc --noEmit -p packages/ui-components/tsconfig.json
+
+    - name: Type-check GoPCA Desktop frontend
+      run: npx tsc --noEmit -p cmd/gopca-desktop/frontend/tsconfig.json
+
+    - name: Type-check GoCSV frontend
+      run: npx tsc --noEmit -p cmd/gocsv/frontend/tsconfig.json
+
     # Until this step existed, the frontend test suites ran only on developer
     # machines: CI linted the TypeScript and never executed a single vitest
     # case. Every guard written for the desktop UI was therefore unenforced on
