@@ -21,6 +21,8 @@ export function DownloadAndInspectZip(arg1:string):Promise<main.ZipInspectResult
 
 export function DownloadGoPCA():Promise<void>;
 
+export function ExecuteAggregateRows(arg1:main.FileData,arg2:main.AggregateOptions):Promise<main.FileData>;
+
 export function ExecuteCellEdit(arg1:main.FileData,arg2:number,arg3:number,arg4:string,arg5:string):Promise<main.FileData>;
 
 export function ExecuteDeleteColumns(arg1:main.FileData,arg2:Array<number>):Promise<main.FileData>;
@@ -68,6 +70,8 @@ export function LoadZipEntry(arg1:string):Promise<main.FileData>;
 export function OpenInGoPCA(arg1:main.FileData):Promise<void>;
 
 export function PeekRemoteURL(arg1:string):Promise<main.URLPeekResult>;
+
+export function PreviewAggregate(arg1:main.FileData,arg2:main.AggregateOptions):Promise<main.AggregatePreview>;
 
 export function PreviewFile(arg1:string,arg2:main.ImportOptions):Promise<main.FilePreview>;
 

@@ -484,6 +484,14 @@ type DeleteRowsCommand struct {
 	rowIndices  []int
 	oldRows     [][]string
 	oldRowNames []string
+	// before is the whole dataset as it was.
+	//
+	// Undo used to re-insert Data and RowNames only, which was consistent while
+	// Execute left the per-row maps alone. Now that Execute trims them (#871),
+	// restoring by hand would mean putting back four separate structures in
+	// step -- and getting one wrong leaves the maps misaligned in the other
+	// direction. Restoring the captured state cannot go half-done.
+	before *FileData
 }
 
 // NewDeleteRowsCommand creates a new delete rows command
@@ -539,20 +547,30 @@ func (c *DeleteRowsCommand) Execute(data *FileData) error {
 		return fmt.Errorf("data is nil")
 	}
 
-	// Delete rows in descending order to maintain indices
-	for _, idx := range c.rowIndices {
-		if idx >= 0 && idx < len(data.Data) {
-			data.Data = append(data.Data[:idx], data.Data[idx+1:]...)
-
-			// Update row names if present
-			if data.RowNames != nil && idx < len(data.RowNames) {
-				data.RowNames = append(data.RowNames[:idx], data.RowNames[idx+1:]...)
-			}
-		}
+	if c.before == nil {
+		c.before = deepCopyFileData(data)
 	}
 
-	// Update row count
-	data.Rows = len(data.Data)
+	// Build the set of rows to drop, then keep the rest.
+	//
+	// This used to splice Data and RowNames directly and leave
+	// CategoricalColumns and NumericTargetColumns behind. Those hold one entry
+	// per row, so after a deletion they were longer than the table and
+	// misaligned from that row onwards (#871). keepRows moves every per-row
+	// structure together, so a future row-removing operation cannot repeat the
+	// omission by forgetting the two that look like maps rather than rows.
+	drop := make(map[int]bool, len(c.rowIndices))
+	for _, idx := range c.rowIndices {
+		drop[idx] = true
+	}
+
+	keep := make([]int, 0, len(data.Data))
+	for i := range data.Data {
+		if !drop[i] {
+			keep = append(keep, i)
+		}
+	}
+	keepRows(data, keep)
 
 	return nil
 }
@@ -562,28 +580,12 @@ func (c *DeleteRowsCommand) Undo(data *FileData) error {
 	if data == nil {
 		return fmt.Errorf("data is nil")
 	}
-
-	// Get sorted indices for restoration
-	indices := make([]int, len(c.rowIndices))
-	copy(indices, c.rowIndices)
-	sort.Ints(indices)
-
-	// Restore rows and names
-	for i, idx := range indices {
-		if idx <= len(data.Data) && i < len(c.oldRows) {
-			// Insert row at original position
-			data.Data = append(data.Data[:idx], append([][]string{c.oldRows[i]}, data.Data[idx:]...)...)
-
-			// Restore row name if it existed
-			if data.RowNames != nil && i < len(c.oldRowNames) {
-				data.RowNames = append(data.RowNames[:idx], append([]string{c.oldRowNames[i]}, data.RowNames[idx:]...)...)
-			}
-		}
+	if c.before == nil {
+		return fmt.Errorf("nothing to undo: the deletion was never executed")
 	}
 
-	// Update row count
-	data.Rows = len(data.Data)
-
+	restored := deepCopyFileData(c.before)
+	*data = *restored
 	return nil
 }
 

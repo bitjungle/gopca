@@ -257,9 +257,15 @@ func insertColumnAt(data *FileData, index int, header string, values []string) {
 		row = append(row, data.Data[i][at:]...)
 		data.Data[i] = row
 	}
+	data.Columns = len(data.Headers)
 }
 
 // removeColumnAt drops the column at index from the headers and every row.
+//
+// Columns is maintained here rather than left to the caller. Every existing
+// caller happened to set it afterwards, so the obligation was invisible until a
+// new one did not: the grid then reported a column count that no longer matched
+// the headers.
 func removeColumnAt(data *FileData, index int) {
 	if index < 0 || index >= len(data.Headers) {
 		return
@@ -270,6 +276,7 @@ func removeColumnAt(data *FileData, index int) {
 			data.Data[i] = append(data.Data[i][:index:index], data.Data[i][index+1:]...)
 		}
 	}
+	data.Columns = len(data.Headers)
 }
 
 // classifyColumn records the type of a column newly added to the table.

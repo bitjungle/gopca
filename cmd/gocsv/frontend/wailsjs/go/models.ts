@@ -343,6 +343,42 @@ export namespace dataquality {
 
 export namespace main {
 	
+	export class AggregateOptions {
+	    groupBy: string;
+	    func: string;
+	
+	    static createFrom(source: any = {}) {
+	        return new AggregateOptions(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.groupBy = source["groupBy"];
+	        this.func = source["func"];
+	    }
+	}
+	export class AggregatePreview {
+	    groups: number;
+	    rows: number;
+	    largestSize: number;
+	    smallestSize: number;
+	    textConflicts: number;
+	    error?: string;
+	
+	    static createFrom(source: any = {}) {
+	        return new AggregatePreview(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.groups = source["groups"];
+	        this.rows = source["rows"];
+	        this.largestSize = source["largestSize"];
+	        this.smallestSize = source["smallestSize"];
+	        this.textConflicts = source["textConflicts"];
+	        this.error = source["error"];
+	    }
+	}
 	export class ExcelImportSuggestion {
 	    needsWizard: boolean;
 	    skipRows: number;
