@@ -269,6 +269,39 @@ jobs:
     - name: Build shared UI components (provides types for lint)
       run: npm run build-ui
 
+    # GoPCA Desktop's frontend/wailsjs/ is gitignored (GoCSV's is committed), so
+    # a fresh checkout has no Go bindings and every `import ... from
+    # '../wailsjs/go/main/App'` fails to resolve. tsc then reports TS2307 for
+    # each import plus a cascade of TS7006 on the now-untyped values -- which is
+    # exactly how the first attempt at the type-check steps below failed in CI
+    # while passing locally, where the bindings happen to exist on disk.
+    #
+    # Generating them here is what the Build jobs get for free from `wails
+    # build`. It is also the only way this job can type-check the real code
+    # rather than a checkout that is missing a third of its declarations.
+    - name: Set up Go (for Wails binding generation)
+      uses: actions/setup-go@v5
+      with:
+        go-version: ${{ env.GO_VERSION }}
+
+    - name: Install Wails CLI
+      run: go install github.com/wailsapp/wails/v2/cmd/wails@v2.13.0
+
+    # `wails generate module` runs `go build -tags bindings` on the app and
+    # executes the result, and main.go carries `//go:embed all:frontend/dist`.
+    # frontend/dist is a build artifact and is not in the repository, so the
+    # build fails with "pattern all:frontend/dist: no matching files found".
+    # An empty placeholder satisfies the embed -- the `all:` prefix means the
+    # dotfile counts as a match -- and the bindings do not depend on its
+    # contents. Building the real dist here is not an option: `npm run build`
+    # is `tsc && vite build`, and tsc is what needs the bindings.
+    - name: Placeholder frontend/dist for the embed directive
+      run: mkdir -p cmd/gopca-desktop/frontend/dist && touch cmd/gopca-desktop/frontend/dist/.gitkeep
+
+    - name: Generate GoPCA Desktop Wails bindings
+      working-directory: cmd/gopca-desktop
+      run: $(go env GOPATH)/bin/wails generate module
+
     - name: Lint shared UI components
       run: npm run lint -w @gopca/ui-components
 
@@ -277,6 +310,27 @@ jobs:
 
     - name: Lint GoCSV frontend
       run: npm run lint -w gocsv-frontend
+
+    # Type-check every frontend.
+    #
+    # Nothing in this job did, and nothing else in a pull request did either.
+    # eslint does not type-check, and `vitest run` transpiles with esbuild,
+    # which strips types without checking them. The only step that ran tsc was
+    # `npm run build` inside the Build jobs -- and those are gated on a push to
+    # main or develop, so they are skipped on every pull request.
+    #
+    # A type error could therefore pass a completely green PR and only appear
+    # when a developer ran `make pca-dev`, which is exactly what happened:
+    # variancePercent.test.ts read a property off a value cast to `never` and
+    # broke the GoPCA Desktop build for everyone until it was noticed by hand.
+    - name: Type-check shared UI components
+      run: npx --no-install tsc --noEmit -p packages/ui-components/tsconfig.json
+
+    - name: Type-check GoPCA Desktop frontend
+      run: npx --no-install tsc --noEmit -p cmd/gopca-desktop/frontend/tsconfig.json
+
+    - name: Type-check GoCSV frontend
+      run: npx --no-install tsc --noEmit -p cmd/gocsv/frontend/tsconfig.json
 
     # Until this step existed, the frontend test suites ran only on developer
     # machines: CI linted the TypeScript and never executed a single vitest
