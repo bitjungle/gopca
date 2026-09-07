@@ -1,3 +1,16 @@
 build/bin
 node_modules
 frontend/dist
+
+# Wails: the generated bindings are produced at build time from the Go source,
+# and are not committed -- the same rule GoPCA Desktop follows. They were
+# tracked here until #886, which is how three of the six files came to be
+# committed with mode 755 and the other three with 644 without anyone
+# noticing: checked-in generated code drifts quietly, because nothing compares
+# it against what generates it.
+#
+# Anchor the pattern with a leading slash. An unanchored `wailsjs/` matches a
+# directory of that name at any depth, which would also swallow any
+# src/__mocks__/wailsjs test doubles added later -- exactly the trap GoPCA
+# Desktop's .gitignore had.
+/frontend/wailsjs/
