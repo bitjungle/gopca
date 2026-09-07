@@ -73,7 +73,7 @@ WAILS_VERSION := $(shell grep 'wailsapp/wails/v2 v' go.mod | awk '{print $$2}')
 .DEFAULT_GOAL := all
 
 # Phony targets
-.PHONY: sync-schemas all build cli cli-all build-cross build-darwin-amd64 build-darwin-arm64 build-linux-amd64 build-linux-arm64 build-windows-amd64 build-all pca-dev pca-build pca-build-all pca-run pca-deps csv-dev csv-build csv-build-all csv-run csv-deps build-everything test test-verbose test-coverage test-integration test-platforms test-e2e test-parity test-regression fmt lint run-pca-iris clean clean-cross install deps deps-all install-hooks sign sign-cli sign-pca sign-csv sign-windows windows-installer windows-installer-signed windows-installer-all notarize notarize-cli notarize-pca notarize-csv sign-and-notarize help
+.PHONY: sync-schemas all build cli cli-all build-cross build-darwin-amd64 build-darwin-arm64 build-linux-amd64 build-linux-arm64 build-windows-amd64 build-all pca-dev pca-build pca-build-all pca-run pca-deps csv-dev csv-build csv-build-all csv-run csv-deps build-everything test test-verbose test-coverage test-integration test-platforms test-e2e test-parity test-regression fmt lint typecheck run-pca-iris clean clean-cross install deps deps-all install-hooks sign sign-cli sign-pca sign-csv sign-windows windows-installer windows-installer-signed windows-installer-all notarize notarize-cli notarize-pca notarize-csv sign-and-notarize help
 
 ## all: Build all applications for current platform and run tests
 all: build pca-build csv-build test
@@ -664,6 +664,16 @@ else
 	@echo "  go install github.com/golangci/golangci-lint/cmd/golangci-lint@latest"
 	@echo "Skipping lint step..."
 endif
+
+## typecheck: Type-check every frontend (shared UI, GoPCA Desktop, GoCSV)
+##
+## Neither `make test` nor `make ci-test` compiles TypeScript, and eslint does
+## not type-check -- so until #886 a type error could pass every check in a pull
+## request and only appear when someone ran `make pca-dev`. This is the target
+## that catches it, and CI runs this exact script, so a pass here means a pass
+## there.
+typecheck:
+	@./scripts/ci/typecheck-frontend.sh
 
 ## run-pca-iris: Execute PCA analysis on iris dataset
 run-pca-iris: build
