@@ -410,3 +410,45 @@ func TestAggregateKeepsColumnCountConsistent(t *testing.T) {
 			data.Columns, len(data.Headers))
 	}
 }
+
+// TestDeleteRowsUndoRestoresPerRowMaps guards the other half of #871.
+//
+// Making Execute trim the per-row maps created an obligation for Undo that had
+// not existed: previously Execute left them alone, so leaving them alone on
+// undo was consistent. Afterwards Execute shrank them and Undo did not restore
+// them, so an undone deletion left the maps *shorter* than the table — the same
+// misalignment, in the other direction.
+//
+// Fixing one direction of a bug and creating the other is easy to miss when the
+// test only exercises Execute.
+func TestDeleteRowsUndoRestoresPerRowMaps(t *testing.T) {
+	data := replicateFixture()
+	data.NumericTargetColumns = map[string][]types.JSONFloat64{"Yield#target": {1, 2, 3, 4}}
+
+	cmd := NewDeleteRowsCommand(data, []int{1})
+	if err := cmd.Execute(data); err != nil {
+		t.Fatalf("Execute: %v", err)
+	}
+	if err := cmd.Undo(data); err != nil {
+		t.Fatalf("Undo: %v", err)
+	}
+
+	if len(data.Data) != 4 {
+		t.Fatalf("undo restored %d rows, want 4", len(data.Data))
+	}
+	for column, values := range data.CategoricalColumns {
+		if len(values) != len(data.Data) {
+			t.Errorf("CategoricalColumns[%q] has %d entries for %d rows after undo",
+				column, len(values), len(data.Data))
+		}
+	}
+	if got := strings.Join(data.CategoricalColumns["Operator"], ","); got != "AB,AB,CD,CD" {
+		t.Errorf("CategoricalColumns[Operator] = %q after undo, want the original", got)
+	}
+	if got := data.NumericTargetColumns["Yield#target"]; len(got) != 4 || got[1] != 2 {
+		t.Errorf("targets = %v after undo, want [1 2 3 4]", got)
+	}
+	if got := strings.Join(data.RowNames, ","); got != "r1,r2,r3,r4" {
+		t.Errorf("row names = %s after undo", got)
+	}
+}

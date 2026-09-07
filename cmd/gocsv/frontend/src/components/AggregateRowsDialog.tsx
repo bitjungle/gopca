@@ -22,7 +22,7 @@
 // See LICENSE for the full license terms.
 
 import React, { useState, useEffect } from 'react';
-import { CustomSelect } from '@gopca/ui-components';
+import { CustomSelect, Dialog } from '@gopca/ui-components';
 import { ExecuteAggregateRows, PreviewAggregate } from '../../wailsjs/go/main/App';
 import { main } from '../../wailsjs/go/models';
 
@@ -91,24 +91,6 @@ export const AggregateRowsDialog: React.FC<AggregateRowsDialogProps> = ({
         };
     }, [isOpen, fileData, groupBy, func]);
 
-    // Escape closes, as it does for every other dialog in the suite.
-    useEffect(() => {
-        if (!isOpen) {
-            return;
-        }
-        const onKeyDown = (e: KeyboardEvent) => {
-            if (e.key === 'Escape') {
-                onClose();
-            }
-        };
-        window.addEventListener('keydown', onKeyDown);
-        return () => window.removeEventListener('keydown', onKeyDown);
-    }, [isOpen, onClose]);
-
-    if (!isOpen) {
-        return null;
-    }
-
     const canApply = preview !== null && !preview.error && !isApplying;
 
     const handleApply = async () => {
@@ -125,13 +107,13 @@ export const AggregateRowsDialog: React.FC<AggregateRowsDialogProps> = ({
     };
 
     return (
-        <div
-            className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50"
-            role="dialog"
-            aria-modal="true"
-            aria-labelledby="aggregate-rows-title"
+        <Dialog
+            isOpen={isOpen}
+            onClose={onClose}
+            width="w-[32rem]"
+            padded={false}
+            ariaLabelledBy="aggregate-rows-title"
         >
-            <div className="bg-white dark:bg-gray-800 rounded-lg shadow-xl w-[32rem]">
                 <div className="flex items-center justify-between p-4 border-b border-gray-200 dark:border-gray-700">
                     <h2
                         id="aggregate-rows-title"
@@ -225,7 +207,6 @@ export const AggregateRowsDialog: React.FC<AggregateRowsDialogProps> = ({
                         {isApplying ? 'Aggregating…' : 'Average Replicates'}
                     </button>
                 </div>
-            </div>
-        </div>
+        </Dialog>
     );
 };
