@@ -38,6 +38,9 @@ export interface CLIConfig {
     varianceExplained?: number;
     snv?: boolean;
     vectorNorm?: boolean;
+    savgolWindow?: number;
+    savgolPolyOrder?: number;
+    savgolDeriv?: number;
     standardScale?: boolean;
     robustScale?: boolean;
     meanCenter?: boolean;
@@ -156,7 +159,25 @@ export function generateCLICommand(config: CLIConfig): string {
         cmd += ' --vector-norm';
     }
 
-    // Add column preprocessing (Step 2)
+    // Savitzky-Golay (Step 2). Emitted between the row and column steps to match
+    // the order the engine applies them in, so the command reads the way the
+    // panel is laid out.
+    //
+    // The order and derivative flags are only emitted alongside a window: the
+    // CLI rejects them on their own, precisely because they would otherwise do
+    // nothing, and a generated command that the CLI refuses is worse than one
+    // that omits a default.
+    if (config.savgolWindow && config.savgolWindow > 0) {
+        cmd += ` --savgol-window ${config.savgolWindow}`;
+        if (config.savgolPolyOrder !== undefined) {
+            cmd += ` --savgol-order ${config.savgolPolyOrder}`;
+        }
+        if (config.savgolDeriv) {
+            cmd += ` --savgol-deriv ${config.savgolDeriv}`;
+        }
+    }
+
+    // Add column preprocessing (Step 3)
     if (config.standardScale) {
         cmd += ' --scale standard';
     } else if (config.robustScale) {

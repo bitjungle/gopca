@@ -30,6 +30,13 @@ import { usePCAContext } from '../../contexts/PCAContext';
 import { usePCRContext } from '../../contexts/PCRContext';
 import { useUIContext } from '../../contexts/UIContext';
 import { maxComponentsFor, clampComponentCount } from '../../utils/maxComponents';
+import {
+    validateSavGol,
+    snapWindowToOdd,
+    savgolSelection,
+    applySavGolSelection,
+    type SavGolSelection
+} from '../../utils/savgolValidation';
 
 interface PCAConfigSectionProps {
     /** Called after runPCA() to reset PC component selectors to 0,1. */
@@ -46,7 +53,7 @@ interface PCAConfigSectionProps {
  */
 export function PCAConfigSection({ onRunPCA }: PCAConfigSectionProps) {
     const { fileData } = useFileDataContext();
-    const { config, setConfig, loading, generateCLICommand } = usePCAContext();
+    const { config, setConfig, loading, generateCLICommand, excludedColumns } = usePCAContext();
 
     // In Regress mode this panel configures the decomposition the regression is
     // built on, so the preprocessing controls still apply. The Go PCA button does
@@ -56,6 +63,14 @@ export function PCAConfigSection({ onRunPCA }: PCAConfigSectionProps) {
     // what is on screen.
     const { mode, regressionCLIConfig } = usePCRContext();
     const regressing = mode === 'regress';
+
+    // Reported next to the control that caused it, rather than after a run that
+    // never had a chance of succeeding. The engine enforces the same rules, so
+    // this is about when the user hears, not whether the rule holds.
+    const savgolError = validateSavGol(
+        config,
+        fileData ? fileData.headers.length - excludedColumns.length : 0
+    );
     const commandLine = regressing
         ? generateCLICommand(regressionCLIConfig)
         : generateCLICommand();
@@ -342,9 +357,88 @@ export function PCAConfigSection({ onRunPCA }: PCAConfigSectionProps) {
                         </p>
                     </HelpWrapper>
 
+                    {/* Between the two existing steps because that is where it runs:
+                        after row normalisation, before any column statistics.
+                        Numbering the panel to match the pipeline is the cheapest
+                        way to teach the order, which matters here -- scatter
+                        correction is a property of the sample, differentiation a
+                        property of the wavelength axis, and swapping them means
+                        something different. */}
+                    <HelpWrapper helpKey="savitzky-golay" className="p-3 bg-gray-50 dark:bg-gray-700/50 rounded-lg">
+                        <label className="block text-sm font-medium mb-2">
+                            Step 2: Savitzky-Golay (optional)
+                        </label>
+                        <CustomSelect
+                            value={savgolSelection(config)}
+                            onChange={(value: string) => {
+                                setConfig(prev => ({
+                                    ...prev,
+                                    ...applySavGolSelection(value as SavGolSelection, prev)
+                                }));
+                            }}
+                            options={[
+                                { value: 'none', label: 'None' },
+                                { value: 'smooth', label: 'Smoothing only' },
+                                { value: 'deriv1', label: '1st Derivative', disabled: config.method === 'temporal' },
+                                { value: 'deriv2', label: '2nd Derivative', disabled: config.method === 'temporal' }
+                            ]}
+                            disabled={config.method === 'temporal'}
+                            className="w-full"
+                        />
+
+                        {config.savgolWindow > 0 && (
+                            <div className="grid grid-cols-2 gap-2 mt-2">
+                                <div>
+                                    <label className="block text-xs font-medium mb-1">Window length</label>
+                                    <input
+                                        type="number"
+                                        value={config.savgolWindow}
+                                        min={3}
+                                        step={2}
+                                        onChange={(e) => setConfig(prev => ({
+                                            ...prev,
+                                            savgolWindow: parseInt(e.target.value, 10) || 0
+                                        }))}
+                                        onBlur={(e) => setConfig(prev => ({
+                                            ...prev,
+                                            savgolWindow: snapWindowToOdd(parseInt(e.target.value, 10))
+                                        }))}
+                                        className="w-full px-2 py-1 text-sm border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-800"
+                                    />
+                                </div>
+                                <div>
+                                    <label className="block text-xs font-medium mb-1">Polynomial order</label>
+                                    <input
+                                        type="number"
+                                        value={config.savgolPolyOrder}
+                                        min={0}
+                                        step={1}
+                                        onChange={(e) => setConfig(prev => ({
+                                            ...prev,
+                                            savgolPolyOrder: parseInt(e.target.value, 10) || 0
+                                        }))}
+                                        className="w-full px-2 py-1 text-sm border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-800"
+                                    />
+                                </div>
+                            </div>
+                        )}
+
+                        {savgolError
+                            ? (
+                                <p className="text-xs text-red-600 dark:text-red-400 mt-1">{savgolError}</p>
+                            )
+                            : (
+                                <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                                    {config.method === 'temporal'
+                                        ? 'Not available for Temporal PCA, which applies no transform along the variable axis'
+                                        : 'Smooths along the variables; derivatives remove a baseline offset (1st) or slope (2nd)'}
+                                </p>
+                            )}
+                    </HelpWrapper>
+
                     <HelpWrapper helpKey="column-preprocessing" className="p-3 bg-gray-50 dark:bg-gray-700/50 rounded-lg">
                         <label className="block text-sm font-medium mb-2">
-                            Step 2: Column-wise Preprocessing
+                            Step 3: Column-wise Preprocessing
                         </label>
                         <CustomSelect
                             value={
@@ -413,7 +507,12 @@ export function PCAConfigSection({ onRunPCA }: PCAConfigSectionProps) {
                     <HelpWrapper helpKey="go-pca-button">
                         <button
                             onClick={onRunPCA}
-                            disabled={loading}
+                            // Also blocked on a bad filter. Leaving the button live
+                            // would make the message beside the control advisory
+                            // only, and the run would fail with the same complaint
+                            // a few seconds later.
+                            disabled={loading || savgolError !== null}
+                            title={savgolError ?? undefined}
                             className="px-6 py-2 bg-blue-600 hover:bg-blue-700 disabled:bg-gray-400 dark:disabled:bg-gray-600 rounded-lg font-medium text-white"
                         >
                             {loading ? 'Running...' : 'Go PCA!'}

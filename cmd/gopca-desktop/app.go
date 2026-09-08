@@ -227,23 +227,67 @@ type FileData struct {
 	NumericTargetColumns map[string][]float64 `json:"numericTargetColumns,omitempty"`
 }
 
+// applySavGolSettings copies Savitzky-Golay settings onto an engine
+// configuration, and refuses the one method that would discard them.
+//
+// Three paths reach the engine from this application -- running an analysis,
+// running a regression, and exporting a model -- and each builds its own
+// types.PCAConfig by hand. Sharing this one function does not make a forgotten
+// call impossible, but it makes it a visibly missing line rather than three
+// fields that quietly stayed zero. The export path is the one worth worrying
+// about: a model written without the filter still loads, still transforms, and
+// projects unfiltered data onto loadings fitted on filtered data.
+//
+// Temporal PCA is refused rather than ignored. It builds its own preprocessor
+// and applies no transform along the variable axis, so a filter set here would
+// be accepted and silently dropped -- which is exactly what --snv does today
+// on that path (#889).
+func applySavGolSettings(config *types.PCAConfig, window, polyOrder, deriv int) error {
+	if window <= 0 {
+		return nil
+	}
+	if config.Method == "temporal" {
+		return fmt.Errorf("Savitzky-Golay filtering is not supported with Temporal PCA: " +
+			"it works along the time axis and applies no transform along the variable axis")
+	}
+	if err := (core.SavGolConfig{
+		WindowLength: window,
+		PolyOrder:    polyOrder,
+		Deriv:        deriv,
+	}).ValidateShape(); err != nil {
+		return err
+	}
+	config.SavGolWindow = window
+	config.SavGolPolyOrder = polyOrder
+	config.SavGolDeriv = deriv
+	return nil
+}
+
 // PCARequest represents a PCA analysis request from the frontend
 type PCARequest struct {
-	Data            [][]float64 `json:"data"`
-	MissingMask     [][]bool    `json:"missingMask,omitempty"`
-	Headers         []string    `json:"headers"`
-	RowNames        []string    `json:"rowNames"`
-	Components      int         `json:"components"`
-	MeanCenter      bool        `json:"meanCenter"`
-	StandardScale   bool        `json:"standardScale"`
-	RobustScale     bool        `json:"robustScale"`
-	ScaleOnly       bool        `json:"scaleOnly"`
-	SNV             bool        `json:"snv"`
-	VectorNorm      bool        `json:"vectorNorm"`
-	Method          string      `json:"method"`
-	ExcludedRows    []int       `json:"excludedRows,omitempty"`
-	ExcludedColumns []int       `json:"excludedColumns,omitempty"`
-	MissingStrategy string      `json:"missingStrategy,omitempty"`
+	Data          [][]float64 `json:"data"`
+	MissingMask   [][]bool    `json:"missingMask,omitempty"`
+	Headers       []string    `json:"headers"`
+	RowNames      []string    `json:"rowNames"`
+	Components    int         `json:"components"`
+	MeanCenter    bool        `json:"meanCenter"`
+	StandardScale bool        `json:"standardScale"`
+	RobustScale   bool        `json:"robustScale"`
+	ScaleOnly     bool        `json:"scaleOnly"`
+	SNV           bool        `json:"snv"`
+	VectorNorm    bool        `json:"vectorNorm"`
+	// Savitzky-Golay smoothing and differentiation along the variable axis.
+	// A window of zero means no filter. The names must match the fields the
+	// configuration panel stores and the request the frontend spreads them
+	// into; nothing in either language checks that, so cmd/gopca-desktop has a
+	// test that compares these tags against the TypeScript.
+	SavGolWindow    int    `json:"savgolWindow,omitempty"`
+	SavGolPolyOrder int    `json:"savgolPolyOrder,omitempty"`
+	SavGolDeriv     int    `json:"savgolDeriv,omitempty"`
+	Method          string `json:"method"`
+	ExcludedRows    []int  `json:"excludedRows,omitempty"`
+	ExcludedColumns []int  `json:"excludedColumns,omitempty"`
+	MissingStrategy string `json:"missingStrategy,omitempty"`
 	// Kernel PCA parameters
 	KernelType   string  `json:"kernelType,omitempty"`
 	KernelGamma  float64 `json:"kernelGamma,omitempty"`
@@ -546,6 +590,10 @@ func (a *App) RunPCA(request PCARequest) (response PCAResponse) {
 		ExcludedRows:    request.ExcludedRows,
 		ExcludedColumns: request.ExcludedColumns,
 		MissingStrategy: types.MissingValueStrategy(request.MissingStrategy),
+	}
+
+	if err := applySavGolSettings(&config, request.SavGolWindow, request.SavGolPolyOrder, request.SavGolDeriv); err != nil {
+		return PCAResponse{Success: false, Error: err.Error()}
 	}
 
 	// Add kernel parameters if using kernel PCA
@@ -1103,6 +1151,9 @@ type PCAConfig struct {
 	ScaleOnly       bool   `json:"scaleOnly"`
 	SNV             bool   `json:"snv"`
 	VectorNorm      bool   `json:"vectorNorm"`
+	SavGolWindow    int    `json:"savgolWindow,omitempty"`
+	SavGolPolyOrder int    `json:"savgolPolyOrder,omitempty"`
+	SavGolDeriv     int    `json:"savgolDeriv,omitempty"`
 	Method          string `json:"method"`
 	MissingStrategy string `json:"missingStrategy"`
 	// Kernel PCA parameters
@@ -1305,6 +1356,37 @@ type ExportPCAModelRequest struct {
 	Filename        string           `json:"filename,omitempty"` // Original data filename
 }
 
+// toEngineConfig converts the exported configuration into the engine's own.
+//
+// A function rather than inline code so it can be tested: the rest of
+// ExportPCAModel is behind a save dialog, and this conversion is the one place
+// where a setting chosen in the panel can fail to reach the written model. A
+// model exported without its Savitzky-Golay filter still loads and still
+// transforms -- it just projects unfiltered data onto loadings fitted on
+// filtered data, which no inspection of the file would reveal.
+func (r ExportPCAModelRequest) toEngineConfig() types.PCAConfig {
+	return types.PCAConfig{
+		Components:      r.Config.Components,
+		MeanCenter:      r.Config.MeanCenter,
+		StandardScale:   r.Config.StandardScale,
+		RobustScale:     r.Config.RobustScale,
+		ScaleOnly:       r.Config.ScaleOnly,
+		SNV:             r.Config.SNV,
+		VectorNorm:      r.Config.VectorNorm,
+		SavGolWindow:    r.Config.SavGolWindow,
+		SavGolPolyOrder: r.Config.SavGolPolyOrder,
+		SavGolDeriv:     r.Config.SavGolDeriv,
+		Method:          r.Config.Method,
+		ExcludedRows:    r.ExcludedRows,
+		ExcludedColumns: r.ExcludedColumns,
+		MissingStrategy: types.MissingValueStrategy(r.Config.MissingStrategy),
+		KernelType:      r.Config.KernelType,
+		KernelGamma:     r.Config.KernelGamma,
+		KernelDegree:    r.Config.KernelDegree,
+		KernelCoef0:     r.Config.KernelCoef0,
+	}
+}
+
 // ExportPCAModel exports the complete PCA model to a JSON file
 func (a *App) ExportPCAModel(request ExportPCAModelRequest) error {
 	// Show save dialog
@@ -1329,23 +1411,7 @@ func (a *App) ExportPCAModel(request ExportPCAModelRequest) error {
 	}
 
 	// Convert PCA config to types.PCAConfig
-	pcaConfig := types.PCAConfig{
-		Components:      request.Config.Components,
-		MeanCenter:      request.Config.MeanCenter,
-		StandardScale:   request.Config.StandardScale,
-		RobustScale:     request.Config.RobustScale,
-		ScaleOnly:       request.Config.ScaleOnly,
-		SNV:             request.Config.SNV,
-		VectorNorm:      request.Config.VectorNorm,
-		Method:          request.Config.Method,
-		ExcludedRows:    request.ExcludedRows,
-		ExcludedColumns: request.ExcludedColumns,
-		MissingStrategy: types.MissingValueStrategy(request.Config.MissingStrategy),
-		KernelType:      request.Config.KernelType,
-		KernelGamma:     request.Config.KernelGamma,
-		KernelDegree:    request.Config.KernelDegree,
-		KernelCoef0:     request.Config.KernelCoef0,
-	}
+	pcaConfig := request.toEngineConfig()
 
 	// Re-fit the preprocessor so the exported model carries the parameters that
 	// were applied, and so metrics are computed against the same matrix the

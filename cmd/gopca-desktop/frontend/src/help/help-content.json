@@ -120,6 +120,11 @@
       "text": "Per-sample transforms applied before column operations. SNV: spectroscopic scatter correction. L2: unit vector normalization.",
       "category": "preprocessing"
     },
+    "savitzky-golay": {
+      "title": "Savitzky-Golay Smoothing and Derivatives",
+      "text": "Fits a polynomial across a sliding window of variables, after row-wise preprocessing. For spectra a 1st derivative removes a baseline offset, a 2nd a baseline slope. Window and order trade smoothing against detail; 11 and 2 suit NIR.",
+      "category": "preprocessing"
+    },
     "snv": {
       "title": "Standard Normal Variate",
       "text": "Removes multiplicative scatter in spectroscopy. Centers and scales each sample independently.",

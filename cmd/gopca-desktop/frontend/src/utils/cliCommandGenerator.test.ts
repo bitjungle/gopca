@@ -115,4 +115,54 @@ describe('generateCLICommand', () => {
             expect(cmd).toContain('--missing-strategy drop');
         });
     });
+
+    describe('Savitzky-Golay', () => {
+        it('omits every flag when no window is set', () => {
+            // The order and derivative keep their panel defaults while the filter
+            // is off. Emitting them alone would produce a command the CLI
+            // rejects, since on their own they do nothing.
+            const cmd = generateCLICommand({
+                ...base, savgolWindow: 0, savgolPolyOrder: 2, savgolDeriv: 0
+            });
+            expect(cmd).not.toContain('--savgol');
+        });
+
+        it('emits the window and order for smoothing', () => {
+            const cmd = generateCLICommand({
+                ...base, savgolWindow: 15, savgolPolyOrder: 3, savgolDeriv: 0
+            });
+            expect(cmd).toContain('--savgol-window 15');
+            expect(cmd).toContain('--savgol-order 3');
+            // A derivative of zero is the default; spelling it out adds noise.
+            expect(cmd).not.toContain('--savgol-deriv');
+        });
+
+        it('emits the derivative when one is asked for', () => {
+            const cmd = generateCLICommand({
+                ...base, snv: true, savgolWindow: 11, savgolPolyOrder: 2, savgolDeriv: 1
+            });
+            expect(cmd).toContain('--snv');
+            expect(cmd).toContain('--savgol-window 11');
+            expect(cmd).toContain('--savgol-order 2');
+            expect(cmd).toContain('--savgol-deriv 1');
+        });
+
+        it('places the filter between the row and column steps, as the engine applies it', () => {
+            const cmd = generateCLICommand({
+                ...base, snv: true, standardScale: true,
+                savgolWindow: 11, savgolPolyOrder: 2, savgolDeriv: 1
+            });
+            expect(cmd.indexOf('--snv')).toBeLessThan(cmd.indexOf('--savgol-window'));
+            expect(cmd.indexOf('--savgol-window')).toBeLessThan(cmd.indexOf('--scale standard'));
+        });
+
+        it('carries the filter into the regress command too', () => {
+            const cmd = generateCLICommand({
+                ...base, savgolWindow: 11, savgolPolyOrder: 2, savgolDeriv: 1, regression
+            });
+            expect(cmd).toContain('pca regress');
+            expect(cmd).toContain('--savgol-window 11');
+            expect(cmd).toContain('--savgol-deriv 1');
+        });
+    });
 });

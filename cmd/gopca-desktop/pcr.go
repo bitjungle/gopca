@@ -354,6 +354,10 @@ func buildDesktopPCRConfig(request PCRRequest, groupLabels []string, rows int) (
 		MissingStrategy: types.MissingValueStrategy(strings.ToLower(request.PCA.MissingStrategy)),
 	}
 
+	if err := applySavGolSettings(&pca, request.PCA.SavGolWindow, request.PCA.SavGolPolyOrder, request.PCA.SavGolDeriv); err != nil {
+		return types.PCRConfig{}, err
+	}
+
 	config := types.PCRConfig{PCA: pca, Response: request.Response}
 
 	if request.Components > 0 {
