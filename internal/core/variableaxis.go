@@ -208,7 +208,6 @@ func spacingOf(headers []string) (numeric, uniform bool, distinctSteps int) {
 	if len(headers) == 0 || float64(len(values))/float64(len(headers)) < 0.9 || len(values) < 2 {
 		return false, false, 0
 	}
-	numeric = true
 
 	steps := make([]float64, 0, len(values)-1)
 	for i := 1; i < len(values); i++ {

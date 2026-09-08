@@ -145,7 +145,7 @@ func (s SavGolOptions) applyTo(config *types.PCAConfig) {
 // it belongs.
 func warnIfAxisNotContinuous(w io.Writer, report core.AxisReport) {
 	if !report.IsContinuous {
-		fmt.Fprintf(w, "Warning: the %d variables do not form a continuum "+
+		_, _ = fmt.Fprintf(w, "Warning: the %d variables do not form a continuum "+
 			"(adjacent values differ only %.1fx less than a random ordering would). "+
 			"Savitzky-Golay fits a polynomial across neighbouring variables, so on data like this "+
 			"a derivative mostly amplifies noise. Check that the columns are in a measured order.\n",
@@ -157,7 +157,7 @@ func warnIfAxisNotContinuous(w io.Writer, report core.AxisReport) {
 	// cannot see this: removing a band from the middle of a spectrum leaves the
 	// data every bit as smooth while making non-adjacent wavelengths neighbours.
 	if report.NamesNumeric && !report.SpacingUniform {
-		fmt.Fprintf(w, "Warning: the variables are not evenly spaced (%d different step sizes "+
+		_, _ = fmt.Fprintf(w, "Warning: the variables are not evenly spaced (%d different step sizes "+
 			"between neighbours). Savitzky-Golay treats them as equally spaced, so wherever a gap "+
 			"falls the filter is combining variables that are not really adjacent. "+
 			"Excluding columns from the middle of a spectrum does this.\n",
