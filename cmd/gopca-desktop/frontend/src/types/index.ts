@@ -46,6 +46,11 @@ export interface PCARequest {
   scaleOnly: boolean;
   snv: boolean;
   vectorNorm: boolean;
+  // Savitzky-Golay: window of 0 means no filter. Field names must match the
+  // json tags on PCARequest in cmd/gopca-desktop/app.go.
+  savgolWindow?: number;
+  savgolPolyOrder?: number;
+  savgolDeriv?: number;
   method: string;
   excludedRows?: number[];
   excludedColumns?: number[];

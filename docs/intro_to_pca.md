@@ -305,6 +305,20 @@ Beyond basic centering and scaling, GoPCA Suite offers specialized preprocessing
 >
 > **Choosing the window and order.** These two trade smoothing against fidelity. A wider window or a lower polynomial order smooths more aggressively and can flatten narrow peaks into the baseline; a narrower window or a higher order follows the shape more faithfully and keeps more noise. A window of 11 variables with order 2 is a common starting point for near-infrared spectra, but it is a starting point, not an answer. There is no way to read the right choice off the spectra themselves — judge it by whether predictions improve, using cross-validation, not by which curve looks cleanest.
 >
+> **Does SNV before a derivative do anything?** It is a fair question — both are sold as ways of dealing with scatter, so combining them sounds like doing the same job twice. It is not, and the reason is worth seeing.
+>
+> Differentiating removes any constant. SNV subtracts each spectrum's mean and divides by its standard deviation, and that subtracted mean is a constant — so it vanishes the moment you differentiate. What is left is exactly
+>
+> ```
+> savgol_deriv(SNV(x)) = savgol_deriv(x) / sd(x)
+> ```
+>
+> an identity, not an approximation. So SNV followed by a derivative is: take the derivative, then divide each sample by its own spectral spread. The half of SNV that centres the spectrum was redundant — the derivative already did it — while the half that rescales it survives, and that is the **multiplicative** scatter correction a derivative cannot perform.
+>
+> This is why the two belong together rather than being alternatives. Scattering changes a spectrum in two ways: it shifts the baseline up or down, and it stretches the whole spectrum by a factor. The derivative handles the first, the divisor handles the second. Using only one leaves the other kind of scatter in the data.
+>
+> Two footnotes. For **smoothing** rather than differentiation, nothing vanishes and SNV applies in full. And **L2 vector normalisation** behaves the same way at every derivative order — `savgol_deriv(x/‖x‖) = savgol_deriv(x)/‖x‖` — because it never centres anything to begin with.
+
 > **Two things that will catch you out.** The filter walks along the columns in the order they appear in your file, and assumes they are evenly spaced wavelengths. If you have excluded a band from the middle of a spectrum, the gap closes and two wavelengths that were never neighbours become adjacent — trimming to a contiguous range is fine, cutting a hole in the middle is not. And a derivative spectrum is not a spectrum: the peaks you knew turn into zero-crossings, and a second derivative flips them upside down. That is normal, and it is why derivative spectra are read differently from raw ones.
 
 > **A caution about compositional data.** Vector normalization is sometimes described as the answer for data whose columns are *parts of a whole* — percentages, mineral assays, food composition. It is not. It removes magnitude differences, but the problem with compositional data is the **constant-sum constraint**: if the parts must add to 100, one rising forces the others to fall, whatever the underlying chemistry. That makes the covariance matrix singular and the correlations between parts spuriously negative, so the components describe the constraint as much as the samples. The remedy is a **log-ratio transform**, which analyses the ratios between parts rather than their amounts — available as **Centred Log-Ratio (CLR)** in GoCSV Desktop, applied before the data reaches GoPCA. See [Data Preparation](intro_to_data_prep.md).

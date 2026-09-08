@@ -30,6 +30,14 @@ import { usePCAContext } from '../../contexts/PCAContext';
 import { usePCRContext } from '../../contexts/PCRContext';
 import { useUIContext } from '../../contexts/UIContext';
 import { maxComponentsFor, clampComponentCount } from '../../utils/maxComponents';
+import { preprocessingPipeline } from '../../utils/preprocessingPipeline';
+import {
+    validateSavGol,
+    snapWindowToOdd,
+    savgolSelection,
+    applySavGolSelection,
+    type SavGolSelection
+} from '../../utils/savgolValidation';
 
 interface PCAConfigSectionProps {
     /** Called after runPCA() to reset PC component selectors to 0,1. */
@@ -46,7 +54,7 @@ interface PCAConfigSectionProps {
  */
 export function PCAConfigSection({ onRunPCA }: PCAConfigSectionProps) {
     const { fileData } = useFileDataContext();
-    const { config, setConfig, loading, generateCLICommand } = usePCAContext();
+    const { config, setConfig, loading, generateCLICommand, excludedColumns } = usePCAContext();
 
     // In Regress mode this panel configures the decomposition the regression is
     // built on, so the preprocessing controls still apply. The Go PCA button does
@@ -56,6 +64,17 @@ export function PCAConfigSection({ onRunPCA }: PCAConfigSectionProps) {
     // what is on screen.
     const { mode, regressionCLIConfig } = usePCRContext();
     const regressing = mode === 'regress';
+
+    // Reported next to the control that caused it, rather than after a run that
+    // never had a chance of succeeding. The engine enforces the same rules, so
+    // this is about when the user hears, not whether the rule holds.
+    const pipeline = preprocessingPipeline(config);
+
+    const savgolError = validateSavGol(
+        config,
+        fileData ? fileData.headers.length - excludedColumns.length : 0,
+        config.method
+    );
     const commandLine = regressing
         ? generateCLICommand(regressionCLIConfig)
         : generateCLICommand();
@@ -323,7 +342,7 @@ export function PCAConfigSection({ onRunPCA }: PCAConfigSectionProps) {
 
                     <HelpWrapper helpKey="row-preprocessing" className="p-3 bg-gray-50 dark:bg-gray-700/50 rounded-lg">
                         <label className="block text-sm font-medium mb-2">
-                            Step 1: Row-wise Preprocessing (optional)
+                            Row-wise Normalization (optional)
                         </label>
                         <CustomSelect
                             value={config.snv ? 'snv' : config.vectorNorm ? 'vector-norm' : 'none'}
@@ -338,13 +357,98 @@ export function PCAConfigSection({ onRunPCA }: PCAConfigSectionProps) {
                             className="w-full"
                         />
                         <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
-                            Normalizes each row/sample independently (useful for spectral data)
+                            Per sample: removes scatter and overall intensity differences between rows
                         </p>
+                    </HelpWrapper>
+
+                    {/* A separate control, not an entry in the row-wise list, because
+                        the two are complementary rather than alternatives. A derivative
+                        removes any constant, so SNV's mean-subtraction vanishes and
+                        SNV-then-derivative reduces exactly to the derivative divided by
+                        each sample's spectral spread -- the multiplicative scatter
+                        correction a derivative cannot perform. Folding it into the
+                        row-wise selector would make the two mutually exclusive and
+                        remove the combination that measured best in #843.
+
+                        The controls were once labelled "Step 1/2/3" to convey the order
+                        they are applied in. That read as a sequence the user had to work
+                        through, so the order is now stated by the summary below, where it
+                        describes what is actually selected. */}
+                    <HelpWrapper helpKey="savitzky-golay" className="p-3 bg-gray-50 dark:bg-gray-700/50 rounded-lg">
+                        <label className="block text-sm font-medium mb-2">
+                            Smoothing &amp; Derivatives (optional)
+                        </label>
+                        <CustomSelect
+                            value={savgolSelection(config)}
+                            onChange={(value: string) => {
+                                setConfig(prev => ({
+                                    ...prev,
+                                    ...applySavGolSelection(value as SavGolSelection, prev)
+                                }));
+                            }}
+                            options={[
+                                { value: 'none', label: 'None' },
+                                { value: 'smooth', label: 'Smoothing only' },
+                                { value: 'deriv1', label: '1st Derivative', disabled: config.method === 'temporal' },
+                                { value: 'deriv2', label: '2nd Derivative', disabled: config.method === 'temporal' }
+                            ]}
+                            disabled={config.method === 'temporal'}
+                            className="w-full"
+                        />
+
+                        {config.savgolWindow > 0 && (
+                            <div className="grid grid-cols-2 gap-2 mt-2">
+                                <div>
+                                    <label className="block text-xs font-medium mb-1">Window length</label>
+                                    <input
+                                        type="number"
+                                        value={config.savgolWindow}
+                                        min={3}
+                                        step={2}
+                                        onChange={(e) => setConfig(prev => ({
+                                            ...prev,
+                                            savgolWindow: parseInt(e.target.value, 10) || 0
+                                        }))}
+                                        onBlur={(e) => setConfig(prev => ({
+                                            ...prev,
+                                            savgolWindow: snapWindowToOdd(parseInt(e.target.value, 10))
+                                        }))}
+                                        className="w-full px-2 py-1 text-sm border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-800"
+                                    />
+                                </div>
+                                <div>
+                                    <label className="block text-xs font-medium mb-1">Polynomial order</label>
+                                    <input
+                                        type="number"
+                                        value={config.savgolPolyOrder}
+                                        min={0}
+                                        step={1}
+                                        onChange={(e) => setConfig(prev => ({
+                                            ...prev,
+                                            savgolPolyOrder: parseInt(e.target.value, 10) || 0
+                                        }))}
+                                        className="w-full px-2 py-1 text-sm border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-800"
+                                    />
+                                </div>
+                            </div>
+                        )}
+
+                        {savgolError
+                            ? (
+                                <p className="text-xs text-red-600 dark:text-red-400 mt-1">{savgolError}</p>
+                            )
+                            : (
+                                <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                                    {config.method === 'temporal'
+                                        ? 'Not available for Temporal PCA, which applies no transform along the variable axis'
+                                        : 'Smooths along the variables; derivatives remove a baseline offset (1st) or slope (2nd)'}
+                                </p>
+                            )}
                     </HelpWrapper>
 
                     <HelpWrapper helpKey="column-preprocessing" className="p-3 bg-gray-50 dark:bg-gray-700/50 rounded-lg">
                         <label className="block text-sm font-medium mb-2">
-                            Step 2: Column-wise Preprocessing
+                            Column-wise Scaling
                         </label>
                         <CustomSelect
                             value={
@@ -383,6 +487,25 @@ export function PCAConfigSection({ onRunPCA }: PCAConfigSectionProps) {
                         </p>
                     </HelpWrapper>
 
+                    {/* States the order the three controls above are applied in, and
+                        does it by describing what is selected rather than what could
+                        be. Shown always, including when nothing is selected: feeding
+                        raw data straight into the decomposition is a choice, and one
+                        worth seeing before pressing the button. */}
+                    <HelpWrapper helpKey="preprocessing-pipeline" className="p-3 bg-gray-50 dark:bg-gray-700/50 rounded-lg">
+                        <div className="text-xs text-gray-600 dark:text-gray-300">
+                            <span className="font-medium">Applied in order: </span>
+                            {pipeline.length === 0
+                                ? <span className="italic">none — the raw data is used as it is</span>
+                                : pipeline.map((step, i) => (
+                                    <span key={step}>
+                                        {i > 0 && <span className="text-gray-400 dark:text-gray-500"> → </span>}
+                                        {step}
+                                    </span>
+                                ))}
+                        </div>
+                    </HelpWrapper>
+
                     <HelpWrapper helpKey="missing-strategy" className="p-3 bg-gray-50 dark:bg-gray-700/50 rounded-lg">
                         <label className="block text-sm font-medium mb-2">
                             Missing Data Strategy
@@ -413,7 +536,12 @@ export function PCAConfigSection({ onRunPCA }: PCAConfigSectionProps) {
                     <HelpWrapper helpKey="go-pca-button">
                         <button
                             onClick={onRunPCA}
-                            disabled={loading}
+                            // Also blocked on a bad filter. Leaving the button live
+                            // would make the message beside the control advisory
+                            // only, and the run would fail with the same complaint
+                            // a few seconds later.
+                            disabled={loading || savgolError !== null}
+                            title={savgolError ?? undefined}
                             className="px-6 py-2 bg-blue-600 hover:bg-blue-700 disabled:bg-gray-400 dark:disabled:bg-gray-600 rounded-lg font-medium text-white"
                         >
                             {loading ? 'Running...' : 'Go PCA!'}

@@ -32,6 +32,13 @@ export interface PCAConfigState {
     scaleOnly: boolean;
     snv: boolean;
     vectorNorm: boolean;
+    // Savitzky-Golay. A window of 0 means no filter; the other two carry
+    // sensible values regardless so the panel has something to show the moment
+    // the filter is switched on. These names are also the JSON the Go request
+    // structs read -- see cmd/gopca-desktop/savgol_binding_test.go.
+    savgolWindow: number;
+    savgolPolyOrder: number;
+    savgolDeriv: number;
     method: string;
     missingStrategy: string;
     // Kernel PCA
@@ -52,6 +59,9 @@ export const DEFAULT_PCA_CONFIG: PCAConfigState = {
     scaleOnly: false,
     snv: false,
     vectorNorm: false,
+    savgolWindow: 0,
+    savgolPolyOrder: 2,
+    savgolDeriv: 0,
     method: 'SVD',
     missingStrategy: 'error',
     kernelType: 'rbf',
