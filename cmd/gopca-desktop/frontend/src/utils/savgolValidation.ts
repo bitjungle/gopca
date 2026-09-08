@@ -35,13 +35,22 @@ export interface SavGolSettings {
 export function validateSavGol(
     settings: SavGolSettings,
     variableCount: number,
-    method?: string
+    method?: string,
+    axisBlocked = false
 ): string | null {
     const { savgolWindow: window, savgolPolyOrder: order, savgolDeriv: deriv } = settings;
 
     // Zero is how the filter is switched off, so nothing else matters.
     if (window === 0) {
         return null;
+    }
+
+    // Reachable by configuring the filter on spectra and then loading a dataset
+    // whose variables are not a continuum: the selector goes disabled but the
+    // window it left behind is still set. Disabling a control does not undo what
+    // it already stored.
+    if (axisBlocked) {
+        return 'These variables do not form a continuum, so a derivative along them would mostly amplify noise. Set this to None, or tick "Enable anyway" if the columns really are in a measured order.';
     }
 
     // Reachable by configuring the filter and then switching method: the

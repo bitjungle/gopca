@@ -269,6 +269,49 @@ func applySavGolSettings(config *types.PCAConfig, window, polyOrder, deriv int) 
 	return nil
 }
 
+// VariableAxisRequest asks whether the variables form an axis a derivative can
+// be taken along. It carries the matrix as it will actually be analysed, after
+// exclusions, because that is what the answer depends on.
+type VariableAxisRequest struct {
+	Data    [][]float64 `json:"data"`
+	Headers []string    `json:"headers"`
+}
+
+// VariableAxisResponse is core.AxisReport as the interface receives it.
+type VariableAxisResponse struct {
+	Variables        int     `json:"variables"`
+	Continuity       float64 `json:"continuity"`
+	SmoothnessFactor float64 `json:"smoothnessFactor"`
+	IsContinuous     bool    `json:"isContinuous"`
+	NamesNumeric     bool    `json:"namesNumeric"`
+	SpacingUniform   bool    `json:"spacingUniform"`
+	DistinctSteps    int     `json:"distinctSteps"`
+}
+
+// AnalyzeVariableAxis reports whether Savitzky-Golay makes sense for this data.
+//
+// Computed in Go rather than in the frontend so there is one implementation of
+// the statistic, not two. The alternative -- reimplementing it in TypeScript to
+// avoid sending the matrix -- would put the same rule in two languages with
+// nothing comparing them, and the interface and the command line would be free
+// to disagree about whether a dataset is a continuum.
+//
+// The matrix is already sent on every run, and this is called only when the data
+// or the exclusions change, so the transfer is not the frequent cost it might
+// look like.
+func (a *App) AnalyzeVariableAxis(request VariableAxisRequest) VariableAxisResponse {
+	report := core.AnalyzeVariableAxis(types.Matrix(request.Data), request.Headers)
+	return VariableAxisResponse{
+		Variables:        report.Variables,
+		Continuity:       report.Continuity,
+		SmoothnessFactor: report.SmoothnessFactor,
+		IsContinuous:     report.IsContinuous,
+		NamesNumeric:     report.NamesNumeric,
+		SpacingUniform:   report.SpacingUniform,
+		DistinctSteps:    report.DistinctSteps,
+	}
+}
+
 // PCARequest represents a PCA analysis request from the frontend
 type PCARequest struct {
 	Data          [][]float64 `json:"data"`

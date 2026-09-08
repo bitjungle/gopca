@@ -25,6 +25,7 @@ package cobra
 
 import (
 	"fmt"
+	"io"
 	"strings"
 
 	"github.com/bitjungle/gopca/internal/core"
@@ -131,4 +132,35 @@ func (s SavGolOptions) applyTo(config *types.PCAConfig) {
 	config.SavGolWindow = s.Window
 	config.SavGolPolyOrder = s.PolyOrder
 	config.SavGolDeriv = s.Deriv
+}
+
+// warnIfAxisNotContinuous reports, on the given writer, anything about the
+// variable axis that undermines a Savitzky-Golay filter.
+//
+// These are warnings rather than refusals. A scientist may know something the
+// statistic does not -- variables can be genuinely ordered without their names
+// saying so, and an axis can be deliberately irregular. Refusing would override
+// that judgement; saying nothing would let a meaningless derivative pass for a
+// result. So the software states what it measured and leaves the decision where
+// it belongs.
+func warnIfAxisNotContinuous(w io.Writer, report core.AxisReport) {
+	if !report.IsContinuous {
+		fmt.Fprintf(w, "Warning: the %d variables do not form a continuum "+
+			"(adjacent values differ only %.1fx less than a random ordering would). "+
+			"Savitzky-Golay fits a polynomial across neighbouring variables, so on data like this "+
+			"a derivative mostly amplifies noise. Check that the columns are in a measured order.\n",
+			report.Variables, report.SmoothnessFactor)
+		return
+	}
+
+	// Continuous, but the axis itself may still be broken. The continuity ratio
+	// cannot see this: removing a band from the middle of a spectrum leaves the
+	// data every bit as smooth while making non-adjacent wavelengths neighbours.
+	if report.NamesNumeric && !report.SpacingUniform {
+		fmt.Fprintf(w, "Warning: the variables are not evenly spaced (%d different step sizes "+
+			"between neighbours). Savitzky-Golay treats them as equally spaced, so wherever a gap "+
+			"falls the filter is combining variables that are not really adjacent. "+
+			"Excluding columns from the middle of a spectrum does this.\n",
+			report.DistinctSteps)
+	}
 }

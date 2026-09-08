@@ -524,6 +524,17 @@ func runAnalyze(opts *AnalyzeOptions, inputFile string) error {
 		}
 	}
 
+	// Warn if a Savitzky-Golay filter has been asked for on variables that do not
+	// form a continuum. The engine will run it and return numbers either way; a
+	// derivative along an axis with no order to it is noise differentiated, and
+	// nothing about the output would say so.
+	//
+	// Checked here rather than with the other flag validation because it needs
+	// the matrix as it will actually be analysed, after exclusions.
+	if opts.SavGol.Enabled() {
+		warnIfAxisNotContinuous(os.Stderr, core.AnalyzeVariableAxis(data.Matrix, data.Headers))
+	}
+
 	// Fit PCA and attach diagnostics (Q/T² + confidence limits) via the shared
 	// core pipeline, so the CLI and Desktop compute identical metrics against the
 	// exact matrix the engine used (result.PreprocessedData) — see #716.
