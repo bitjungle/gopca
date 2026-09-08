@@ -93,6 +93,35 @@ pca analyze [OPTIONS] <input.csv>
 - `--snv` - Apply Standard Normal Variate (row-wise normalization)
 - `--vector-norm` - Apply L2 vector normalization (row-wise)
 
+##### Savitzky-Golay Smoothing and Derivatives
+
+Fits a low-order polynomial across a sliding window of variables and evaluates it, or one of its derivatives, at the window centre. Applied **after** `--snv` or `--vector-norm` and **before** any column centring or scaling.
+
+- `--savgol-window <n>` - Window length in variables. Must be odd and greater than the polynomial order. Omitted or `0` means no filtering, which is what enables the filter.
+- `--savgol-order <n>` - Degree of the polynomial fitted in each window (default: `2`)
+- `--savgol-deriv <n>` - Derivative order: `0` smooths, `1` and `2` take the first and second derivative (default: `0`). Must not exceed `--savgol-order`.
+
+`--savgol-order` and `--savgol-deriv` are rejected without `--savgol-window`, because on their own they would do nothing.
+
+**Why derivatives.** For near-infrared spectra, a first derivative removes an additive baseline offset and a second removes a baseline slope — both vanish under differentiation. This is the usual next step after scatter correction. Differencing a noisy spectrum directly would amplify the noise, which is why the derivative is taken through a fitted polynomial rather than by subtracting neighbours.
+
+**Choosing the parameters.** Window and order trade smoothing against fidelity: a wider window or lower order smooths harder and can flatten narrow peaks, while a narrower window or higher order preserves shape and keeps more noise. A window of 11 with order 2 is a common starting point for NIR; there is no universally right pair, and the honest way to choose is to compare cross-validated predictions rather than the look of the spectra.
+
+**Variable order matters.** The filter slides along the columns in the order they appear in the file, so it assumes they are in wavelength order and evenly spaced. Excluding columns from the middle of a spectrum with `--exclude-columns` closes the gap and makes neighbouring wavelengths adjacent that were not; restricting to a contiguous range is safe, removing an interior band is not.
+
+**Restrictions.**
+- Not available with `--method temporal`, which works along the time axis and applies no transform along the variable axis.
+- Not available with `--missing-strategy native`, since a window spanning a missing value would spread it across every variable in that window. Impute or drop first.
+- The window cannot be wider than the number of variables.
+
+```bash
+# Scatter correction, then a first derivative: the standard NIR recipe
+pca analyze --snv --savgol-window 11 --savgol-order 2 --savgol-deriv 1 --scale standard corn.csv
+
+# Smoothing only, no differentiation
+pca analyze --savgol-window 15 --savgol-order 3 corn.csv
+```
+
 ##### Kernel PCA Options
 - `--kernel-type <type>` - Kernel type: `rbf`, `linear`, or `poly`
 - `--kernel-gamma <value>` - Gamma parameter for RBF and polynomial kernels (default: 0.01)
@@ -261,7 +290,9 @@ Categorical `#target` columns are listed separately and cannot be used: predicti
 | `--wold-r <x>` | For `--select wold`: PRESS ratio threshold | `1.0` |
 | `--metric <m>` | Selection metric: `rmse` or `mae` | `rmse` |
 
-Predictor-side options (`--method`, `--scale`, `--snv`, `--vector-norm`, `--no-mean-centering`, `--exclude-rows`, `--exclude-columns`) work as they do for `analyze`.
+Predictor-side options (`--method`, `--scale`, `--snv`, `--vector-norm`, `--savgol-window`, `--savgol-order`, `--savgol-deriv`, `--no-mean-centering`, `--exclude-rows`, `--exclude-columns`) work as they do for `analyze`.
+
+Savitzky-Golay is worth singling out for regression. Unlike SNV it is the *same* operator for every sample, so it folds into the reported coefficients and the original-scale form stays available — a deployed model needs the raw wavelengths and nothing else. Combine it with `--snv` and that collapse is lost again, because SNV still scales each sample by its own spread.
 
 #### Examples
 

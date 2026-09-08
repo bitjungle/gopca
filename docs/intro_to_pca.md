@@ -297,10 +297,23 @@ Beyond basic centering and scaling, GoPCA Suite offers specialized preprocessing
 2. **Spectroscopic Preprocessing:**
    - **SNV (Standard Normal Variate)**: Row-wise normalization that removes multiplicative scatter effects in spectroscopic data
    - **Vector Normalization**: Scales each sample to unit length (`x / ‖x‖`), removing differences in overall magnitude between samples while keeping the shape of each one. Useful for spectra, where overall intensity varies for reasons that are not chemical.
+   - **Savitzky-Golay Smoothing and Derivatives**: Fits a low-order polynomial across a sliding window of wavelengths and reads off its value — or its slope, or its curvature — at the centre of the window. Applied after SNV and before centering.
+
+> **Why take a derivative of a spectrum?** Scatter correction removes a good deal, but not everything. What often remains is a **baseline** that drifts across the spectrum — from particle size, packing density, or the instrument itself. A first derivative removes an additive offset and a second derivative removes a linear slope, because a constant and a straight line simply vanish when you differentiate. What survives is the shape you cared about: the peaks.
+>
+> The reason to use Savitzky-Golay rather than subtracting neighbouring points is noise. Differentiating amplifies exactly the fast, point-to-point variation that noise consists of, so a derivative taken by plain differencing can be mostly noise. Fitting a smooth polynomial across a window first, and differentiating that, smooths and differentiates in the same step.
+>
+> **Choosing the window and order.** These two trade smoothing against fidelity. A wider window or a lower polynomial order smooths more aggressively and can flatten narrow peaks into the baseline; a narrower window or a higher order follows the shape more faithfully and keeps more noise. A window of 11 variables with order 2 is a common starting point for near-infrared spectra, but it is a starting point, not an answer. There is no way to read the right choice off the spectra themselves — judge it by whether predictions improve, using cross-validation, not by which curve looks cleanest.
+>
+> **Two things that will catch you out.** The filter walks along the columns in the order they appear in your file, and assumes they are evenly spaced wavelengths. If you have excluded a band from the middle of a spectrum, the gap closes and two wavelengths that were never neighbours become adjacent — trimming to a contiguous range is fine, cutting a hole in the middle is not. And a derivative spectrum is not a spectrum: the peaks you knew turn into zero-crossings, and a second derivative flips them upside down. That is normal, and it is why derivative spectra are read differently from raw ones.
 
 > **A caution about compositional data.** Vector normalization is sometimes described as the answer for data whose columns are *parts of a whole* — percentages, mineral assays, food composition. It is not. It removes magnitude differences, but the problem with compositional data is the **constant-sum constraint**: if the parts must add to 100, one rising forces the others to fall, whatever the underlying chemistry. That makes the covariance matrix singular and the correlations between parts spuriously negative, so the components describe the constraint as much as the samples. The remedy is a **log-ratio transform**, which analyses the ratios between parts rather than their amounts — available as **Centred Log-Ratio (CLR)** in GoCSV Desktop, applied before the data reaches GoPCA. See [Data Preparation](intro_to_data_prep.md).
 
-**In GoPCA Suite:** Both the pca CLI and GoPCA Desktop provide simple options for all preprocessing methods. GoPCA Desktop offers intuitive checkboxes, while the pca CLI uses flags like `--no-mean-centering`, `--scale` (with options: none, standard, or robust), `--scale-only` (variance scaling without centering), `--snv`, and `--vector-norm`.
+**In GoPCA Suite:** Both the pca CLI and GoPCA Desktop provide simple options for all preprocessing methods. GoPCA Desktop offers intuitive checkboxes, while the pca CLI uses flags like `--no-mean-centering`, `--scale` (with options: none, standard, or robust), `--scale-only` (variance scaling without centering), `--snv`, `--vector-norm`, and `--savgol-window` with `--savgol-order` and `--savgol-deriv`. The standard near-infrared recipe is scatter correction followed by a first derivative:
+
+```bash
+pca analyze --snv --savgol-window 11 --savgol-order 2 --savgol-deriv 1 --scale standard corn.csv
+```
 
 ![Center and scale](images/intro_to_pca_fig_05-03.jpg)
 
@@ -778,7 +791,7 @@ pca regress --response "Moisture#target" --cv 10 corn.csv
 pca regress --response "Yield#target" --cv loo --cv-group "BatchID" process.csv
 ```
 
-Three limitations are worth stating plainly. **Kernel and Temporal PCA cannot be used for PCR** — neither can project a new sample from its variables alone, so a saved model could not predict. Under **SNV or vector normalisation** no fixed per-variable coefficients exist, since those methods scale each sample by a statistic of itself; the model still predicts correctly through the full pipeline, but GoPCA says the coefficient plot is unavailable rather than showing an approximation. And PCR predicts *numbers*: a `#target` column holding 0, 1 and 2 for three species is a class label, and regressing on it asserts the classes are ordered and evenly spaced. Predicting a category is classification, which this suite deliberately does not attempt — GoPCA warns you when a response looks like a class code.
+Three limitations are worth stating plainly. **Kernel and Temporal PCA cannot be used for PCR** — neither can project a new sample from its variables alone, so a saved model could not predict. Under **SNV or vector normalisation** no fixed per-variable coefficients exist, since those methods scale each sample by a statistic of itself; the model still predicts correctly through the full pipeline, but GoPCA says the coefficient plot is unavailable rather than showing an approximation. **Savitzky-Golay is the exception among the row-wise methods**: it applies the same filter to every sample, so it folds into the coefficients and the original-scale form survives — though combining it with SNV loses that again, for the reason just given. And PCR predicts *numbers*: a `#target` column holding 0, 1 and 2 for three species is a class label, and regressing on it asserts the classes are ordered and evenly spaced. Predicting a category is classification, which this suite deliberately does not attempt — GoPCA warns you when a response looks like a class code.
 
 ---
 

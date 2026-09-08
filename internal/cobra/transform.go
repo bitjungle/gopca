@@ -201,25 +201,9 @@ func runTransform(opts *TransformOptions, modelFile, inputFile string) error {
 	data.Headers = modelFeatures
 
 	// Create preprocessor from saved parameters
-	preprocessor := core.NewPreprocessorWithScaleOnly(
-		pcaOutputData.Preprocessing.MeanCenter,
-		pcaOutputData.Preprocessing.StandardScale,
-		pcaOutputData.Preprocessing.RobustScale,
-		pcaOutputData.Preprocessing.ScaleOnly,
-		pcaOutputData.Preprocessing.SNV,
-		pcaOutputData.Preprocessing.VectorNorm,
-	)
-
-	// Restore preprocessing parameters
-	if err := preprocessor.SetFittedParameters(
-		pcaOutputData.Preprocessing.Parameters.FeatureMeans,
-		pcaOutputData.Preprocessing.Parameters.FeatureStdDevs,
-		pcaOutputData.Preprocessing.Parameters.FeatureMedians,
-		pcaOutputData.Preprocessing.Parameters.FeatureMADs,
-		pcaOutputData.Preprocessing.Parameters.RowMeans,
-		pcaOutputData.Preprocessing.Parameters.RowStdDevs,
-	); err != nil {
-		return fmt.Errorf("failed to restore preprocessing parameters: %w", err)
+	preprocessor, err := preprocessorFromModel(pcaOutputData.Preprocessing)
+	if err != nil {
+		return err
 	}
 
 	// Apply preprocessing
@@ -446,4 +430,49 @@ func checkTransformSupported(method string) error {
 			"Run 'pca analyze' over the combined series instead")
 	}
 	return nil
+}
+
+// preprocessorFromModel rebuilds the preprocessing a saved model was fitted
+// with, so new data passes through exactly the same transformation.
+//
+// This is a function rather than inline code so it can be tested against the
+// writing side. A model's preprocessing crosses three representations on its way
+// here -- the PCAConfig that fitted it, the JSON written to disk, and the
+// PreprocessingInfo parsed back -- and each hop is hand-maintained. A setting
+// dropped at any of them still yields scores of the right shape and plausible
+// magnitude, projected onto loadings that no longer match the data.
+func preprocessorFromModel(info types.PreprocessingInfo) (*core.Preprocessor, error) {
+	preprocessor := core.NewPreprocessorWithScaleOnly(
+		info.MeanCenter,
+		info.StandardScale,
+		info.RobustScale,
+		info.ScaleOnly,
+		info.SNV,
+		info.VectorNorm,
+	)
+
+	// The Savitzky-Golay filter has no fitted parameters to restore: the
+	// operator follows entirely from these three numbers and the variable count,
+	// which the model's feature list has already pinned.
+	if info.SavGolWindow > 0 {
+		if err := preprocessor.SetSavitzkyGolay(core.SavGolConfig{
+			WindowLength: info.SavGolWindow,
+			PolyOrder:    info.SavGolPolyOrder,
+			Deriv:        info.SavGolDeriv,
+		}); err != nil {
+			return nil, fmt.Errorf("restoring the model's Savitzky-Golay filter: %w", err)
+		}
+	}
+
+	if err := preprocessor.SetFittedParameters(
+		info.Parameters.FeatureMeans,
+		info.Parameters.FeatureStdDevs,
+		info.Parameters.FeatureMedians,
+		info.Parameters.FeatureMADs,
+		info.Parameters.RowMeans,
+		info.Parameters.RowStdDevs,
+	); err != nil {
+		return nil, fmt.Errorf("failed to restore preprocessing parameters: %w", err)
+	}
+	return preprocessor, nil
 }

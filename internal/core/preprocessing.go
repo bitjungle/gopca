@@ -59,6 +59,14 @@ type Preprocessor struct {
 	// Kept for potential future use in specialized inverse transforms
 	rowMeans   []float64
 	rowStdDevs []float64
+
+	// savGolConfig, when set, applies a Savitzky-Golay filter along the variable
+	// axis after SNV or vector normalisation and before any column statistics.
+	// savGol is the filter compiled for the width of the data actually seen; it
+	// is built on first use because the configuration alone does not determine
+	// it, and cleared whenever the width changes.
+	savGolConfig *SavGolConfig
+	savGol       *SavGol
 }
 
 // NewPreprocessor creates a new preprocessor instance
@@ -91,6 +99,114 @@ func NewPreprocessorWithScaleOnly(meanCenter, standardScale, robustScale, scaleO
 		SNV:           snv,
 		VectorNorm:    vectorNorm,
 	}
+}
+
+// ApplySavGolConfig transfers the Savitzky-Golay settings from a PCAConfig onto
+// a preprocessor, doing nothing when no window is set.
+//
+// Every construction site goes through this rather than reading the three
+// fields itself, so a path that forgets the filter is a missing call rather than
+// a silently dropped setting -- which is how --snv came to be accepted and
+// ignored by temporal PCA.
+func ApplySavGolConfig(p *Preprocessor, config types.PCAConfig) error {
+	if config.SavGolWindow <= 0 {
+		return nil
+	}
+	return p.SetSavitzkyGolay(SavGolConfig{
+		WindowLength: config.SavGolWindow,
+		PolyOrder:    config.SavGolPolyOrder,
+		Deriv:        config.SavGolDeriv,
+	})
+}
+
+// SetSavitzkyGolay enables Savitzky-Golay filtering along the variable axis.
+//
+// There is no constructor parameter for this. The existing constructors already
+// take six positional booleans, and three more integers among them would be a
+// row of unlabelled arguments at every call site -- the kind of signature where
+// transposing two values compiles and produces a different filter.
+//
+// Only the configuration's shape is checked here. Whether the window fits the
+// data cannot be known until the data arrives, and is checked then.
+func (p *Preprocessor) SetSavitzkyGolay(cfg SavGolConfig) error {
+	if err := cfg.ValidateShape(); err != nil {
+		return err
+	}
+	stored := cfg
+	p.savGolConfig = &stored
+	p.savGol = nil
+	return nil
+}
+
+// SavitzkyGolayEnabled reports whether a Savitzky-Golay filter is configured.
+func (p *Preprocessor) SavitzkyGolayEnabled() bool { return p.savGolConfig != nil }
+
+// SavitzkyGolayFilter returns the compiled filter, or nil if none is configured
+// or the preprocessor has not yet seen data.
+//
+// Callers collapsing a model back onto original variables need the operator
+// itself, not merely the knowledge that one was applied.
+func (p *Preprocessor) SavitzkyGolayFilter() *SavGol { return p.savGol }
+
+// hasRowStage reports whether anything happens before column statistics.
+func (p *Preprocessor) hasRowStage() bool {
+	return p.SNV || p.VectorNorm || p.savGolConfig != nil
+}
+
+// compileSavGol builds the filter for a given number of variables, reusing the
+// previous one when the width is unchanged.
+func (p *Preprocessor) compileSavGol(nVars int) error {
+	if p.savGolConfig == nil {
+		return nil
+	}
+	if p.savGol != nil && p.savGol.NumVars() == nVars {
+		return nil
+	}
+	filter, err := NewSavGol(*p.savGolConfig, nVars)
+	if err != nil {
+		return err
+	}
+	p.savGol = filter
+	return nil
+}
+
+// applyRowStage applies everything that acts along a row: SNV or vector
+// normalisation first, then Savitzky-Golay.
+//
+// The order is deliberate and matches how the two are used together in
+// spectroscopy. Scatter correction is a property of the sample -- it divides a
+// spectrum by its own spread -- while the derivative is a property of the
+// wavelength axis. Differentiating first and normalising afterwards would let
+// each sample's derivative be rescaled by the spread of its own derivative,
+// which is not what either step is for.
+//
+// The returned matrix is always freshly allocated, so callers may keep the input.
+func (p *Preprocessor) applyRowStage(data types.Matrix, storeStats bool) (types.Matrix, error) {
+	if len(data) == 0 || len(data[0]) == 0 {
+		return nil, fmt.Errorf("empty data matrix")
+	}
+	if err := p.compileSavGol(len(data[0])); err != nil {
+		return nil, err
+	}
+
+	out := make(types.Matrix, len(data))
+	for i := range data {
+		row := data[i]
+		if p.SNV || p.VectorNorm {
+			row = p.applyRowWisePreprocessing(row, storeStats, i)
+		} else {
+			row = append([]float64(nil), row...)
+		}
+		if p.savGol != nil {
+			filtered, err := p.savGol.Apply(row)
+			if err != nil {
+				return nil, fmt.Errorf("row %d: %w", i, err)
+			}
+			row = filtered
+		}
+		out[i] = row
+	}
+	return out, nil
 }
 
 // applyRowWisePreprocessing applies SNV or Vector Normalization to a single row
@@ -151,17 +267,17 @@ func (p *Preprocessor) applyRowWisePreprocessing(row []float64, storeStats bool,
 
 // FitTransform fits the preprocessor and transforms the data
 func (p *Preprocessor) FitTransform(data types.Matrix) (types.Matrix, error) {
-	// If row-wise preprocessing is enabled, we need to fit column statistics on row-normalized data
-	if p.SNV || p.VectorNorm {
+	// If anything acts along the rows, column statistics must be fitted on the
+	// data as it looks after that stage, not before it.
+	if p.hasRowStage() {
 		// Initialize storage for row statistics during fitting
 		n := len(data)
 		p.rowMeans = make([]float64, n)
 		p.rowStdDevs = make([]float64, n)
 
-		// First apply row-wise preprocessing
-		dataForFit := make(types.Matrix, len(data))
-		for i := range data {
-			dataForFit[i] = p.applyRowWisePreprocessing(data[i], true, i)
+		dataForFit, err := p.applyRowStage(data, true)
+		if err != nil {
+			return nil, err
 		}
 
 		// Fit column statistics on row-normalized data
@@ -261,13 +377,19 @@ func (p *Preprocessor) Transform(data types.Matrix) (types.Matrix, error) {
 		copy(result[i], data[i])
 	}
 
-	// Apply row-wise preprocessing first (SNV or Vector Normalization)
-	if p.SNV || p.VectorNorm {
-		// For transformation of new data, we calculate fresh row statistics
-		// This is critical: we do NOT use stored row statistics from training
-		for i := 0; i < n; i++ {
-			result[i] = p.applyRowWisePreprocessing(result[i], false, -1)
+	// Apply the row stage first: SNV or vector normalization, then Savitzky-Golay.
+	//
+	// For transformation of new data, row statistics are calculated fresh. This
+	// is critical: we do NOT use stored row statistics from training. The
+	// Savitzky-Golay operator, by contrast, is fixed -- it depends on the
+	// configuration and the variable count, never on the sample -- so new data
+	// passes through exactly the filter the model was fitted with.
+	if p.hasRowStage() {
+		staged, err := p.applyRowStage(result, false)
+		if err != nil {
+			return nil, err
 		}
+		result = staged
 	}
 
 	// Then apply column-wise preprocessing

@@ -24,6 +24,7 @@
 package core
 
 import (
+	"fmt"
 	"math"
 	"math/rand/v2"
 	"testing"
@@ -985,4 +986,88 @@ func TestPooledAndMeanOfFoldsAreDifferentQuantities(t *testing.T) {
 			}
 		}
 	})
+}
+
+// TestPCRPipelineEquivalenceWithSavGol is the same equivalence check with a
+// Savitzky-Golay filter in the pipeline, and it is the one that matters most.
+//
+// The filter acts along a row, which is the property that makes SNV
+// uncollapsible -- so the natural mistake is to treat it the same way and
+// report the deployable form as unavailable. The opposite mistake is worse:
+// collapsing it with the wrong operator, say S instead of S^T, produces
+// coefficients that are the right length, finite, and plausible, and that
+// silently predict something else. Only comparing the two routes end to end
+// separates those cases.
+func TestPCRPipelineEquivalenceWithSavGol(t *testing.T) {
+	data, y := makeRegressionData(45, 24, 4, 0.4, 3)
+
+	for _, sg := range []struct {
+		window, order, deriv int
+	}{
+		{7, 2, 0},
+		{9, 2, 1},
+		{11, 3, 2},
+	} {
+		name := fmt.Sprintf("w%d_p%d_d%d", sg.window, sg.order, sg.deriv)
+		t.Run(name, func(t *testing.T) {
+			config := fixedConfig(4)
+			config.PCA.SavGolWindow = sg.window
+			config.PCA.SavGolPolyOrder = sg.order
+			config.PCA.SavGolDeriv = sg.deriv
+
+			engine := NewPCREngine()
+			result, err := engine.Fit(data, y, config)
+			if err != nil {
+				t.Fatalf("Fit: %v", err)
+			}
+			if !result.OriginalScaleValid {
+				t.Fatal("a Savitzky-Golay filter is a fixed operator, so the collapsed " +
+					"form must remain available")
+			}
+			if len(result.Coefficients) != len(data[0]) {
+				t.Fatalf("got %d coefficients for %d variables", len(result.Coefficients), len(data[0]))
+			}
+
+			viaPipeline, err := engine.Predict(data)
+			if err != nil {
+				t.Fatalf("Predict: %v", err)
+			}
+			for i := range data {
+				collapsed := result.InterceptOriginal
+				for j := range data[i] {
+					collapsed += data[i][j] * result.Coefficients[j]
+				}
+				if math.Abs(collapsed-viaPipeline[i]) > 1e-8*(1+math.Abs(collapsed)) {
+					t.Fatalf("row %d: collapsed %.12g, pipeline %.12g", i, collapsed, viaPipeline[i])
+				}
+			}
+		})
+	}
+}
+
+// TestPCRSavGolWithSNVHasNoCollapsedForm records the boundary. Savitzky-Golay
+// alone collapses; combined with SNV it cannot, because SNV still scales each
+// sample by its own spread. The pair is the common spectroscopy recipe, so this
+// is the case a user is most likely to hit, and reporting a collapsed form here
+// would be reporting a wrong one.
+func TestPCRSavGolWithSNVHasNoCollapsedForm(t *testing.T) {
+	data, y := makeRegressionData(40, 24, 3, 0.3, 11)
+
+	config := fixedConfig(3)
+	config.PCA.SNV = true
+	config.PCA.SavGolWindow = 9
+	config.PCA.SavGolPolyOrder = 2
+	config.PCA.SavGolDeriv = 1
+
+	engine := NewPCREngine()
+	result, err := engine.Fit(data, y, config)
+	if err != nil {
+		t.Fatalf("Fit: %v", err)
+	}
+	if result.OriginalScaleValid {
+		t.Error("SNV makes the map sample-dependent, so no collapsed form exists")
+	}
+	if result.Coefficients != nil {
+		t.Errorf("expected no original-scale coefficients, got %d", len(result.Coefficients))
+	}
 }

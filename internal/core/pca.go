@@ -134,9 +134,12 @@ func (p *PCAImpl) Fit(data types.Matrix, config types.PCAConfig) (*types.PCAResu
 		// into NaN. Skip diagnostics entirely (as for kernel/temporal) rather than
 		// emit garbage; leave PreprocessedData nil.
 		preprocessedForMetrics = nil
-	} else if config.MeanCenter || config.StandardScale || config.RobustScale || config.ScaleOnly || config.SNV || config.VectorNorm {
+	} else if config.MeanCenter || config.StandardScale || config.RobustScale || config.ScaleOnly || config.SNV || config.VectorNorm || config.SavGolWindow > 0 {
 		// Create preprocessor with the appropriate settings
 		p.preprocessor = NewPreprocessorWithScaleOnly(config.MeanCenter, config.StandardScale, config.RobustScale, config.ScaleOnly, config.SNV, config.VectorNorm)
+		if err := ApplySavGolConfig(p.preprocessor, config); err != nil {
+			return nil, err
+		}
 
 		// Convert to types.Matrix for preprocessor
 		typeMatrix := utils.DenseToMatrix(X)

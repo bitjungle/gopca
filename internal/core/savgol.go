@@ -88,6 +88,20 @@ type SavGolConfig struct {
 // Validate reports whether the configuration is usable for a spectrum of
 // nVars variables.
 func (c SavGolConfig) Validate(nVars int) error {
+	if err := c.ValidateShape(); err != nil {
+		return err
+	}
+	if c.WindowLength > nVars {
+		return fmt.Errorf("Savitzky-Golay window length (%d) exceeds the number of variables (%d)",
+			c.WindowLength, nVars)
+	}
+	return nil
+}
+
+// ValidateShape checks everything that can be judged without knowing how wide
+// the data is, so a command line can reject a nonsensical combination before it
+// has opened the file.
+func (c SavGolConfig) ValidateShape() error {
 	if c.WindowLength < 3 {
 		return fmt.Errorf("Savitzky-Golay window length must be at least 3, got %d", c.WindowLength)
 	}
@@ -110,12 +124,8 @@ func (c SavGolConfig) Validate(nVars int) error {
 	// a configuration that could not mean anything.
 	if c.Deriv > c.PolyOrder {
 		return fmt.Errorf("Savitzky-Golay derivative order (%d) must not exceed the polynomial order (%d): "+
-			"the %d-th derivative of a degree-%d polynomial is identically zero",
-			c.Deriv, c.PolyOrder, c.Deriv, c.PolyOrder)
-	}
-	if c.WindowLength > nVars {
-		return fmt.Errorf("Savitzky-Golay window length (%d) exceeds the number of variables (%d)",
-			c.WindowLength, nVars)
+			"a degree-%d polynomial has no non-zero derivative of order %d, so the result would be zero everywhere",
+			c.Deriv, c.PolyOrder, c.PolyOrder, c.Deriv)
 	}
 	return nil
 }
