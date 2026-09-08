@@ -34,13 +34,22 @@ export interface SavGolSettings {
  */
 export function validateSavGol(
     settings: SavGolSettings,
-    variableCount: number
+    variableCount: number,
+    method?: string
 ): string | null {
     const { savgolWindow: window, savgolPolyOrder: order, savgolDeriv: deriv } = settings;
 
     // Zero is how the filter is switched off, so nothing else matters.
     if (window === 0) {
         return null;
+    }
+
+    // Reachable by configuring the filter and then switching method: the
+    // selector goes disabled but the window it left behind is still set, and
+    // the backend would refuse the run. Disabling a control does not undo what
+    // it already stored.
+    if (method?.toLowerCase() === 'temporal') {
+        return 'Savitzky-Golay is not available for Temporal PCA, which applies no transform along the variable axis. Set it to None or choose another method.';
     }
 
     if (!Number.isInteger(window) || window < 0) {

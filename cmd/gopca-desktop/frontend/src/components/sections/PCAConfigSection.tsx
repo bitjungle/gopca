@@ -69,7 +69,8 @@ export function PCAConfigSection({ onRunPCA }: PCAConfigSectionProps) {
     // this is about when the user hears, not whether the rule holds.
     const savgolError = validateSavGol(
         config,
-        fileData ? fileData.headers.length - excludedColumns.length : 0
+        fileData ? fileData.headers.length - excludedColumns.length : 0,
+        config.method
     );
     const commandLine = regressing
         ? generateCLICommand(regressionCLIConfig)

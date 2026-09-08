@@ -243,7 +243,13 @@ type FileData struct {
 // be accepted and silently dropped -- which is exactly what --snv does today
 // on that path (#889).
 func applySavGolSettings(config *types.PCAConfig, window, polyOrder, deriv int) error {
-	if window <= 0 {
+	// Only zero means off. A negative window would otherwise be swallowed here
+	// and the run would proceed unfiltered without a word, which is the failure
+	// this whole path exists to avoid; the CLI rejects it for the same reason.
+	if window < 0 {
+		return fmt.Errorf("Savitzky-Golay window length must be a positive odd number, or 0 to disable the filter, got %d", window)
+	}
+	if window == 0 {
 		return nil
 	}
 	if config.Method == "temporal" {

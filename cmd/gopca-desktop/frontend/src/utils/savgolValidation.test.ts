@@ -60,6 +60,24 @@ describe('validateSavGol', () => {
         expect(validateSavGol(settings(101, 2, 1), 0)).toBeNull();
     });
 
+    it('blocks the run when a filter is left set on Temporal PCA', () => {
+        // Reachable by configuring the filter and then switching method: the
+        // selector goes disabled, but the window it left behind is still set.
+        const message = validateSavGol(settings(11, 2, 1), 700, 'temporal');
+        expect(message).toMatch(/not available for Temporal PCA/i);
+        expect(message).toMatch(/Set it to None or choose another method/);
+    });
+
+    it('says nothing about Temporal PCA when no filter is set', () => {
+        expect(validateSavGol(settings(0, 2, 0), 700, 'temporal')).toBeNull();
+    });
+
+    it('accepts the filter for every other method', () => {
+        for (const method of ['SVD', 'NIPALS', 'kernel', undefined]) {
+            expect(validateSavGol(settings(11, 2, 1), 700, method)).toBeNull();
+        }
+    });
+
     it('rejects a fractional window', () => {
         expect(validateSavGol(settings(10.5, 2, 0), 700)).toMatch(/whole number/);
     });

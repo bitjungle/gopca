@@ -147,6 +147,9 @@ func TestApplySavGolSettings(t *testing.T) {
 		{"applied", "svd", 11, 2, 1, "", 11},
 		{"applied for kernel too", "kernel", 11, 2, 1, "", 11},
 		{"even window refused", "svd", 10, 2, 1, "must be odd", 0},
+		// Only zero disables. A negative window swallowed here would leave the
+		// run unfiltered and silent, which is the failure this path guards.
+		{"negative window refused", "svd", -5, 2, 1, "positive odd number", 0},
 		{"order not below window", "svd", 5, 5, 0, "less than the window length", 0},
 		{"deriv above order", "svd", 7, 2, 3, "zero everywhere", 0},
 		{"temporal refused", "temporal", 11, 2, 1, "not supported with Temporal PCA", 0},
