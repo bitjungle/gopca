@@ -336,11 +336,18 @@ func fitScoreRegression(scores types.Matrix, y []float64, rows []int, k int) (*s
 //	y = intercept + sum_j gamma_j (a . v_j) = intercept + a . theta
 //
 // expands to a plain linear function of x with beta_p = theta_p / divisor_p and
-// an intercept of intercept - center . beta. Row-wise preprocessing breaks this:
-// SNV and vector normalization scale each row by a statistic of that same row, so
-// no fixed coefficient vector reproduces their effect. In that case the fields
-// are left empty and OriginalScaleValid is false, because a plausible-looking
-// wrong coefficient is worse than an absent one.
+// an intercept of intercept - center . beta. SNV and vector normalization break
+// this: they scale each row by a statistic of that same row, so no fixed
+// coefficient vector reproduces their effect. In that case the fields are left
+// empty and OriginalScaleValid is false, because a plausible-looking wrong
+// coefficient is worse than an absent one.
+//
+// A Savitzky-Golay filter is the opposite case, and it is worth being explicit
+// about why. It also acts along a row, but it is the same operator for every
+// sample, so it composes into the coefficients as a transpose and the collapsed
+// form survives. Treating "acts along a row" as automatically disqualifying
+// would have thrown that away and reported the deployable form as unavailable
+// when it was merely one matrix multiply out of reach.
 func (p *PCRImpl) attachOriginalScale(result *types.PCRResult) error {
 	nVars := p.nVars
 	k := 0
@@ -382,6 +389,26 @@ func (p *PCRImpl) attachOriginalScale(result *types.PCRResult) error {
 	intercept := p.intercept
 	for v := 0; v < nVars; v++ {
 		intercept -= center[v] * beta[v]
+	}
+
+	// A Savitzky-Golay filter sits before the column statistics, so beta at this
+	// point is stated in filtered variables. Unlike SNV it can be undone: the
+	// filter is a fixed linear operator S, identical for every sample, so
+	// predicting from S x with coefficients beta is the same as predicting from
+	// x with coefficients S^T beta. Collapsing it means a deployed model needs
+	// the original wavelengths and nothing else -- no filtering step to
+	// reimplement, and no chance of reimplementing it differently.
+	if p.preprocessor != nil && p.preprocessor.SavitzkyGolayEnabled() {
+		filter := p.preprocessor.SavitzkyGolayFilter()
+		if filter == nil {
+			return fmt.Errorf("a Savitzky-Golay filter is configured but was never compiled, " +
+				"so the original-scale coefficients cannot be recovered")
+		}
+		collapsed, err := filter.ApplyTranspose(beta)
+		if err != nil {
+			return fmt.Errorf("collapsing the Savitzky-Golay filter into the coefficients: %w", err)
+		}
+		beta = collapsed
 	}
 
 	result.Coefficients = beta

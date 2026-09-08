@@ -66,6 +66,7 @@ type RegressOptions struct {
 	ScaleOnly       bool
 	SNV             bool
 	VectorNorm      bool
+	SavGol          SavGolOptions
 	NoMeanCentering bool
 	MissingStrategy string
 
@@ -133,6 +134,9 @@ EXAMPLES:
   pca regress --response "Protein#target" --cv 10 -o results/ corn.csv`,
 		Args: cobra.ExactArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
+			if err := opts.SavGol.validate(cmd, opts.Method, opts.MissingStrategy); err != nil {
+				return err
+			}
 			return runRegress(opts, args[0])
 		},
 	}
@@ -177,6 +181,7 @@ EXAMPLES:
 		"Divide by standard deviation without mean centering")
 	cmd.Flags().BoolVar(&opts.SNV, "snv", false,
 		"Standard Normal Variate, applied per row")
+	addSavGolFlags(cmd, &opts.SavGol)
 	cmd.Flags().BoolVar(&opts.VectorNorm, "vector-norm", false,
 		"L2 normalization, applied per row")
 	cmd.Flags().StringVar(&opts.MissingStrategy, "missing-strategy", "error",
@@ -554,6 +559,7 @@ func buildPCRConfig(opts *RegressOptions, data *pkgcsv.Data,
 		},
 		Response: opts.Response,
 	}
+	opts.SavGol.applyTo(&config.PCA)
 
 	if opts.Scale != "none" && opts.Scale != "standard" && opts.Scale != "robust" {
 		return config, fmt.Errorf("invalid scale %q: expected none, standard or robust", opts.Scale)

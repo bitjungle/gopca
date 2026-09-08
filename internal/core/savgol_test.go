@@ -241,7 +241,7 @@ func TestSavGolConfigValidation(t *testing.T) {
 		{"order not below window", SavGolConfig{5, 5, 0}, 100, true, "must be less than the window length"},
 		{"negative order", SavGolConfig{5, -1, 0}, 100, true, "must not be negative"},
 		{"negative deriv", SavGolConfig{5, 2, -1}, 100, true, "must not be negative"},
-		{"deriv above order", SavGolConfig{7, 2, 3}, 100, true, "identically zero"},
+		{"deriv above order", SavGolConfig{7, 2, 3}, 100, true, "zero everywhere"},
 		{"window wider than spectrum", SavGolConfig{101, 2, 1}, 50, true, "exceeds the number of variables"},
 	}
 	for _, tt := range tests {

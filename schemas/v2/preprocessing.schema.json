@@ -38,6 +38,32 @@
       "type": "boolean",
       "description": "Whether L2 normalization (row-wise) was applied"
     },
+    "savgol_window": {
+      "type": "integer",
+      "minimum": 0,
+      "oneOf": [
+        {
+          "const": 0,
+          "description": "No filter was applied. This is also how models written before the filter existed read, since the field is absent from them."
+        },
+        {
+          "minimum": 3,
+          "not": { "multipleOf": 2 },
+          "description": "An enabled filter. The window must be odd so it has a centre, and at least 3."
+        }
+      ],
+      "description": "Savitzky-Golay sliding window length in variables. Either zero, meaning no filter, or an odd length of at least 3 that is also greater than savgol_polyorder. The relation to savgol_polyorder cannot be expressed here and is checked when the filter is rebuilt."
+    },
+    "savgol_polyorder": {
+      "type": "integer",
+      "minimum": 0,
+      "description": "Degree of the polynomial fitted within each Savitzky-Golay window. Meaningful only when savgol_window is greater than zero."
+    },
+    "savgol_deriv": {
+      "type": "integer",
+      "minimum": 0,
+      "description": "Savitzky-Golay derivative order: 0 smooths without differentiating, 1 and 2 take the first and second derivative. Must not exceed savgol_polyorder. Meaningful only when savgol_window is greater than zero."
+    },
     "parameters": {
       "type": "object",
       "description": "Fitted preprocessing parameters",

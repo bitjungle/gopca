@@ -79,6 +79,9 @@ func FitPreprocessorForExport(data types.Matrix, config types.PCAConfig) (*Prepr
 		preprocessor := NewPreprocessorWithScaleOnly(
 			config.MeanCenter, config.StandardScale, config.RobustScale,
 			config.ScaleOnly, config.SNV, config.VectorNorm)
+		if err := ApplySavGolConfig(preprocessor, config); err != nil {
+			return nil, nil, err
+		}
 		processed, err := preprocessor.FitTransform(data)
 		if err != nil {
 			return nil, nil, err

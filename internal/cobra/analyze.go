@@ -57,6 +57,7 @@ type AnalyzeOptions struct {
 	Scale           string // "none", "standard", "robust"
 	ScaleOnly       bool
 	SNV             bool
+	SavGol          SavGolOptions
 	VectorNorm      bool
 	NoMeanCentering bool
 
@@ -127,6 +128,12 @@ EXAMPLES:
   pca analyze -f json --output-dir results/ data.csv`,
 		Args: cobra.ExactArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
+			// Checked here rather than inside runAnalyze because it needs the
+			// command to tell which flags the user actually set, and because a
+			// bad combination should be reported before the file is opened.
+			if err := opts.SavGol.validate(cmd, opts.Method, opts.MissingStrategy); err != nil {
+				return err
+			}
 			return runAnalyze(opts, args[0])
 		},
 	}
@@ -166,6 +173,7 @@ EXAMPLES:
 		"Apply Standard Normal Variate transformation")
 	cmd.Flags().BoolVar(&opts.VectorNorm, "vector-norm", false,
 		"Apply L2 vector normalization (row-wise)")
+	addSavGolFlags(cmd, &opts.SavGol)
 
 	// Data format options
 	cmd.Flags().BoolVar(&opts.NoHeaders, "no-headers", false,
@@ -411,6 +419,7 @@ func runAnalyze(opts *AnalyzeOptions, inputFile string) error {
 		VectorNorm:      opts.VectorNorm,
 		MissingStrategy: types.MissingValueStrategy(opts.MissingStrategy),
 	}
+	opts.SavGol.applyTo(&config)
 
 	// Add kernel parameters if using kernel PCA
 	if opts.Method == "kernel" {

@@ -73,6 +73,10 @@ type PreprocessingConfig struct {
 	ScaleOnly     bool              `json:"scale_only"`
 	SNV           bool              `json:"snv"`
 	VectorNorm    bool              `json:"vector_norm"`
+	// Savitzky-Golay: window length of zero means no filtering.
+	SavGolWindow    int `json:"savgol_window,omitempty"`
+	SavGolPolyOrder int `json:"savgol_polyorder,omitempty"`
+	SavGolDeriv     int `json:"savgol_deriv,omitempty"`
 }
 
 // MatrixImpl is a simple implementation of a Matrix-like interface

@@ -67,13 +67,20 @@ var AllMissingValueStrategies = []MissingValueStrategy{
 
 // PCAConfig holds configuration for PCA analysis
 type PCAConfig struct {
-	Components      int    `json:"components"`
-	MeanCenter      bool   `json:"mean_center"`
-	StandardScale   bool   `json:"standard_scale"`
-	RobustScale     bool   `json:"robust_scale"`               // Robust scaling (median/MAD)
-	ScaleOnly       bool   `json:"scale_only"`                 // Variance scaling: divide by std dev without mean centering
-	SNV             bool   `json:"snv"`                        // Standard Normal Variate (row-wise normalization)
-	VectorNorm      bool   `json:"vector_norm"`                // L2 normalization (row-wise)
+	Components    int  `json:"components"`
+	MeanCenter    bool `json:"mean_center"`
+	StandardScale bool `json:"standard_scale"`
+	RobustScale   bool `json:"robust_scale"` // Robust scaling (median/MAD)
+	ScaleOnly     bool `json:"scale_only"`   // Variance scaling: divide by std dev without mean centering
+	SNV           bool `json:"snv"`          // Standard Normal Variate (row-wise normalization)
+	VectorNorm    bool `json:"vector_norm"`  // L2 normalization (row-wise)
+	// Savitzky-Golay smoothing and differentiation along the variable axis,
+	// applied after SNV or vector normalization and before column statistics.
+	// A window length of zero means no filtering; the other two are meaningless
+	// on their own and the command line refuses them without a window.
+	SavGolWindow    int    `json:"savgol_window,omitempty"`    // Sliding window length, odd and > SavGolPolyOrder
+	SavGolPolyOrder int    `json:"savgol_polyorder,omitempty"` // Degree of the polynomial fitted in each window
+	SavGolDeriv     int    `json:"savgol_deriv,omitempty"`     // Derivative order: 0 smooths, 1 and 2 differentiate
 	Method          string `json:"method"`                     // "svd", "eigen", "nipals", or "kernel"
 	ExcludedRows    []int  `json:"excluded_rows,omitempty"`    // 0-based indices of rows to exclude
 	ExcludedColumns []int  `json:"excluded_columns,omitempty"` // 0-based indices of columns to exclude
@@ -313,13 +320,20 @@ type ModelConfig struct {
 
 // PreprocessingInfo contains all preprocessing configuration and parameters
 type PreprocessingInfo struct {
-	MeanCenter    bool                `json:"mean_center"`
-	StandardScale bool                `json:"standard_scale"`
-	RobustScale   bool                `json:"robust_scale"`
-	ScaleOnly     bool                `json:"scale_only"`
-	SNV           bool                `json:"snv"`
-	VectorNorm    bool                `json:"vector_norm"`
-	Parameters    PreprocessingParams `json:"parameters"`
+	MeanCenter    bool `json:"mean_center"`
+	StandardScale bool `json:"standard_scale"`
+	RobustScale   bool `json:"robust_scale"`
+	ScaleOnly     bool `json:"scale_only"`
+	SNV           bool `json:"snv"`
+	VectorNorm    bool `json:"vector_norm"`
+	// Savitzky-Golay settings, recorded so `pca transform` reapplies exactly the
+	// filter the model was fitted with. There are no fitted parameters to store:
+	// the operator is determined entirely by these three numbers and the
+	// variable count, which is why it can be rebuilt rather than serialised.
+	SavGolWindow    int                 `json:"savgol_window,omitempty"`
+	SavGolPolyOrder int                 `json:"savgol_polyorder,omitempty"`
+	SavGolDeriv     int                 `json:"savgol_deriv,omitempty"`
+	Parameters      PreprocessingParams `json:"parameters"`
 }
 
 // PreprocessingParams contains the fitted preprocessing parameters

@@ -272,7 +272,7 @@ func (kpca *KernelPCAImpl) Fit(data types.Matrix, config types.PCAConfig) (*type
 
 	// Apply preprocessing if needed (only variance scaling, SNV, or vector norm for kernel PCA)
 	processedData := data
-	if config.ScaleOnly || config.SNV || config.VectorNorm {
+	if config.ScaleOnly || config.SNV || config.VectorNorm || config.SavGolWindow > 0 {
 		// Create preprocessor with only the allowed preprocessing options
 		kpca.preprocessor = NewPreprocessorWithScaleOnly(
 			false,             // no mean centering for kernel PCA
@@ -282,6 +282,9 @@ func (kpca *KernelPCAImpl) Fit(data types.Matrix, config types.PCAConfig) (*type
 			config.SNV,        // SNV allowed
 			config.VectorNorm, // vector norm allowed
 		)
+		if err := ApplySavGolConfig(kpca.preprocessor, config); err != nil {
+			return nil, err
+		}
 
 		// Fit and transform
 		var err error

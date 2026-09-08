@@ -151,7 +151,13 @@ func ConvertToPCAOutputDataWithMetadata(result *types.PCAResult, data *Data, pre
 		ScaleOnly:     config.ScaleOnly,
 		SNV:           config.SNV,
 		VectorNorm:    config.VectorNorm,
-		Parameters:    types.PreprocessingParams{},
+		// Recorded so `pca transform` rebuilds the same filter. These travel as
+		// settings rather than as fitted parameters because the operator is
+		// determined by them and the variable count alone.
+		SavGolWindow:    config.SavGolWindow,
+		SavGolPolyOrder: config.SavGolPolyOrder,
+		SavGolDeriv:     config.SavGolDeriv,
+		Parameters:      types.PreprocessingParams{},
 	}
 
 	// Add preprocessing parameters if preprocessor was used
