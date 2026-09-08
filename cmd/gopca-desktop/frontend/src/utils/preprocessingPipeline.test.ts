@@ -7,7 +7,13 @@
 // See LICENSE for the full license terms.
 
 import { describe, it, expect } from 'vitest';
-import { preprocessingPipeline, PreprocessingSummaryConfig } from './preprocessingPipeline';
+import {
+    preprocessingPipeline,
+    rowStagePipeline,
+    columnStagePipeline,
+    shouldShowPreview,
+    PreprocessingSummaryConfig
+} from './preprocessingPipeline';
 
 const config = (overrides: Partial<PreprocessingSummaryConfig> = {}): PreprocessingSummaryConfig => ({
     snv: false,
@@ -77,5 +83,73 @@ describe('preprocessingPipeline', () => {
         // both, and announcing two row-wise steps would describe a pipeline the
         // engine never runs.
         expect(preprocessingPipeline(config({ snv: true, vectorNorm: true }))).toEqual(['SNV']);
+    });
+});
+
+describe('shouldShowPreview', () => {
+    it('shows for row-wise normalization on its own', () => {
+        // Reported from the running app: the preview appeared to need
+        // Savitzky-Golay. Seeing what SNV did to the spectra is as reasonable a
+        // question as seeing what a derivative did.
+        expect(shouldShowPreview(true, config({ snv: true }))).toBe(true);
+        expect(shouldShowPreview(true, config({ vectorNorm: true }))).toBe(true);
+    });
+
+    it('shows for Savitzky-Golay on its own', () => {
+        expect(shouldShowPreview(true, config({ savgolWindow: 11 }))).toBe(true);
+    });
+
+    it('shows for both together', () => {
+        expect(shouldShowPreview(true, config({ snv: true, savgolWindow: 11 }))).toBe(true);
+    });
+
+    it('hides when nothing happens to the data', () => {
+        // A "preprocessed" view identical to the raw one says nothing.
+        expect(shouldShowPreview(true, config())).toBe(false);
+    });
+
+    it('hides when the variables are not an axis worth drawing along', () => {
+        // A line across unordered variables is a shape with no meaning.
+        expect(shouldShowPreview(false, config({ snv: true, savgolWindow: 11 }))).toBe(false);
+    });
+
+    it('ignores column-wise settings, which the preview does not apply', () => {
+        expect(shouldShowPreview(true, config({ meanCenter: true, standardScale: true }))).toBe(false);
+    });
+});
+
+describe('rowStagePipeline and columnStagePipeline', () => {
+    it('split the pipeline exactly where the preview stops', () => {
+        // The preview draws the row stage and not the column stage, so a caption
+        // built from the full pipeline would name a step the curves never went
+        // through.
+        const full = config({
+            snv: true,
+            savgolWindow: 11, savgolPolyOrder: 2, savgolDeriv: 1,
+            meanCenter: true, standardScale: true
+        });
+        expect(rowStagePipeline(full)).toEqual([
+            'SNV',
+            'Savitzky-Golay 1st derivative (window 11, order 2)'
+        ]);
+        expect(columnStagePipeline(full)).toEqual(['Standard scale']);
+    });
+
+    it('together they reproduce the full pipeline, in order', () => {
+        // The summary line and the plot caption must not be able to disagree
+        // about what happens or in what sequence.
+        for (const c of [
+            config(),
+            config({ snv: true }),
+            config({ meanCenter: true }),
+            config({ vectorNorm: true, savgolWindow: 9, savgolDeriv: 2, robustScale: true }),
+            config({ savgolWindow: 15, savgolPolyOrder: 3, scaleOnly: true })
+        ]) {
+            expect([...rowStagePipeline(c), ...columnStagePipeline(c)]).toEqual(preprocessingPipeline(c));
+        }
+    });
+
+    it('reports no column stage when none is selected', () => {
+        expect(columnStagePipeline(config({ snv: true }))).toEqual([]);
     });
 });

@@ -42,6 +42,17 @@ export interface PreprocessingSummaryConfig {
  * request carries rather than from the panel's layout.
  */
 export function preprocessingPipeline(config: PreprocessingSummaryConfig): string[] {
+    return [...rowStagePipeline(config), ...columnStagePipeline(config)];
+}
+
+/**
+ * The steps applied along each row: normalisation, then Savitzky-Golay.
+ *
+ * Separate from the column steps because the preview plot shows exactly this
+ * much and no more. A caption listing "Mean center" beside curves that were
+ * never centred would describe a picture the reader is not looking at.
+ */
+export function rowStagePipeline(config: PreprocessingSummaryConfig): string[] {
     const steps: string[] = [];
 
     if (config.snv) {
@@ -62,17 +73,51 @@ export function preprocessingPipeline(config: PreprocessingSummaryConfig): strin
         steps.push(`Savitzky-Golay ${what} (window ${config.savgolWindow}, order ${config.savgolPolyOrder})`);
     }
 
-    // Same precedence the column-wise selector uses, so the summary cannot
-    // disagree with the control above it.
-    if (config.scaleOnly) {
-        steps.push('Variance scale');
-    } else if (config.robustScale) {
-        steps.push('Robust scale');
-    } else if (config.standardScale) {
-        steps.push('Standard scale');
-    } else if (config.meanCenter) {
-        steps.push('Mean center');
-    }
-
     return steps;
+}
+
+/**
+ * The steps applied down each column, after the row stage.
+ *
+ * Precedence matches the column-wise selector, so the summary cannot disagree
+ * with the control above it.
+ */
+export function columnStagePipeline(config: PreprocessingSummaryConfig): string[] {
+    if (config.scaleOnly) {
+        return ['Variance scale'];
+    }
+    if (config.robustScale) {
+        return ['Robust scale'];
+    }
+    if (config.standardScale) {
+        return ['Standard scale'];
+    }
+    if (config.meanCenter) {
+        return ['Mean center'];
+    }
+    return [];
+}
+
+/**
+ * Whether a preview of the preprocessed data is worth drawing.
+ *
+ * Two conditions, and both are about whether the plot could mean anything:
+ * the variables must form an axis worth drawing a curve along, and something
+ * must actually happen to them, or the "preprocessed" view would be the raw one
+ * under a different name.
+ *
+ * Note that Savitzky-Golay is *not* required. Row-wise normalisation alone
+ * changes the spectra, and seeing what SNV did is as reasonable a question as
+ * seeing what a derivative did. This is exported and tested rather than written
+ * inline because getting it wrong is invisible: the preview simply does not
+ * appear, and nothing says why.
+ */
+export function shouldShowPreview(
+    isContinuousAxis: boolean,
+    config: Pick<PreprocessingSummaryConfig, 'snv' | 'vectorNorm' | 'savgolWindow'>
+): boolean {
+    if (!isContinuousAxis) {
+        return false;
+    }
+    return config.snv || config.vectorNorm || config.savgolWindow > 0;
 }

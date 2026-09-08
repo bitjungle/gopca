@@ -13,8 +13,10 @@ import { HelpWrapper } from './index';
 
 interface PreprocessingPreviewProps {
     preview: PreviewData;
-    /** Described in words above the plot, so the curves can be read. */
-    pipeline: string[];
+    /** The steps these curves have actually been through. */
+    rowStage: string[];
+    /** What happens after, and is deliberately not drawn. */
+    columnStage: string[];
 }
 
 /**
@@ -29,7 +31,7 @@ interface PreprocessingPreviewProps {
  * and are much harder to read, and "the preprocessed spectra" in the
  * spectroscopic sense means this stage.
  */
-export function PreprocessingPreview({ preview, pipeline }: PreprocessingPreviewProps) {
+export function PreprocessingPreview({ preview, rowStage, columnStage }: PreprocessingPreviewProps) {
     const { theme } = useTheme();
     const [showRaw, setShowRaw] = React.useState(false);
 
@@ -115,8 +117,19 @@ export function PreprocessingPreview({ preview, pipeline }: PreprocessingPreview
                 {preview.raw.length < preview.totalRows
                     ? `${preview.raw.length} of ${preview.totalRows} samples, spread across the file`
                     : `${preview.raw.length} samples`}
-                {!showRaw && pipeline.length > 0 && ` · ${pipeline.join(' → ')}`}
+                {!showRaw && rowStage.length > 0 && ` · ${rowStage.join(' → ')}`}
             </p>
+
+            {/* Naming what is not drawn matters as much as naming what is. The
+                caption used to list the column step alongside the others, which
+                described a picture the reader was not looking at: centred spectra
+                are all pulled toward zero, and these are not. */}
+            {!showRaw && columnStage.length > 0 && (
+                <p className="text-xs text-gray-400 dark:text-gray-500">
+                    {columnStage.join(' → ')} follows, and is not shown — it would pull every
+                    curve toward zero and hide the shape you are judging.
+                </p>
+            )}
 
             {/* The previous curves stay on screen. The usual cause is a
                 half-typed window, and blanking the plot on every intermediate

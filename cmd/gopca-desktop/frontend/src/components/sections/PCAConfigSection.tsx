@@ -30,7 +30,12 @@ import { usePCAContext } from '../../contexts/PCAContext';
 import { usePCRContext } from '../../contexts/PCRContext';
 import { useUIContext } from '../../contexts/UIContext';
 import { maxComponentsFor, clampComponentCount } from '../../utils/maxComponents';
-import { preprocessingPipeline } from '../../utils/preprocessingPipeline';
+import {
+    preprocessingPipeline,
+    rowStagePipeline,
+    columnStagePipeline,
+    shouldShowPreview
+} from '../../utils/preprocessingPipeline';
 import { usePreprocessingPreview } from '../../hooks/usePreprocessingPreview';
 import { PreprocessingPreview } from '../PreprocessingPreview';
 import {
@@ -93,10 +98,7 @@ export function PCAConfigSection({ onRunPCA }: PCAConfigSectionProps) {
     // along. On data that is not a continuum a line plot across the variables
     // would be a shape with no meaning, and for plain PCA there is nothing to
     // compare against.
-    const previewWorthShowing = Boolean(
-        variableAxis?.isContinuous
-        && (config.snv || config.vectorNorm || config.savgolWindow > 0)
-    );
+    const previewWorthShowing = shouldShowPreview(Boolean(variableAxis?.isContinuous), config);
     const preview = usePreprocessingPreview(
         fileData, config, excludedRows, excludedColumns, previewWorthShowing
     );
@@ -517,9 +519,6 @@ export function PCAConfigSection({ onRunPCA }: PCAConfigSectionProps) {
                             </p>
                         )}
 
-                        {preview && !savgolError && (
-                            <PreprocessingPreview preview={preview} pipeline={pipeline} />
-                        )}
                     </HelpWrapper>
 
                     <HelpWrapper helpKey="column-preprocessing" className="p-3 bg-gray-50 dark:bg-gray-700/50 rounded-lg">
@@ -580,6 +579,20 @@ export function PCAConfigSection({ onRunPCA }: PCAConfigSectionProps) {
                                     </span>
                                 ))}
                         </div>
+
+                        {/* Belongs here rather than inside the Savitzky-Golay card,
+                            which was where it first went. It previews the whole row
+                            stage -- scatter correction as well as the filter -- so
+                            sitting inside one of the two steps misrepresented what it
+                            shows, and made it look as though the filter had to be on
+                            for the plot to mean anything. */}
+                        {preview && !savgolError && (
+                            <PreprocessingPreview
+                                preview={preview}
+                                rowStage={rowStagePipeline(config)}
+                                columnStage={columnStagePipeline(config)}
+                            />
+                        )}
                     </HelpWrapper>
 
                     <HelpWrapper helpKey="missing-strategy" className="p-3 bg-gray-50 dark:bg-gray-700/50 rounded-lg">
