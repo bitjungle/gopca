@@ -282,6 +282,7 @@ type VariableAxisResponse struct {
 	Variables        int     `json:"variables"`
 	Continuity       float64 `json:"continuity"`
 	SmoothnessFactor float64 `json:"smoothnessFactor"`
+	Measurable       bool    `json:"measurable"`
 	IsContinuous     bool    `json:"isContinuous"`
 	NamesNumeric     bool    `json:"namesNumeric"`
 	SpacingUniform   bool    `json:"spacingUniform"`
@@ -305,6 +306,7 @@ func (a *App) AnalyzeVariableAxis(request VariableAxisRequest) VariableAxisRespo
 		Variables:        report.Variables,
 		Continuity:       report.Continuity,
 		SmoothnessFactor: report.SmoothnessFactor,
+		Measurable:       report.Measurable,
 		IsContinuous:     report.IsContinuous,
 		NamesNumeric:     report.NamesNumeric,
 		SpacingUniform:   report.SpacingUniform,

@@ -154,15 +154,26 @@ func TestAnalyzeVariableAxisSpacing(t *testing.T) {
 func TestAnalyzeVariableAxisSurvivesNoise(t *testing.T) {
 	data, headers := loadAxisDataset(t, "corn/corn.csv")
 
-	var overall float64
+	// The standard deviation about the mean, not the root mean square about
+	// zero. For absorbance spectra, which are entirely positive, the two differ
+	// by a large factor, and the figure quoted as evidence for this threshold
+	// was measured against the standard deviation.
+	var sum float64
 	var n int
 	for _, row := range data {
 		for _, v := range row {
-			overall += v * v
+			sum += v
 			n++
 		}
 	}
-	sd := math.Sqrt(overall / float64(n))
+	mean := sum / float64(n)
+	var ss float64
+	for _, row := range data {
+		for _, v := range row {
+			ss += (v - mean) * (v - mean)
+		}
+	}
+	sd := math.Sqrt(ss / float64(n-1))
 
 	rng := rand.New(rand.NewSource(20260908))
 	for _, pct := range []float64{1, 5, 20} {
@@ -178,6 +189,7 @@ func TestAnalyzeVariableAxisSurvivesNoise(t *testing.T) {
 			t.Errorf("corn with %.0f%% noise was rejected as non-continuous (ratio %.5g)",
 				pct, report.Continuity)
 		}
+		t.Logf("%.0f%% noise: ratio %.5g (threshold %.2g)", pct, report.Continuity, core.ContinuityThreshold)
 	}
 }
 
@@ -258,4 +270,49 @@ func parseFloatOrZero(s string) float64 {
 		return 0
 	}
 	return v
+}
+
+// TestAnalyzeVariableAxisUnknownIsNotNegative separates "nothing could be
+// measured" from "these variables are not a continuum".
+//
+// They are different claims and only one of them is a finding. Reporting the
+// first as the second would let a dataset of flat or incomplete rows disable a
+// control on evidence that was never gathered.
+func TestAnalyzeVariableAxisUnknownIsNotNegative(t *testing.T) {
+	t.Run("all rows flat", func(t *testing.T) {
+		data := types.Matrix{{5, 5, 5, 5, 5}, {2, 2, 2, 2, 2}}
+		report := core.AnalyzeVariableAxis(data, nil)
+		if report.Measurable {
+			t.Error("rows with no variance cannot yield a ratio, so nothing was measurable")
+		}
+		if report.IsContinuous {
+			t.Error("an unmeasurable axis must not be reported as continuous either")
+		}
+	})
+
+	t.Run("all rows carry a missing value", func(t *testing.T) {
+		data := types.Matrix{
+			{1, math.NaN(), 3, 4, 5},
+			{2, 3, math.NaN(), 5, 6},
+		}
+		report := core.AnalyzeVariableAxis(data, nil)
+		if report.Measurable {
+			t.Error("every row was skipped, so nothing was measurable")
+		}
+	})
+
+	t.Run("a usable row makes it measurable", func(t *testing.T) {
+		data := types.Matrix{
+			{5, 5, 5, 5, 5},          // flat, skipped
+			{1, math.NaN(), 3, 4, 5}, // incomplete, skipped
+			{1, 2, 3, 4, 5},          // usable
+		}
+		report := core.AnalyzeVariableAxis(data, nil)
+		if !report.Measurable {
+			t.Error("one usable row is enough to measure")
+		}
+		if !report.IsContinuous {
+			t.Errorf("a straight line is as continuous as an axis gets (ratio %.5g)", report.Continuity)
+		}
+	})
 }

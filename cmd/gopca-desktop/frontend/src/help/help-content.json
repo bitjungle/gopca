@@ -122,7 +122,7 @@
     },
     "savitzky-golay": {
       "title": "Smoothing and Derivatives (Savitzky-Golay)",
-      "text": "Fits a polynomial across a sliding window of variables. Complements SNV rather than replacing it: a 1st derivative removes a baseline offset, a 2nd a slope. Window and order trade smoothing against detail; 11 and 2 suit NIR.",
+      "text": "Fits a polynomial across a sliding window of variables. Needs an axis where neighbours measure nearly the same thing; GoPCA checks that and disables this otherwise. Complements SNV: a 1st derivative removes a baseline, a 2nd a slope.",
       "category": "preprocessing"
     },
     "preprocessing-pipeline": {

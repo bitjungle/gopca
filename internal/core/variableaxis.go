@@ -86,7 +86,18 @@ type AxisReport struct {
 	// showing a user: 6093 for corn, 1.8 for wine.
 	SmoothnessFactor float64
 
+	// Measurable reports whether the continuity statistic could be computed at
+	// all. It is false when no row was usable -- every row carrying a missing
+	// value, or being flat enough to have no variance to divide by.
+	//
+	// This is not the same as "not a continuum", and conflating the two would
+	// turn an absence of evidence into a negative verdict. Callers must treat a
+	// report with Measurable false as having no opinion.
+	Measurable bool
+
 	// IsContinuous reports whether a derivative along this axis is meaningful.
+	// False when the axis is rough and also when nothing could be measured, so
+	// check Measurable before presenting it as a finding.
 	IsContinuous bool
 
 	// NamesNumeric reports whether the column names parse as numbers, which is
@@ -121,9 +132,9 @@ func AnalyzeVariableAxis(data types.Matrix, headers []string) AxisReport {
 	}
 	report.Variables = len(data[0])
 
-	report.Continuity, report.SmoothnessFactor = continuityOf(data)
-	report.IsContinuous = report.Variables >= minVariablesForFilter &&
-		report.Continuity > 0 &&
+	report.Continuity, report.SmoothnessFactor, report.Measurable = continuityOf(data)
+	report.IsContinuous = report.Measurable &&
+		report.Variables >= minVariablesForFilter &&
 		report.Continuity <= ContinuityThreshold
 
 	if len(headers) == report.Variables {
@@ -134,7 +145,7 @@ func AnalyzeVariableAxis(data types.Matrix, headers []string) AxisReport {
 
 // continuityOf returns the median von Neumann ratio across rows, and the same
 // figure expressed as a factor relative to the random-ordering expectation of 2.
-func continuityOf(data types.Matrix) (ratio, factor float64) {
+func continuityOf(data types.Matrix) (ratio, factor float64, measurable bool) {
 	ratios := make([]float64, 0, len(data))
 	for _, row := range data {
 		if len(row) < 2 {
@@ -175,7 +186,7 @@ func continuityOf(data types.Matrix) (ratio, factor float64) {
 		ratios = append(ratios, mssd/variance)
 	}
 	if len(ratios) == 0 {
-		return 0, 0
+		return 0, 0, false
 	}
 
 	// Median rather than mean: a handful of corrupted or unusually flat rows
@@ -190,7 +201,7 @@ func continuityOf(data types.Matrix) (ratio, factor float64) {
 	if ratio > 0 {
 		factor = 2 / ratio
 	}
-	return ratio, factor
+	return ratio, factor, true
 }
 
 // spacingOf inspects the column names for an evenly spaced numeric axis.

@@ -21,6 +21,8 @@ export interface VariableAxis {
     variables: number;
     continuity: number;
     smoothnessFactor: number;
+    /** False when nothing could be measured — not the same as "not a continuum". */
+    measurable: boolean;
     isContinuous: boolean;
     namesNumeric: boolean;
     spacingUniform: boolean;

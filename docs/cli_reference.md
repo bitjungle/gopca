@@ -109,7 +109,13 @@ Fits a low-order polynomial across a sliding window of variables and evaluates i
 
 **Choosing the parameters.** Window and order trade smoothing against fidelity: a wider window or lower order smooths harder and can flatten narrow peaks, while a narrower window or higher order preserves shape and keeps more noise. A window of 11 with order 2 is a common starting point for NIR; there is no universally right pair, and the honest way to choose is to compare cross-validated predictions rather than the look of the spectra.
 
-**Variable order matters.** The filter slides along the columns in the order they appear in the file, so it assumes they are in wavelength order and evenly spaced. Excluding columns from the middle of a spectrum with `--exclude-columns` closes the gap and makes neighbouring wavelengths adjacent that were not; restricting to a contiguous range is safe, removing an interior band is not.
+**Variable order matters, and GoPCA checks it.** The filter slides along the columns in the order they appear in the file, so it assumes they are in wavelength order and evenly spaced. Two warnings are printed to standard error when that looks doubtful — warnings, not refusals, because you may know something the data does not show:
+
+- *The variables do not form a continuum.* For a derivative to mean anything the values have to change smoothly from one variable to the next. GoPCA measures this with the **von Neumann ratio** — the mean square difference between neighbouring variables divided by the variance along the row. Under a random column order its expected value is 2; a spectrum drives it to about 0.0003, roughly six thousand times smoother. Below 0.5 the axis is treated as a continuum. Thirteen unrelated chemical measurements score about 1.1, and a derivative across them mostly amplifies noise.
+
+- *The variables are not evenly spaced.* Excluding columns from the middle of a spectrum with `--exclude-columns` closes the gap and makes wavelengths adjacent that were not, while leaving the data every bit as smooth — so only the spacing check can catch it. Restricting to a contiguous range is safe; removing an interior band is not.
+
+The same check drives GoPCA Desktop, where the control is disabled with the measured figure shown and an *Enable anyway* option.
 
 **Restrictions.**
 - Not available with `--method temporal`, which works along the time axis and applies no transform along the variable axis.

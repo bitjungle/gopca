@@ -144,6 +144,13 @@ func (s SavGolOptions) applyTo(config *types.PCAConfig) {
 // result. So the software states what it measured and leaves the decision where
 // it belongs.
 func warnIfAxisNotContinuous(w io.Writer, report core.AxisReport) {
+	// Nothing usable to measure -- every row missing a value, or flat. Saying
+	// "these variables do not form a continuum" here would state as a finding
+	// something that was never established.
+	if !report.Measurable {
+		return
+	}
+
 	if !report.IsContinuous {
 		_, _ = fmt.Fprintf(w, "Warning: the %d variables do not form a continuum "+
 			"(adjacent values differ only %.1fx less than a random ordering would). "+

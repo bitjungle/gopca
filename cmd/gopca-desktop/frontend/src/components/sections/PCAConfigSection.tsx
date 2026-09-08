@@ -81,7 +81,10 @@ export function PCAConfigSection({ onRunPCA }: PCAConfigSectionProps) {
 
     // A decision made about one dataset says nothing about the next one.
     React.useEffect(() => { setSavgolOverride(false); }, [fileData]);
-    const axisUnsuitable = variableAxis !== null && !variableAxis.isContinuous;
+    // measurable guards the difference between "these variables are not a
+    // continuum" and "nothing could be measured". Only the first is a finding;
+    // the second must not disable anything.
+    const axisUnsuitable = variableAxis !== null && variableAxis.measurable && !variableAxis.isContinuous;
     const savgolBlocked = axisUnsuitable && !savgolOverride;
 
     const savgolError = validateSavGol(
