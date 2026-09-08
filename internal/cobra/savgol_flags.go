@@ -71,6 +71,14 @@ func (s SavGolOptions) validate(cmd *cobra.Command, method, missingStrategy stri
 	orderSet := cmd.Flags().Changed("savgol-order")
 	derivSet := cmd.Flags().Changed("savgol-deriv")
 
+	// A negative window is not "no filter": nobody types -5 meaning off. Cobra
+	// accepts it, Enabled() reads it as disabled, and the run would proceed
+	// unfiltered without a word -- the same silent no-op the order/deriv rule
+	// below exists to prevent.
+	if cmd.Flags().Changed("savgol-window") && s.Window < 0 {
+		return fmt.Errorf("--savgol-window must be a positive odd length, or 0 to disable the filter, got %d", s.Window)
+	}
+
 	if !s.Enabled() {
 		if orderSet || derivSet {
 			var given []string

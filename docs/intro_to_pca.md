@@ -297,7 +297,7 @@ Beyond basic centering and scaling, GoPCA Suite offers specialized preprocessing
 2. **Spectroscopic Preprocessing:**
    - **SNV (Standard Normal Variate)**: Row-wise normalization that removes multiplicative scatter effects in spectroscopic data
    - **Vector Normalization**: Scales each sample to unit length (`x / ‖x‖`), removing differences in overall magnitude between samples while keeping the shape of each one. Useful for spectra, where overall intensity varies for reasons that are not chemical.
-   - **Savitzky-Golay Smoothing and Derivatives**: Fits a low-order polynomial across a sliding window of wavelengths and reads off its value — or its slope, or its curvature — at the centre of the window. Applied after SNV and before centering.
+   - **Savitzky-Golay Smoothing and Derivatives**: Fits a low-order polynomial across a sliding window of wavelengths and reads off its value — or its slope, or its curvature — at the centre of the window. It can be used alone; combined with SNV or vector normalization it runs after that step, and always before centering.
 
 > **Why take a derivative of a spectrum?** Scatter correction removes a good deal, but not everything. What often remains is a **baseline** that drifts across the spectrum — from particle size, packing density, or the instrument itself. A first derivative removes an additive offset and a second derivative removes a linear slope, because a constant and a straight line simply vanish when you differentiate. What survives is the shape you cared about: the peaks.
 >

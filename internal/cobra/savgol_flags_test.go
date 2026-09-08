@@ -67,6 +67,12 @@ func TestSavGolFlagValidation(t *testing.T) {
 
 		// Shape, rejected before the file is even opened.
 		{"even window", []string{"--savgol-window", "10"}, "svd", "error", true, "must be odd"},
+
+		// A negative window is not a request to disable the filter. Cobra takes
+		// it, Enabled() reads it as off, and the run would otherwise proceed
+		// unfiltered without a word.
+		{"negative window", []string{"--savgol-window", "-5"}, "svd", "error", true, "must be a positive odd length"},
+		{"explicit zero disables", []string{"--savgol-window", "0"}, "svd", "error", false, ""},
 		{"order not below window", []string{"--savgol-window", "5", "--savgol-order", "5"}, "svd", "error", true, "less than the window length"},
 		{"deriv above order", []string{"--savgol-window", "7", "--savgol-deriv", "3"}, "svd", "error", true, "zero everywhere"},
 

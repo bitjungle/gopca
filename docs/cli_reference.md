@@ -95,9 +95,9 @@ pca analyze [OPTIONS] <input.csv>
 
 ##### Savitzky-Golay Smoothing and Derivatives
 
-Fits a low-order polynomial across a sliding window of variables and evaluates it, or one of its derivatives, at the window centre. Applied **after** `--snv` or `--vector-norm` and **before** any column centring or scaling.
+Fits a low-order polynomial across a sliding window of variables and evaluates it, or one of its derivatives, at the window centre. It can be used on its own; when `--snv` or `--vector-norm` is also given, the filter runs **after** it, and in every case **before** any column centring or scaling.
 
-- `--savgol-window <n>` - Window length in variables. Must be odd and greater than the polynomial order. Omitted or `0` means no filtering, which is what enables the filter.
+- `--savgol-window <n>` - Window length in variables, and the flag that switches the filter on. Any value greater than zero enables it, and must be odd and greater than the polynomial order. Omitted or `0` means no filtering.
 - `--savgol-order <n>` - Degree of the polynomial fitted in each window (default: `2`)
 - `--savgol-deriv <n>` - Derivative order: `0` smooths, `1` and `2` take the first and second derivative (default: `0`). Must not exceed `--savgol-order`.
 
