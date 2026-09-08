@@ -114,9 +114,16 @@ export function columnStagePipeline(config: PreprocessingSummaryConfig): string[
  */
 export function shouldShowPreview(
     isContinuousAxis: boolean,
-    config: Pick<PreprocessingSummaryConfig, 'snv' | 'vectorNorm' | 'savgolWindow'>
+    config: Pick<PreprocessingSummaryConfig, 'snv' | 'vectorNorm' | 'savgolWindow'>,
+    method?: string
 ): boolean {
     if (!isContinuousAxis) {
+        return false;
+    }
+    // Temporal PCA builds its own preprocessor and applies no row-wise stage at
+    // all, so a preview of one would show a transformation that will not happen
+    // -- the same discrepancy #889 records for --snv on that path.
+    if (method?.toLowerCase() === 'temporal') {
         return false;
     }
     return config.snv || config.vectorNorm || config.savgolWindow > 0;

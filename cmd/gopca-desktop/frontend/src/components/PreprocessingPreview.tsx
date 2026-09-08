@@ -136,7 +136,13 @@ export function PreprocessingPreview({ preview, rowStage, columnStage }: Preproc
                 value would make it flicker rather than inform. */}
             {preview.error && (
                 <p className="text-xs text-amber-600 dark:text-amber-400 mt-1">
-                    Showing the last valid preview — {preview.error}
+                    {hasCurves
+                        // Only claim there is something to look at when there is.
+                        // The first request can fail outright -- a window typed
+                        // before anything valid was ever computed -- and there are
+                        // no earlier curves to be showing.
+                        ? `Showing the last valid preview — ${preview.error}`
+                        : preview.error}
                 </p>
             )}
         </HelpWrapper>

@@ -98,7 +98,7 @@ export function PCAConfigSection({ onRunPCA }: PCAConfigSectionProps) {
     // along. On data that is not a continuum a line plot across the variables
     // would be a shape with no meaning, and for plain PCA there is nothing to
     // compare against.
-    const previewWorthShowing = shouldShowPreview(Boolean(variableAxis?.isContinuous), config);
+    const previewWorthShowing = shouldShowPreview(Boolean(variableAxis?.isContinuous), config, config.method);
     const preview = usePreprocessingPreview(
         fileData, config, excludedRows, excludedColumns, previewWorthShowing
     );
@@ -586,7 +586,13 @@ export function PCAConfigSection({ onRunPCA }: PCAConfigSectionProps) {
                             sitting inside one of the two steps misrepresented what it
                             shows, and made it look as though the filter had to be on
                             for the plot to mean anything. */}
-                        {preview && !savgolError && (
+                        {/* Deliberately not gated on savgolError. Most of those errors
+                            are a window in the middle of being typed, and unmounting
+                            the plot for each intermediate value would blank it exactly
+                            while someone is adjusting the number -- which is the
+                            opposite of what a live preview is for. The component keeps
+                            the last valid curves and says so. */}
+                        {preview && (
                             <PreprocessingPreview
                                 preview={preview}
                                 rowStage={rowStagePipeline(config)}

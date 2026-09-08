@@ -113,6 +113,20 @@ describe('shouldShowPreview', () => {
         expect(shouldShowPreview(false, config({ snv: true, savgolWindow: 11 }))).toBe(false);
     });
 
+    it('hides for Temporal PCA, which applies no row stage at all', () => {
+        // Previewing SNV there would show a transformation that will not happen:
+        // temporal PCA builds its own preprocessor and drops the row-wise
+        // settings (#889).
+        expect(shouldShowPreview(true, config({ snv: true }), 'temporal')).toBe(false);
+        expect(shouldShowPreview(true, config({ savgolWindow: 11 }), 'Temporal')).toBe(false);
+    });
+
+    it('shows for every other method', () => {
+        for (const method of ['SVD', 'NIPALS', 'kernel', undefined]) {
+            expect(shouldShowPreview(true, config({ snv: true }), method)).toBe(true);
+        }
+    });
+
     it('ignores column-wise settings, which the preview does not apply', () => {
         expect(shouldShowPreview(true, config({ meanCenter: true, standardScale: true }))).toBe(false);
     });
