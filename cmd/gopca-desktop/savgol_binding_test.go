@@ -29,6 +29,7 @@ import (
 	"path/filepath"
 	"reflect"
 	"regexp"
+	"strconv"
 	"strings"
 	"testing"
 
@@ -301,4 +302,64 @@ func savGolSpectra(rows, cols int) [][]float64 {
 		}
 	}
 	return data
+}
+
+// TestAnalyzeVariableAxisReachesTheInterface checks the Wails method, not the
+// statistic — the statistic is covered in internal/core against the real
+// datasets. What this adds is that the report actually crosses the boundary
+// with its fields intact, since the panel decides whether to offer a control
+// based on them and a zeroed report reads as "not a continuum".
+func TestAnalyzeVariableAxisReachesTheInterface(t *testing.T) {
+	// Smooth: a peak on a sloping baseline, sampled densely.
+	spectra := savGolSpectra(20, 60)
+	headers := make([]string, 60)
+	for i := range headers {
+		headers[i] = strconv.Itoa(1100 + 2*i)
+	}
+
+	smooth := (&App{}).AnalyzeVariableAxis(VariableAxisRequest{Data: spectra, Headers: headers})
+	if !smooth.IsContinuous {
+		t.Errorf("dense spectra were not reported as continuous (ratio %.5g)", smooth.Continuity)
+	}
+	if smooth.Variables != 60 {
+		t.Errorf("Variables = %d, want 60", smooth.Variables)
+	}
+	if smooth.SmoothnessFactor <= 1 {
+		t.Errorf("SmoothnessFactor = %.3g; a smooth curve must beat a random ordering", smooth.SmoothnessFactor)
+	}
+	if !smooth.NamesNumeric || !smooth.SpacingUniform || smooth.DistinctSteps != 1 {
+		t.Errorf("evenly spaced numeric headers reported as numeric=%v uniform=%v steps=%d",
+			smooth.NamesNumeric, smooth.SpacingUniform, smooth.DistinctSteps)
+	}
+
+	// The same values with the columns shuffled must stop being a continuum,
+	// which is what shows the report describes the ordering and not the numbers.
+	shuffled := make([][]float64, len(spectra))
+	order := []int{}
+	for i := 0; i < 60; i++ {
+		order = append(order, (i*37)%60) // a fixed, order-destroying permutation
+	}
+	for i, row := range spectra {
+		shuffled[i] = make([]float64, len(row))
+		for k, j := range order {
+			shuffled[i][k] = row[j]
+		}
+	}
+	rough := (&App{}).AnalyzeVariableAxis(VariableAxisRequest{Data: shuffled, Headers: headers})
+	if rough.IsContinuous {
+		t.Errorf("shuffled columns were still reported as a continuum (ratio %.5g)", rough.Continuity)
+	}
+}
+
+// TestAnalyzeVariableAxisHandlesNoData covers the state the interface is in
+// before a file is loaded. A zeroed report is fine; a panic is not, and the
+// frontend treats "not continuous" here as "unknown" rather than as a verdict.
+func TestAnalyzeVariableAxisHandlesNoData(t *testing.T) {
+	report := (&App{}).AnalyzeVariableAxis(VariableAxisRequest{})
+	if report.IsContinuous {
+		t.Error("an empty request reported a continuum")
+	}
+	if report.Variables != 0 {
+		t.Errorf("Variables = %d, want 0", report.Variables)
+	}
 }

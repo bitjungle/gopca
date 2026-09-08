@@ -54,7 +54,7 @@ interface PCAConfigSectionProps {
  */
 export function PCAConfigSection({ onRunPCA }: PCAConfigSectionProps) {
     const { fileData } = useFileDataContext();
-    const { config, setConfig, loading, generateCLICommand, excludedColumns } = usePCAContext();
+    const { config, setConfig, loading, generateCLICommand, excludedColumns, variableAxis } = usePCAContext();
 
     // In Regress mode this panel configures the decomposition the regression is
     // built on, so the preprocessing controls still apply. The Go PCA button does
@@ -70,10 +70,28 @@ export function PCAConfigSection({ onRunPCA }: PCAConfigSectionProps) {
     // this is about when the user hears, not whether the rule holds.
     const pipeline = preprocessingPipeline(config);
 
+    // Savitzky-Golay fits a polynomial across neighbouring variables, which only
+    // means anything if neighbouring variables measure nearly the same thing.
+    // The check is offered as a default, not a verdict: `savgolOverride` lets a
+    // user who knows their axis is ordered proceed anyway. Withholding the
+    // control outright would be indistinguishable, to them, from the feature not
+    // existing -- and a null report (no file yet, or the call failed) must not
+    // read as a negative answer.
+    const [savgolOverride, setSavgolOverride] = React.useState(false);
+
+    // A decision made about one dataset says nothing about the next one.
+    React.useEffect(() => { setSavgolOverride(false); }, [fileData]);
+    // measurable guards the difference between "these variables are not a
+    // continuum" and "nothing could be measured". Only the first is a finding;
+    // the second must not disable anything.
+    const axisUnsuitable = variableAxis !== null && variableAxis.measurable && !variableAxis.isContinuous;
+    const savgolBlocked = axisUnsuitable && !savgolOverride;
+
     const savgolError = validateSavGol(
         config,
         fileData ? fileData.headers.length - excludedColumns.length : 0,
-        config.method
+        config.method,
+        savgolBlocked
     );
     const commandLine = regressing
         ? generateCLICommand(regressionCLIConfig)
@@ -392,7 +410,7 @@ export function PCAConfigSection({ onRunPCA }: PCAConfigSectionProps) {
                                 { value: 'deriv1', label: '1st Derivative', disabled: config.method === 'temporal' },
                                 { value: 'deriv2', label: '2nd Derivative', disabled: config.method === 'temporal' }
                             ]}
-                            disabled={config.method === 'temporal'}
+                            disabled={config.method === 'temporal' || savgolBlocked}
                             className="w-full"
                         />
 
@@ -433,17 +451,57 @@ export function PCAConfigSection({ onRunPCA }: PCAConfigSectionProps) {
                             </div>
                         )}
 
-                        {savgolError
-                            ? (
-                                <p className="text-xs text-red-600 dark:text-red-400 mt-1">{savgolError}</p>
-                            )
-                            : (
-                                <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
-                                    {config.method === 'temporal'
-                                        ? 'Not available for Temporal PCA, which applies no transform along the variable axis'
-                                        : 'Smooths along the variables; derivatives remove a baseline offset (1st) or slope (2nd)'}
+                        {savgolError && (
+                            <p className="text-xs text-red-600 dark:text-red-400 mt-1">{savgolError}</p>
+                        )}
+
+                        {!savgolError && config.method === 'temporal' && (
+                            <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                                Not available for Temporal PCA, which applies no transform along the variable axis
+                            </p>
+                        )}
+
+                        {/* The measured reason, not a bare refusal. A scientist can
+                            check a number; "unavailable" teaches nothing and cannot
+                            be argued with. */}
+                        {!savgolError && config.method !== 'temporal' && axisUnsuitable && (
+                            <div className="mt-1">
+                                <p className="text-xs text-gray-500 dark:text-gray-400">
+                                    These {variableAxis.variables} variables do not form a continuum — adjacent
+                                    values differ only {variableAxis.smoothnessFactor.toFixed(1)}× less than a
+                                    random ordering would. A derivative here would mostly amplify noise.
                                 </p>
-                            )}
+                                <label className="mt-1 flex items-center gap-1 text-xs text-gray-500 dark:text-gray-400">
+                                    <input
+                                        type="checkbox"
+                                        checked={savgolOverride}
+                                        onChange={e => setSavgolOverride(e.target.checked)}
+                                    />
+                                    Enable anyway — my variables are in a measured order
+                                </label>
+                            </div>
+                        )}
+
+                        {/* Continuous, but the axis may still be broken. The continuity
+                            ratio cannot see this: removing a band from the middle of a
+                            spectrum leaves the data every bit as smooth. */}
+                        {!savgolError && config.method !== 'temporal' && !axisUnsuitable
+                            && variableAxis?.namesNumeric && !variableAxis.spacingUniform && (
+                            <p className="text-xs text-amber-600 dark:text-amber-400 mt-1">
+                                ⚠ The variables are not evenly spaced ({variableAxis.distinctSteps} different step
+                                sizes). Savitzky-Golay treats them as equally spaced, so where a gap falls it
+                                combines variables that are not really adjacent — excluding columns from the middle
+                                of a spectrum does this.
+                            </p>
+                        )}
+
+                        {!savgolError && config.method !== 'temporal' && !axisUnsuitable
+                            && !(variableAxis?.namesNumeric && !variableAxis.spacingUniform) && (
+                            <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                                Smooths along the variables; derivatives remove a baseline offset (1st) or slope (2nd)
+                                {variableAxis?.isContinuous && ` — variables look continuous (${variableAxis.smoothnessFactor.toFixed(0)}× smoother than a random ordering)`}
+                            </p>
+                        )}
                     </HelpWrapper>
 
                     <HelpWrapper helpKey="column-preprocessing" className="p-3 bg-gray-50 dark:bg-gray-700/50 rounded-lg">

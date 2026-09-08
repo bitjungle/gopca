@@ -78,6 +78,24 @@ describe('validateSavGol', () => {
         }
     });
 
+    it('blocks a window left set on data whose variables are not a continuum', () => {
+        // Reachable by configuring the filter on spectra and then loading iris:
+        // the selector goes disabled but the window it left behind is still set.
+        const message = validateSavGol(settings(11, 2, 1), 700, 'SVD', true);
+        expect(message).toMatch(/do not form a continuum/);
+        expect(message).toMatch(/Enable anyway/);
+    });
+
+    it('says nothing about the axis when no filter is set', () => {
+        expect(validateSavGol(settings(0, 2, 0), 700, 'SVD', true)).toBeNull();
+    });
+
+    it('defaults to not blocking, so an unknown axis is not a negative verdict', () => {
+        // The report is null before a file loads or if the call fails. Treating
+        // that as "unsuitable" would hide the feature for a backend hiccup.
+        expect(validateSavGol(settings(11, 2, 1), 700, 'SVD')).toBeNull();
+    });
+
     it('rejects a fractional window', () => {
         expect(validateSavGol(settings(10.5, 2, 0), 700)).toMatch(/whole number/);
     });

@@ -26,6 +26,7 @@ package cobra
 import (
 	"fmt"
 	"math"
+	"os"
 	"sort"
 	"strconv"
 	"strings"
@@ -249,6 +250,14 @@ func runRegress(opts *RegressOptions, inputFile string) error {
 		}
 		fmt.Printf("Response %q: %d of %d rows have an observed value\n",
 			opts.Response, observed, len(y))
+	}
+
+	// Same warning as `pca analyze`: the predictors reach the engine through the
+	// same preprocessing, so a filter along an axis with no order to it is just
+	// as meaningless here, and a regression puts a number on it that looks
+	// authoritative.
+	if opts.SavGol.Enabled() {
+		warnIfAxisNotContinuous(os.Stderr, core.AnalyzeVariableAxis(data.Matrix, data.Headers))
 	}
 
 	engine := core.NewPCREngine()

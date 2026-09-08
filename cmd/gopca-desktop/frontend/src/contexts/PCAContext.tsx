@@ -25,6 +25,7 @@ import React, { createContext, useContext, useState, useCallback, useMemo } from
 import { ExportPCAModel } from '../../wailsjs/go/main/App';
 import { asFractions } from '../utils/variancePercent';
 import { usePCAConfig, PCAConfigState } from '../hooks/usePCAConfig';
+import { useVariableAxis, VariableAxis } from '../hooks/useVariableAxis';
 import { usePCARunner } from '../hooks/usePCARunner';
 import { useFileDataContext } from './FileDataContext';
 import { usePalette } from './PaletteContext';
@@ -36,6 +37,8 @@ export interface PCAContextType {
     // ── Config & exclusions ───────────────────────────────────────────────────
     config: PCAConfigState;
     setConfig: React.Dispatch<React.SetStateAction<PCAConfigState>>;
+    /** Whether the variables form an axis a derivative can be taken along; null while unknown. */
+    variableAxis: VariableAxis | null;
     excludedRows: number[];
     excludedColumns: number[];
     setExcludedRows: React.Dispatch<React.SetStateAction<number[]>>;
@@ -113,6 +116,10 @@ export const PCAProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         pcaHasExclusions, pcaResultsRef, pcaErrorRef,
         runPCA, clearPcaError, clearPcaResponse
     } = usePCARunner(fileData, config, excludedRows, excludedColumns, selectedGroupColumn);
+
+    // Whether the variables form a continuum, recomputed when the exclusions
+    // change because that is what the answer depends on.
+    const variableAxis = useVariableAxis(fileData, excludedRows, excludedColumns);
 
     const loading = fileLoading || pcaLoading;
 
@@ -233,6 +240,7 @@ export const PCAProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     // does not support per-field subscriptions without context splitting.
     const value = useMemo<PCAContextType>(() => ({
         config, setConfig,
+        variableAxis,
         excludedRows, excludedColumns,
         setExcludedRows, setExcludedColumns,
         updateGammaForData, resetExclusions,
@@ -245,7 +253,7 @@ export const PCAProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         handleRowSelectionChange, handleColumnSelectionChange,
         handleStartupFile
     }), [
-        config, setConfig,
+        config, setConfig, variableAxis,
         excludedRows, excludedColumns,
         setExcludedRows, setExcludedColumns,
         updateGammaForData, resetExclusions,
