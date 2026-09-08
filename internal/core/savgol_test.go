@@ -28,6 +28,8 @@ import (
 	"math/rand"
 	"strings"
 	"testing"
+
+	"github.com/bitjungle/gopca/pkg/types"
 )
 
 // evalPoly evaluates sum_j coeffs[j] * t^j.
@@ -294,5 +296,144 @@ func TestSavGolRejectsWrongLengthInput(t *testing.T) {
 	}
 	if _, err := filter.ApplyTranspose(make([]float64, 21)); err == nil {
 		t.Error("ApplyTranspose accepted a vector of the wrong length")
+	}
+}
+
+// TestPreviewRowStageMatchesTheFullRun is the property a sampled preview rests
+// on: nothing in the row stage is fitted, so a subset of rows receives exactly
+// what it would receive in a full run.
+//
+// If this were false the preview would be an approximation of the pipeline
+// rather than a window onto it, and it would mislead precisely when it mattered
+// -- while someone was tuning a window and watching the result.
+func TestPreviewRowStageMatchesTheFullRun(t *testing.T) {
+	rng := rand.New(rand.NewSource(20260908))
+	const rows, cols = 60, 48
+
+	full := make(types.Matrix, rows)
+	for i := range full {
+		full[i] = make([]float64, cols)
+		for j := range full[i] {
+			t := float64(j)
+			centre := 12.0 + float64(i%9)
+			full[i][j] = 0.4 + 0.03*t + 2.0*math.Exp(-((t-centre)*(t-centre))/7.0) +
+				rng.NormFloat64()*0.01
+		}
+	}
+
+	configs := []types.PCAConfig{
+		{SavGolWindow: 9, SavGolPolyOrder: 2, SavGolDeriv: 1},
+		{SNV: true, SavGolWindow: 11, SavGolPolyOrder: 2, SavGolDeriv: 1},
+		{SNV: true},
+		{VectorNorm: true, SavGolWindow: 7, SavGolPolyOrder: 3, SavGolDeriv: 2},
+		{}, // nothing enabled: the rows must come back unchanged
+	}
+
+	// A scattered sample, as an interface would take.
+	sample := []int{0, 7, 19, 33, 41, 58}
+
+	for _, config := range configs {
+		wholeResult, err := PreviewRowStage(full, config)
+		if err != nil {
+			t.Fatalf("%+v: full run failed: %v", config, err)
+		}
+
+		subset := make(types.Matrix, len(sample))
+		for k, i := range sample {
+			subset[k] = full[i]
+		}
+		subsetResult, err := PreviewRowStage(subset, config)
+		if err != nil {
+			t.Fatalf("%+v: subset run failed: %v", config, err)
+		}
+
+		for k, i := range sample {
+			for j := range wholeResult[i] {
+				if diff := math.Abs(subsetResult[k][j] - wholeResult[i][j]); diff > 1e-12 {
+					t.Fatalf("config %+v, row %d variable %d: subset gave %.12g, full run %.12g",
+						config, i, j, subsetResult[k][j], wholeResult[i][j])
+				}
+			}
+		}
+	}
+}
+
+// TestPreviewRowStageStopsBeforeColumnStatistics checks that the preview shows
+// the spectra, not the centred matrix the decomposition sees. Centring every
+// column would pull all the curves toward zero and make the shape the user is
+// judging much harder to read.
+func TestPreviewRowStageStopsBeforeColumnStatistics(t *testing.T) {
+	data := types.Matrix{
+		{1, 2, 3, 4, 5, 6, 7},
+		{2, 4, 6, 8, 10, 12, 14},
+		{3, 1, 4, 1, 5, 9, 2},
+	}
+
+	// The column settings must be carried alongside a row-wise one. With only
+	// column options set there is no row stage at all, the function returns its
+	// input early, and a test built that way would pass whatever the column
+	// handling did -- which is exactly how the first version of this test failed
+	// to notice centring being added.
+	rowOnly := types.PCAConfig{SNV: true}
+	withColumns := types.PCAConfig{SNV: true, MeanCenter: true, StandardScale: true}
+
+	want, err := PreviewRowStage(data, rowOnly)
+	if err != nil {
+		t.Fatalf("row-only preview: %v", err)
+	}
+	got, err := PreviewRowStage(data, withColumns)
+	if err != nil {
+		t.Fatalf("preview with column settings: %v", err)
+	}
+
+	for i := range want {
+		for j := range want[i] {
+			if math.Abs(got[i][j]-want[i][j]) > 1e-12 {
+				t.Fatalf("row %d variable %d: got %.12g with column settings present, "+
+					"want %.12g from the row stage alone; column centring and scaling "+
+					"must not reach the preview",
+					i, j, got[i][j], want[i][j])
+			}
+		}
+	}
+
+	// And the row stage must actually have done something, or the comparison
+	// above is two copies of the input agreeing with each other.
+	unchanged := true
+	for i := range data {
+		for j := range data[i] {
+			if math.Abs(got[i][j]-data[i][j]) > 1e-12 {
+				unchanged = false
+			}
+		}
+	}
+	if unchanged {
+		t.Fatal("the row stage left the data untouched, so this test compared nothing")
+	}
+}
+
+// TestPreviewRowStageDoesNotAliasTheInput guards a subtle one: the caller keeps
+// the raw rows to draw alongside the processed ones, so returning slices that
+// share memory with the input would make the "raw" trace change under it.
+func TestPreviewRowStageDoesNotAliasTheInput(t *testing.T) {
+	for _, config := range []types.PCAConfig{
+		{}, // the pass-through path
+		{SNV: true},
+		{SavGolWindow: 5, SavGolPolyOrder: 2, SavGolDeriv: 0},
+	} {
+		data := types.Matrix{{1, 2, 3, 4, 5}, {2, 4, 6, 8, 10}}
+		original := append([]float64(nil), data[0]...)
+
+		got, err := PreviewRowStage(data, config)
+		if err != nil {
+			t.Fatalf("%+v: %v", config, err)
+		}
+		got[0][0] = 999
+
+		for j := range original {
+			if data[0][j] != original[j] {
+				t.Errorf("%+v: writing to the result changed the input at variable %d", config, j)
+			}
+		}
 	}
 }

@@ -30,7 +30,14 @@ import { usePCAContext } from '../../contexts/PCAContext';
 import { usePCRContext } from '../../contexts/PCRContext';
 import { useUIContext } from '../../contexts/UIContext';
 import { maxComponentsFor, clampComponentCount } from '../../utils/maxComponents';
-import { preprocessingPipeline } from '../../utils/preprocessingPipeline';
+import {
+    preprocessingPipeline,
+    rowStagePipeline,
+    columnStagePipeline,
+    shouldShowPreview
+} from '../../utils/preprocessingPipeline';
+import { usePreprocessingPreview } from '../../hooks/usePreprocessingPreview';
+import { PreprocessingPreview } from '../PreprocessingPreview';
 import {
     validateSavGol,
     snapWindowToOdd,
@@ -54,7 +61,7 @@ interface PCAConfigSectionProps {
  */
 export function PCAConfigSection({ onRunPCA }: PCAConfigSectionProps) {
     const { fileData } = useFileDataContext();
-    const { config, setConfig, loading, generateCLICommand, excludedColumns, variableAxis } = usePCAContext();
+    const { config, setConfig, loading, generateCLICommand, excludedRows, excludedColumns, variableAxis } = usePCAContext();
 
     // In Regress mode this panel configures the decomposition the regression is
     // built on, so the preprocessing controls still apply. The Go PCA button does
@@ -86,6 +93,15 @@ export function PCAConfigSection({ onRunPCA }: PCAConfigSectionProps) {
     // the second must not disable anything.
     const axisUnsuitable = variableAxis !== null && variableAxis.measurable && !variableAxis.isContinuous;
     const savgolBlocked = axisUnsuitable && !savgolOverride;
+
+    // Shown only when there is a transformation to inspect and an axis to draw it
+    // along. On data that is not a continuum a line plot across the variables
+    // would be a shape with no meaning, and for plain PCA there is nothing to
+    // compare against.
+    const previewWorthShowing = shouldShowPreview(Boolean(variableAxis?.isContinuous), config, config.method);
+    const preview = usePreprocessingPreview(
+        fileData, config, excludedRows, excludedColumns, previewWorthShowing
+    );
 
     const savgolError = validateSavGol(
         config,
@@ -502,6 +518,7 @@ export function PCAConfigSection({ onRunPCA }: PCAConfigSectionProps) {
                                 {variableAxis?.isContinuous && ` — variables look continuous (${variableAxis.smoothnessFactor.toFixed(0)}× smoother than a random ordering)`}
                             </p>
                         )}
+
                     </HelpWrapper>
 
                     <HelpWrapper helpKey="column-preprocessing" className="p-3 bg-gray-50 dark:bg-gray-700/50 rounded-lg">
@@ -562,6 +579,26 @@ export function PCAConfigSection({ onRunPCA }: PCAConfigSectionProps) {
                                     </span>
                                 ))}
                         </div>
+
+                        {/* Belongs here rather than inside the Savitzky-Golay card,
+                            which was where it first went. It previews the whole row
+                            stage -- scatter correction as well as the filter -- so
+                            sitting inside one of the two steps misrepresented what it
+                            shows, and made it look as though the filter had to be on
+                            for the plot to mean anything. */}
+                        {/* Deliberately not gated on savgolError. Most of those errors
+                            are a window in the middle of being typed, and unmounting
+                            the plot for each intermediate value would blank it exactly
+                            while someone is adjusting the number -- which is the
+                            opposite of what a live preview is for. The component keeps
+                            the last valid curves and says so. */}
+                        {preview && (
+                            <PreprocessingPreview
+                                preview={preview}
+                                rowStage={rowStagePipeline(config)}
+                                columnStage={columnStagePipeline(config)}
+                            />
+                        )}
                     </HelpWrapper>
 
                     <HelpWrapper helpKey="missing-strategy" className="p-3 bg-gray-50 dark:bg-gray-700/50 rounded-lg">
