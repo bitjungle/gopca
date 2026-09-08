@@ -125,6 +125,11 @@
       "text": "Fits a polynomial across a sliding window of variables. Needs an axis where neighbours measure nearly the same thing; GoPCA checks that and disables this otherwise. Complements SNV: a 1st derivative removes a baseline, a 2nd a slope.",
       "category": "preprocessing"
     },
+    "preprocessing-preview": {
+      "title": "Preprocessing Preview",
+      "text": "The chosen samples as the decomposition will see them, spread across the file rather than taken from the top. Shows scatter correction and Savitzky-Golay but not column centring, which pulls every curve toward zero and hides the shape.",
+      "category": "preprocessing"
+    },
     "preprocessing-pipeline": {
       "title": "Preprocessing Pipeline",
       "text": "The order these are applied in. Each is optional and independent. A derivative removes any constant, so SNV before one reduces exactly to the derivative divided by each sample's spectral spread: the multiplicative scatter correction a derivative cannot do.",

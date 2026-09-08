@@ -363,3 +363,79 @@ func TestAnalyzeVariableAxisHandlesNoData(t *testing.T) {
 		t.Errorf("Variables = %d, want 0", report.Variables)
 	}
 }
+
+// TestPreprocessPreviewReachesTheInterface checks the preview call end to end.
+// The statistic and the sampling property are covered in internal/core; what
+// this adds is that the rows survive the crossing and come back changed.
+func TestPreprocessPreviewReachesTheInterface(t *testing.T) {
+	rows := savGolSpectra(6, 40)
+
+	response := (&App{}).PreprocessPreview(PreprocessPreviewRequest{
+		Data:            rows,
+		SNV:             true,
+		SavGolWindow:    9,
+		SavGolPolyOrder: 2,
+		SavGolDeriv:     1,
+	})
+	if !response.Success {
+		t.Fatalf("preview failed: %s", response.Error)
+	}
+	if len(response.Data) != len(rows) || len(response.Data[0]) != len(rows[0]) {
+		t.Fatalf("returned %dx%d, want %dx%d",
+			len(response.Data), len(response.Data[0]), len(rows), len(rows[0]))
+	}
+
+	// A first derivative of a peak on a sloping baseline cannot resemble the
+	// input. Without this the test would pass on a method that returned its
+	// argument untouched.
+	same := true
+	for i := range rows {
+		for j := range rows[i] {
+			if math.Abs(rows[i][j]-response.Data[i][j]) > 1e-9 {
+				same = false
+			}
+		}
+	}
+	if same {
+		t.Error("the preview returned the input unchanged; the settings did not reach the engine")
+	}
+}
+
+// TestPreprocessPreviewReportsBadSettingsWithoutFailing covers what happens
+// while someone is typing. An even window is a configuration on the way to a
+// valid one, and it must come back as a message rather than as an exception the
+// interface has to catch.
+func TestPreprocessPreviewReportsBadSettingsWithoutFailing(t *testing.T) {
+	response := (&App{}).PreprocessPreview(PreprocessPreviewRequest{
+		Data:            savGolSpectra(4, 30),
+		SavGolWindow:    10, // even: no centre
+		SavGolPolyOrder: 2,
+		SavGolDeriv:     1,
+	})
+	if response.Success {
+		t.Fatal("an even window was accepted")
+	}
+	if !strings.Contains(response.Error, "must be odd") {
+		t.Errorf("the error does not say what is wrong: %s", response.Error)
+	}
+	if response.Data != nil {
+		t.Error("a refused configuration returned data")
+	}
+}
+
+// TestPreprocessPreviewWithNoPreprocessing returns the rows unchanged rather
+// than erroring, so the interface can offer a raw view through the same path.
+func TestPreprocessPreviewWithNoPreprocessing(t *testing.T) {
+	rows := savGolSpectra(3, 20)
+	response := (&App{}).PreprocessPreview(PreprocessPreviewRequest{Data: rows})
+	if !response.Success {
+		t.Fatalf("preview failed: %s", response.Error)
+	}
+	for i := range rows {
+		for j := range rows[i] {
+			if response.Data[i][j] != rows[i][j] {
+				t.Fatalf("row %d variable %d changed with nothing enabled", i, j)
+			}
+		}
+	}
+}

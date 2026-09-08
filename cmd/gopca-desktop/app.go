@@ -269,6 +269,53 @@ func applySavGolSettings(config *types.PCAConfig, window, polyOrder, deriv int) 
 	return nil
 }
 
+// PreprocessPreviewRequest asks for the row stage applied to a handful of
+// samples, so the interface can show what a filter did without running a
+// decomposition.
+//
+// Data carries only the rows to be drawn, chosen by the caller. Nothing in the
+// row stage is fitted, so those rows receive exactly what a full run would give
+// them -- see core.PreviewRowStage. Sending a sample is therefore not an
+// approximation, and it keeps both directions of the call small: a spectral
+// dataset can be nine hundred rows of a thousand variables, and no plot can
+// show that anyway.
+type PreprocessPreviewRequest struct {
+	Data            [][]float64 `json:"data"`
+	SNV             bool        `json:"snv"`
+	VectorNorm      bool        `json:"vectorNorm"`
+	SavGolWindow    int         `json:"savgolWindow,omitempty"`
+	SavGolPolyOrder int         `json:"savgolPolyOrder,omitempty"`
+	SavGolDeriv     int         `json:"savgolDeriv,omitempty"`
+}
+
+// PreprocessPreviewResponse carries the processed rows, or the reason there are
+// none.
+type PreprocessPreviewResponse struct {
+	Success bool        `json:"success"`
+	Error   string      `json:"error,omitempty"`
+	Data    [][]float64 `json:"data,omitempty"`
+}
+
+// PreprocessPreview applies the row stage to the rows it is given.
+//
+// Errors are returned in the response rather than thrown, because every one of
+// them is a configuration the user is in the middle of typing -- an even window,
+// an order above the window -- and an exception for a half-finished number would
+// be noise.
+func (a *App) PreprocessPreview(request PreprocessPreviewRequest) PreprocessPreviewResponse {
+	processed, err := core.PreviewRowStage(types.Matrix(request.Data), types.PCAConfig{
+		SNV:             request.SNV,
+		VectorNorm:      request.VectorNorm,
+		SavGolWindow:    request.SavGolWindow,
+		SavGolPolyOrder: request.SavGolPolyOrder,
+		SavGolDeriv:     request.SavGolDeriv,
+	})
+	if err != nil {
+		return PreprocessPreviewResponse{Success: false, Error: err.Error()}
+	}
+	return PreprocessPreviewResponse{Success: true, Data: processed}
+}
+
 // VariableAxisRequest asks whether the variables form an axis a derivative can
 // be taken along. It carries the matrix as it will actually be analysed, after
 // exclusions, because that is what the answer depends on.

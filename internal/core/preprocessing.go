@@ -119,6 +119,43 @@ func ApplySavGolConfig(p *Preprocessor, config types.PCAConfig) error {
 	})
 }
 
+// PreviewRowStage applies only the row-wise stage of preprocessing: SNV or
+// vector normalisation, then Savitzky-Golay. Column centring and scaling are
+// deliberately left out.
+//
+// This exists so an interface can show what a filter did to the spectra without
+// running a decomposition. Column centring is excluded because centred spectra
+// are hard to read -- every one of them is pulled toward zero by the mean
+// spectrum, which is a separate and well understood step -- and because "the
+// preprocessed spectra" in the chemometric sense means exactly this stage.
+//
+// The rows given need not be the whole dataset. Nothing in this stage is fitted:
+// SNV and vector normalisation are computed from the row being transformed, and
+// the Savitzky-Golay operator depends only on the number of variables. So the
+// result for a handful of rows is identical to what those rows would receive in
+// a full run, and a preview can send thirty spectra rather than nine hundred
+// without becoming an approximation. That property is asserted in the tests,
+// because it is the whole basis for sampling.
+func PreviewRowStage(data types.Matrix, config types.PCAConfig) (types.Matrix, error) {
+	if len(data) == 0 || len(data[0]) == 0 {
+		return nil, fmt.Errorf("no data to preprocess")
+	}
+
+	p := &Preprocessor{SNV: config.SNV, VectorNorm: config.VectorNorm}
+	if err := ApplySavGolConfig(p, config); err != nil {
+		return nil, err
+	}
+	if !p.hasRowStage() {
+		// Nothing to do, but the caller still wants a matrix it may keep.
+		out := make(types.Matrix, len(data))
+		for i, row := range data {
+			out[i] = append([]float64(nil), row...)
+		}
+		return out, nil
+	}
+	return p.applyRowStage(data, false)
+}
+
 // SetSavitzkyGolay enables Savitzky-Golay filtering along the variable axis.
 //
 // There is no constructor parameter for this. The existing constructors already

@@ -31,6 +31,8 @@ import { usePCRContext } from '../../contexts/PCRContext';
 import { useUIContext } from '../../contexts/UIContext';
 import { maxComponentsFor, clampComponentCount } from '../../utils/maxComponents';
 import { preprocessingPipeline } from '../../utils/preprocessingPipeline';
+import { usePreprocessingPreview } from '../../hooks/usePreprocessingPreview';
+import { PreprocessingPreview } from '../PreprocessingPreview';
 import {
     validateSavGol,
     snapWindowToOdd,
@@ -54,7 +56,7 @@ interface PCAConfigSectionProps {
  */
 export function PCAConfigSection({ onRunPCA }: PCAConfigSectionProps) {
     const { fileData } = useFileDataContext();
-    const { config, setConfig, loading, generateCLICommand, excludedColumns, variableAxis } = usePCAContext();
+    const { config, setConfig, loading, generateCLICommand, excludedRows, excludedColumns, variableAxis } = usePCAContext();
 
     // In Regress mode this panel configures the decomposition the regression is
     // built on, so the preprocessing controls still apply. The Go PCA button does
@@ -86,6 +88,18 @@ export function PCAConfigSection({ onRunPCA }: PCAConfigSectionProps) {
     // the second must not disable anything.
     const axisUnsuitable = variableAxis !== null && variableAxis.measurable && !variableAxis.isContinuous;
     const savgolBlocked = axisUnsuitable && !savgolOverride;
+
+    // Shown only when there is a transformation to inspect and an axis to draw it
+    // along. On data that is not a continuum a line plot across the variables
+    // would be a shape with no meaning, and for plain PCA there is nothing to
+    // compare against.
+    const previewWorthShowing = Boolean(
+        variableAxis?.isContinuous
+        && (config.snv || config.vectorNorm || config.savgolWindow > 0)
+    );
+    const preview = usePreprocessingPreview(
+        fileData, config, excludedRows, excludedColumns, previewWorthShowing
+    );
 
     const savgolError = validateSavGol(
         config,
@@ -501,6 +515,10 @@ export function PCAConfigSection({ onRunPCA }: PCAConfigSectionProps) {
                                 Smooths along the variables; derivatives remove a baseline offset (1st) or slope (2nd)
                                 {variableAxis?.isContinuous && ` — variables look continuous (${variableAxis.smoothnessFactor.toFixed(0)}× smoother than a random ordering)`}
                             </p>
+                        )}
+
+                        {preview && !savgolError && (
+                            <PreprocessingPreview preview={preview} pipeline={pipeline} />
                         )}
                     </HelpWrapper>
 
