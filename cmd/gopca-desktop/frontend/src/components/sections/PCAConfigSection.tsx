@@ -30,6 +30,7 @@ import { usePCAContext } from '../../contexts/PCAContext';
 import { usePCRContext } from '../../contexts/PCRContext';
 import { useUIContext } from '../../contexts/UIContext';
 import { maxComponentsFor, clampComponentCount } from '../../utils/maxComponents';
+import { preprocessingPipeline } from '../../utils/preprocessingPipeline';
 import {
     validateSavGol,
     snapWindowToOdd,
@@ -67,6 +68,8 @@ export function PCAConfigSection({ onRunPCA }: PCAConfigSectionProps) {
     // Reported next to the control that caused it, rather than after a run that
     // never had a chance of succeeding. The engine enforces the same rules, so
     // this is about when the user hears, not whether the rule holds.
+    const pipeline = preprocessingPipeline(config);
+
     const savgolError = validateSavGol(
         config,
         fileData ? fileData.headers.length - excludedColumns.length : 0,
@@ -339,7 +342,7 @@ export function PCAConfigSection({ onRunPCA }: PCAConfigSectionProps) {
 
                     <HelpWrapper helpKey="row-preprocessing" className="p-3 bg-gray-50 dark:bg-gray-700/50 rounded-lg">
                         <label className="block text-sm font-medium mb-2">
-                            Step 1: Row-wise Preprocessing (optional)
+                            Row-wise Normalization (optional)
                         </label>
                         <CustomSelect
                             value={config.snv ? 'snv' : config.vectorNorm ? 'vector-norm' : 'none'}
@@ -354,20 +357,26 @@ export function PCAConfigSection({ onRunPCA }: PCAConfigSectionProps) {
                             className="w-full"
                         />
                         <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
-                            Normalizes each row/sample independently (useful for spectral data)
+                            Per sample: removes scatter and overall intensity differences between rows
                         </p>
                     </HelpWrapper>
 
-                    {/* Between the two existing steps because that is where it runs:
-                        after row normalisation, before any column statistics.
-                        Numbering the panel to match the pipeline is the cheapest
-                        way to teach the order, which matters here -- scatter
-                        correction is a property of the sample, differentiation a
-                        property of the wavelength axis, and swapping them means
-                        something different. */}
+                    {/* A separate control, not an entry in the row-wise list, because
+                        the two are complementary rather than alternatives. A derivative
+                        removes any constant, so SNV's mean-subtraction vanishes and
+                        SNV-then-derivative reduces exactly to the derivative divided by
+                        each sample's spectral spread -- the multiplicative scatter
+                        correction a derivative cannot perform. Folding it into the
+                        row-wise selector would make the two mutually exclusive and
+                        remove the combination that measured best in #843.
+
+                        The controls were once labelled "Step 1/2/3" to convey the order
+                        they are applied in. That read as a sequence the user had to work
+                        through, so the order is now stated by the summary below, where it
+                        describes what is actually selected. */}
                     <HelpWrapper helpKey="savitzky-golay" className="p-3 bg-gray-50 dark:bg-gray-700/50 rounded-lg">
                         <label className="block text-sm font-medium mb-2">
-                            Step 2: Savitzky-Golay (optional)
+                            Smoothing &amp; Derivatives (optional)
                         </label>
                         <CustomSelect
                             value={savgolSelection(config)}
@@ -439,7 +448,7 @@ export function PCAConfigSection({ onRunPCA }: PCAConfigSectionProps) {
 
                     <HelpWrapper helpKey="column-preprocessing" className="p-3 bg-gray-50 dark:bg-gray-700/50 rounded-lg">
                         <label className="block text-sm font-medium mb-2">
-                            Step 3: Column-wise Preprocessing
+                            Column-wise Scaling
                         </label>
                         <CustomSelect
                             value={
@@ -476,6 +485,25 @@ export function PCAConfigSection({ onRunPCA }: PCAConfigSectionProps) {
                                     : 'Kernel PCA performs centering in kernel space. Consider Variance Scale if features have different scales.'
                                 : 'Normalizes each column/feature across all samples'}
                         </p>
+                    </HelpWrapper>
+
+                    {/* States the order the three controls above are applied in, and
+                        does it by describing what is selected rather than what could
+                        be. Shown always, including when nothing is selected: feeding
+                        raw data straight into the decomposition is a choice, and one
+                        worth seeing before pressing the button. */}
+                    <HelpWrapper helpKey="preprocessing-pipeline" className="p-3 bg-gray-50 dark:bg-gray-700/50 rounded-lg">
+                        <div className="text-xs text-gray-600 dark:text-gray-300">
+                            <span className="font-medium">Applied in order: </span>
+                            {pipeline.length === 0
+                                ? <span className="italic">none — the raw data is used as it is</span>
+                                : pipeline.map((step, i) => (
+                                    <span key={step}>
+                                        {i > 0 && <span className="text-gray-400 dark:text-gray-500"> → </span>}
+                                        {step}
+                                    </span>
+                                ))}
+                        </div>
                     </HelpWrapper>
 
                     <HelpWrapper helpKey="missing-strategy" className="p-3 bg-gray-50 dark:bg-gray-700/50 rounded-lg">
