@@ -157,6 +157,38 @@ describe('DocumentationViewer table of contents', () => {
         expect(scrollTo).not.toHaveBeenCalled();
     });
 
+    // jsdom performs no layout, so no test here can observe that the container
+    // actually scrolls. What can be pinned is the class that makes it able to:
+    // without min-h-0 the flex chain never constrains this element, it grows to
+    // fit the whole document, and there is no scroll for a click to perform.
+    // That is invisible in every DOM-less test and was invisible in Chromium
+    // too, so the class is asserted rather than trusted.
+    it('keeps the scroll container able to shrink inside the flex chain', async () => {
+        await openViewer();
+        const container = screen.getByTestId('documentation-scroll');
+        expect(container.className).toContain('overflow-y-auto');
+        expect(container.className, 'min-h-0 is what lets this element scroll').toContain('min-h-0');
+        expect(container.parentElement!.className,
+            'the row must shrink too, or it never constrains its child').toContain('min-h-0');
+    });
+
+    it('says why when a click cannot scroll anywhere', async () => {
+        // Silence here cost two rounds of guessing: a dead click looked exactly
+        // like a dead handler.
+        const warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
+        await openViewer();
+        document.getElementById('3-conclusion')!.remove();
+
+        const toc = screen.getByLabelText('Table of contents');
+        const button = Array.from(toc.querySelectorAll('button'))
+            .find(b => b.textContent === '3. Conclusion')!;
+        await userEvent.click(button);
+
+        expect(warn).toHaveBeenCalled();
+        expect(String(warn.mock.calls[0])).toContain('no heading has that id');
+        warn.mockRestore();
+    });
+
     it('marks the clicked entry as the current location', async () => {
         await openViewer();
         const toc = screen.getByLabelText('Table of contents');

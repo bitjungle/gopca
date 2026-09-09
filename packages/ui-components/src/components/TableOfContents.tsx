@@ -30,7 +30,7 @@ export const TableOfContents: React.FC<TableOfContentsProps> = ({
 
     return (
         <aside
-            className="w-56 shrink-0 overflow-y-auto border-r border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800/40"
+            className="w-56 shrink-0 min-h-0 overflow-y-auto border-r border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800/40"
             aria-label="Table of contents"
         >
             <div className="py-6 px-3">

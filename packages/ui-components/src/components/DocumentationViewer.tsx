@@ -138,7 +138,21 @@ export const DocumentationViewer: React.FC<DocumentationViewerProps> = ({
   const handleTocClick = (id: string) => {
     const container = scrollRef.current;
     const target = document.getElementById(id);
-    if (!container || !target || !container.contains(target)) return;
+
+    // Say why nothing happened. Three separate conditions used to return in
+    // silence here, which made a dead click impossible to tell apart from a
+    // dead handler -- and that cost two rounds of guessing before the real
+    // cause was found.
+    if (!container || !target || !container.contains(target)) {
+      console.warn(
+        '[DocumentationViewer] cannot scroll to "%s": %s',
+        id,
+        !container ? 'the scroll container is not mounted'
+          : !target ? 'no heading has that id'
+            : 'the heading is not inside the scroll container'
+      );
+      return;
+    }
 
     // Scroll the container we own, by an offset we compute, rather than asking
     // the element to bring itself into view. scrollIntoView walks up to every
@@ -181,7 +195,15 @@ export const DocumentationViewer: React.FC<DocumentationViewerProps> = ({
       </div>
 
       {/* Body: TOC sidebar + scrollable content */}
-      <div className="flex flex-1 overflow-hidden">
+      {/* min-h-0 is load-bearing, not tidying. A flex child defaults to
+          min-height:auto, which refuses to shrink below its content -- so the
+          column never constrains this row, the row never constrains the content
+          column, and the element with overflow-y-auto grows to fit the whole
+          document instead of scrolling it. Chromium resolves this to zero once
+          overflow is set; WebKit does not, which is why the table of contents
+          worked in a browser and did nothing in the app: there was no scroll
+          for it to perform (#436). */}
+      <div className="flex flex-1 min-h-0 overflow-hidden">
         {/* Sticky TOC sidebar */}
         <TableOfContents
           entries={tocEntries}
@@ -190,7 +212,11 @@ export const DocumentationViewer: React.FC<DocumentationViewerProps> = ({
         />
 
         {/* Scrollable content column */}
-        <div ref={scrollRef} data-testid="documentation-scroll" className="flex-1 overflow-y-auto">
+        <div
+          ref={scrollRef}
+          data-testid="documentation-scroll"
+          className="flex-1 min-h-0 min-w-0 overflow-y-auto"
+        >
           <div className="max-w-4xl mx-auto px-6 py-8 text-left">
             {isLoading ? (
               <div className="flex items-center justify-center h-64">
