@@ -93,6 +93,11 @@ pca analyze [OPTIONS] <input.csv>
 - `--snv` - Apply Standard Normal Variate (row-wise normalization)
 - `--vector-norm` - Apply L2 vector normalization (row-wise)
 
+Row-wise methods act along the variable axis, so two combinations are **refused** rather than silently ignored:
+
+- `--method temporal` embeds the series in time lags, which makes a row a window in time rather than a spectrum. It has no variable axis to normalize along, so `--snv`, `--vector-norm` and the Savitzky-Golay flags are all rejected.
+- `--missing-strategy native` leaves gaps in the data, and a row's mean and norm are undefined when entries in that row are missing — each row would be normalized over a different subset of variables, putting them on different scales. Impute or drop first.
+
 ##### Savitzky-Golay Smoothing and Derivatives
 
 Fits a low-order polynomial across a sliding window of variables and evaluates it, or one of its derivatives, at the window centre. It can be used on its own; when `--snv` or `--vector-norm` is also given, the filter runs **after** it, and in every case **before** any column centring or scaling.

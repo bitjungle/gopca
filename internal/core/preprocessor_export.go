@@ -88,6 +88,9 @@ func FitPreprocessorForExport(data types.Matrix, config types.PCAConfig) (*Prepr
 		}
 		return preprocessor, processed, nil
 	}
+	// As in PCAImpl.Fit: reached only for native missing-value handling, where
+	// SNV and vector normalization are already refused, so there is nothing here
+	// to drop.
 	preprocessor := NewPreprocessorWithScaleOnly(
 		config.MeanCenter, config.StandardScale, config.RobustScale,
 		config.ScaleOnly, false, false)

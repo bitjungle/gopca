@@ -474,6 +474,10 @@ func (p *PCAImpl) storeMissingPreprocessor(means, stdDevs, medians, mads []float
 		!p.config.RobustScale && !p.config.ScaleOnly {
 		return nil
 	}
+	// Row-wise off is not a choice made here: this path runs only under NIPALS
+	// native missing-value handling, and Fit refuses SNV and vector normalization
+	// in that case above. Stated so a reader does not have to reconstruct the
+	// reachability argument, and so it is noticed if that refusal ever moves.
 	pre := NewPreprocessorWithScaleOnly(
 		p.config.MeanCenter, p.config.StandardScale, p.config.RobustScale,
 		p.config.ScaleOnly, false, false)

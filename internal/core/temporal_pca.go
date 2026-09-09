@@ -180,6 +180,25 @@ func (t *TemporalPCAImpl) GetLoadingForLag(variable, lag, component int) (float6
 }
 
 // validateTemporalPCAInput validates input for temporal PCA
+// unsupportedRowWiseForTemporal names the first row-wise setting temporal PCA
+// cannot honour, or an empty string if there is none.
+//
+// Named rather than boolean so the refusal can say which setting is at fault;
+// "row-wise preprocessing is not supported" leaves a user checking three
+// controls to find which one they set.
+func unsupportedRowWiseForTemporal(config types.PCAConfig) string {
+	switch {
+	case config.SNV:
+		return "SNV"
+	case config.VectorNorm:
+		return "vector normalization"
+	case config.SavGolWindow > 0:
+		return "Savitzky-Golay filtering"
+	default:
+		return ""
+	}
+}
+
 func validateTemporalPCAInput(data types.Matrix, config types.PCAConfig) error {
 	// Basic validation
 	if len(data) == 0 {
@@ -189,6 +208,26 @@ func validateTemporalPCAInput(data types.Matrix, config types.PCAConfig) error {
 	// Check temporal lags first
 	if config.TemporalLags <= 0 {
 		return fmt.Errorf("temporal PCA requires positive number of lags, got %d", config.TemporalLags)
+	}
+
+	// Row-wise preprocessing is refused rather than ignored (#889).
+	//
+	// This method preprocesses the original series and then embeds it in lags,
+	// so the rows it works with are windows in time, not spectra. SNV divides a
+	// row by its own standard deviation and vector normalisation by its own
+	// length, and Savitzky-Golay fits a polynomial across neighbouring columns --
+	// all three describe an operation along a variable axis that this method does
+	// not have.
+	//
+	// Until now the settings were accepted and then dropped where the temporal
+	// preprocessor is built, which told a user their spectra had been
+	// scatter-corrected when nothing of the sort had happened. Refusing here
+	// rather than at each interface means every caller of the engine inherits it,
+	// including any added later.
+	if unsupported := unsupportedRowWiseForTemporal(config); unsupported != "" {
+		return fmt.Errorf("%s is not supported with temporal PCA: it works along the time axis "+
+			"and applies no transform along the variable axis, so the setting would be silently "+
+			"discarded. Remove it, or choose another method", unsupported)
 	}
 
 	n := len(data)
@@ -265,6 +304,9 @@ func (t *TemporalPCAImpl) Fit(data types.Matrix, config types.PCAConfig) (*types
 			config.StandardScale,
 			config.RobustScale,
 			config.ScaleOnly,
+			// Unreachable with either enabled: validateTemporalPCAInput refuses
+			// them above. Left explicit so the reason is here, where the reader
+			// of this call is, rather than only at the check.
 			false, // SNV
 			false, // VectorNorm
 		)
