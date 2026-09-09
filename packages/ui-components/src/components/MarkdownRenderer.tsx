@@ -27,7 +27,7 @@ import remarkMath from 'remark-math';
 import remarkGfm from 'remark-gfm';
 import rehypeKatex from 'rehype-katex';
 import 'katex/dist/katex.min.css';
-import { toSlug, extractTextContent } from '../utils/tocUtils';
+import { toSlug, extractTextContent, headingIdsByLine } from '../utils/tocUtils';
 
 export interface MarkdownRendererProps {
   content: string;
@@ -46,6 +46,24 @@ export interface MarkdownRendererProps {
  * - Consistent styling across GoPCA and GoCSV applications
  * - Dark mode support
  */
+/**
+ * The id for one heading, looked up by its line in the markdown source.
+ *
+ * Falls back to a slug of the rendered text when the position is missing, which
+ * keeps a heading addressable rather than giving it no id at all -- though the
+ * table of contents may then not match it, so the lookup is what should
+ * normally succeed.
+ */
+function headingId(
+  ids: Map<number, string>,
+  node: { position?: { start?: { line?: number } } } | undefined,
+  children: React.ReactNode
+): string {
+  const line = node?.position?.start?.line;
+  const fromSource = line === undefined ? undefined : ids.get(line);
+  return fromSource ?? toSlug(extractTextContent(children));
+}
+
 export const MarkdownRenderer: React.FC<MarkdownRendererProps> = ({
   content,
   className = '',
@@ -54,7 +72,13 @@ export const MarkdownRenderer: React.FC<MarkdownRendererProps> = ({
   // Mutable counter map captured by the heading component overrides below.
   // Declared inside the render function so it resets to empty on every render,
   // ensuring duplicate headings are numbered consistently from scratch each time.
-  const headingCounts = new Map<string, number>();
+  // Ids are derived from each heading's position in the source, not counted as
+  // the tree is built. The previous version mutated a counter inside the h2/h3
+  // renderers, which is a side effect during render: StrictMode invokes render
+  // twice, so every heading was seen as a duplicate of itself and took a "-2"
+  // id, while the table of contents kept asking for the first one. Every link
+  // then pointed at nothing (#436).
+  const headingIds = React.useMemo(() => headingIdsByLine(content), [content]);
 
   return (
     <div className={`prose prose-lg dark:prose-invert max-w-none text-left
@@ -180,20 +204,12 @@ export const MarkdownRenderer: React.FC<MarkdownRendererProps> = ({
           // "the-core-idea-2" — so TOC links always land on the right element.
           // id is placed after ...props spread so it cannot be overwritten by an
           // id present in the AST node's props.
-          h2: ({ children, ...props }) => {
-            const base = toSlug(extractTextContent(children));
-            const count = headingCounts.get(base) ?? 0;
-            headingCounts.set(base, count + 1);
-            const id = count === 0 ? base : `${base}-${count + 1}`;
-            return <h2 {...props} id={id}>{children}</h2>;
-          },
-          h3: ({ children, ...props }) => {
-            const base = toSlug(extractTextContent(children));
-            const count = headingCounts.get(base) ?? 0;
-            headingCounts.set(base, count + 1);
-            const id = count === 0 ? base : `${base}-${count + 1}`;
-            return <h3 {...props} id={id}>{children}</h3>;
-          },
+          h2: ({ node, children, ...props }) => (
+            <h2 {...props} id={headingId(headingIds, node, children)}>{children}</h2>
+          ),
+          h3: ({ node, children, ...props }) => (
+            <h3 {...props} id={headingId(headingIds, node, children)}>{children}</h3>
+          ),
           // Custom image component to handle relative paths
           img: ({ src, alt, ...props }) => {
             // If the src is a relative path starting with 'images/', prepend the docs path

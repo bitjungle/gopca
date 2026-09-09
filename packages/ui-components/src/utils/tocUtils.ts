@@ -11,6 +11,8 @@ export interface TocEntry {
     level: 2 | 3;
     text: string;
     id: string;
+    /** 1-based line in the markdown source; identifies the heading uniquely. */
+    line: number;
 }
 
 /**
@@ -53,8 +55,9 @@ export function extractHeadings(markdown: string): TocEntry[] {
     const entries: TocEntry[] = [];
     const counts = new Map<string, number>();
 
-    for (const line of markdown.split('\n')) {
-        const trimmed = line.trim();
+    const lines = markdown.split('\n');
+    for (let index = 0; index < lines.length; index++) {
+        const trimmed = lines[index].trim();
         const h2 = /^## (.+)$/.exec(trimmed);
         const h3 = /^### (.+)$/.exec(trimmed);
         const match = h2 ?? h3;
@@ -66,7 +69,31 @@ export function extractHeadings(markdown: string): TocEntry[] {
         const count = counts.get(base) ?? 0;
         counts.set(base, count + 1);
         const id = count === 0 ? base : `${base}-${count + 1}`;
-        entries.push({ level: level as 2 | 3, text, id });
+        entries.push({ level: level as 2 | 3, text, id, line: index + 1 });
     }
     return entries;
+}
+
+/**
+ * Maps each heading's source line to the id it must carry.
+ *
+ * The renderer used to number duplicate headings with a counter it mutated
+ * while rendering. That is a side effect during render, and React StrictMode
+ * deliberately invokes render twice to surface exactly this: on the second pass
+ * every heading looked like a repeat of itself and took the "-2" id, while the
+ * table of contents -- built in a single pass over the source -- kept asking for
+ * the first. Every entry then pointed at nothing, and clicking one did nothing
+ * at all (#436).
+ *
+ * Deriving the id from the heading's position in the source removes the state.
+ * The same markdown yields the same ids however many times it is rendered, and
+ * both sides get them from this one function rather than from two counters that
+ * have to agree.
+ */
+export function headingIdsByLine(markdown: string): Map<number, string> {
+    const byLine = new Map<number, string>();
+    for (const entry of extractHeadings(markdown)) {
+        byLine.set(entry.line, entry.id);
+    }
+    return byLine;
 }

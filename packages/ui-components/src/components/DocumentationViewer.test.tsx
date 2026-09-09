@@ -8,6 +8,7 @@
 //
 // See LICENSE for the full license terms.
 
+import { StrictMode } from 'react';
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { render, screen, waitFor, cleanup } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
@@ -76,20 +77,50 @@ afterEach(() => {
     vi.restoreAllMocks();
 });
 
+// Both applications mount inside React.StrictMode, which invokes render twice
+// in development to surface side effects. Every test here renders the same way:
+// without it, a renderer that mutates state while building the tree looks
+// correct, which is exactly how #436 survived a browser reproduction, a jsdom
+// suite and two attempted fixes.
 const openViewer = async () => {
     render(
-        <DocumentationViewer
-            isOpen
-            onClose={() => {}}
-            title="Docs"
-            markdownPath="/docs/test.md"
-        />
+        <StrictMode>
+            <DocumentationViewer
+                isOpen
+                onClose={() => {}}
+                title="Docs"
+                markdownPath="/docs/test.md"
+            />
+        </StrictMode>
     );
     // Wait for the fetch to resolve and the markdown to render.
     await waitFor(() => expect(screen.getByRole('heading', { name: '3. Conclusion' })).toBeTruthy());
 };
 
 describe('DocumentationViewer table of contents', () => {
+    it('gives headings the ids the contents asks for, under StrictMode', async () => {
+        // The defect itself. StrictMode renders twice; a counter mutated during
+        // render then sees every heading as a repeat of itself and appends "-2",
+        // while the contents list -- built in one pass over the source -- keeps
+        // asking for the first id. Every entry points at nothing.
+        await openViewer();
+        const wanted = extractHeadings(MARKDOWN).map(e => e.id);
+        const rendered = Array.from(document.querySelectorAll('h2[id], h3[id]')).map(h => h.id);
+        expect(rendered).toEqual(wanted);
+    });
+
+    it('gives the same ids however many times it renders', async () => {
+        // Ids must be a function of the source, not of how often React chose to
+        // render. Anything stateful shows up here as a second render producing
+        // different ids from the first.
+        await openViewer();
+        const first = Array.from(document.querySelectorAll('h2[id], h3[id]')).map(h => h.id);
+        cleanup();
+        await openViewer();
+        const second = Array.from(document.querySelectorAll('h2[id], h3[id]')).map(h => h.id);
+        expect(second).toEqual(first);
+    });
+
     it('lists every H2 and H3 as a button', async () => {
         await openViewer();
         const toc = screen.getByLabelText('Table of contents');
@@ -228,9 +259,11 @@ describe('against the documents the apps actually ship', () => {
             }));
 
             render(
-                <DocumentationViewer
-                    isOpen onClose={() => {}} title="Docs" markdownPath={`/docs/${name}`}
-                />
+                <StrictMode>
+                    <DocumentationViewer
+                        isOpen onClose={() => {}} title="Docs" markdownPath={`/docs/${name}`}
+                    />
+                </StrictMode>
             );
 
             const toc = await screen.findByLabelText('Table of contents');
