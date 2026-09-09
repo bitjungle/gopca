@@ -184,3 +184,50 @@ func smoothSeries(rows, cols int) types.Matrix {
 	}
 	return data
 }
+
+// TestNativeMissingHonoursOrRefusesRowWiseSettings closes a gap in the grid
+// above, which varies the method but not the missing-value strategy.
+//
+// That gap was not hypothetical. Savitzky-Golay was accepted and silently
+// ignored under NIPALS native handling, and a comment in the engine asserted
+// the opposite -- the claim had been written rather than checked, and the test
+// that was supposed to catch this class of defect could not see the case.
+func TestNativeMissingHonoursOrRefusesRowWiseSettings(t *testing.T) {
+	data := smoothSeries(40, 24)
+	// Native handling exists for data with gaps; without one, the branch under
+	// test is never entered and this would check nothing.
+	data[7][11] = math.NaN()
+
+	base := types.PCAConfig{
+		Components:      2,
+		MeanCenter:      true,
+		Method:          "nipals",
+		MissingStrategy: types.MissingNative,
+	}
+
+	baseline, err := core.NewPCAEngineForMethod("nipals").Fit(data, base)
+	if err != nil {
+		t.Fatalf("native handling failed without any row-wise setting: %v", err)
+	}
+
+	for _, setting := range rowWiseSettings {
+		t.Run(setting.name, func(t *testing.T) {
+			with := base
+			setting.apply(&with)
+
+			got, err := core.NewPCAEngineForMethod("nipals").Fit(data, with)
+			if err != nil {
+				if !mentionsSetting(err.Error(), setting.name) {
+					t.Errorf("native handling refused %s but the message does not identify it: %v",
+						setting.name, err)
+				}
+				return
+			}
+			if scoresEqual(got.Scores, baseline.Scores) {
+				t.Errorf("native handling accepted %s and produced identical scores to running "+
+					"without it; a row with gaps cannot support a row-wise transform, so this "+
+					"was taken and discarded", setting.name)
+			}
+		})
+	}
+}

@@ -89,8 +89,11 @@ func FitPreprocessorForExport(data types.Matrix, config types.PCAConfig) (*Prepr
 		return preprocessor, processed, nil
 	}
 	// As in PCAImpl.Fit: reached only for native missing-value handling, where
-	// SNV and vector normalization are already refused, so there is nothing here
-	// to drop.
+	// every row-wise setting is refused before this runs, so there is nothing
+	// here to drop. That was not true when this comment was first written --
+	// Savitzky-Golay was still accepted and ignored on this path (#889) -- which
+	// is why the refusal is enforced in one place and covered by a test rather
+	// than asserted here.
 	preprocessor := NewPreprocessorWithScaleOnly(
 		config.MeanCenter, config.StandardScale, config.RobustScale,
 		config.ScaleOnly, false, false)

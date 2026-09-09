@@ -179,7 +179,6 @@ func (t *TemporalPCAImpl) GetLoadingForLag(variable, lag, component int) (float6
 	return t.loadings.At(component, colIdx), nil
 }
 
-// validateTemporalPCAInput validates input for temporal PCA
 // unsupportedRowWiseForTemporal names the first row-wise setting temporal PCA
 // cannot honour, or an empty string if there is none.
 //
@@ -199,6 +198,7 @@ func unsupportedRowWiseForTemporal(config types.PCAConfig) string {
 	}
 }
 
+// validateTemporalPCAInput validates input for temporal PCA
 func validateTemporalPCAInput(data types.Matrix, config types.PCAConfig) error {
 	// Basic validation
 	if len(data) == 0 {
