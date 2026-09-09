@@ -99,9 +99,13 @@ export const DocumentationViewer: React.FC<DocumentationViewerProps> = ({
     if (!scrollRef.current || tocEntries.length === 0 || isLoading) return;
 
     const root = scrollRef.current;
+    // getElementById rather than a selector: heading ids here begin with a
+    // digit ("1-introduction-..."), which has to be escaped to be a valid
+    // selector, and CSS.escape is a global that not every environment provides.
+    // Looking an id up directly needs no escaping and cannot be got wrong.
     const elements = tocEntries
-      .map(e => root.querySelector(`#${CSS.escape(e.id)}`) as HTMLElement | null)
-      .filter((el): el is HTMLElement => el !== null);
+      .map(e => document.getElementById(e.id))
+      .filter((el): el is HTMLElement => el !== null && root.contains(el));
 
     if (elements.length === 0) return;
 
@@ -132,8 +136,22 @@ export const DocumentationViewer: React.FC<DocumentationViewerProps> = ({
   }, [tocEntries, isLoading]);
 
   const handleTocClick = (id: string) => {
-    const el = scrollRef.current?.querySelector(`#${CSS.escape(id)}`);
-    el?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    const container = scrollRef.current;
+    const target = document.getElementById(id);
+    if (!container || !target || !container.contains(target)) return;
+
+    // Scroll the container we own, by an offset we compute, rather than asking
+    // the element to bring itself into view. scrollIntoView walks up to every
+    // scrollable ancestor and decides for itself which to move; inside a
+    // fixed-position overlay with a nested scroll region that is not reliably
+    // the one intended, and when it picks wrong the click appears to do
+    // nothing at all -- which is the reported symptom (#436). Here there is
+    // exactly one scroller and one number.
+    const offset = target.getBoundingClientRect().top
+      - container.getBoundingClientRect().top
+      + container.scrollTop;
+
+    container.scrollTo({ top: Math.max(0, offset), behavior: 'smooth' });
     setActiveId(id);
   };
 
@@ -172,7 +190,7 @@ export const DocumentationViewer: React.FC<DocumentationViewerProps> = ({
         />
 
         {/* Scrollable content column */}
-        <div ref={scrollRef} className="flex-1 overflow-y-auto">
+        <div ref={scrollRef} data-testid="documentation-scroll" className="flex-1 overflow-y-auto">
           <div className="max-w-4xl mx-auto px-6 py-8 text-left">
             {isLoading ? (
               <div className="flex items-center justify-center h-64">

@@ -20,7 +20,12 @@ import { defineConfig } from 'vitest/config';
 // where both of those defects actually lived.
 export default defineConfig({
     test: {
+        // Most tests here are pure functions and need no DOM. The documentation
+        // viewer is the exception: its table of contents was wired correctly on
+        // every reading of the code and still did nothing when clicked, which is
+        // a failure only a rendered tree can show. Files opting in with
+        // `@vitest-environment jsdom` get one.
         environment: 'node',
-        include: ['src/**/*.test.ts']
+        include: ['src/**/*.test.ts', 'src/**/*.test.tsx']
     }
 });

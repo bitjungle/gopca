@@ -1,3 +1,4 @@
+#!/usr/bin/env node
 // GoPCA Suite
 //
 // Copyright © 2025-2026 Rune Mathisen <devel@bitjungle.com>
@@ -21,7 +22,6 @@
 //
 // See LICENSE for the full license terms.
 
-#!/usr/bin/env node
 
 const fs = require('fs');
 const path = require('path');
@@ -80,7 +80,11 @@ function generateCLIHelp() {
 // Generate JSON for other tools
 function generateJSON() {
     const output = {
-        version: helpContent.metadata.version,
+        // help-content.json carries only `help` and `categories`; the
+        // `metadata` block this once read has not existed for some time, and
+        // the script has been unable to run since a copyright-header sweep
+        // pushed its shebang off line 1, so nothing noticed.
+        version: helpContent.metadata?.version ?? 'unversioned',
         generated: new Date().toISOString(),
         help: helpContent.help,
         categories: helpContent.categories
