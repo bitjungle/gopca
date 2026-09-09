@@ -12,6 +12,7 @@ import {
     rowStagePipeline,
     columnStagePipeline,
     shouldShowPreview,
+    unsupportedRowWiseFor,
     PreprocessingSummaryConfig
 } from './preprocessingPipeline';
 
@@ -165,5 +166,29 @@ describe('rowStagePipeline and columnStagePipeline', () => {
 
     it('reports no column stage when none is selected', () => {
         expect(columnStagePipeline(config({ snv: true }))).toEqual([]);
+    });
+});
+
+describe('unsupportedRowWiseFor', () => {
+    it('names the setting Temporal PCA cannot apply', () => {
+        // Reachable by choosing SNV and then switching method: disabling a
+        // control does not clear what it already stored, and the engine would
+        // refuse the run (#889).
+        expect(unsupportedRowWiseFor('temporal', config({ snv: true }))).toBe('SNV');
+        expect(unsupportedRowWiseFor('Temporal', config({ vectorNorm: true }))).toBe('L2 normalization');
+    });
+
+    it('says nothing when no row-wise normalization is selected', () => {
+        expect(unsupportedRowWiseFor('temporal', config())).toBeNull();
+        // Savitzky-Golay is judged by validateSavGol, which also weighs its
+        // parameters; reporting it here too would produce two messages for one
+        // problem.
+        expect(unsupportedRowWiseFor('temporal', config({ savgolWindow: 11 }))).toBeNull();
+    });
+
+    it('permits row-wise normalization for every other method', () => {
+        for (const method of ['SVD', 'NIPALS', 'kernel', undefined]) {
+            expect(unsupportedRowWiseFor(method, config({ snv: true }))).toBeNull();
+        }
     });
 });

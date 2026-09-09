@@ -62,6 +62,27 @@ func NewPCAEngineForMethod(method string) types.PCAEngine {
 	}
 }
 
+// unsupportedRowWiseForNativeMissing names the first row-wise setting that
+// cannot be honoured alongside NIPALS native missing-value handling, or an empty
+// string if there is none.
+//
+// All three describe an operation along a row, and a row with gaps in it does
+// not support one: SNV and vector normalisation would divide each row by a
+// statistic computed over a different subset of variables, and a Savitzky-Golay
+// window spanning a gap has no polynomial to fit.
+func unsupportedRowWiseForNativeMissing(config types.PCAConfig) string {
+	switch {
+	case config.SNV:
+		return "SNV"
+	case config.VectorNorm:
+		return "vector normalization"
+	case config.SavGolWindow > 0:
+		return "Savitzky-Golay filtering"
+	default:
+		return ""
+	}
+}
+
 // Fit trains the PCA model on the provided data
 func (p *PCAImpl) Fit(data types.Matrix, config types.PCAConfig) (*types.PCAResult, error) {
 	if err := ValidatePCAInput(data, config); err != nil {
@@ -115,17 +136,18 @@ func (p *PCAImpl) Fit(data types.Matrix, config types.PCAConfig) (*types.PCAResu
 		// for every row, so the rows are no longer on a common scale and the
 		// result is not the correction the user asked for. Refusing is safer
 		// than returning an analysis that silently answers a different question.
-		if config.SNV || config.VectorNorm {
-			method := "SNV"
-			if config.VectorNorm && !config.SNV {
-				method = "vector normalization"
-			}
+		//
+		// Savitzky-Golay is refused for the same reason and was missed until
+		// #889: a window spanning a gap has no polynomial to fit, and this
+		// branch builds no preprocessor at all, so the filter was accepted and
+		// then silently ignored.
+		if setting := unsupportedRowWiseForNativeMissing(config); setting != "" {
 			return nil, fmt.Errorf(
 				"%s cannot be combined with NIPALS native missing-value handling: "+
-					"a row's mean and norm are undefined when entries in that row are missing. "+
+					"a row's statistics are undefined when entries in that row are missing. "+
 					"Either impute the missing values first (--missing-strategy mean/median/zero), "+
 					"drop incomplete rows (--missing-strategy drop), or run without %s",
-				method, method)
+				setting, setting)
 		}
 		// Per-sample reconstruction diagnostics are ill-defined here: missing
 		// entries have no ground truth, and NIPALS centers with NaN-aware means
@@ -474,6 +496,12 @@ func (p *PCAImpl) storeMissingPreprocessor(means, stdDevs, medians, mads []float
 		!p.config.RobustScale && !p.config.ScaleOnly {
 		return nil
 	}
+	// Row-wise off is not a choice made here: this path runs only under NIPALS
+	// native missing-value handling, and Fit refuses every row-wise setting in
+	// that case above. An earlier version of this comment said the same thing
+	// while Savitzky-Golay was in fact still accepted and ignored -- the claim
+	// was written rather than checked. It is now true, and the grid test in
+	// rowwise_honoured_test.go covers native handling so it stays true.
 	pre := NewPreprocessorWithScaleOnly(
 		p.config.MeanCenter, p.config.StandardScale, p.config.RobustScale,
 		p.config.ScaleOnly, false, false)

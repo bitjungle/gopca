@@ -34,7 +34,8 @@ import {
     preprocessingPipeline,
     rowStagePipeline,
     columnStagePipeline,
-    shouldShowPreview
+    shouldShowPreview,
+    unsupportedRowWiseFor
 } from '../../utils/preprocessingPipeline';
 import { usePreprocessingPreview } from '../../hooks/usePreprocessingPreview';
 import { PreprocessingPreview } from '../PreprocessingPreview';
@@ -98,6 +99,12 @@ export function PCAConfigSection({ onRunPCA }: PCAConfigSectionProps) {
     // along. On data that is not a continuum a line plot across the variables
     // would be a shape with no meaning, and for plain PCA there is nothing to
     // compare against.
+    // Temporal PCA preprocesses the original series and then embeds it in lags,
+    // so its rows are windows in time and there is no variable axis to normalise
+    // along. The engine refuses these (#889); saying so here means the user hears
+    // it while looking at the control rather than after pressing the button.
+    const rowWiseUnsupported = unsupportedRowWiseFor(config.method, config);
+
     const previewWorthShowing = shouldShowPreview(Boolean(variableAxis?.isContinuous), config, config.method);
     const preview = usePreprocessingPreview(
         fileData, config, excludedRows, excludedColumns, previewWorthShowing
@@ -385,14 +392,30 @@ export function PCAConfigSection({ onRunPCA }: PCAConfigSectionProps) {
                             }}
                             options={[
                                 { value: 'none', label: 'None' },
-                                { value: 'snv', label: 'SNV (Standard Normal Variate)' },
-                                { value: 'vector-norm', label: 'L2 Vector Normalization' }
+                                { value: 'snv', label: 'SNV (Standard Normal Variate)', disabled: config.method === 'temporal' },
+                                { value: 'vector-norm', label: 'L2 Vector Normalization', disabled: config.method === 'temporal' }
                             ]}
+                            disabled={config.method === 'temporal'}
                             className="w-full"
                         />
-                        <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
-                            Per sample: removes scatter and overall intensity differences between rows
-                        </p>
+                        {config.method === 'temporal'
+                            ? (
+                                <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                                    Not available for Temporal PCA: it embeds the series in time lags, so a row is
+                                    a window in time rather than a spectrum
+                                </p>
+                            )
+                            : (
+                                <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                                    Per sample: removes scatter and overall intensity differences between rows
+                                </p>
+                            )}
+                        {rowWiseUnsupported && (
+                            <p className="text-xs text-red-600 dark:text-red-400 mt-1">
+                                {rowWiseUnsupported} is still selected and Temporal PCA cannot apply it. Set this
+                                to None, or choose another method.
+                            </p>
+                        )}
                     </HelpWrapper>
 
                     {/* A separate control, not an entry in the row-wise list, because
@@ -635,8 +658,10 @@ export function PCAConfigSection({ onRunPCA }: PCAConfigSectionProps) {
                             // would make the message beside the control advisory
                             // only, and the run would fail with the same complaint
                             // a few seconds later.
-                            disabled={loading || savgolError !== null}
-                            title={savgolError ?? undefined}
+                            disabled={loading || savgolError !== null || rowWiseUnsupported !== null}
+                            title={savgolError ?? (rowWiseUnsupported
+                                ? `${rowWiseUnsupported} is not supported with Temporal PCA`
+                                : undefined)}
                             className="px-6 py-2 bg-blue-600 hover:bg-blue-700 disabled:bg-gray-400 dark:disabled:bg-gray-600 rounded-lg font-medium text-white"
                         >
                             {loading ? 'Running...' : 'Go PCA!'}

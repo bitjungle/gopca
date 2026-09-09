@@ -128,3 +128,31 @@ export function shouldShowPreview(
     }
     return config.snv || config.vectorNorm || config.savgolWindow > 0;
 }
+
+/**
+ * Names the row-wise normalisation a method cannot honour, or null.
+ *
+ * Mirrors unsupportedRowWiseForTemporal in the engine, which is the authority:
+ * this exists so the panel can say so before the run rather than after it, not
+ * to make the decision. Savitzky-Golay is checked separately, by
+ * validateSavGol, because it has parameters to judge as well.
+ *
+ * Returning the setting's name rather than a boolean lets the message say which
+ * control is at fault; "row-wise preprocessing is unavailable" leaves the user
+ * looking for it.
+ */
+export function unsupportedRowWiseFor(
+    method: string | undefined,
+    config: Pick<PreprocessingSummaryConfig, 'snv' | 'vectorNorm'>
+): string | null {
+    if (method?.toLowerCase() !== 'temporal') {
+        return null;
+    }
+    if (config.snv) {
+        return 'SNV';
+    }
+    if (config.vectorNorm) {
+        return 'L2 normalization';
+    }
+    return null;
+}
