@@ -73,7 +73,7 @@ WAILS_VERSION := $(shell grep 'wailsapp/wails/v2 v' go.mod | awk '{print $$2}')
 .DEFAULT_GOAL := all
 
 # Phony targets
-.PHONY: sync-schemas all build cli cli-all build-cross build-darwin-amd64 build-darwin-arm64 build-linux-amd64 build-linux-arm64 build-windows-amd64 build-all pca-dev pca-build pca-build-all pca-run pca-deps csv-dev csv-build csv-build-all csv-run csv-deps build-everything test test-verbose test-coverage test-integration test-platforms test-e2e test-parity test-regression fmt lint typecheck run-pca-iris clean clean-cross install deps deps-all install-hooks sign sign-cli sign-pca sign-csv sign-windows windows-installer windows-installer-signed windows-installer-all notarize notarize-cli notarize-pca notarize-csv sign-and-notarize help
+.PHONY: sync-schemas all build cli cli-all build-cross build-darwin-amd64 build-darwin-arm64 build-linux-amd64 build-linux-arm64 build-windows-amd64 build-all pca-dev pca-build pca-build-all pca-run pca-deps csv-dev csv-build csv-build-all csv-run csv-deps build-everything test test-verbose test-coverage test-integration test-platforms test-e2e test-parity test-regression fmt lint typecheck build-ui run-pca-iris clean clean-cross install deps deps-all install-hooks sign sign-cli sign-pca sign-csv sign-windows windows-installer windows-installer-signed windows-installer-all notarize notarize-cli notarize-pca notarize-csv sign-and-notarize help
 
 ## all: Build all applications for current platform and run tests
 all: build pca-build csv-build test
@@ -135,8 +135,19 @@ sync-docs:
 sync-datasets:
 	@bash scripts/sync-datasets.sh
 
+## build-ui: Build the shared UI components package
+##
+## packages/ui-components is compiled: both desktop applications import it from
+## dist/, which is gitignored. So a fresh clone has no dist at all, and a stale
+## one is invisible -- the app builds and runs, showing the previous version of
+## every shared component. Every target that builds or runs an app depends on
+## this, so that cannot happen silently.
+build-ui:
+	@echo "Building shared UI components..."
+	@npm run build -w @gopca/ui-components
+
 ## pca-dev: Run GoPCA Desktop in development mode with hot reload
-pca-dev: sync-docs sync-datasets
+pca-dev: build-ui sync-docs sync-datasets
 	@if [ -x "$(WAILS)" ]; then \
 		echo "Starting GoPCA Desktop in development mode..."; \
 		cd $(DESKTOP_PATH) && $(WAILS) dev; \
@@ -147,7 +158,7 @@ pca-dev: sync-docs sync-datasets
 	fi
 
 ## pca-build: Build GoPCA Desktop for production
-pca-build: sync-docs sync-datasets
+pca-build: build-ui sync-docs sync-datasets
 	@if [ -x "$(WAILS)" ]; then \
 		echo "Building GoPCA Desktop..."; \
 		cd $(DESKTOP_PATH) && $(WAILS) build $(DESKTOP_LDFLAGS); \
@@ -178,7 +189,7 @@ pca-deps:
 	@echo "GoPCA Desktop dependencies installed"
 
 ## csv-dev: Run GoCSV Desktop in development mode with hot reload
-csv-dev: sync-docs
+csv-dev: build-ui sync-docs
 	@if [ -x "$(WAILS)" ]; then \
 		echo "Starting CSV editor in development mode..."; \
 		cd $(CSV_PATH) && $(WAILS) dev; \
@@ -189,7 +200,7 @@ csv-dev: sync-docs
 	fi
 
 ## csv-build: Build GoCSV Desktop for production
-csv-build: sync-docs
+csv-build: build-ui sync-docs
 	@if [ -x "$(WAILS)" ]; then \
 		echo "Building CSV editor application..."; \
 		cd $(CSV_PATH) && $(WAILS) build $(DESKTOP_LDFLAGS); \
