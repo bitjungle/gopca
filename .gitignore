@@ -32,8 +32,9 @@ docs_tmp/
 # Reference materials are local-only (PDFs, summaries, notes)
 docs/references/
 
-# Internal milestone and planning docs (not for public repo)
-docs/devel/milestone_*.md
+# Internal development guides are local-only. Kept on disk, never tracked:
+# these are working notes for the maintainers, not published documentation.
+docs/devel/
 
 # Build artifacts
 results/

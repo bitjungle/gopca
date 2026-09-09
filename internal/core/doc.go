@@ -37,6 +37,6 @@
 //
 // The package is deliberately free of any UI or application dependencies so it
 // can be shared unchanged across every interface. Algorithms are validated
-// against reference implementations (scikit-learn, R); see the package tests and
-// docs/devel/validation-methodology.md.
+// against reference implementations (scikit-learn, R); see the *_validation_test.go
+// files in this package, notably sklearn_validation_test.go.
 package core
