@@ -132,6 +132,9 @@ echo "5. Checking for network calls in JavaScript/TypeScript..."
 #   fetch(dataUrl)       - CSV/data preview loaded from a blob/local path
 #   fetch(markdownPath)  - in-app help/docs markdown
 #   fetch(tutorialPath)  - bundled tutorial markdown (/tutorials/*, see TutorialViewer.tsx)
+#   vi.stubGlobal('fetch' - a test replacing fetch with a stub. This is the
+#                          opposite of a network call: it makes one impossible
+#                          for the duration of the test.
 FETCH_USAGE=$(grep -r "fetch\|XMLHttpRequest\|axios\|WebSocket" \
     --include="*.ts" \
     --include="*.tsx" \
@@ -143,7 +146,7 @@ FETCH_USAGE=$(grep -r "fetch\|XMLHttpRequest\|axios\|WebSocket" \
     --exclude-dir=".venv" \
     --exclude-dir="testdata" \
     "$PROJECT_ROOT" 2>/dev/null | \
-    grep -v "// \|/\* \| \* \|fetchMetrics\|fetch(dataUrl)\|fetch(markdownPath)\|fetch(tutorialPath)\|blobToDataURL\|fetchError\|fetchedBlob" || true)
+    grep -v "// \|/\* \| \* \|fetchMetrics\|fetch(dataUrl)\|fetch(markdownPath)\|fetch(tutorialPath)\|vi.stubGlobal('fetch'\|blobToDataURL\|fetchError\|fetchedBlob" || true)
 
 if [ -n "$FETCH_USAGE" ]; then
     print_status 1 "Found potential network calls in frontend code:"

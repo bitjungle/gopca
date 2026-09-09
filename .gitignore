@@ -79,3 +79,8 @@ testdata/validation/reference_results
 
 # Private PCA presentation (personal, not shared)
 testdata/nhanes/pca_presentation/
+
+# Output of scripts/generate-help-docs.js. Regenerated from help-content.json
+# on demand; nothing reads it back, so committing it would only create a second
+# copy to drift.
+docs/generated/
