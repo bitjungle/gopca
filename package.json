@@ -37,7 +37,8 @@
     "brace-expansion@>=2.0.0 <3.0.0": "2.1.4",
     "glob@>=10.2.0 <10.5.0": "10.5.0",
     "nanoid@<3.3.18": "3.3.18",
-    "postcss@<8.5.23": "8.5.26"
+    "postcss@<8.5.23": "8.5.26",
+    "maplibre-gl": "6.4.1"
   },
   "devDependencies": {
     "@typescript-eslint/eslint-plugin": "^8.43.0",
