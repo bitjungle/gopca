@@ -85,13 +85,74 @@ describe('placeCircleLabels', () => {
         expect(collisions(WINE, placed)).toEqual([]);
     });
 
-    it('keeps each label on its own arrow radius, so arrow length still reads', () => {
+    it('never lets a label cover its own arrow, unless it cannot fit outside', () => {
+        // The defect a screenshot showed after the first fix: labels were
+        // centred on a point beyond the tip, so the inner half of the text lay
+        // back over the arrow it names. On Wine that covered up to a third of
+        // some arrows, and proanthocyanins rendered as "oanthocyanins" with its
+        // first letters lost under its own arrowhead.
+        const LIMIT = 1.2;
+        const placed = placeCircleLabels(WINE, { fontSizePx: FONT, plotSizePx: PLOT, axisSpan: SPAN });
+        WINE.forEach((label, i) => {
+            const tip = Math.hypot(label.x, label.y);
+            const angle = Math.atan2(placed[i].y, placed[i].x);
+            const radius = Math.hypot(placed[i].x, placed[i].y);
+            const reach
+                = halfWidth(label.text) * Math.abs(Math.cos(angle))
+                + halfHeight * Math.abs(Math.sin(angle));
+
+            const clears = radius - reach >= tip - 1e-9;
+            // The only permitted exception: clearing the tip would push the
+            // text off the axis, and a clipped label is worse than a crowded
+            // one. Then it must be left exactly where it used to be.
+            const cannotFit = tip + 2 * reach > LIMIT;
+            if (!clears) {
+                expect(cannotFit, `${label.text} overlaps its arrow but would have fitted outside`).toBe(true);
+                // Pushed as far out as the axis allows rather than abandoned,
+                // and never pulled inward -- a label among the arrows would be
+                // worse than one that merely touches its own.
+                expect(radius).toBeGreaterThanOrEqual(tip * 1.15 - 1e-9);
+                // Not pushed out into being clipped either. A very long name on
+                // a long arrow already extended past the axis under the old
+                // placement, so the bound is "no further than it was", not "in
+                // range" -- moving it out would make an existing overflow worse.
+                expect(radius).toBeLessThanOrEqual(Math.max(tip * 1.15, 1.2 - reach) + 1e-9);
+            }
+        });
+    });
+
+    it('leaves a name too long to fit exactly where it was', () => {
+        // od280/od315_of_diluted_wines is 28 characters on an arrow of 0.86.
+        // Clearing its tip would put its far edge at 1.67 against an axis that
+        // stops at 1.2, so it stays put rather than being cut off.
+        const long = WINE.find(w => w.text.startsWith('od280'))!;
+        const placed = placeCircleLabels([long], { fontSizePx: FONT, plotSizePx: PLOT, axisSpan: SPAN });
+        expect(Math.hypot(placed[0].x, placed[0].y)).toBeCloseTo(Math.hypot(long.x, long.y) * 1.15, 10);
+    });
+
+    it('does that by pushing labels out, never by pulling them in', () => {
+        // A label closer to the origin than the old placement would sit among
+        // the arrows rather than outside them.
         const placed = placeCircleLabels(WINE, { fontSizePx: FONT, plotSizePx: PLOT, axisSpan: SPAN });
         WINE.forEach((label, i) => {
             const before = Math.hypot(label.x, label.y) * 1.15;
             const after = Math.hypot(placed[i].x, placed[i].y);
-            expect(after).toBeCloseTo(before, 10);
+            expect(after).toBeGreaterThanOrEqual(before - 1e-12);
         });
+    });
+
+    it('leaves a vertical arrow almost where it was, since text is thin that way', () => {
+        // Pushing a label clear of its tip costs half a line height for an arrow
+        // pointing up, against half a name's width for one pointing sideways.
+        // A rule that ignored direction would shove vertical labels far out.
+        const name = 'phenols';
+        const up = placeCircleLabels([{ text: name, x: 0, y: 0.7 }],
+            { fontSizePx: FONT, plotSizePx: PLOT, axisSpan: SPAN });
+        expect(Math.hypot(up[0].x, up[0].y)).toBeLessThan(0.7 * 1.15 + 0.03);
+
+        const right = placeCircleLabels([{ text: name, x: 0.7, y: 0 }],
+            { fontSizePx: FONT, plotSizePx: PLOT, axisSpan: SPAN });
+        expect(Math.hypot(right[0].x, right[0].y)).toBeGreaterThan(0.7 * 1.15 + 0.03);
     });
 
     it('never rotates a label further than the cap from its own arrow', () => {

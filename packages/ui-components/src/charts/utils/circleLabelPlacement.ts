@@ -53,6 +53,16 @@ export interface CircleLabelPlacementOptions {
   /** Width of the data range on each axis; the circle plot uses -1.2..1.2. */
   axisSpan?: number;
   /**
+   * Furthest a label may reach from the origin before it is clipped.
+   *
+   * Pushing a label clear of its own arrow costs half its width, and the
+   * longest names cannot afford that: `od280/od315_of_diluted_wines` would end
+   * up 1.67 from the origin against an axis that stops at 1.2, so it would be
+   * cut off. Trading an overlapped arrow for an unreadable label is not a
+   * trade, so a label that cannot fit outside is left where it was.
+   */
+  axisLimit?: number;
+  /**
    * How far a label may be rotated away from its own arrow.
    *
    * A cap matters: a label that has drifted far from its arrow is no longer
@@ -65,6 +75,16 @@ export interface CircleLabelPlacementOptions {
   charWidthRatio?: number;
   /** Line height as a fraction of font size. */
   lineHeightRatio?: number;
+  /**
+   * Gap left between an arrow tip and the near edge of its label, in pixels.
+   *
+   * Labels were centred on a point at a fixed multiple of the arrow tip, which
+   * put the inner half of the text back over the arrow it names -- on Wine that
+   * covered a third of some arrows, and `proanthocyanins` rendered as
+   * "oanthocyanins" with its first letters lost under its own arrowhead. Each
+   * label is now pushed out until it clears its tip.
+   */
+  tipClearancePx?: number;
   /**
    * Clearance required around each label, in pixels.
    *
@@ -89,10 +109,12 @@ const DEFAULTS: Required<CircleLabelPlacementOptions> = {
   fontSizePx: 10,
   plotSizePx: 500,
   axisSpan: 2.4,
+  axisLimit: 1.2,
   maxShiftDegrees: 14,
   charWidthRatio: 0.55,
   lineHeightRatio: 1.2,
-  paddingPx: 6
+  paddingPx: 6,
+  tipClearancePx: 4
 };
 
 /** Degrees moved per relaxation step; small enough not to overshoot a fix. */
@@ -110,6 +132,27 @@ interface Placement {
 }
 
 /**
+ * How far along its own direction a label should sit.
+ *
+ * Three bounds, in order of priority: never nearer than the original radial
+ * placement, far enough out to clear the arrow tip, and not so far that the
+ * text leaves the plot. When the last two conflict -- a long name on a long
+ * arrow -- the label stays where it was and keeps its overlap, because a
+ * clipped label is worse than a crowded one.
+ */
+function boundedRadius(
+  tipRadius: number,
+  reach: number,
+  settings: Required<CircleLabelPlacementOptions>,
+  dataPerPixel: number
+): number {
+  const original = tipRadius * settings.radiusFactor;
+  const clearsTip = tipRadius + reach + settings.tipClearancePx * dataPerPixel;
+  const fitsOnAxis = settings.axisLimit - reach;
+  return Math.max(original, Math.min(clearsTip, Math.max(original, fitsOnAxis)));
+}
+
+/**
  * Returns a position for each label such that, where possible, no two overlap.
  *
  * Labels keep their own radius and move only in angle, by at most
@@ -124,15 +167,30 @@ export function placeCircleLabels(
   const dataPerPixel = settings.axisSpan / settings.plotSizePx;
 
   const placements: Placement[] = labels.map((label, index) => {
-    const radius = Math.hypot(label.x, label.y) * settings.radiusFactor;
+    const tipRadius = Math.hypot(label.x, label.y);
+    const angle = Math.atan2(label.y, label.x);
+    const halfWidth = ((label.text.length * settings.charWidthRatio * settings.fontSizePx)
+      + 2 * settings.paddingPx) * dataPerPixel / 2;
+    const halfHeight = ((settings.lineHeightRatio * settings.fontSizePx)
+      + 2 * settings.paddingPx) * dataPerPixel / 2;
+
+    // How far the label box reaches back toward the origin: the support of an
+    // axis-aligned box in the inward radial direction. For an arrow pointing
+    // sideways that is the label's half-width, and for one pointing up it is
+    // half a line height -- which is why a vertical arrow needs almost no push
+    // and a horizontal one needs a lot.
+    const inwardReach = halfWidth * Math.abs(Math.cos(angle))
+      + halfHeight * Math.abs(Math.sin(angle));
+
     return {
       index,
-      angle: Math.atan2(label.y, label.x),
-      radius,
-      halfWidth: ((label.text.length * settings.charWidthRatio * settings.fontSizePx)
-        + 2 * settings.paddingPx) * dataPerPixel / 2,
-      halfHeight: ((settings.lineHeightRatio * settings.fontSizePx)
-        + 2 * settings.paddingPx) * dataPerPixel / 2,
+      angle,
+      // Far enough out that the text starts beyond its own arrow, but never
+      // closer than the original placement, so short names are unaffected, and
+      // never so far that the label runs off the axis.
+      radius: boundedRadius(tipRadius, inwardReach, settings, dataPerPixel),
+      halfWidth,
+      halfHeight,
       shift: 0
     };
   });
@@ -200,6 +258,18 @@ export function placeCircleLabels(
     if (!moved) {
       break;
     }
+  }
+
+  // Re-apply the radial bound at the final angle. The relaxation above rotates
+  // labels, and how far a box reaches along the radius depends on its
+  // direction, so a radius computed before the rotation is slightly wrong
+  // afterwards -- enough to leave a label just touching the arrow it was moved
+  // out to clear.
+  for (const p of placements) {
+    const tipRadius = Math.hypot(labels[p.index].x, labels[p.index].y);
+    const reach = p.halfWidth * Math.abs(Math.cos(p.angle))
+      + p.halfHeight * Math.abs(Math.sin(p.angle));
+    p.radius = boundedRadius(tipRadius, reach, settings, dataPerPixel);
   }
 
   const result: PlacedCircleLabel[] = new Array(placements.length);
