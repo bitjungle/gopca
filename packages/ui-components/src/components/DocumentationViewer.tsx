@@ -165,7 +165,18 @@ export const DocumentationViewer: React.FC<DocumentationViewerProps> = ({
       - container.getBoundingClientRect().top
       + container.scrollTop;
 
-    container.scrollTo({ top: Math.max(0, offset), behavior: 'smooth' });
+    const top = Math.max(0, offset);
+    // scrollTo with an options object is what gives the smooth animation, but
+    // it is also the newest thing in this path, and every failure here is
+    // silent -- the click simply does nothing, which is what made this defect
+    // expensive to find. Assigning scrollTop is the oldest mechanism the DOM
+    // has and cannot be absent, so it is worth the three lines even though the
+    // fallback has not been observed to trigger.
+    if (typeof container.scrollTo === 'function') {
+      container.scrollTo({ top, behavior: 'smooth' });
+    } else {
+      container.scrollTop = top;
+    }
     setActiveId(id);
   };
 

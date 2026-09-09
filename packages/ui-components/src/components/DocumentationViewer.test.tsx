@@ -172,6 +172,27 @@ describe('DocumentationViewer table of contents', () => {
         expect(scrollTo.mock.calls[0][0]).toMatchObject({ behavior: 'smooth' });
     });
 
+    it('falls back to scrollTop where scrollTo is unavailable', async () => {
+        // Not a case that has been observed, but every failure on this path is
+        // silent, so the cheapest mechanism is kept as a backstop.
+        const original = Element.prototype.scrollTo;
+        // @ts-expect-error - deliberately removing a DOM method for the test
+        delete Element.prototype.scrollTo;
+
+        await openViewer();
+        const container = screen.getByTestId('documentation-scroll');
+        const setter = vi.fn();
+        Object.defineProperty(container, 'scrollTop', { set: setter, get: () => 0, configurable: true });
+
+        const toc = screen.getByLabelText('Table of contents');
+        const button = Array.from(toc.querySelectorAll('button'))
+            .find(b => b.textContent === '3. Conclusion')!;
+        await userEvent.click(button);
+
+        expect(setter).toHaveBeenCalled();
+        Element.prototype.scrollTo = original;
+    });
+
     it('does nothing rather than throwing when a heading is missing', async () => {
         // An entry with no heading should not take the application down; the
         // guard also documents that a mismatch is survivable.
