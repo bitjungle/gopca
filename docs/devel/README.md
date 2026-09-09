@@ -18,6 +18,7 @@ This directory contains developer documentation for the GoPCA Suite. These docum
 ### Testing & Validation
 - [Validation Methodology](validation-methodology.md) - PCA validation against scikit-learn
 - [Integration Testing](integration-testing.md) - End-to-end testing strategies
+- [Debugging the Desktop Frontends](frontend-debugging.md) - Reproducing frontend defects, and the mistakes that made #436 expensive
 - [Reliability Audit Progress](reliability-audit-progress.md) - Tracking PCA reliability improvements
 - [UX Testing Checklist](ux-testing-checklist.md) - User experience testing procedures
 
