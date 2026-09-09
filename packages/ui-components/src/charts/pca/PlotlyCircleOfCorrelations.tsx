@@ -30,6 +30,7 @@ import { getExportMenuItems } from '../utils/plotlyExport';
 import { PLOT_CONFIG, getScaledMarkerSize } from '../config/plotConfig';
 import { PlotlyWithFullscreen } from '../utils/plotlyFullscreen';
 import { getWatermarkDataUrlSync } from '../assets/watermark';
+import { placeCircleLabels } from '../utils/circleLabelPlacement';
 import { PlotlyVisualizationConfig } from '../core/PlotlyVisualization';
 
 export interface CircleOfCorrelationsData {
@@ -206,15 +207,26 @@ export class PlotlyCircleOfCorrelations {
 
     // Add labels
     if (this.config.showLabels) {
+      // Placed with a de-confliction pass rather than radially, because two
+      // arrows at nearly the same angle put their names on top of each other --
+      // and those are the tightly correlated variables a reader is trying to
+      // tell apart, so the labels failed exactly where they mattered (#830).
+      // Each label keeps its own radius, so arrow length still reads correctly.
+      const labelSize = Math.round((this.config.labelSize || 10) * (this.config.fontScale || 1.0));
+      const placed = placeCircleLabels(
+        filteredNames.map((text, i) => ({ text, x: correlationsX[i], y: correlationsY[i] })),
+        { fontSizePx: labelSize }
+      );
+
       traces.push({
         type: 'scatter',
         mode: 'text',
-        x: correlationsX.map((x) => x * 1.15),  // Slightly beyond vector tip
-        y: correlationsY.map((y) => y * 1.15),
+        x: placed.map((p) => p.x),
+        y: placed.map((p) => p.y),
         text: filteredNames,
         textposition: 'middle center',
         textfont: {
-          size: Math.round((this.config.labelSize || 10) * (this.config.fontScale || 1.0)),
+          size: labelSize,
           color: this.config.theme === 'dark' ? '#e5e7eb' : '#374151'
         },
         showlegend: false,
