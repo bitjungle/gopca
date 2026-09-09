@@ -168,7 +168,7 @@ ANALYTICS=$(grep -r "gtag\|ga(\|_gaq\|analytics\|pixel\|beacon" \
     --exclude-dir=".venv" \
     --exclude-dir="testdata" \
     "$PROJECT_ROOT" 2>/dev/null | \
-    grep -v "// \|/\* \| \* \|pixelRatio\|No analytics" || true)
+    grep -v "// \|/\* \|/\*\*\| \* \|pixelRatio\|No analytics" || true)
 
 if [ -n "$ANALYTICS" ]; then
     print_status 1 "Found potential analytics/tracking code:"
