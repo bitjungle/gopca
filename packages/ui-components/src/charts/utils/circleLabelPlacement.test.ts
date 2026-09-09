@@ -232,3 +232,23 @@ describe('placeCircleLabels', () => {
         }
     });
 });
+
+describe('option handling', () => {
+    it('falls back to the default when an option is explicitly undefined', () => {
+        // The chart passes plotSizePx from a measurement that does not exist on
+        // the first render. Spreading undefined over the defaults would make
+        // every pixel size NaN and every position NaN, and the plot would
+        // silently render nothing.
+        const withUndefined = placeCircleLabels(WINE, { fontSizePx: FONT, plotSizePx: undefined });
+        expect(withUndefined.every(p => Number.isFinite(p.x) && Number.isFinite(p.y))).toBe(true);
+        expect(withUndefined).toEqual(placeCircleLabels(WINE, { fontSizePx: FONT }));
+    });
+
+    it('separates more aggressively on a smaller plot', () => {
+        // The same labels occupy more of the data range when the plot is small,
+        // so more pairs collide and more of them have to move.
+        const shifted = (size: number) => placeCircleLabels(WINE, { fontSizePx: FONT, plotSizePx: size })
+            .filter(p => p.shiftedDegrees !== 0).length;
+        expect(shifted(300)).toBeGreaterThan(shifted(900));
+    });
+});

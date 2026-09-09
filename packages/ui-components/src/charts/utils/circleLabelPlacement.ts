@@ -163,7 +163,12 @@ export function placeCircleLabels(
   labels: CircleLabel[],
   options: CircleLabelPlacementOptions = {}
 ): PlacedCircleLabel[] {
-  const settings = { ...DEFAULTS, ...options };
+  // undefined must fall back to the default, not through it: the caller may
+  // not have measured the plot yet on the first render.
+  const provided = Object.fromEntries(
+    Object.entries(options).filter(([, value]) => value !== undefined)
+  ) as CircleLabelPlacementOptions;
+  const settings = { ...DEFAULTS, ...provided };
   const dataPerPixel = settings.axisSpan / settings.plotSizePx;
 
   const placements: Placement[] = labels.map((label, index) => {

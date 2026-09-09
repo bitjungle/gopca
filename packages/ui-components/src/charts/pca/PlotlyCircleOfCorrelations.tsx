@@ -23,7 +23,7 @@
 
 // Circle of Correlations visualization for PCA
 
-import React, { useMemo } from 'react';
+import React, { useMemo, useRef, useState, useEffect } from 'react';
 import { Data, Layout } from 'plotly.js';
 import { getPlotlyTheme, mergeLayouts } from '../utils/plotlyTheme';
 import { getExportMenuItems } from '../utils/plotlyExport';
@@ -50,6 +50,16 @@ export interface CircleOfCorrelationsData {
 }
 
 export interface CircleOfCorrelationsConfig extends PlotlyVisualizationConfig {
+  /**
+   * Rendered size of the square plot in pixels, used only to keep labels apart.
+   *
+   * Label size is fixed in pixels while positions are in data units, so the two
+   * can only be compared through the rendered scale. Assuming a size makes the
+   * de-confliction too eager in a large window and too shy in a small one, so
+   * PCACircleOfCorrelations measures its container and passes the real value;
+   * the default is a fallback for callers that construct this class directly.
+   */
+  plotSizePx?: number;
   pcX?: number;  // PC for X-axis (1-indexed)
   pcY?: number;  // PC for Y-axis (1-indexed)
   showCircle?: boolean;
@@ -215,7 +225,7 @@ export class PlotlyCircleOfCorrelations {
       const labelSize = Math.round((this.config.labelSize || 10) * (this.config.fontScale || 1.0));
       const placed = placeCircleLabels(
         filteredNames.map((text, i) => ({ text, x: correlationsX[i], y: correlationsY[i] })),
-        { fontSizePx: labelSize }
+        { fontSizePx: labelSize, plotSizePx: this.config.plotSizePx }
       );
 
       traces.push({
@@ -428,14 +438,48 @@ export const PCACircleOfCorrelations: React.FC<{
   data: CircleOfCorrelationsData;
   config?: CircleOfCorrelationsConfig;
 }> = ({ data, config }) => {
-  const plot = useMemo(() => new PlotlyCircleOfCorrelations(data, config), [data, config]);
+  const container = useRef<HTMLDivElement>(null);
+  const [measuredSize, setMeasuredSize] = useState<number | undefined>(undefined);
+
+  // Label de-confliction needs the rendered size, because text is sized in
+  // pixels and positions are in data units. The plot is responsive and also
+  // opens fullscreen, so a fixed assumption would separate labels too eagerly
+  // in a large window and too little in a small one.
+  useEffect(() => {
+    const element = container.current;
+    if (!element || typeof ResizeObserver === 'undefined') {
+      return;
+    }
+    const observer = new ResizeObserver((entries) => {
+      const box = entries[0]?.contentRect;
+      if (!box) {
+        return;
+      }
+      // The plot is square and fits the smaller dimension.
+      const size = Math.round(Math.min(box.width, box.height));
+      // Only react to real changes, and ignore sub-pixel jitter: setting state
+      // on every observation would re-run the placement continuously and could
+      // feed back into the layout.
+      setMeasuredSize((previous) =>
+        previous !== undefined && Math.abs(previous - size) < 8 ? previous : size);
+    });
+    observer.observe(element);
+    return () => observer.disconnect();
+  }, []);
+
+  const plot = useMemo(
+    () => new PlotlyCircleOfCorrelations(data, { ...config, plotSizePx: measuredSize ?? config?.plotSizePx }),
+    [data, config, measuredSize]
+  );
 
   return (
-    <PlotlyWithFullscreen
-      data={plot.getTraces()}
-      layout={plot.getEnhancedLayout()}
-      config={plot.getConfig()}
-      style={{ width: '100%', height: '100%' }}
-    />
+    <div ref={container} style={{ width: '100%', height: '100%' }}>
+      <PlotlyWithFullscreen
+        data={plot.getTraces()}
+        layout={plot.getEnhancedLayout()}
+        config={plot.getConfig()}
+        style={{ width: '100%', height: '100%' }}
+      />
+    </div>
   );
 };
