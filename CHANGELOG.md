@@ -5,6 +5,57 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Changed
+- **Model files are now validated against the JSON schema.** The v1 schemas shipped with the
+  applications but were never parsed; `ValidateModel` ran a set of hand-written structural checks
+  instead. The schema graph is now compiled and enforced, both on `pca transform` and on the Desktop
+  export path. **Models GoPCA writes are unaffected** — every variant was checked (SVD, NIPALS,
+  kernel, robust, SNV, dropped missing values, and both PCR cases) and all validate. The change is
+  visible only for hand-edited or third-party-generated files, which may now be rejected where they
+  previously loaded, and the error names the failing path:
+
+  ```
+  $ pca transform hand_edited_model.json data.csv
+  Error: model validation failed: model does not match the schema:
+    metadata.analysis_id: Does not match pattern '^[0-9a-f]{8}-[0-9a-f]{4}-...'
+  ```
+
+  `analysis_id` has always been documented as a UUID and was simply never checked, so a file
+  carrying `"analysis_id": "model-2024-run-7"` used to load without complaint. This is enforcement
+  catching up with the documentation rather than a new restriction (#846)
+- **`regression.validation.folds` now records the folds actually built.** It previously echoed the
+  *configured* fold count, which is `0` for any design meaning "one fold per group" — so a
+  leave-one-out run reported `"folds": 0` regardless of sample count. A leave-one-out sweep over 441
+  labelled rows now reports `"folds": 441`. Anything reading this field to describe the validation
+  design was reading a configuration value that could not be interpreted without also knowing the
+  row count. `design` carries the human-readable form (`leave-one-row-out`) and was never affected
+  (#844)
+- **One-hot encoding in GoCSV keeps the source column.** It previously removed the column it
+  encoded, silently and unconditionally. The dialog now offers a **Keep original column** checkbox,
+  ticked by default. This matters beyond GoCSV: GoPCA colours scores plots by categorical columns,
+  so encoding `species` used to cost the ability to colour by it. For anyone using `pkg/transform`
+  directly the new option is `Options.RemoveOriginal`, spelled that way round so the zero value
+  keeps the column (#854, #855)
+
+### Fixed
+- **Exporting a partially labelled dataset no longer fails.** `PreservedColumns.NumericTarget` was a
+  `map[string][]float64`, and `encoding/json` refuses to marshal a NaN under any circumstances. A
+  `#target` column with an unmeasured value therefore aborted the entire export, on both
+  `pca analyze -f json` and `pca regress -o`:
+
+  ```
+  Error: failed to encode the model: json: unsupported value: NaN
+  ```
+
+  This is the ordinary case in chemometrics rather than an edge case — a calibration set where only
+  some samples went for reference analysis — and it survived because every fixture it had been tried
+  on had complete target columns. Gaps are now encoded as `null` and read back as NaN; on
+  `testdata/bronir2` that is 414 nulls of 855 values. **Consumers parsing `numericTarget` into a
+  plain float array will now encounter `null`**, which they never could before, because the file
+  simply did not exist. The schema was updated to allow it (#839)
+
 ## [1.7.0] - 2026-09-01
 
 This release turns the column overview above the data table into a general data preview. It now
