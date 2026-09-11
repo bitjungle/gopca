@@ -122,6 +122,43 @@ func columnValues(data *FileData, colIndex int) []string {
 	return values
 }
 
+// demoteNonIdentifyingRowNames puts the row-name column back in the table when
+// it does not identify rows, and reports whether it did.
+//
+// The loader takes the first column as row names unconditionally:
+// types.DefaultCSVFormat sets HasRowNames, and parseCSVContent builds every
+// candidate format from it. Nothing checks whether that column can actually
+// serve. So a file whose first column repeats -- a source title, a batch name,
+// a category -- silently acquires row names that cannot tell its rows apart,
+// and the user only learns this from the GoPCA validation panel afterwards.
+//
+// The rule for what may be a row-name column already exists in
+// checkRowNameCandidate, and ExecuteSetRowNames enforces it when a user picks a
+// column by hand. Applying it here closes the gap that comment describes: the
+// import was the other caller bypassing the rule, and it made a choice the same
+// user would have been refused (#904).
+//
+// Demotion is deliberately the same operation as the manual "Move Row Names
+// into Table", helpers included, so an automatic demotion and a hand-made one
+// leave the file in the same state.
+func demoteNonIdentifyingRowNames(data *FileData) bool {
+	if data == nil || len(data.RowNames) == 0 {
+		return false
+	}
+	if checkRowNameCandidate(data.RowNames).OK {
+		return false
+	}
+
+	header := uniqueHeader(data.Headers, defaultRowNameHeader(data.RowNamesHeader))
+	insertColumnAt(data, 0, header, data.RowNames)
+	classifyColumn(data, header, data.RowNames)
+
+	data.RowNames = nil
+	data.RowNamesHeader = ""
+	data.Columns = len(data.Headers)
+	return true
+}
+
 // CanUseAsRowNames reports whether the given column could become the row-name
 // column. Bound for the frontend so the menu can explain itself.
 func (a *App) CanUseAsRowNames(data *FileData, colIndex int) RowNameCheck {

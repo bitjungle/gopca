@@ -624,6 +624,14 @@ func (a *App) parseCSVContent(content string, ext string) (*FileData, error) {
 		}
 	}
 
+	// The first column arrived here as row names whether or not it can serve as
+	// them, because DefaultCSVFormat sets HasRowNames and nothing above checks.
+	// Hand it back to the table when it cannot (#904).
+	if demoteNonIdentifyingRowNames(fileData) {
+		a.logInfo(fmt.Sprintf("First column %q kept as data: %s",
+			fileData.Headers[0], checkRowNameCandidate(columnValues(fileData, 0)).Reason))
+	}
+
 	return fileData, nil
 }
 
