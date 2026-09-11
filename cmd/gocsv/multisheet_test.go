@@ -24,7 +24,12 @@
 package main
 
 import (
+	"archive/zip"
+	"bytes"
+	"io"
+	"os"
 	"path/filepath"
+	"regexp"
 	"strings"
 	"testing"
 
@@ -41,6 +46,12 @@ import (
 // the rest get sheets of their own. Names in hidden are marked not-visible.
 func writeSheets(t *testing.T, path string, sheets []string, grids [][][]string, hidden ...string) {
 	t.Helper()
+	if len(sheets) == 0 {
+		t.Fatal("writeSheets: need at least one sheet name")
+	}
+	if len(grids) != len(sheets) {
+		t.Fatalf("writeSheets: %d grids for %d sheets", len(grids), len(sheets))
+	}
 	f := excelize.NewFile()
 	defer func() { _ = f.Close() }()
 
@@ -167,4 +178,122 @@ func TestMultiSheetAndTitleBlockBothReported(t *testing.T) {
 	if suggestion.SkipRows != 1 {
 		t.Errorf("SkipRows = %d, want 1 so the wizard still locates the table", suggestion.SkipRows)
 	}
+}
+
+// hideEverySheet rewrites a workbook so that every sheet is marked hidden.
+//
+// excelize will not produce this through SetSheetVisible -- like Excel, it keeps
+// one sheet visible -- so the state has to be written into xl/workbook.xml
+// directly. Files in the wild do reach it, and the first version of this test
+// tried to build the case with SetSheetVisible, quietly got one visible sheet
+// and two hidden, and proved nothing about the case it was named for.
+func hideEverySheet(t *testing.T, path string) {
+	t.Helper()
+	in, err := zip.OpenReader(path)
+	if err != nil {
+		t.Fatalf("open fixture: %v", err)
+	}
+	defer func() { _ = in.Close() }()
+
+	var buf bytes.Buffer
+	out := zip.NewWriter(&buf)
+	pattern := regexp.MustCompile(`(<sheet name="[^"]*" sheetId="\d+")`)
+	for _, file := range in.File {
+		r, err := file.Open()
+		if err != nil {
+			t.Fatalf("open %s: %v", file.Name, err)
+		}
+		content, err := io.ReadAll(r)
+		_ = r.Close()
+		if err != nil {
+			t.Fatalf("read %s: %v", file.Name, err)
+		}
+		if file.Name == "xl/workbook.xml" {
+			content = pattern.ReplaceAll(content, []byte(`$1 state="hidden"`))
+		}
+		w, err := out.Create(file.Name)
+		if err != nil {
+			t.Fatalf("create %s: %v", file.Name, err)
+		}
+		if _, err := w.Write(content); err != nil {
+			t.Fatalf("write %s: %v", file.Name, err)
+		}
+	}
+	if err := out.Close(); err != nil {
+		t.Fatalf("close zip: %v", err)
+	}
+	if err := os.WriteFile(path, buf.Bytes(), 0o600); err != nil {
+		t.Fatalf("write fixture: %v", err)
+	}
+}
+
+// assertAllHidden fails if the fixture did not actually end up all-hidden, so a
+// silently ineffective rewrite cannot make the tests below pass vacuously.
+func assertAllHidden(t *testing.T, path string) {
+	t.Helper()
+	f, err := excelize.OpenFile(path)
+	if err != nil {
+		t.Fatalf("open: %v", err)
+	}
+	defer func() { _ = f.Close() }()
+	for _, sheet := range f.GetSheetList() {
+		visible, err := f.GetSheetVisible(sheet)
+		if err != nil {
+			t.Fatalf("GetSheetVisible(%s): %v", sheet, err)
+		}
+		if visible {
+			t.Fatalf("fixture sheet %s is still visible; the test would not exercise the case", sheet)
+		}
+	}
+}
+
+func TestEverySheetHiddenStillOffersTheChoice(t *testing.T) {
+	// Filtering hidden sheets can remove every candidate. When it does, the
+	// filter has deleted the question rather than answered it: several hidden
+	// sheets would otherwise fall through to an arbitrary first-sheet default,
+	// which is the guess this change exists to remove. Found by review on #907.
+	path := filepath.Join(t.TempDir(), "allhidden.xlsx")
+	writeSheets(t, path, []string{"A", "B", "C"}, [][][]string{table(), table(), table()})
+	hideEverySheet(t, path)
+	assertAllHidden(t, path)
+
+	app := &App{}
+	err := errFromLoad(app, path)
+	if err == nil {
+		t.Fatal("loaded one of three hidden sheets arbitrarily instead of asking")
+	}
+	if !strings.Contains(err.Error(), "A") || !strings.Contains(err.Error(), "C") {
+		t.Errorf("error should still name the sheets, got: %v", err)
+	}
+
+	suggestion, err := suggestExcelImport(path)
+	if err != nil {
+		t.Fatalf("suggestExcelImport: %v", err)
+	}
+	if !suggestion.NeedsWizard {
+		t.Error("refused the file but did not offer the wizard: a dead end")
+	}
+}
+
+func TestOneHiddenSheetLoadsWithoutAsking(t *testing.T) {
+	// The companion control. One sheet is unambiguous whether or not it is
+	// hidden, so the fallback above must not turn a hidden sheet into a prompt.
+	path := filepath.Join(t.TempDir(), "onehidden.xlsx")
+	writeSheets(t, path, []string{"Only"}, [][][]string{table()})
+	hideEverySheet(t, path)
+	assertAllHidden(t, path)
+
+	app := &App{}
+	data, err := app.loadExcel(path)
+	if err != nil {
+		t.Fatalf("a single hidden sheet should still load: %v", err)
+	}
+	if data.Rows != 2 {
+		t.Errorf("rows = %d, want 2", data.Rows)
+	}
+}
+
+func errFromLoad(app *App, path string) error {
+	_, err := app.loadExcel(path)
+	return err
 }
