@@ -194,10 +194,26 @@ func (a *App) loadExcel(filePath string) (*FileData, error) {
 		return nil, fmt.Errorf("no sheets found in Excel file")
 	}
 
-	// For now, use the first sheet. TODO: Add sheet selection dialog
+	// A workbook with more than one sheet has no defensible default. Loading
+	// the first one silently discards the rest, and the only trace was a log
+	// line in a terminal the user is not reading. Hand the file to the import
+	// wizard instead, which has had a sheet selector all along -- refusing here
+	// is what routes it there, because LoadCSV records the path on error and
+	// the frontend then asks SuggestImportForFailedLoad what to do (#905).
+	//
+	// Hidden sheets do not count. Tools emit them for their own bookkeeping,
+	// and prompting for a choice the user cannot see would be noise.
+	visible := visibleSheets(f, sheets)
+	if len(visible) > 1 {
+		return nil, fmt.Errorf("this workbook has %d sheets (%s), so there is no single obvious one to open",
+			len(visible), strings.Join(visible, ", "))
+	}
 	selectedSheet := sheets[0]
+	if len(visible) == 1 {
+		selectedSheet = visible[0]
+	}
 	if len(sheets) > 1 {
-		a.logInfo(fmt.Sprintf("Multiple sheets found. Using first sheet: %s", selectedSheet))
+		a.logInfo(fmt.Sprintf("Using sheet: %s", selectedSheet))
 	}
 
 	// Get all rows from the selected sheet
@@ -302,6 +318,23 @@ type ExcelImportSuggestion struct {
 	FilePath    string `json:"filePath"` // the file the suggestion is about
 }
 
+// visibleSheets filters out sheets the workbook marks hidden, which tools emit
+// for their own bookkeeping. Visibility is metadata, so this reads no rows.
+//
+// A sheet whose visibility cannot be determined is treated as visible: the
+// question being asked is "might the user have meant this one", and the safe
+// answer when we do not know is yes.
+func visibleSheets(f *excelize.File, sheets []string) []string {
+	out := make([]string, 0, len(sheets))
+	for _, sheet := range sheets {
+		shown, err := f.GetSheetVisible(sheet)
+		if err != nil || shown {
+			out = append(out, sheet)
+		}
+	}
+	return out
+}
+
 // suggestExcelImport inspects a spreadsheet that failed to open and reports
 // whether the import wizard could read it, and with what settings. A title block
 // above the table is the case it detects: those rows are narrower than the table,
@@ -338,7 +371,13 @@ func suggestExcelImport(filePath string) (*ExcelImportSuggestion, error) {
 	if len(sheets) == 0 {
 		return nil, fmt.Errorf("no sheets found in Excel file")
 	}
+	visible := visibleSheets(f, sheets)
+	multiSheet := len(visible) > 1
+
 	sheet := sheets[0]
+	if len(visible) > 0 {
+		sheet = visible[0]
+	}
 
 	rows, err := f.GetRows(sheet)
 	if err != nil {
@@ -355,7 +394,11 @@ func suggestExcelImport(filePath string) (*ExcelImportSuggestion, error) {
 	if width > 0 {
 		preamble = leadingNarrowRows(rows, width)
 	}
-	if preamble == 0 {
+	// Two reasons to send the file to the wizard, and they compose: a title
+	// block means the parser needs telling where the table starts, and several
+	// sheets mean the user needs to say which one they meant. Either alone is
+	// enough; neither means the sheet is unambiguous and loads directly.
+	if preamble == 0 && !multiSheet {
 		return &ExcelImportSuggestion{}, nil
 	}
 	return &ExcelImportSuggestion{
