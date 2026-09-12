@@ -308,7 +308,7 @@ func TestGenerateQualityIssues_HighMissing(t *testing.T) {
 	report := &DataQualityReport{
 		DataProfile: DataProfile{MissingPercent: 25},
 	}
-	issues := generateQualityIssues(report, nil)
+	issues := generateQualityIssues(report, nil, nil)
 	found := false
 	for _, iss := range issues {
 		if iss.Category == "missing" && iss.Severity == "error" {
@@ -324,7 +324,7 @@ func TestGenerateQualityIssues_Duplicates(t *testing.T) {
 	report := &DataQualityReport{
 		DataProfile: DataProfile{DuplicateRows: 5},
 	}
-	issues := generateQualityIssues(report, nil)
+	issues := generateQualityIssues(report, nil, nil)
 	found := false
 	for _, iss := range issues {
 		if iss.Category == "duplicate" {
