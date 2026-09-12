@@ -138,7 +138,7 @@ func TestLoadCSVFromURL(t *testing.T) {
 
 	assert.Equal(t, 7314, fd.Rows)
 	assert.Equal(t, 106, fd.Columns)
-	assert.Equal(t, "country#target", fd.Headers[0])
+	assert.Equal(t, "country", fd.Headers[0])
 	assert.Equal(t, 7314, len(fd.RowNames))
 	assert.Equal(t, "1", fd.RowNames[0])
 }

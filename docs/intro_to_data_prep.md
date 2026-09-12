@@ -40,7 +40,7 @@ One division is worth fixing in your mind from the start:
 
 You can save as **CSV** or **Excel**.
 
-**A note on Parquet.** These files have no row index, so GoCSV adds a `Sample_ID` column (1, 2, 3 …) to give every row a unique identifier. String columns arrive marked as `column_name#target`, which makes them available as group variables for colouring plots in GoPCA. Numeric columns come in directly, and nulls become empty cells.
+**A note on Parquet.** These files have no row index, so GoCSV adds a `Sample_ID` column (1, 2, 3 …) to give every row a unique identifier. String columns arrive under their own names and are treated as categorical, which makes them available as group variables for colouring plots in GoPCA. Numeric columns come in directly, and nulls become empty cells.
 
 ### When a file will not open on its own
 

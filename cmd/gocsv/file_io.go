@@ -447,20 +447,24 @@ func (a *App) loadParquet(filePath string) (*FileData, error) {
 		return nil, fmt.Errorf("failed to parse Parquet file: %w", err)
 	}
 
-	// Build headers: prepend Sample_ID, mark string columns as #target.
-	// String columns (ByteArray kind) are categorical identifiers — marking them
-	// as #target makes GoPCA treat them as group labels for coloring the scores plot.
-	// Sample_ID provides a unique integer row identifier since string columns like
-	// "country" are not unique (the same country appears once per year).
+	// Build headers, prepending Sample_ID.
+	//
+	// String columns used to have "#target" appended here, on the stated grounds
+	// that it "makes GoPCA treat them as group labels for coloring the scores
+	// plot". It does not: the suffix is only consulted for numeric columns
+	// (pkg/types/csv_mixed.go), and a text column is classified categorical --
+	// excluded from the PCA, available for colouring -- from its type alone. The
+	// suffix changed the displayed name and nothing else, while claiming the
+	// strongest term in the vocabulary for a column that is not a response to
+	// anything (#914).
+	//
+	// Sample_ID provides a unique integer row identifier, since string columns
+	// like "country" are not unique (the same country appears once per year).
 	fields := pf.Schema().Fields()
 	headers := make([]string, 0, len(fields)+1)
 	headers = append(headers, "Sample_ID")
 	for _, field := range fields {
-		name := field.Name()
-		if field.Type().Kind() == parquet.ByteArray || field.Type().Kind() == parquet.FixedLenByteArray {
-			name = name + "#target"
-		}
-		headers = append(headers, name)
+		headers = append(headers, field.Name())
 	}
 
 	// Build CSV: header row followed by data rows
