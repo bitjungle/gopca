@@ -33,14 +33,27 @@ NC='\033[0m'
 
 DATASETS_DIR="internal/datasets"
 
+# --check reports differences without writing, so CI can fail on a stale
+# embedded dataset instead of the difference being noticed months later.
+CHECK_ONLY=0
+if [ "${1:-}" = "--check" ]; then
+    CHECK_ONLY=1
+fi
+
 # Array of "source_csv:target_gz_name" pairs
+# Every embedded dataset must appear here, and the source named must be the file
+# the tutorial actually ships. Three entries were wrong until #915: swiss_roll
+# pointed at circles.csv (a different dataset entirely), body_measures had no
+# entry at all, and iris pointed at a test fixture that carries an extra
+# class-coded column the tutorial does not want.
 ENTRIES=(
-    "testdata/iris/iris.csv:iris"
+    "testdata/iris/iris_tutorial.csv:iris"
     "testdata/wine/wine.csv:wine"
     "testdata/corn/corn.csv:corn"
-    "testdata/swiss_roll/circles.csv:swiss_roll"
+    "testdata/swiss_roll/swiss_roll.csv:swiss_roll"
     "testdata/eye_state/eeg_eye_state.csv:eeg_eye_state"
     "testdata/CSTR/cstr_temporal_pca.csv:cstr"
+    "testdata/nhanes/body_measures.csv:body_measures"
 )
 
 echo "Synchronizing embedded datasets..."
@@ -61,11 +74,24 @@ for entry in "${ENTRIES[@]}"; do
         continue
     fi
 
-    # Recompress if the gz doesn't exist or the source is newer than the gz
-    if [ ! -f "$dst" ] || [ "$src" -nt "$dst" ]; then
-        gzip -c "$src" > "$dst"
-        echo -e "${GREEN}✓${NC} ${name}: compressed $src → $dst"
-        updated=$((updated + 1))
+    # Compare content, not timestamps. The guard used to be "$src" -nt "$dst",
+    # which depends on filesystem mtimes: a git checkout reorders them
+    # arbitrarily, so a needed rebuild could be skipped and a stale embedded
+    # dataset could sit undetected indefinitely. That is exactly what happened
+    # to three of these entries (#915). Comparing the decompressed bytes makes
+    # the answer a property of the files themselves.
+    if [ ! -f "$dst" ] || ! gzip -dc "$dst" 2>/dev/null | cmp -s - "$src"; then
+        if [ "$CHECK_ONLY" = "1" ]; then
+            echo -e "${RED}✗${NC} ${name}: embedded copy differs from $src"
+            errors=$((errors + 1))
+        else
+            # -n omits the modification time from the gzip header, so the same
+            # input always produces the same bytes. Without it every rebuild
+            # shows as a binary diff even when the data is unchanged.
+            gzip -n -c "$src" > "$dst"
+            echo -e "${GREEN}✓${NC} ${name}: compressed $src → $dst"
+            updated=$((updated + 1))
+        fi
     else
         echo -e "${GREEN}✓${NC} ${name}: up to date"
         skipped=$((skipped + 1))
