@@ -35,7 +35,7 @@ One division is worth fixing in your mind from the start:
 |--------|-----------|-------|
 | CSV | `.csv` | Delimiter and decimal separator are detected automatically |
 | TSV | `.tsv` | Tab-separated |
-| Excel | `.xlsx`, `.xls` | A single-sheet workbook opens directly. A workbook with several sheets opens the Import Wizard, so you choose which one |
+| Excel | `.xlsx`, `.xls` | A single-sheet workbook opens directly. One with several sheets opens the Import Wizard, so you choose which one. Sheets the workbook marks hidden are not counted |
 | Parquet | `.parquet` | Columnar format used by Kaggle, Hugging Face, Our World in Data and similar sources |
 
 You can save as **CSV** or **Excel**.
@@ -255,7 +255,7 @@ This is where you say which column plays which part — the question raised in s
 ```
 ID,x1,x2,x3,Yield#target
   -> variables entering the PCA : x1, x2, x3
-  -> held out, available as a reference : Yield
+  -> held out, available as a reference : Yield#target
 ```
 
 What you then do with it decides the analysis:
@@ -429,7 +429,7 @@ GoCSV shows you where they are; what to do about them is a judgement it cannot m
 - [ ] Categorical variables encoded, if you want them in the analysis
 - [ ] Compositional data transformed with CLR, if your columns are parts of a whole
 - [ ] Replicates averaged, or `--cv-group` planned for if you are heading to PCR
-- [ ] Every outcome variable marked with `#target`, so no response is sitting among the predictors
+- [ ] Anything you will not have measured at prediction time marked with `#target`, so no answer is sitting among the predictors
 - [ ] Group variables marked with `#target` too, so their role is written down
 - [ ] No duplicate column names
 
