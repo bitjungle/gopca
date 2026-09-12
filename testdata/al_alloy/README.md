@@ -2,7 +2,7 @@
 
 The Aluminium Alloy Dataset for Unsupervised Learning is a publicly available materials dataset containing 1,154 aluminium alloy instances characterized by their elemental compositions and processing conditions. The dataset includes concentrations of 25 alloying elements together with categorical information describing heat treatment and mechanical processing states, making it suitable for exploring relationships between composition, processing history, and alloy classification. Originally compiled from published literature and experimental sources, the dataset was developed to support unsupervised machine-learning approaches for discovering natural groupings and patterns within aluminium alloy systems. Its relatively diverse chemical and processing information makes it a useful benchmark for clustering, dimensionality reduction, anomaly detection, and other materials-informatics studies. 
 
-* [Data source url](https://data.mendeley.com/datasets/tvtg7gs59p/1)
+* [Data source](https://data.mendeley.com/datasets/tvtg7gs59p/1)
 
 * Research article: Bhat, N., Barnard, A. S., & Birbilis, N. (2023). Unsupervised machine learning discovers classes in aluminium alloys. Royal Society Open Science, 10(2), 220360.
 
