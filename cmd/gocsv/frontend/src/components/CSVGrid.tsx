@@ -27,7 +27,7 @@ import { ColDef, GridReadyEvent, CellValueChangedEvent, GridApi, ColumnApi, Colu
 import 'ag-grid-community/styles/ag-grid.css';
 import 'ag-grid-community/styles/ag-theme-quartz.css';
 import { useTheme } from '@gopca/ui-components';
-import { ExecuteDeleteRows, ExecuteDeleteColumns, ExecuteInsertRow, ExecuteInsertColumn, ExecuteToggleTargetColumn, ExecuteDuplicateRows, ExecuteSetRowNames, ExecuteMoveRowNamesIntoTable, CanUseAsRowNames, ExecuteReorderColumns } from '../../wailsjs/go/main/App';
+import { ExecuteDeleteRows, ExecuteDeleteColumns, ExecuteInsertRow, ExecuteInsertColumn, ExecuteToggleTargetColumn, ExecuteToggleCategoryColumn, ExecuteDuplicateRows, ExecuteSetRowNames, ExecuteMoveRowNamesIntoTable, CanUseAsRowNames, ExecuteReorderColumns } from '../../wailsjs/go/main/App';
 import { RenameDialog } from './RenameDialog';
 import { ConfirmDialog } from '@gopca/ui-components';
 import {
@@ -215,6 +215,8 @@ return 'text';
         const header = headers[colIndex];
         const isTargetColumn = header.toLowerCase().endsWith('#target') ||
                               header.toLowerCase().endsWith('# target');
+        const isCategoryColumn = header.toLowerCase().endsWith('#category') ||
+                              header.toLowerCase().endsWith('# category');
 
         // Whether this column can serve as row names is a property of its
         // values, so ask the backend rather than guessing here. The same check
@@ -278,6 +280,22 @@ return 'text';
                     }
                 },
                 icon: <TargetColumnMenuIcon />
+            },
+            {
+                // For a column of numbers that are really labels -- a processing
+                // code, a site number. Without this they enter the PCA as
+                // measurements, where their variance is arbitrary (#914).
+                label: isCategoryColumn ? 'Remove Category Flag' : 'Mark as Category Column',
+                action: async () => {
+                    if (fileData) {
+                        try {
+                            const updatedData = await ExecuteToggleCategoryColumn(fileData, colIndex);
+                            onRefresh?.(updatedData);
+                        } catch (error) {
+                            console.error('Error toggling category column:', error);
+                        }
+                    }
+                }
             },
             {
                 label: 'Rename Column',

@@ -26,6 +26,7 @@ package main
 import (
 	"fmt"
 	"sort"
+	"strconv"
 	"strings"
 
 	"github.com/bitjungle/gopca/pkg/types"
@@ -1226,4 +1227,129 @@ func (c *TransformCommand) GetDescription() string {
 		return fmt.Sprintf("%s column '%s'", transformName, c.options.Columns[0])
 	}
 	return fmt.Sprintf("%s %d columns", transformName, len(c.options.Columns))
+}
+
+// ToggleCategoryColumnCommand adds or removes the #category suffix on a column.
+//
+// The marker exists for numbers that are labels -- a processing code, a site
+// number, a batch identifier. Such a column parses as numeric and would
+// otherwise enter the PCA as a measurement, where its variance is arbitrary and
+// can dominate everything else. Marking it says the values are categories, and
+// it is then held out and offered for colouring, exactly as a text column is.
+type ToggleCategoryColumnCommand struct {
+	app         *App
+	colIndex    int
+	oldName     string
+	newName     string
+	wasCategory bool
+	oldType     string
+}
+
+// NewToggleCategoryColumnCommand captures the pre-state.
+func NewToggleCategoryColumnCommand(app *App, data *FileData, colIndex int) *ToggleCategoryColumnCommand {
+	if colIndex >= len(data.Headers) {
+		return nil
+	}
+
+	oldName := data.Headers[colIndex]
+	wasCategory := hasCategorySuffix(oldName)
+
+	newName := oldName + "#category"
+	if wasCategory {
+		newName = strings.TrimSpace(trimCategorySuffix(oldName))
+	}
+
+	oldType := ""
+	if data.ColumnTypes != nil {
+		oldType = data.ColumnTypes[oldName]
+	}
+
+	return &ToggleCategoryColumnCommand{
+		app:         app,
+		colIndex:    colIndex,
+		oldName:     oldName,
+		newName:     newName,
+		wasCategory: wasCategory,
+		oldType:     oldType,
+	}
+}
+
+// Execute applies the change.
+func (c *ToggleCategoryColumnCommand) Execute(data *FileData) error {
+	headerCmd := NewHeaderEditCommand(c.colIndex, c.oldName, c.newName)
+	if err := headerCmd.Execute(data); err != nil {
+		return err
+	}
+
+	if data.ColumnTypes == nil {
+		return nil
+	}
+	delete(data.ColumnTypes, c.oldName)
+
+	if c.wasCategory {
+		// Removing the marker hands the column back to its values. A column of
+		// text stays categorical whatever its name says; only one holding
+		// numbers has anything to revert to.
+		data.ColumnTypes[c.newName] = columnTypeFromValues(data, c.colIndex)
+	} else {
+		data.ColumnTypes[c.newName] = "categorical"
+	}
+	return nil
+}
+
+// Undo reverts the change, restoring the type the column had before.
+func (c *ToggleCategoryColumnCommand) Undo(data *FileData) error {
+	headerCmd := NewHeaderEditCommand(c.colIndex, c.newName, c.oldName)
+	if err := headerCmd.Execute(data); err != nil {
+		return err
+	}
+	if data.ColumnTypes != nil {
+		delete(data.ColumnTypes, c.newName)
+		data.ColumnTypes[c.oldName] = c.oldType
+	}
+	return nil
+}
+
+// GetDescription implements Command.
+func (c *ToggleCategoryColumnCommand) GetDescription() string {
+	if c.wasCategory {
+		return fmt.Sprintf("Remove category flag from '%s'", c.newName)
+	}
+	return fmt.Sprintf("Mark '%s' as a category column", c.oldName)
+}
+
+// hasCategorySuffix reports whether a column name carries the marker, in any of
+// the spacings and casings a spreadsheet round-trip can produce.
+func hasCategorySuffix(name string) bool {
+	lower := strings.ToLower(name)
+	return strings.HasSuffix(lower, "#category") || strings.HasSuffix(lower, "# category")
+}
+
+// trimCategorySuffix removes the marker, whichever form it took.
+func trimCategorySuffix(name string) string {
+	for _, suffix := range []string{"#category", "# category", "#Category", "# Category"} {
+		if strings.HasSuffix(name, suffix) {
+			return strings.TrimSuffix(name, suffix)
+		}
+	}
+	return name
+}
+
+// columnTypeFromValues reports what a column's contents make it, ignoring its
+// name. Used when a marker is removed and the column reverts to whatever it
+// actually holds.
+func columnTypeFromValues(data *FileData, colIndex int) string {
+	for _, row := range data.Data {
+		if colIndex >= len(row) {
+			continue
+		}
+		value := strings.TrimSpace(row[colIndex])
+		if value == "" {
+			continue
+		}
+		if _, err := strconv.ParseFloat(value, 64); err != nil {
+			return "categorical"
+		}
+	}
+	return "numeric"
 }

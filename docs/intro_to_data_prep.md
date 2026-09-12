@@ -269,6 +269,46 @@ Categorical columns are already excluded from the PCA and already available for 
 
 > **What `#target` is not.** It does not transform the column, weight it, or tell PCA to pay attention to it. It does the opposite: it takes the column *out* of the analysis so that any agreement you find afterwards was not arranged in advance.
 
+### Category columns
+
+There is a second marker, and it exists for a problem `#target` cannot express.
+
+Some columns hold numbers that are not measurements. A processing code running 1
+to 11, a site number, a batch identifier. Each parses as a number, so PCA treats
+it as a quantity — and the arithmetic distance between code 3 and code 9 enters
+the analysis as though it meant something.
+
+It can be worse than meaningless. In the aluminium alloy dataset, a processing
+code sits beside 25 element concentrations expressed as weight fractions. Its
+variance is about **7,400 times** the largest element's, so with default
+preprocessing it takes **99.97% of the first component** — one column, holding
+labels, swallowing the entire analysis. Nothing in the output looks wrong.
+
+**Mark as Category Column** appends `#category`, and the column is then treated
+as a class: held out of the PCA, offered for colouring, and available to the
+encoders in the previous section — which only accept categorical columns, so
+this is what makes one-hot encoding a numeric code possible at all.
+
+**Which of the two markers you want:**
+
+| | `#target` | `#category` |
+|---|---|---|
+| You are saying | "this is an outcome, not a predictor" | "these numbers are labels, not quantities" |
+| Colouring | gradient | by class |
+| In regression | can be the response | never the response; can group CV folds |
+| Encoders | not offered | one-hot and ordinal |
+
+Two questions decide it. **"Would I ever want to predict this?"** — that is a
+target. **"Is the gap between 3 and 9 meaningful?"** — if not, it is a category.
+
+On a column that already holds text, `#category` changes nothing: text is
+categorical anyway. The marker is for numbers pretending to be measurements.
+
+> **Marking a class code as a target and then regressing on it** is the mistake
+> worth naming. The fit runs, reports an R², and asserts that your three species
+> are ordered and evenly spaced. GoPCA warns when a response looks like a class
+> code — but `#category` says what you meant before anyone has to be warned.
+
 ---
 
 ## 6. Transformations
@@ -430,6 +470,7 @@ GoCSV shows you where they are; what to do about them is a judgement it cannot m
 - [ ] Compositional data transformed with CLR, if your columns are parts of a whole
 - [ ] Replicates averaged, or `--cv-group` planned for if you are heading to PCR
 - [ ] Anything you will not have measured at prediction time marked with `#target`, so no answer is sitting among the predictors
+- [ ] Numeric columns that are really codes marked with `#category`, so they do not enter the analysis as quantities
 - [ ] Group variables marked with `#target` too, so their role is written down
 - [ ] No duplicate column names
 

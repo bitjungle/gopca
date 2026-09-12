@@ -139,6 +139,11 @@ func GetTransformableColumns(in Input, transformType Type) []string {
 				columns = append(columns, header)
 			}
 		case OneHot, Ordinal:
+			// colType is already "categorical" for a column marked #category,
+			// because the parser classifies on the marker before it looks at the
+			// values (#914). Numbers that are really codes therefore become
+			// encodable, which is the point: one-hot encoding a processing code
+			// is the standard treatment and was previously impossible.
 			if colType == "categorical" {
 				columns = append(columns, header)
 			}

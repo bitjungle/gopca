@@ -162,6 +162,25 @@ func (a *App) ExecuteToggleTargetColumn(data *FileData, colIndex int) (*FileData
 	return a.executeCommand(cmd, data, "toggle target column")
 }
 
+// ExecuteToggleCategoryColumn adds or removes the #category marker on a column,
+// with undo support.
+//
+// Marking a column says its values are labels rather than measurements, which is
+// the one thing the parser cannot work out for itself: a processing code holding
+// 1..11 parses as numeric and would otherwise enter the PCA as a quantity.
+func (a *App) ExecuteToggleCategoryColumn(data *FileData, colIndex int) (*FileData, error) {
+	if colIndex < 0 || colIndex >= len(data.Headers) {
+		return nil, fmt.Errorf("toggle category column: invalid column index: %d", colIndex)
+	}
+
+	cmd := NewToggleCategoryColumnCommand(a, data, colIndex)
+	if cmd == nil {
+		return nil, fmt.Errorf("toggle category column: invalid column index: %d", colIndex)
+	}
+
+	return a.executeCommand(cmd, data, "toggle category column")
+}
+
 // ExecuteSetRowNames makes a column the row-name column, with undo support.
 //
 // The uniqueness requirement is enforced here rather than only in the dialog,

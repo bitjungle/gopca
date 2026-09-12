@@ -114,6 +114,70 @@ Common use cases for target variables:
 - Quality scores
 - Time points
 
+### Category Columns (`#category`)
+
+Some columns hold numbers that are not measurements. A processing code taking the
+values 1 to 11, a site number, a batch identifier: each parses as a number, and
+each would otherwise enter the PCA as a quantity, where the arithmetic distance
+between code 3 and code 9 is meaningless.
+
+The `#category` suffix says the values are labels:
+
+```csv
+Sample,Feature1,Feature2,proc_num#category
+S1,1.2,3.4,10
+S2,2.3,4.5,11
+S3,3.4,5.6,10
+```
+
+The column is then held out of the PCA and offered for colouring by class,
+exactly as a column of text would be. It also becomes available to the one-hot
+and ordinal encoders, which only accept categorical columns.
+
+`#category` on a column that already holds text is harmless but unnecessary — a
+text column is categorical anyway. The marker exists for numbers.
+
+### Which marker do I want?
+
+Both markers take a column out of the PCA. They differ in what you are saying
+about it, and in what GoPCA offers to do with it afterwards.
+
+| | `#target` | `#category` |
+|---|---|---|
+| **What you are saying** | "This is an outcome, not a predictor" | "These numbers are labels, not quantities" |
+| **Applies to** | Numeric columns | Numeric columns (text is already categorical) |
+| **In the PCA** | Held out; colours plots on a gradient | Held out; colours plots by class |
+| **In regression** | Can be nominated as the response with `--response` | Never a response; can group cross-validation folds with `--cv-group` |
+| **Encoders** | Not offered | Offered to one-hot and ordinal encoding |
+
+Two questions settle it:
+
+**"Would I ever want to predict this?"** A yield, a density, a concentration you
+would rather not measure every time — that is `#target`.
+
+**"Is the gap between 3 and 9 meaningful?"** If the numbers are codes and the
+answer is no, that is `#category`.
+
+A worked example. This file has one of each:
+
+```csv
+Sample,Wavelength1,Wavelength2,Batch#category,Moisture#target
+S1,0.412,0.388,3,10.4
+S2,0.407,0.391,3,10.9
+S3,0.419,0.385,7,11.2
+```
+
+Two wavelengths enter the PCA. `Batch` is held out as a class — colour the scores
+plot by it and you can see whether batches separate, and pass it to `--cv-group`
+so a batch never straddles a cross-validation fold. `Moisture` is held out as an
+outcome — colour by it to see whether the components relate to moisture, or model
+it with `pca regress --response "Moisture#target"`.
+
+> **The mistake to avoid.** Marking a class code `#target` and then regressing on
+> it. The fit will run and mean nothing: it asserts that the codes are ordered
+> and evenly spaced. GoPCA warns when a response looks like a class code, but
+> `#category` says what you meant in the first place.
+
 ## Missing Values
 
 GoPCA recognizes several representations of missing data:
