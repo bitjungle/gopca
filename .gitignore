@@ -36,6 +36,14 @@ docs/references/
 # these are working notes for the maintainers, not published documentation.
 docs/devel/
 
+# Working notes that accompany a test dataset but are not for publication.
+# The datasets themselves are tracked; these are the analyst's scratch documents.
+testdata/*/pre_analysis.md
+
+# macOS finder metadata. Covered by most developers' global gitignore, but not
+# by everyone's, and a stray .DS_Store in a published dataset folder is noise.
+.DS_Store
+
 # Build artifacts
 results/
 
