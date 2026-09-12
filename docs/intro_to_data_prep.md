@@ -35,7 +35,7 @@ One division is worth fixing in your mind from the start:
 |--------|-----------|-------|
 | CSV | `.csv` | Delimiter and decimal separator are detected automatically |
 | TSV | `.tsv` | Tab-separated |
-| Excel | `.xlsx`, `.xls` | The first sheet opens directly; use the Import Wizard for another sheet |
+| Excel | `.xlsx`, `.xls` | A single-sheet workbook opens directly. A workbook with several sheets opens the Import Wizard, so you choose which one |
 | Parquet | `.parquet` | Columnar format used by Kaggle, Hugging Face, Our World in Data and similar sources |
 
 You can save as **CSV** or **Excel**.
@@ -73,10 +73,32 @@ GoCSV will tell you the file is not ready for PCA yet, which is true and useful.
 
 ## 2. Getting the shape right
 
-PCA expects a specific arrangement, and this is worth checking before anything else:
+Before anything else, one question decides whether the analysis will mean anything: **what is in your rows, and what is in your columns?**
+
+There is a single right answer, and it is the same one GoPCA shows you in Step 1:
 
 - **Rows are samples** — the things you measured
 - **Columns are variables** — the things you measured *about* them
+
+If that sounds abstract, it is easier to see than to define. Say you measured three flowers:
+
+| | Sepal length | Sepal width | Petal length |
+|---|---|---|---|
+| **Flower 1** | 5.1 | 3.5 | 1.4 |
+| **Flower 2** | 4.9 | 3.0 | 1.4 |
+| **Flower 3** | 4.7 | 3.2 | 1.3 |
+
+Each **row** is one flower — one thing you observed. Each **column** is one property, measured the same way for every flower. Reading across a row tells you about one flower; reading down a column tells you about one measurement across all of them.
+
+### Am I the wrong way round?
+
+Two questions settle it, and you only need one:
+
+**"If I collected one more sample tomorrow, where would it go?"** It should be a new **row**. If your table would grow a new *column* instead, it is transposed.
+
+**"Does one column hold values measured in different units?"** If a single column contains a temperature, then a pH, then a concentration, those are variables stacked vertically — the table is on its side.
+
+> **This is not a formatting preference.** PCA looks for variables that vary together across samples. Feed it the transpose and it will answer a question you did not ask — how *samples* vary across *measurements* — and give you a perfectly ordinary-looking set of components describing nothing you meant. The arithmetic cannot tell you it happened; only you can.
 
 ### Your instrument probably disagrees
 
@@ -91,16 +113,37 @@ Two things happen that are worth expecting:
 
 ### Row names: which column identifies your samples
 
-The first column of your file becomes the row-name column. It is shown down the left of the grid, kept out of the numbers, and used to label points in GoPCA's plots.
+Your samples need labels, and the first column of your file is where GoCSV looks for them. When it can serve, it becomes the **row-name column**: shown down the left of the grid, kept out of the numbers, and used to label points in GoPCA's plots.
 
-This happens **whether or not the first column looks like an identifier** — if your file begins with a measurement, that measurement becomes row names. Two fixes, both on the right-click menu of any column header:
+**"When it can serve" means every value is present and different from every other.** That is what a label has to be. If the first column repeats itself — a source, a batch, a category — GoCSV leaves it in the table as an ordinary column and the table simply has no row names. Nothing is lost and nothing is silently mislabelled.
 
-- **Use as Row Names** — promote a different column. Whatever was serving as row names comes back into the table, so nothing is lost.
+The reason for the rule is worth seeing rather than taking on trust: row names label the points in a scores plot. Two samples sharing a name are indistinguishable exactly where you would most want to tell them apart, and a sample with a blank name is a point you cannot identify at all.
+
+Two commands, both on the right-click menu of any column header:
+
+- **Use as Row Names** — promote a different column. Whatever was serving as row names returns to the table, so nothing is lost.
 - **Move Row Names into Table** — put the row names back as an ordinary column and leave the table without any.
 
-**Row names must be unique.** GoCSV will not let you promote a column with repeated or empty values, and will tell you which value is the problem. The reason is worth knowing: row names label the points in a scores plot, so two samples sharing a name are indistinguishable exactly where you would most want to tell them apart.
+> **If no column identifies your samples,** that is a perfectly ordinary situation, and you have two choices. Analyse without row names — GoPCA will number the points — or build an identifier: **Combine Columns** will join a site and a date into something unique, and **Split Column** will pull an identifier out of a code that has one buried in it.
 
-If a file *arrives* with duplicate row names, GoCSV warns you rather than refusing it. The numbers are still analysable; only the labelling is ambiguous, and whether that matters is your call.
+### What part does each column play?
+
+Getting rows and columns right settles the *shape* of your table. There is a second question, and it only arrives once you start thinking about regression: **do all your columns play the same part?**
+
+For PCA, the answer is yes. PCA asks one question of every variable at once — *how do these vary together?* — and no column is special. There is nothing to predict and nothing doing the predicting. This is what people mean when they call PCA **unsupervised**: nobody has told it what the right answer looks like.
+
+Principal Component **Regression**, new in version 2, asks a different question: *can these variables predict that one?* Now the columns divide into two parts:
+
+| Part | Also called | What it is |
+|------|-------------|------------|
+| **Predictors** | independent variables, *X* | The things you measure in order to make a prediction — spectra, concentrations, process settings |
+| **Response** | dependent variable, *Y*, target | The one thing you want to predict — a yield, a density, a concentration you would rather not measure every time |
+
+**A note on the words**, because they confuse almost everyone at first. "Independent" and "dependent" come from designed experiments: you *set* the independent variable and watch the dependent one respond. Most data is not like that — nobody set the iron content of a rock — so the value does not really depend on anything you controlled. **Predictor** and **response** say the same thing without the implied experiment, and are the safer words when in doubt. You will meet both.
+
+**Why this matters here, in the preparation step.** A response variable left sitting among the predictors is used to predict itself. The model will look superb and mean nothing, and neither the numbers nor the plots will look wrong. You tell GoCSV which column is which by marking the response with **`#target`** — see **Target columns** in section 5.
+
+> **One variable, two jobs.** A column marked `#target` is held out of the PCA in both cases. In PCA it comes back as a reference variable — colour the scores plot by yield and see whether the components have found anything related to it. In PCR that same column becomes the response you are modelling. The marking is the same; what you do with it is the difference between the two analyses.
 
 ---
 
@@ -205,9 +248,26 @@ Both keep the original column by default. Keeping it is usually what you want, b
 
 ### Target columns
 
-**Mark as Target Column** appends `#target` to a column name. A numeric column marked this way is held back from the PCA itself and offered instead as a reference variable — for colouring a scores plot, or as the response in a PCR model.
+This is where you say which column plays which part — the question raised in section 2.
 
-Categorical columns are already excluded from the PCA and already available for colouring, so marking one changes its name without changing what it does.
+**Mark as Target Column** appends `#target` to a column name. A numeric column marked this way is **held out of the PCA** and offered instead as a reference variable:
+
+```
+ID,x1,x2,x3,Yield#target
+  -> variables entering the PCA : x1, x2, x3
+  -> held out, available as a reference : Yield
+```
+
+What you then do with it decides the analysis:
+
+- **In PCA**, colour the scores plot by it. If samples high in yield gather on one side of a component, that component has found something related to yield — without ever having been shown it. That is a genuinely independent check, and it is only worth anything *because* the variable was held out.
+- **In PCR**, it is the response you model: `pca regress --response "Yield#target"`, or pick it from the list in GoPCA Desktop.
+
+**The test to apply is simple: will this variable be available when you come to make a prediction?** A spectrum will be — that is the point of the model. A lab-measured density will not, if measuring it is the work you are trying to avoid. Anything in the second group belongs out of the predictors, whether or not it is the response you are modelling today. A column that is only known *after* the answer is known will predict that answer beautifully and be useless on the next sample.
+
+Categorical columns are already excluded from the PCA and already available for colouring, so marking one changes its name without changing what it does. Marking `Batch#target` is a way of writing down what the column is *for* — a grouping variable, not a measurement — which is worth doing for the next person to open the file, and for you in six months.
+
+> **What `#target` is not.** It does not transform the column, weight it, or tell PCA to pay attention to it. It does the opposite: it takes the column *out* of the analysis so that any agreement you find afterwards was not arranged in advance.
 
 ---
 
@@ -369,7 +429,8 @@ GoCSV shows you where they are; what to do about them is a judgement it cannot m
 - [ ] Categorical variables encoded, if you want them in the analysis
 - [ ] Compositional data transformed with CLR, if your columns are parts of a whole
 - [ ] Replicates averaged, or `--cv-group` planned for if you are heading to PCR
-- [ ] Group and response variables marked with `#target`
+- [ ] Every outcome variable marked with `#target`, so no response is sitting among the predictors
+- [ ] Group variables marked with `#target` too, so their role is written down
 - [ ] No duplicate column names
 
 **Validate for GoPCA** checks most of this and explains anything it finds. A warning is not a refusal — it tells you something about your data that you may already know and have a reason for.
