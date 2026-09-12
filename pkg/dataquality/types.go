@@ -149,7 +149,7 @@ type OutlierInfo struct {
 // QualityIssue describes a detected data quality problem.
 type QualityIssue struct {
 	Severity    string   `json:"severity"` // "error", "warning", "info"
-	Category    string   `json:"category"` // "missing", "outlier", "duplicate", "correlation", "variance", "distribution"
+	Category    string   `json:"category"` // "missing", "outlier", "duplicate", "correlation", "variance", "distribution", "structure"
 	Description string   `json:"description"`
 	Affected    []string `json:"affected"`
 	Impact      string   `json:"impact"`

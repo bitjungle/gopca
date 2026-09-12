@@ -374,8 +374,12 @@ func findSparseRows(data [][]string, rows, columns int) []int {
 	filled := make([]int, 0, rows)
 	for i := 0; i < rows && i < len(data); i++ {
 		count := 0
-		for _, cell := range data[i] {
-			if strings.TrimSpace(cell) != "" {
+		// Bounded by the column count and judged by isMissing, so this agrees
+		// with the rest of the report. A cell reading "NA" survives parsing as
+		// literal text in a categorical column, and counting it as populated
+		// would hide exactly the kind of row this is looking for.
+		for j := 0; j < columns && j < len(data[i]); j++ {
+			if !isMissing(data[i][j]) {
 				count++
 			}
 		}

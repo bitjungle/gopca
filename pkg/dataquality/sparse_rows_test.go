@@ -134,3 +134,36 @@ func TestFindSparseRowsLeavesModeratelyThinRowsAlone(t *testing.T) {
 		t.Errorf("findSparseRows = %v, want none: two-thirds populated is missing data, not a stray row", got)
 	}
 }
+
+func TestFindSparseRowsTreatsMissingMarkersAsEmpty(t *testing.T) {
+	// A cell reading "NA" survives parsing as literal text in a categorical
+	// column, so a stray row can be full of missing markers rather than blanks.
+	// Counting those as populated hid exactly the row this check looks for.
+	// Raised in review on #910.
+	data := grid(20, 30)
+	markers := []string{"NA", "-", "?", "none", "null", "missing"}
+	for j := range data[9] {
+		data[9][j] = markers[j%len(markers)]
+	}
+
+	got := findSparseRows(data, 20, 30)
+	if len(got) != 1 || got[0] != 10 {
+		t.Fatalf("findSparseRows = %v, want [10]: a row of missing markers holds no values", got)
+	}
+}
+
+func TestFindSparseRowsIgnoresCellsBeyondTheColumnCount(t *testing.T) {
+	// Rows wider than the header should not have their extra cells counted,
+	// which would make a thin row look populated. AnalyzeMissing bounds by the
+	// header count for the same reason.
+	data := grid(20, 10)
+	for j := range data[3] {
+		data[3][j] = ""
+	}
+	data[3] = append(data[3], "x", "x", "x", "x", "x", "x", "x", "x")
+
+	got := findSparseRows(data, 20, 10)
+	if len(got) != 1 || got[0] != 4 {
+		t.Fatalf("findSparseRows = %v, want [4]: cells past column 10 are not part of the dataset", got)
+	}
+}
