@@ -79,8 +79,10 @@ func AnalyzeDataQuality(in AnalysisInput) (*DataQualityReport, error) {
 	// Calculate correlations for numeric columns
 	correlations := calculateCorrelations(in.Data, in.Headers, in.ColumnTypes, in.Rows)
 
+	sparseRows := findSparseRows(in.Data, in.Rows, in.Columns)
+
 	// Generate issues based on analysis
-	report.Issues = generateQualityIssues(report, correlations)
+	report.Issues = generateQualityIssues(report, correlations, sparseRows)
 
 	// Generate recommendations
 	report.Recommendations = generateRecommendations(report)
@@ -339,6 +341,58 @@ func detectOutliers(data [][]string, rows, colIdx int, stats ColumnStatistics) [
 	}
 
 	return outliers
+}
+
+// findSparseRows returns the 1-based indices of rows holding far fewer values
+// than the rest of the dataset.
+//
+// The case this exists for is a stray spreadsheet row: a note, a stranded
+// continuation of the line above, a fragment left behind by an export. Such a
+// row imports as a genuine record and is close to invisible afterwards, because
+// missing-value analysis is per column and per dataset -- one junk row spread
+// across thirty columns lifts each column's missing rate by well under a
+// percent and crosses no threshold. Nothing else here looks at rows.
+//
+// The comparison is against the dataset's own median row rather than a fixed
+// count, so a uniformly sparse dataset reports nothing: every row is equally
+// thin, so none of them stands out. A row has to be thinner than half the
+// typical row to qualify, which on real data is a wide margin rather than a
+// fine judgement -- in the case that prompted this, the rows populated 30, 29
+// and 1 of 30 fields, and any cut between those extremes isolates the same row.
+//
+// Rows with nothing in them at all are always reported, whatever the median.
+//
+// Narrow datasets are skipped: below a few columns, "half the typical row" is
+// one or two cells and says nothing useful.
+func findSparseRows(data [][]string, rows, columns int) []int {
+	const minColumns = 4
+
+	if columns < minColumns || rows == 0 {
+		return nil
+	}
+
+	filled := make([]int, 0, rows)
+	for i := 0; i < rows && i < len(data); i++ {
+		count := 0
+		for _, cell := range data[i] {
+			if strings.TrimSpace(cell) != "" {
+				count++
+			}
+		}
+		filled = append(filled, count)
+	}
+
+	ordered := append([]int(nil), filled...)
+	sort.Ints(ordered)
+	median := ordered[len(ordered)/2]
+
+	var sparse []int
+	for i, count := range filled {
+		if count == 0 || count*2 < median {
+			sparse = append(sparse, i+1)
+		}
+	}
+	return sparse
 }
 
 // countDuplicateRows returns the number of rows that appear more than once.

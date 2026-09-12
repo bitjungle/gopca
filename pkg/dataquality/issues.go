@@ -26,13 +26,29 @@ package dataquality
 import (
 	"fmt"
 	"math"
+	"strconv"
 	"strings"
 )
 
 // generateQualityIssues inspects the analysis report and correlation map and
 // returns a list of detected data quality issues.
-func generateQualityIssues(report *DataQualityReport, correlations map[string]map[string]float64) []QualityIssue {
+func generateQualityIssues(report *DataQualityReport, correlations map[string]map[string]float64, sparseRows []int) []QualityIssue {
 	issues := []QualityIssue{}
+
+	// A row holding almost nothing is usually a stray line rather than a record:
+	// a note, or a continuation of the row above that an export stranded on its
+	// own line. It is reported and never removed, because whether it belongs to
+	// the row above, should be deleted, or is a real observation with missing
+	// values depends on knowing what the file was meant to say.
+	if len(sparseRows) > 0 {
+		issues = append(issues, QualityIssue{
+			Severity:    "warning",
+			Category:    "structure",
+			Description: fmt.Sprintf("%d row(s) hold far fewer values than the rest of the dataset: %s", len(sparseRows), describeRowNumbers(sparseRows)),
+			Affected:    []string{},
+			Impact:      "A stray row is analysed as though it were an observation; check whether it belongs to the row above or should be removed",
+		})
+	}
 
 	// Dataset-level missing data
 	switch {
@@ -125,6 +141,24 @@ func generateQualityIssues(report *DataQualityReport, correlations map[string]ma
 	}
 
 	return issues
+}
+
+// describeRowNumbers lists row numbers, abbreviating a long run so the message
+// stays readable when a whole block of the file is affected.
+func describeRowNumbers(rows []int) string {
+	const maxListed = 5
+
+	listed := rows
+	suffix := ""
+	if len(rows) > maxListed {
+		listed = rows[:maxListed]
+		suffix = fmt.Sprintf(" and %d more", len(rows)-maxListed)
+	}
+	parts := make([]string, len(listed))
+	for i, row := range listed {
+		parts[i] = strconv.Itoa(row)
+	}
+	return strings.Join(parts, ", ") + suffix
 }
 
 // generateRecommendations returns prioritised, actionable recommendations
