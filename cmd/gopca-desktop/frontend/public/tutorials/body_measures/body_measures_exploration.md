@@ -197,7 +197,7 @@ is doing, it is measuring overall size.
 ### A tempting confirmation that does not survive inspection
 
 BMI is the obvious external check, so let us make it. Set
-**Color by → `BMI_class#target`** on the **Scores Plot**. The file carries BMI
+**Color by → `BMI_class#category`** on the **Scores Plot**. The file carries BMI
 twice — as a continuous value and binned into the four WHO categories — and the
 categories show the pattern far more plainly, because discrete bands have visible
 edges where a smooth colour ramp does not.
@@ -245,7 +245,7 @@ built to divide out size cannot be a pure measure of size.
 
 Rather than colouring by one target at a time and squinting at gradients, open
 the **Eigencorrelation Plot**. It shows the correlation between every component
-and every `#target` column in the file as a heat map — so the BMI row displays
+and every held-out column in the file (`#target` and `#category` alike) as a heat map — so the BMI row displays
 +0.79 under PC1 and −0.58 under PC2 side by side, and the diagonal is obvious
 without any inference from the scores plot. Keep it in mind for Steps 4 and 6,
 where the same question comes up about sex and about age.
@@ -303,7 +303,7 @@ measurement that belongs partly to size and partly to both shape groups.
 
 > **Settings** — Column-wise: Standard Scale · Method: SVD · Components: 5
 
-Set **Color by → `Gender#target`** on the **Scores Plot**.
+Set **Color by → `Gender#category`** on the **Scores Plot**.
 
 #### Questions:
 
@@ -330,7 +330,7 @@ distinct groups. Enable **Confidence Ellipses** (95%) to make the shift visible.
 
 👉 This is where the plot will mislead you if you let it.
 
-Open the **Eigencorrelation Plot** and find the `Gender#target_Male` row — third
+Open the **Eigencorrelation Plot** and find the `Gender#category_Male` row — third
 from the top, since rows are sorted by their PC1 correlation. Read along it,
 watching the **colours**:
 

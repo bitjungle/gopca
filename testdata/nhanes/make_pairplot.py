@@ -14,7 +14,8 @@ import matplotlib.pyplot as plt
 df = pd.read_csv('body_measures.csv')
 
 # The seven measurement columns are the PCA features. The remaining columns
-# (Sample_ID and the #target columns) must NOT be treated as plot variables.
+# (Sample_ID and the held-out #target / #category columns) must NOT be treated
+# as plot variables.
 features = {
     'Weight (kg)': 'Weight',
     'Height (cm)': 'Height',
@@ -26,7 +27,7 @@ features = {
 }
 
 # Colour by sex; give the column a clean name so the legend reads nicely.
-df = df.rename(columns={**features, 'Gender#target': 'Sex'})
+df = df.rename(columns={**features, 'Gender#category': 'Sex'})
 feature_labels = list(features.values())
 
 # 5096 points overwhelm a 7x7 grid; sample a legible subset (fixed seed = reproducible).

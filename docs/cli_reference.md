@@ -283,7 +283,9 @@ The response is a numeric column marked with the `#target` suffix. Ask which col
 pca regress --list-responses corn.csv
 ```
 
-Categorical `#target` columns are listed separately and cannot be used: predicting a category is classification, which GoPCA does not do.
+Categorical columns are listed separately and cannot be used as a response: predicting a category is classification, which GoPCA does not do.
+
+If a numeric column is really a class code — 0, 1, 2 for three species — mark it `#category` rather than `#target`. Regressing on it would report an R² while asserting that the classes are ordered and evenly spaced. GoPCA warns when a response looks like a class code, but the marker says what you meant before the warning is needed.
 
 #### Options
 
@@ -515,9 +517,22 @@ Sample3,3.45,6.78,9.01,TypeA
 
 ### Special Columns
 
-- **Group Columns**: Categorical columns for sample grouping
-- **Target Columns**: Columns ending with `#target` are automatically detected
-- **Metadata Columns**: Additional columns for correlation analysis
+Two suffixes take a column out of the analysis and keep it for interpretation.
+They differ in what they claim about it:
+
+| Suffix | Says | In PCA | In regression |
+|--------|------|--------|---------------|
+| `#target` | an outcome you might predict | colours plots on a gradient | can be the `--response` |
+| `#category` | the values are labels, not quantities | colours plots by class | never a response; can be `--cv-group` |
+
+- **Target Columns**: numeric columns ending with `#target`, detected automatically
+- **Category Columns**: columns ending with `#category`, treated as categorical
+  whatever they contain. This is how a numeric code — a processing type, a site
+  number — is kept out of the analysis, where it would otherwise be read as a
+  measurement
+- **Metadata Columns**: additional columns for correlation analysis
+
+Text columns are categorical without any marker; `#category` is for numbers.
 
 ## Preprocessing Pipeline
 
