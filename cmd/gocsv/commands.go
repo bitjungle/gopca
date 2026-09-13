@@ -957,6 +957,9 @@ type ToggleTargetColumnCommand struct {
 	oldName   string
 	newName   string
 	wasTarget bool
+	oldType   string
+	oldValues []string
+	hadValues bool
 }
 
 // NewToggleTargetColumnCommand creates a new toggle target column command
@@ -966,28 +969,21 @@ func NewToggleTargetColumnCommand(app *App, data *FileData, colIndex int) *Toggl
 	}
 
 	oldName := data.Headers[colIndex]
-	newName := oldName
-	wasTarget := false
+	wasTarget := hasTargetSuffix(oldName)
 
-	// Check if column already has #target suffix
-	lowerName := strings.ToLower(oldName)
-	if strings.HasSuffix(lowerName, "#target") || strings.HasSuffix(lowerName, "# target") {
-		// Remove #target suffix
-		wasTarget = true
-		if strings.HasSuffix(oldName, "#target") {
-			newName = strings.TrimSuffix(oldName, "#target")
-		} else if strings.HasSuffix(oldName, "# target") {
-			newName = strings.TrimSuffix(oldName, "# target")
-		} else if strings.HasSuffix(oldName, "#Target") {
-			newName = strings.TrimSuffix(oldName, "#Target")
-		} else if strings.HasSuffix(oldName, "# Target") {
-			newName = strings.TrimSuffix(oldName, "# Target")
-		}
-		newName = strings.TrimSpace(newName)
-	} else {
-		// Add #target suffix
-		newName = oldName + "#target"
+	// The two markers describe mutually exclusive roles -- a column is an
+	// outcome you might predict, or a label you group by, never both -- so
+	// adding one removes the other rather than appending beside it (#922).
+	newName := stripMarkers(oldName)
+	if !wasTarget {
+		newName += "#target"
 	}
+
+	oldType := ""
+	if data.ColumnTypes != nil {
+		oldType = data.ColumnTypes[oldName]
+	}
+	oldValues, hadValues := data.CategoricalColumns[oldName]
 
 	return &ToggleTargetColumnCommand{
 		app:       app,
@@ -995,6 +991,9 @@ func NewToggleTargetColumnCommand(app *App, data *FileData, colIndex int) *Toggl
 		oldName:   oldName,
 		newName:   newName,
 		wasTarget: wasTarget,
+		oldType:   oldType,
+		oldValues: append([]string(nil), oldValues...),
+		hadValues: hadValues,
 	}
 }
 
@@ -1007,17 +1006,33 @@ func (c *ToggleTargetColumnCommand) Execute(data *FileData) error {
 		return err
 	}
 
-	// Update column type based on whether it's now a target column
-	if data.ColumnTypes != nil {
-		if c.wasTarget {
-			// Was target, now is not - change from "target" to "numeric"
-			data.ColumnTypes[c.newName] = "numeric"
-		} else {
-			// Was not target, now is - change to "target"
-			data.ColumnTypes[c.newName] = "target"
-		}
+	// HeaderEditCommand has already migrated both maps to the new name, so
+	// everything below addresses the column by it.
+	if data.ColumnTypes == nil {
+		data.ColumnTypes = map[string]string{}
 	}
 
+	if c.wasTarget {
+		// Removing the marker hands the column back to its values: a column of
+		// text is categorical whatever its name said, and only one holding
+		// numbers becomes numeric. Guessing "numeric" here was wrong for every
+		// text column, and undo inherited the same mistake.
+		newType := columnTypeFromValues(data, c.colIndex)
+		data.ColumnTypes[c.newName] = newType
+		if newType == "categorical" {
+			if data.CategoricalColumns == nil {
+				data.CategoricalColumns = map[string][]string{}
+			}
+			data.CategoricalColumns[c.newName] = columnValuesAt(data, c.colIndex)
+		}
+		return nil
+	}
+
+	data.ColumnTypes[c.newName] = "target"
+	// A target is held out as a numeric reference, so it is no longer offered as
+	// a categorical column. Leaving it in both maps is the half-converted state
+	// the frontend and pkg/transform disagree about.
+	delete(data.CategoricalColumns, c.newName)
 	return nil
 }
 
@@ -1029,15 +1044,17 @@ func (c *ToggleTargetColumnCommand) Undo(data *FileData) error {
 		return err
 	}
 
-	// Restore column type
+	// Restore the type the column actually had, rather than inferring one from
+	// which direction the toggle went.
 	if data.ColumnTypes != nil {
-		if c.wasTarget {
-			// Was target before toggle, restore to "target"
-			data.ColumnTypes[c.oldName] = "target"
-		} else {
-			// Was not target before toggle, restore to "numeric"
-			data.ColumnTypes[c.oldName] = "numeric"
+		data.ColumnTypes[c.oldName] = c.oldType
+	}
+	delete(data.CategoricalColumns, c.oldName)
+	if c.hadValues {
+		if data.CategoricalColumns == nil {
+			data.CategoricalColumns = map[string][]string{}
 		}
+		data.CategoricalColumns[c.oldName] = append([]string(nil), c.oldValues...)
 	}
 
 	return nil
@@ -1045,10 +1062,16 @@ func (c *ToggleTargetColumnCommand) Undo(data *FileData) error {
 
 // GetDescription returns a description of the command
 func (c *ToggleTargetColumnCommand) GetDescription() string {
+	base := stripMarkers(c.oldName)
 	if c.wasTarget {
-		return fmt.Sprintf("Remove target flag from '%s'", c.oldName)
+		return fmt.Sprintf("Remove target flag from '%s'", base)
 	}
-	return fmt.Sprintf("Mark '%s' as target column", c.oldName)
+	// Say when the other marker was displaced, so the undo history records what
+	// actually happened rather than only half of it.
+	if hasCategorySuffix(c.oldName) {
+		return fmt.Sprintf("Mark '%s' as target column instead of category", base)
+	}
+	return fmt.Sprintf("Mark '%s' as target column", base)
 }
 
 // DuplicateRowCommand represents duplication of one or more rows
@@ -1256,9 +1279,12 @@ func NewToggleCategoryColumnCommand(app *App, data *FileData, colIndex int) *Tog
 	oldName := data.Headers[colIndex]
 	wasCategory := hasCategorySuffix(oldName)
 
-	newName := oldName + "#category"
-	if wasCategory {
-		newName = strings.TrimSpace(trimCategorySuffix(oldName))
+	// Mutually exclusive with #target, for the reason given on the other toggle:
+	// a column is an outcome you might predict or a label you group by, never
+	// both, so adding one marker removes the other (#922).
+	newName := stripMarkers(oldName)
+	if !wasCategory {
+		newName += "#category"
 	}
 
 	oldType := ""
@@ -1339,27 +1365,71 @@ func (c *ToggleCategoryColumnCommand) Undo(data *FileData) error {
 
 // GetDescription implements Command.
 func (c *ToggleCategoryColumnCommand) GetDescription() string {
+	base := stripMarkers(c.oldName)
 	if c.wasCategory {
-		return fmt.Sprintf("Remove category flag from '%s'", c.newName)
+		return fmt.Sprintf("Remove category flag from '%s'", base)
 	}
-	return fmt.Sprintf("Mark '%s' as a category column", c.oldName)
+	if hasTargetSuffix(c.oldName) {
+		return fmt.Sprintf("Mark '%s' as a category column instead of target", base)
+	}
+	return fmt.Sprintf("Mark '%s' as a category column", base)
 }
 
 // hasCategorySuffix reports whether a column name carries the marker, in any of
 // the spacings and casings a spreadsheet round-trip can produce.
 func hasCategorySuffix(name string) bool {
+	_, found := trimMarkerSuffix(name, "category")
+	return found
+}
+
+// hasTargetSuffix is the same test for the other marker.
+func hasTargetSuffix(name string) bool {
+	_, found := trimMarkerSuffix(name, "target")
+	return found
+}
+
+// trimMarkerSuffix removes one marker from the end of a column name and reports
+// whether it found one.
+//
+// Matching is case-insensitive and tolerates a space on either side of the hash,
+// because a spreadsheet round-trip introduces them: swiss_roll.csv ships
+// "color #target". The comparison is done on a lowered copy while the slice is
+// taken from the original, so the column keeps whatever capitalisation it had.
+func trimMarkerSuffix(name, marker string) (string, bool) {
 	lower := strings.ToLower(name)
-	return strings.HasSuffix(lower, "#category") || strings.HasSuffix(lower, "# category")
+	for _, suffix := range []string{"#" + marker, "# " + marker} {
+		if strings.HasSuffix(lower, suffix) {
+			return strings.TrimSpace(name[:len(name)-len(suffix)]), true
+		}
+	}
+	return name, false
 }
 
 // trimCategorySuffix removes the marker, whichever form it took.
 func trimCategorySuffix(name string) string {
-	for _, suffix := range []string{"#category", "# category", "#Category", "# Category"} {
-		if strings.HasSuffix(name, suffix) {
-			return strings.TrimSuffix(name, suffix)
+	trimmed, _ := trimMarkerSuffix(name, "category")
+	return trimmed
+}
+
+// stripMarkers removes every marker from the end of a column name, leaving the
+// name the user actually gave the column.
+//
+// It loops because a name can carry more than one. Until #922 the two toggles
+// appended without looking at what was already there, so "code#target#category"
+// was reachable, and a file written then still opens today. Toggling such a
+// column now cleans it up rather than adding a third.
+func stripMarkers(name string) string {
+	for {
+		if trimmed, found := trimMarkerSuffix(name, "category"); found {
+			name = trimmed
+			continue
 		}
+		if trimmed, found := trimMarkerSuffix(name, "target"); found {
+			name = trimmed
+			continue
+		}
+		return name
 	}
-	return name
 }
 
 // columnValuesAt returns a column's values, one per row.
