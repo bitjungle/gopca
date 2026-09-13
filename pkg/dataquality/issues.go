@@ -151,11 +151,16 @@ func generateQualityIssues(report *DataQualityReport, correlations map[string]ma
 // combined". PCA works on variance, so a column holding more than half of it
 // becomes the first component almost by itself.
 //
-// The absolute range test elsewhere in this file cannot find such a column. A
-// processing code running 1..11 has a range of 10 -- neither large nor small --
-// while carrying 99.97% of the variance in a table whose other columns are
-// weight fractions. It fires instead on a trace element with a range of 0.0001,
-// which is of no consequence to anything.
+// The absolute range test elsewhere in this file cannot find such a column,
+// because dominance is relative and that test is not. A category code numbered
+// 1..11 has a range of 10, which is neither large nor small, yet can carry
+// almost all the variance in a table of fractions; meanwhile the same test fires
+// on a trace measurement with a range of 0.0001 that affects nothing.
+//
+// The same shape appears without any category code involved: a sample ID, a year,
+// a timestamp in seconds, or one column recorded in grams beside others in
+// kilograms. What they share is a spread unrelated to the measurements around
+// them, and that is what this measures.
 //
 // Target and category columns are excluded by their type: they are already held
 // out of the analysis, so their variance cannot dominate it.
@@ -245,10 +250,10 @@ func generateRecommendations(report *DataQualityReport) []Recommendation {
 		})
 	}
 
-	// One column carrying most of the variance is worth naming on its own. The
-	// absolute test below cannot find it: a processing code running 1..11 has a
-	// range of 10, which is neither large nor small, while accounting for 99.97%
-	// of the variance in a table of weight fractions (#909).
+	// One column carrying most of the variance is worth naming on its own,
+	// whatever the reason -- an identifier, a timestamp, a column in the wrong
+	// unit, a category code stored as an integer. The absolute test below cannot
+	// find any of them, because dominance is relative and that test is not (#909).
 	if name, share := dominantVarianceColumn(report); name != "" {
 		recs = append(recs, Recommendation{
 			Priority: "high",
