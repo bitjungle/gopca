@@ -217,6 +217,29 @@ func isTargetColumn(columnName string, targetColumns []string) bool {
 	return false
 }
 
+// isCategoryColumn reports whether a column is marked as categorical by name.
+//
+// The marker exists for the one thing the type of a column cannot tell us: that
+// its numbers are labels. A processing code holding 1..11, a site number, a
+// batch identifier -- each parses as numeric and would otherwise enter the PCA
+// as a measurement, where its variance is arbitrary and can dwarf everything
+// else. Marking it says "these are categories", and the column is then held out
+// and offered for colouring, exactly as a text column would be.
+//
+// On a column that already holds text the marker is redundant rather than
+// wrong: it agrees with what the type says. That is deliberate -- a marker
+// should never contradict itself.
+//
+// A space before the marker is accepted because the suffix test does not care
+// what precedes it: "site #category" ends with "#category" just as
+// "site#category" does. swiss_roll.csv ships "color #target" written that way,
+// so the form does occur. A space *after* the hash -- "site# category" -- is not
+// recognised, matching isTargetColumn, which has the same limitation.
+func isCategoryColumn(columnName string) bool {
+	lowerName := strings.ToLower(columnName)
+	return strings.HasSuffix(lowerName, "#category") || strings.HasSuffix(lowerName, "# category")
+}
+
 // ParseCSVMixedWithTargets parses CSV data with support for numeric target columns
 // Target columns are numeric columns that should be available for visualization but not included in PCA
 // Columns with "#target" suffix (with or without space) are automatically detected as target columns
@@ -301,31 +324,26 @@ func ParseCSVMixedWithTargets(r io.Reader, format CSVFormat, targetColumns []str
 			}
 		}
 
-		if !hasAnyValue {
-			// Empty column - check if it's a target column by name
-			colName := ""
-			if j < len(headers) {
-				colName = headers[j]
-			}
+		colName := ""
+		if j < len(headers) {
+			colName = headers[j]
+		}
 
+		switch {
+		case isCategoryColumn(colName):
+			// Marked as categories, whatever the values look like. This is the
+			// only case where the name overrides what the column contains, and
+			// it is why the marker exists (#914).
+			categoricalCols = append(categoricalCols, j)
+		case !hasAnyValue || isNumeric:
+			// An empty column is treated as numeric, as it always has been:
+			// there is nothing in it to suggest otherwise.
 			if isTargetColumn(colName, targetColumns) {
 				numericTargetCols = append(numericTargetCols, j)
 			} else {
 				numericDataCols = append(numericDataCols, j)
 			}
-		} else if isNumeric {
-			// Numeric column - check if it's a target
-			colName := ""
-			if j < len(headers) {
-				colName = headers[j]
-			}
-
-			if isTargetColumn(colName, targetColumns) {
-				numericTargetCols = append(numericTargetCols, j)
-			} else {
-				numericDataCols = append(numericDataCols, j)
-			}
-		} else {
+		default:
 			categoricalCols = append(categoricalCols, j)
 		}
 	}

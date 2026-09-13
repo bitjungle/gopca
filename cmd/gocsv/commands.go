@@ -26,6 +26,7 @@ package main
 import (
 	"fmt"
 	"sort"
+	"strconv"
 	"strings"
 
 	"github.com/bitjungle/gopca/pkg/types"
@@ -1226,4 +1227,169 @@ func (c *TransformCommand) GetDescription() string {
 		return fmt.Sprintf("%s column '%s'", transformName, c.options.Columns[0])
 	}
 	return fmt.Sprintf("%s %d columns", transformName, len(c.options.Columns))
+}
+
+// ToggleCategoryColumnCommand adds or removes the #category suffix on a column.
+//
+// The marker exists for numbers that are labels -- a processing code, a site
+// number, a batch identifier. Such a column parses as numeric and would
+// otherwise enter the PCA as a measurement, where its variance is arbitrary and
+// can dominate everything else. Marking it says the values are categories, and
+// it is then held out and offered for colouring, exactly as a text column is.
+type ToggleCategoryColumnCommand struct {
+	app         *App
+	colIndex    int
+	oldName     string
+	newName     string
+	wasCategory bool
+	oldType     string
+	oldValues   []string
+	hadValues   bool
+}
+
+// NewToggleCategoryColumnCommand captures the pre-state.
+func NewToggleCategoryColumnCommand(app *App, data *FileData, colIndex int) *ToggleCategoryColumnCommand {
+	if colIndex >= len(data.Headers) {
+		return nil
+	}
+
+	oldName := data.Headers[colIndex]
+	wasCategory := hasCategorySuffix(oldName)
+
+	newName := oldName + "#category"
+	if wasCategory {
+		newName = strings.TrimSpace(trimCategorySuffix(oldName))
+	}
+
+	oldType := ""
+	if data.ColumnTypes != nil {
+		oldType = data.ColumnTypes[oldName]
+	}
+	oldValues, hadValues := data.CategoricalColumns[oldName]
+
+	return &ToggleCategoryColumnCommand{
+		app:         app,
+		colIndex:    colIndex,
+		oldName:     oldName,
+		newName:     newName,
+		wasCategory: wasCategory,
+		oldType:     oldType,
+		oldValues:   append([]string(nil), oldValues...),
+		hadValues:   hadValues,
+	}
+}
+
+// Execute applies the change.
+func (c *ToggleCategoryColumnCommand) Execute(data *FileData) error {
+	headerCmd := NewHeaderEditCommand(c.colIndex, c.oldName, c.newName)
+	if err := headerCmd.Execute(data); err != nil {
+		return err
+	}
+
+	// HeaderEditCommand has already migrated both maps from the old name to the
+	// new one, so everything below addresses the column by its new name.
+	if data.ColumnTypes == nil {
+		data.ColumnTypes = map[string]string{}
+	}
+
+	newType := "categorical"
+	if c.wasCategory {
+		// Removing the marker hands the column back to its values. A column of
+		// text stays categorical whatever its name says; only one holding
+		// numbers has anything to revert to.
+		newType = columnTypeFromValues(data, c.colIndex)
+	}
+	data.ColumnTypes[c.newName] = newType
+
+	// ColumnTypes is not the whole story. CategoricalColumns carries the values,
+	// and the frontend and pkg/transform both read it to decide what a column is
+	// -- a column categorical in one map and absent from the other is
+	// half-converted, and the encoders will not see it.
+	if newType == "categorical" {
+		if data.CategoricalColumns == nil {
+			data.CategoricalColumns = map[string][]string{}
+		}
+		data.CategoricalColumns[c.newName] = columnValuesAt(data, c.colIndex)
+	} else {
+		delete(data.CategoricalColumns, c.newName)
+	}
+	return nil
+}
+
+// Undo reverts the change, restoring the type the column had before.
+func (c *ToggleCategoryColumnCommand) Undo(data *FileData) error {
+	headerCmd := NewHeaderEditCommand(c.colIndex, c.newName, c.oldName)
+	if err := headerCmd.Execute(data); err != nil {
+		return err
+	}
+	// The header edit has migrated the maps back to the old name; restore the
+	// values they held before this command ran.
+	if data.ColumnTypes != nil {
+		data.ColumnTypes[c.oldName] = c.oldType
+	}
+	delete(data.CategoricalColumns, c.oldName)
+	if c.hadValues {
+		if data.CategoricalColumns == nil {
+			data.CategoricalColumns = map[string][]string{}
+		}
+		data.CategoricalColumns[c.oldName] = append([]string(nil), c.oldValues...)
+	}
+	return nil
+}
+
+// GetDescription implements Command.
+func (c *ToggleCategoryColumnCommand) GetDescription() string {
+	if c.wasCategory {
+		return fmt.Sprintf("Remove category flag from '%s'", c.newName)
+	}
+	return fmt.Sprintf("Mark '%s' as a category column", c.oldName)
+}
+
+// hasCategorySuffix reports whether a column name carries the marker, in any of
+// the spacings and casings a spreadsheet round-trip can produce.
+func hasCategorySuffix(name string) bool {
+	lower := strings.ToLower(name)
+	return strings.HasSuffix(lower, "#category") || strings.HasSuffix(lower, "# category")
+}
+
+// trimCategorySuffix removes the marker, whichever form it took.
+func trimCategorySuffix(name string) string {
+	for _, suffix := range []string{"#category", "# category", "#Category", "# Category"} {
+		if strings.HasSuffix(name, suffix) {
+			return strings.TrimSuffix(name, suffix)
+		}
+	}
+	return name
+}
+
+// columnValuesAt returns a column's values, one per row.
+func columnValuesAt(data *FileData, colIndex int) []string {
+	values := make([]string, 0, len(data.Data))
+	for _, row := range data.Data {
+		if colIndex < len(row) {
+			values = append(values, row[colIndex])
+		} else {
+			values = append(values, "")
+		}
+	}
+	return values
+}
+
+// columnTypeFromValues reports what a column's contents make it, ignoring its
+// name. Used when a marker is removed and the column reverts to whatever it
+// actually holds.
+func columnTypeFromValues(data *FileData, colIndex int) string {
+	for _, row := range data.Data {
+		if colIndex >= len(row) {
+			continue
+		}
+		value := strings.TrimSpace(row[colIndex])
+		if value == "" {
+			continue
+		}
+		if _, err := strconv.ParseFloat(value, 64); err != nil {
+			return "categorical"
+		}
+	}
+	return "numeric"
 }
