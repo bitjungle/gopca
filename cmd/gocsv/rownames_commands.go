@@ -318,3 +318,66 @@ func classifyColumn(data *FileData, header string, values []string) {
 	}
 	data.CategoricalColumns[header] = append([]string(nil), values...)
 }
+
+// AddRowNumbersCommand gives a file row names when nothing in it can serve.
+//
+// Row names label the points in a scores plot, and they have to identify rows:
+// present, and distinct. Some datasets carry nothing that qualifies -- every
+// column repeats, and no combination of them is unique either. Until now there
+// was no way to give such a file identifiers from inside GoCSV, because Insert
+// Column adds an empty column and nothing fills one with a sequence.
+//
+// Row names are not a column: they are RowNames and RowNamesHeader on FileData,
+// held out of the analysis by construction. So this does not insert anything --
+// it populates those two fields directly, which is both simpler and avoids
+// creating a numeric column that would enter the PCA if it were ever moved back
+// into the table.
+type AddRowNumbersCommand struct {
+	app    *App
+	names  []string
+	header string
+}
+
+// NewAddRowNumbersCommand refuses when the file already has row names.
+//
+// Overwriting existing identifiers is destructive in a way undo does not excuse:
+// the user would lose labels that mean something in exchange for ordinals that
+// do not. Move Row Names into Table first if that is genuinely what is wanted.
+func NewAddRowNumbersCommand(app *App, data *FileData) (*AddRowNumbersCommand, error) {
+	if data == nil || len(data.Data) == 0 {
+		return nil, fmt.Errorf("this file has no rows")
+	}
+	if len(data.RowNames) > 0 {
+		return nil, fmt.Errorf("this file already has row names (%q). Use Move Row Names "+
+			"into Table first if you want to replace them", defaultRowNameHeader(data.RowNamesHeader))
+	}
+
+	names := make([]string, len(data.Data))
+	for i := range data.Data {
+		names[i] = strconv.Itoa(i + 1)
+	}
+	return &AddRowNumbersCommand{
+		app:    app,
+		names:  names,
+		header: uniqueHeader(data.Headers, "Sample_ID"),
+	}, nil
+}
+
+// Execute sets the generated names.
+func (c *AddRowNumbersCommand) Execute(data *FileData) error {
+	data.RowNames = append([]string(nil), c.names...)
+	data.RowNamesHeader = c.header
+	return nil
+}
+
+// Undo removes them again, returning the file to having none.
+func (c *AddRowNumbersCommand) Undo(data *FileData) error {
+	data.RowNames = nil
+	data.RowNamesHeader = ""
+	return nil
+}
+
+// GetDescription implements Command.
+func (c *AddRowNumbersCommand) GetDescription() string {
+	return fmt.Sprintf("Number the rows as '%s'", c.header)
+}

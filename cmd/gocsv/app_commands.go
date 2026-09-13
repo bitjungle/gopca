@@ -194,6 +194,18 @@ func (a *App) ExecuteSetRowNames(data *FileData, colIndex int) (*FileData, error
 	return a.executeCommand(cmd, data, "set row names")
 }
 
+// ExecuteAddRowNumbers gives the file row names 1..n, with undo support.
+//
+// For datasets where nothing can serve as an identifier: every column repeats,
+// and no combination of them is unique either.
+func (a *App) ExecuteAddRowNumbers(data *FileData) (*FileData, error) {
+	cmd, err := NewAddRowNumbersCommand(a, data)
+	if err != nil {
+		return nil, fmt.Errorf("add row numbers: %w", err)
+	}
+	return a.executeCommand(cmd, data, "add row numbers")
+}
+
 // ExecuteMoveRowNamesIntoTable turns the row-name column back into an ordinary
 // column, with undo support.
 func (a *App) ExecuteMoveRowNamesIntoTable(data *FileData) (*FileData, error) {

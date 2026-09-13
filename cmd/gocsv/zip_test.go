@@ -192,7 +192,7 @@ func TestLoadZipEntry_CSV(t *testing.T) {
 	require.NoError(t, err)
 	require.NotNil(t, fd)
 	assert.Greater(t, fd.Rows+fd.Columns, 0) // verify data was parsed
-	assert.Empty(t, app.pendingZipPath)        // cleaned up after load
+	assert.Empty(t, app.pendingZipPath)      // cleaned up after load
 }
 
 func TestLoadZipEntry_DataExtension(t *testing.T) {

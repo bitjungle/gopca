@@ -27,7 +27,7 @@ import { ColDef, GridReadyEvent, CellValueChangedEvent, GridApi, ColumnApi, Colu
 import 'ag-grid-community/styles/ag-grid.css';
 import 'ag-grid-community/styles/ag-theme-quartz.css';
 import { useTheme } from '@gopca/ui-components';
-import { ExecuteDeleteRows, ExecuteDeleteColumns, ExecuteInsertRow, ExecuteInsertColumn, ExecuteToggleTargetColumn, ExecuteToggleCategoryColumn, ExecuteDuplicateRows, ExecuteSetRowNames, ExecuteMoveRowNamesIntoTable, CanUseAsRowNames, ExecuteReorderColumns } from '../../wailsjs/go/main/App';
+import { ExecuteDeleteRows, ExecuteDeleteColumns, ExecuteInsertRow, ExecuteInsertColumn, ExecuteToggleTargetColumn, ExecuteToggleCategoryColumn, ExecuteAddRowNumbers, ExecuteDuplicateRows, ExecuteSetRowNames, ExecuteMoveRowNamesIntoTable, CanUseAsRowNames, ExecuteReorderColumns } from '../../wailsjs/go/main/App';
 import { RenameDialog } from './RenameDialog';
 import { ConfirmDialog } from '@gopca/ui-components';
 import {
@@ -250,6 +250,25 @@ return 'text';
                 },
                 icon: <RowNameMenuIcon />
             },
+            ...(!hasRowNames
+                ? [{
+                    // Offered only when the file has none. The command refuses when
+                    // row names already exist, so gating this on hasRowNames would
+                    // hide it in exactly the situation it is for (#923).
+                    label: 'Number the Rows',
+                    action: async () => {
+                        if (fileData) {
+                            try {
+                                const updatedData = await ExecuteAddRowNumbers(fileData);
+                                onRefresh?.(updatedData);
+                            } catch (error) {
+                                console.error('Error numbering rows:', error);
+                            }
+                        }
+                    },
+                    icon: <RowNameMenuIcon />
+                }]
+                : []),
             ...(hasRowNames
                 ? [{
                     label: 'Move Row Names into Table',
