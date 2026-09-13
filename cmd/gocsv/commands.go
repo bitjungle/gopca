@@ -26,7 +26,6 @@ package main
 import (
 	"fmt"
 	"sort"
-	"strconv"
 	"strings"
 
 	"github.com/bitjungle/gopca/pkg/types"
@@ -952,14 +951,16 @@ func (c *InsertColumnCommand) GetDescription() string {
 
 // ToggleTargetColumnCommand represents toggling the #target suffix on a column
 type ToggleTargetColumnCommand struct {
-	app       *App
-	colIndex  int
-	oldName   string
-	newName   string
-	wasTarget bool
-	oldType   string
-	oldValues []string
-	hadValues bool
+	app        *App
+	colIndex   int
+	oldName    string
+	newName    string
+	wasTarget  bool
+	oldType    string
+	oldValues  []string
+	hadValues  bool
+	oldTargets []types.JSONFloat64
+	hadTargets bool
 }
 
 // NewToggleTargetColumnCommand creates a new toggle target column command
@@ -984,16 +985,19 @@ func NewToggleTargetColumnCommand(app *App, data *FileData, colIndex int) *Toggl
 		oldType = data.ColumnTypes[oldName]
 	}
 	oldValues, hadValues := data.CategoricalColumns[oldName]
+	oldTargets, hadTargets := data.NumericTargetColumns[oldName]
 
 	return &ToggleTargetColumnCommand{
-		app:       app,
-		colIndex:  colIndex,
-		oldName:   oldName,
-		newName:   newName,
-		wasTarget: wasTarget,
-		oldType:   oldType,
-		oldValues: append([]string(nil), oldValues...),
-		hadValues: hadValues,
+		app:        app,
+		colIndex:   colIndex,
+		oldName:    oldName,
+		newName:    newName,
+		wasTarget:  wasTarget,
+		oldType:    oldType,
+		oldValues:  append([]string(nil), oldValues...),
+		hadValues:  hadValues,
+		oldTargets: append([]types.JSONFloat64(nil), oldTargets...),
+		hadTargets: hadTargets,
 	}
 }
 
@@ -1017,14 +1021,16 @@ func (c *ToggleTargetColumnCommand) Execute(data *FileData) error {
 		// text is categorical whatever its name said, and only one holding
 		// numbers becomes numeric. Guessing "numeric" here was wrong for every
 		// text column, and undo inherited the same mistake.
-		newType := columnTypeFromValues(data, c.colIndex)
-		data.ColumnTypes[c.newName] = newType
-		if newType == "categorical" {
-			if data.CategoricalColumns == nil {
-				data.CategoricalColumns = map[string][]string{}
-			}
-			data.CategoricalColumns[c.newName] = columnValuesAt(data, c.colIndex)
-		}
+		//
+		// classifyColumn carries the one rule for this, including that a column
+		// has to hold at least one number to be called numeric -- an all-empty
+		// column is not a variable PCA can use.
+		delete(data.CategoricalColumns, c.newName)
+		classifyColumn(data, c.newName, columnValuesAt(data, c.colIndex))
+		// It is no longer a target, so the per-row target values must go with
+		// the marker. HeaderEditCommand migrates that map too, so without this
+		// they survive under a header that no longer claims to be a target.
+		delete(data.NumericTargetColumns, c.newName)
 		return nil
 	}
 
@@ -1049,13 +1055,7 @@ func (c *ToggleTargetColumnCommand) Undo(data *FileData) error {
 	if data.ColumnTypes != nil {
 		data.ColumnTypes[c.oldName] = c.oldType
 	}
-	delete(data.CategoricalColumns, c.oldName)
-	if c.hadValues {
-		if data.CategoricalColumns == nil {
-			data.CategoricalColumns = map[string][]string{}
-		}
-		data.CategoricalColumns[c.oldName] = append([]string(nil), c.oldValues...)
-	}
+	restoreColumnMaps(data, c.oldName, c.oldValues, c.hadValues, c.oldTargets, c.hadTargets)
 
 	return nil
 }
@@ -1268,6 +1268,8 @@ type ToggleCategoryColumnCommand struct {
 	oldType     string
 	oldValues   []string
 	hadValues   bool
+	oldTargets  []types.JSONFloat64
+	hadTargets  bool
 }
 
 // NewToggleCategoryColumnCommand captures the pre-state.
@@ -1292,6 +1294,7 @@ func NewToggleCategoryColumnCommand(app *App, data *FileData, colIndex int) *Tog
 		oldType = data.ColumnTypes[oldName]
 	}
 	oldValues, hadValues := data.CategoricalColumns[oldName]
+	oldTargets, hadTargets := data.NumericTargetColumns[oldName]
 
 	return &ToggleCategoryColumnCommand{
 		app:         app,
@@ -1302,6 +1305,8 @@ func NewToggleCategoryColumnCommand(app *App, data *FileData, colIndex int) *Tog
 		oldType:     oldType,
 		oldValues:   append([]string(nil), oldValues...),
 		hadValues:   hadValues,
+		oldTargets:  append([]types.JSONFloat64(nil), oldTargets...),
+		hadTargets:  hadTargets,
 	}
 }
 
@@ -1318,27 +1323,32 @@ func (c *ToggleCategoryColumnCommand) Execute(data *FileData) error {
 		data.ColumnTypes = map[string]string{}
 	}
 
-	newType := "categorical"
-	if c.wasCategory {
-		// Removing the marker hands the column back to its values. A column of
-		// text stays categorical whatever its name says; only one holding
-		// numbers has anything to revert to.
-		newType = columnTypeFromValues(data, c.colIndex)
-	}
-	data.ColumnTypes[c.newName] = newType
+	values := columnValuesAt(data, c.colIndex)
+	delete(data.CategoricalColumns, c.newName)
 
-	// ColumnTypes is not the whole story. CategoricalColumns carries the values,
-	// and the frontend and pkg/transform both read it to decide what a column is
-	// -- a column categorical in one map and absent from the other is
-	// half-converted, and the encoders will not see it.
-	if newType == "categorical" {
+	if c.wasCategory {
+		// Removing the marker hands the column back to its values. classifyColumn
+		// carries the one rule for that -- including that a column has to hold at
+		// least one number to be called numeric, so an all-empty column is not
+		// offered to PCA as a variable.
+		classifyColumn(data, c.newName, values)
+	} else {
+		// ColumnTypes is not the whole story. CategoricalColumns carries the
+		// values, and the frontend and pkg/transform both read it to decide what
+		// a column is -- a column categorical in one map and absent from the
+		// other is half-converted, and the encoders will not see it.
+		data.ColumnTypes[c.newName] = "categorical"
 		if data.CategoricalColumns == nil {
 			data.CategoricalColumns = map[string][]string{}
 		}
-		data.CategoricalColumns[c.newName] = columnValuesAt(data, c.colIndex)
-	} else {
-		delete(data.CategoricalColumns, c.newName)
+		data.CategoricalColumns[c.newName] = values
 	}
+
+	// Never a target either way, so the per-row target values go with the
+	// marker. HeaderEditCommand migrates that map too, so without this a column
+	// switched from #target to #category keeps its target values under the new
+	// header.
+	delete(data.NumericTargetColumns, c.newName)
 	return nil
 }
 
@@ -1353,13 +1363,7 @@ func (c *ToggleCategoryColumnCommand) Undo(data *FileData) error {
 	if data.ColumnTypes != nil {
 		data.ColumnTypes[c.oldName] = c.oldType
 	}
-	delete(data.CategoricalColumns, c.oldName)
-	if c.hadValues {
-		if data.CategoricalColumns == nil {
-			data.CategoricalColumns = map[string][]string{}
-		}
-		data.CategoricalColumns[c.oldName] = append([]string(nil), c.oldValues...)
-	}
+	restoreColumnMaps(data, c.oldName, c.oldValues, c.hadValues, c.oldTargets, c.hadTargets)
 	return nil
 }
 
@@ -1445,21 +1449,23 @@ func columnValuesAt(data *FileData, colIndex int) []string {
 	return values
 }
 
-// columnTypeFromValues reports what a column's contents make it, ignoring its
-// name. Used when a marker is removed and the column reverts to whatever it
-// actually holds.
-func columnTypeFromValues(data *FileData, colIndex int) string {
-	for _, row := range data.Data {
-		if colIndex >= len(row) {
-			continue
+// restoreColumnMaps puts a column's per-row maps back as they were before a
+// command ran. Both marker toggles undo through it, so neither can forget one.
+func restoreColumnMaps(data *FileData, name string, values []string, hadValues bool,
+	targets []types.JSONFloat64, hadTargets bool) {
+	delete(data.CategoricalColumns, name)
+	if hadValues {
+		if data.CategoricalColumns == nil {
+			data.CategoricalColumns = map[string][]string{}
 		}
-		value := strings.TrimSpace(row[colIndex])
-		if value == "" {
-			continue
-		}
-		if _, err := strconv.ParseFloat(value, 64); err != nil {
-			return "categorical"
-		}
+		data.CategoricalColumns[name] = append([]string(nil), values...)
 	}
-	return "numeric"
+
+	delete(data.NumericTargetColumns, name)
+	if hadTargets {
+		if data.NumericTargetColumns == nil {
+			data.NumericTargetColumns = map[string][]types.JSONFloat64{}
+		}
+		data.NumericTargetColumns[name] = append([]types.JSONFloat64(nil), targets...)
+	}
 }

@@ -175,3 +175,78 @@ func TestStripMarkersHandlesSpacingAndCase(t *testing.T) {
 		}
 	}
 }
+
+// Copilot's review of #926 found three further defects. All three were verified
+// before being fixed.
+
+func TestRemovingTheTargetFlagDropsTheTargetValues(t *testing.T) {
+	// HeaderEditCommand migrates NumericTargetColumns along with the rename, so
+	// without an explicit delete the per-row target values survive under a header
+	// that no longer claims to be a target.
+	app, data, idx := markerFixture(t, "Yield#target", "10.5")
+	if _, ok := data.NumericTargetColumns["Yield#target"]; !ok {
+		t.Fatal("fixture did not produce a numeric target column")
+	}
+
+	NewToggleTargetColumnCommand(app, data, idx).Execute(data)
+
+	if _, ok := data.NumericTargetColumns["Yield"]; ok {
+		t.Error("still a numeric target under a header with no marker")
+	}
+}
+
+func TestSwitchingATargetToCategoryDropsTheTargetValues(t *testing.T) {
+	app, data, idx := markerFixture(t, "Yield#target", "10.5")
+	NewToggleCategoryColumnCommand(app, data, idx).Execute(data)
+
+	if _, ok := data.NumericTargetColumns["Yield#category"]; ok {
+		t.Error("numeric target values carried onto a categorical header")
+	}
+	if _, ok := data.CategoricalColumns["Yield#category"]; !ok {
+		t.Error("not registered as categorical")
+	}
+}
+
+func TestUndoRestoresTheTargetValues(t *testing.T) {
+	app, data, idx := markerFixture(t, "Yield#target", "10.5")
+	cmd := NewToggleCategoryColumnCommand(app, data, idx)
+	if err := cmd.Execute(data); err != nil {
+		t.Fatalf("Execute: %v", err)
+	}
+	if err := cmd.Undo(data); err != nil {
+		t.Fatalf("Undo: %v", err)
+	}
+
+	if _, ok := data.NumericTargetColumns["Yield#target"]; !ok {
+		t.Error("undo did not put the numeric target values back")
+	}
+	if got := data.ColumnTypes["Yield#target"]; got != "target" {
+		t.Errorf("type = %q, want target restored", got)
+	}
+}
+
+func TestRemovingAMarkerFromAnEmptyColumnDoesNotCallItNumeric(t *testing.T) {
+	// classifyColumn requires at least one parsed number before calling a column
+	// numeric, so that PCA is never offered a variable with nothing in it. The
+	// toggles had a second, looser copy of that rule which returned "numeric" for
+	// a column it never saw a value in.
+	app := &App{}
+	data, err := app.parseCSVContent("ID,x1,blank#category\nS1,1,\nS2,2,\n", ".csv")
+	if err != nil {
+		t.Fatalf("parseCSVContent: %v", err)
+	}
+	idx := -1
+	for i, h := range data.Headers {
+		if h == "blank#category" {
+			idx = i
+		}
+	}
+	if idx < 0 {
+		t.Skipf("empty column not retained: %v", data.Headers)
+	}
+
+	NewToggleCategoryColumnCommand(app, data, idx).Execute(data)
+	if got := data.ColumnTypes["blank"]; got == "numeric" {
+		t.Error("an all-empty column was called numeric; PCA would be offered a variable with nothing in it")
+	}
+}
