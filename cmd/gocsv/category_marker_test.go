@@ -110,6 +110,14 @@ func TestToggleCategoryMarksAndUnmarks(t *testing.T) {
 	if got := data.ColumnTypes["proc_num#category"]; got != "categorical" {
 		t.Errorf("type = %q, want categorical", got)
 	}
+	// ColumnTypes alone is not enough. The frontend and pkg/transform read
+	// CategoricalColumns, so a column marked in one map and missing from the
+	// other is half-converted and the encoders will not see it.
+	if values, ok := data.CategoricalColumns["proc_num#category"]; !ok {
+		t.Error("absent from CategoricalColumns, so nothing downstream sees it as categorical")
+	} else if len(values) != len(data.Data) {
+		t.Errorf("CategoricalColumns holds %d values, want %d (one per row)", len(values), len(data.Data))
+	}
 
 	// Removing it must hand the column back to its values, not leave it
 	// categorical because it once carried the marker.
@@ -122,6 +130,12 @@ func TestToggleCategoryMarksAndUnmarks(t *testing.T) {
 	}
 	if got := data.ColumnTypes["proc_num"]; got != "numeric" {
 		t.Errorf("type = %q, want numeric: the column holds numbers", got)
+	}
+	if _, ok := data.CategoricalColumns["proc_num#category"]; ok {
+		t.Error("still registered as categorical under its old name")
+	}
+	if _, ok := data.CategoricalColumns["proc_num"]; ok {
+		t.Error("a numeric column must not be left in CategoricalColumns")
 	}
 
 	// And undo restores the marked state it was in.
@@ -163,5 +177,19 @@ func TestUnmarkingATextColumnLeavesItCategorical(t *testing.T) {
 	}
 	if got := data.ColumnTypes["species"]; got != "categorical" {
 		t.Errorf("type = %q, want categorical: text is categorical whatever the name says", got)
+	}
+}
+
+func TestCategoryMarkerAcceptsASpaceAfterTheHash(t *testing.T) {
+	// The command helpers and the context menu both recognise "# category", so
+	// the parser has to as well: otherwise the menu offers to remove a flag the
+	// analysis never honoured. Raised in review on #919.
+	app := &App{}
+	data, err := app.parseCSVContent("ID,x1,site# category\nS1,1,3\nS2,2,4\n", ".csv")
+	if err != nil {
+		t.Fatalf("parseCSVContent: %v", err)
+	}
+	if got := data.ColumnTypes["site# category"]; got != "categorical" {
+		t.Errorf("type = %q, want categorical", got)
 	}
 }

@@ -236,7 +236,8 @@ func isTargetColumn(columnName string, targetColumns []string) bool {
 // so the form does occur. A space *after* the hash -- "site# category" -- is not
 // recognised, matching isTargetColumn, which has the same limitation.
 func isCategoryColumn(columnName string) bool {
-	return strings.HasSuffix(strings.ToLower(columnName), "#category")
+	lowerName := strings.ToLower(columnName)
+	return strings.HasSuffix(lowerName, "#category") || strings.HasSuffix(lowerName, "# category")
 }
 
 // ParseCSVMixedWithTargets parses CSV data with support for numeric target columns

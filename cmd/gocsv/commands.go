@@ -1243,6 +1243,8 @@ type ToggleCategoryColumnCommand struct {
 	newName     string
 	wasCategory bool
 	oldType     string
+	oldValues   []string
+	hadValues   bool
 }
 
 // NewToggleCategoryColumnCommand captures the pre-state.
@@ -1263,6 +1265,7 @@ func NewToggleCategoryColumnCommand(app *App, data *FileData, colIndex int) *Tog
 	if data.ColumnTypes != nil {
 		oldType = data.ColumnTypes[oldName]
 	}
+	oldValues, hadValues := data.CategoricalColumns[oldName]
 
 	return &ToggleCategoryColumnCommand{
 		app:         app,
@@ -1271,6 +1274,8 @@ func NewToggleCategoryColumnCommand(app *App, data *FileData, colIndex int) *Tog
 		newName:     newName,
 		wasCategory: wasCategory,
 		oldType:     oldType,
+		oldValues:   append([]string(nil), oldValues...),
+		hadValues:   hadValues,
 	}
 }
 
@@ -1281,18 +1286,32 @@ func (c *ToggleCategoryColumnCommand) Execute(data *FileData) error {
 		return err
 	}
 
+	// HeaderEditCommand has already migrated both maps from the old name to the
+	// new one, so everything below addresses the column by its new name.
 	if data.ColumnTypes == nil {
-		return nil
+		data.ColumnTypes = map[string]string{}
 	}
-	delete(data.ColumnTypes, c.oldName)
 
+	newType := "categorical"
 	if c.wasCategory {
 		// Removing the marker hands the column back to its values. A column of
 		// text stays categorical whatever its name says; only one holding
 		// numbers has anything to revert to.
-		data.ColumnTypes[c.newName] = columnTypeFromValues(data, c.colIndex)
+		newType = columnTypeFromValues(data, c.colIndex)
+	}
+	data.ColumnTypes[c.newName] = newType
+
+	// ColumnTypes is not the whole story. CategoricalColumns carries the values,
+	// and the frontend and pkg/transform both read it to decide what a column is
+	// -- a column categorical in one map and absent from the other is
+	// half-converted, and the encoders will not see it.
+	if newType == "categorical" {
+		if data.CategoricalColumns == nil {
+			data.CategoricalColumns = map[string][]string{}
+		}
+		data.CategoricalColumns[c.newName] = columnValuesAt(data, c.colIndex)
 	} else {
-		data.ColumnTypes[c.newName] = "categorical"
+		delete(data.CategoricalColumns, c.newName)
 	}
 	return nil
 }
@@ -1303,9 +1322,17 @@ func (c *ToggleCategoryColumnCommand) Undo(data *FileData) error {
 	if err := headerCmd.Execute(data); err != nil {
 		return err
 	}
+	// The header edit has migrated the maps back to the old name; restore the
+	// values they held before this command ran.
 	if data.ColumnTypes != nil {
-		delete(data.ColumnTypes, c.newName)
 		data.ColumnTypes[c.oldName] = c.oldType
+	}
+	delete(data.CategoricalColumns, c.oldName)
+	if c.hadValues {
+		if data.CategoricalColumns == nil {
+			data.CategoricalColumns = map[string][]string{}
+		}
+		data.CategoricalColumns[c.oldName] = append([]string(nil), c.oldValues...)
 	}
 	return nil
 }
@@ -1333,6 +1360,19 @@ func trimCategorySuffix(name string) string {
 		}
 	}
 	return name
+}
+
+// columnValuesAt returns a column's values, one per row.
+func columnValuesAt(data *FileData, colIndex int) []string {
+	values := make([]string, 0, len(data.Data))
+	for _, row := range data.Data {
+		if colIndex < len(row) {
+			values = append(values, row[colIndex])
+		} else {
+			values = append(values, "")
+		}
+	}
+	return values
 }
 
 // columnTypeFromValues reports what a column's contents make it, ignoring its
