@@ -447,16 +447,21 @@ func (a *App) loadParquet(filePath string) (*FileData, error) {
 		return nil, fmt.Errorf("failed to parse Parquet file: %w", err)
 	}
 
-	// Build headers, prepending Sample_ID.
+	// Build headers, prepending Sample_ID, and mark string columns #category.
 	//
-	// String columns used to have "#target" appended here, on the stated grounds
-	// that it "makes GoPCA treat them as group labels for coloring the scores
-	// plot". It does not: the suffix is only consulted for numeric columns
-	// (pkg/types/csv_mixed.go), and a text column is classified categorical --
-	// excluded from the PCA, available for colouring -- from its type alone. The
-	// suffix changed the displayed name and nothing else, while claiming the
-	// strongest term in the vocabulary for a column that is not a response to
-	// anything (#914).
+	// These used to be marked "#target", on the stated grounds that it "makes
+	// GoPCA treat them as group labels for coloring the scores plot". It did
+	// not: the suffix is only consulted for numeric columns, and a text column
+	// is classified categorical from its values alone. So the marker was inert
+	// while claiming the strongest term in the vocabulary for a column that is
+	// not a response to anything.
+	//
+	// Dropping it entirely would not do either. Type detection runs on the
+	// values after the sheet is converted to CSV, so a Parquet string column
+	// holding "001", "002" -- a zero-padded code, a year, an identifier -- is
+	// detected as numeric and would enter the PCA as a measurement. Parquet
+	// records that the column is text, and #category is how that knowledge
+	// survives the conversion (#914).
 	//
 	// Sample_ID provides a unique integer row identifier, since string columns
 	// like "country" are not unique (the same country appears once per year).
@@ -464,7 +469,11 @@ func (a *App) loadParquet(filePath string) (*FileData, error) {
 	headers := make([]string, 0, len(fields)+1)
 	headers = append(headers, "Sample_ID")
 	for _, field := range fields {
-		headers = append(headers, field.Name())
+		name := field.Name()
+		if field.Type().Kind() == parquet.ByteArray || field.Type().Kind() == parquet.FixedLenByteArray {
+			name += "#category"
+		}
+		headers = append(headers, name)
 	}
 
 	// Build CSV: header row followed by data rows
