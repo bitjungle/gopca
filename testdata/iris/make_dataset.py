@@ -25,28 +25,30 @@ from sklearn.datasets import load_iris
 
 data = load_iris(as_frame=True)
 
-# Replace the target values with their names
-data.frame['species'] = data.target.map(
-    dict(zip(range(len(data.target_names)), data.target_names)))
+# Both files are derived from these two, so they cannot drift apart. data.frame
+# is deliberately not mutated: the fixture used to rename its columns in place,
+# which left the tutorial needing a second load_iris() to get a clean frame.
+measurements = data.data
+species = data.target.map(dict(zip(range(len(data.target_names)), data.target_names)))
 
-# Rename the target column to species#target
-data.frame = data.frame.rename(columns={'target': 'species#target'})
-
-data.frame.to_csv('iris.csv', index=True)
+# --- the test fixture -------------------------------------------------------
+fixture = measurements.copy()
+fixture['species#target'] = data.target
+fixture['species'] = species
+fixture.to_csv('iris.csv', index=True)
 
 # --- the tutorial dataset ---------------------------------------------------
-tutorial = load_iris(as_frame=True).frame.drop(columns=["target"]).copy()
-tutorial["species"] = data.target.map(
-    dict(zip(range(len(data.target_names)), data.target_names)))
+tutorial = measurements.copy()
+tutorial['species'] = species
 
 # Two-letter species prefix plus a per-species counter, so a label identifies the
 # sample and says what it is: se_01..se_50, ve_01..ve_50, vi_01..vi_50.
 counters = {}
 labels = []
-for species in tutorial["species"]:
-    counters[species] = counters.get(species, 0) + 1
-    labels.append(f"{species[:2]}_{counters[species]:02d}")
+for name in tutorial['species']:
+    counters[name] = counters.get(name, 0) + 1
+    labels.append(f"{name[:2]}_{counters[name]:02d}")
 tutorial.index = labels
-tutorial.index.name = ""
+tutorial.index.name = ''
 
-tutorial.to_csv("iris_tutorial.csv", index=True)
+tutorial.to_csv('iris_tutorial.csv', index=True)
