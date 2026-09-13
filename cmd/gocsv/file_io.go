@@ -447,18 +447,31 @@ func (a *App) loadParquet(filePath string) (*FileData, error) {
 		return nil, fmt.Errorf("failed to parse Parquet file: %w", err)
 	}
 
-	// Build headers: prepend Sample_ID, mark string columns as #target.
-	// String columns (ByteArray kind) are categorical identifiers — marking them
-	// as #target makes GoPCA treat them as group labels for coloring the scores plot.
-	// Sample_ID provides a unique integer row identifier since string columns like
-	// "country" are not unique (the same country appears once per year).
+	// Build headers, prepending Sample_ID, and mark string columns #category.
+	//
+	// These used to be marked "#target", on the stated grounds that it "makes
+	// GoPCA treat them as group labels for coloring the scores plot". It did
+	// not: the suffix is only consulted for numeric columns, and a text column
+	// is classified categorical from its values alone. So the marker was inert
+	// while claiming the strongest term in the vocabulary for a column that is
+	// not a response to anything.
+	//
+	// Dropping it entirely would not do either. Type detection runs on the
+	// values after the sheet is converted to CSV, so a Parquet string column
+	// holding "001", "002" -- a zero-padded code, a year, an identifier -- is
+	// detected as numeric and would enter the PCA as a measurement. Parquet
+	// records that the column is text, and #category is how that knowledge
+	// survives the conversion (#914).
+	//
+	// Sample_ID provides a unique integer row identifier, since string columns
+	// like "country" are not unique (the same country appears once per year).
 	fields := pf.Schema().Fields()
 	headers := make([]string, 0, len(fields)+1)
 	headers = append(headers, "Sample_ID")
 	for _, field := range fields {
 		name := field.Name()
 		if field.Type().Kind() == parquet.ByteArray || field.Type().Kind() == parquet.FixedLenByteArray {
-			name = name + "#target"
+			name += "#category"
 		}
 		headers = append(headers, name)
 	}
