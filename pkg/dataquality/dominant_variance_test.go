@@ -13,11 +13,11 @@ func TestDominantVarianceColumnNamesTheOffender(t *testing.T) {
 	// The shape that prompted this: a category code stored as an integer beside
 	// columns of weight fractions.
 	r := &DataQualityReport{ColumnAnalysis: []ColumnAnalysis{
-		col("proc_num", 3.54), col("Al", 0.041), col("Si", 0.027), col("Zn", 0.025),
+		col("SiteCode", 3.54), col("Al", 0.041), col("Si", 0.027), col("Zn", 0.025),
 	}}
 	name, share := dominantVarianceColumn(r)
-	if name != "proc_num" {
-		t.Fatalf("name = %q, want proc_num", name)
+	if name != "SiteCode" {
+		t.Fatalf("name = %q, want SiteCode", name)
 	}
 	if share < 99 {
 		t.Errorf("share = %.2f, want above 99", share)
@@ -87,16 +87,18 @@ func TestZeroVarianceEverywhereNamesNothing(t *testing.T) {
 func TestRecommendationNamesTheColumnAndQuotesTheShare(t *testing.T) {
 	r := &DataQualityReport{
 		DataProfile:    DataProfile{Rows: 100, Columns: 4, NumericColumns: 4},
-		ColumnAnalysis: []ColumnAnalysis{col("proc_num", 3.54), col("Al", 0.041), col("Si", 0.027)},
+		ColumnAnalysis: []ColumnAnalysis{col("SiteCode", 3.54), col("Al", 0.041), col("Si", 0.027)},
 	}
+	recs := generateRecommendations(r)
 	var found *Recommendation
-	for i, rec := range generateRecommendations(r) {
-		if rec.Category == "scaling" && len(rec.Columns) == 1 && rec.Columns[0] == "proc_num" {
-			found = &generateRecommendations(r)[i]
+	for i := range recs {
+		if recs[i].Category == "scaling" && len(recs[i].Columns) == 1 && recs[i].Columns[0] == "SiteCode" {
+			found = &recs[i]
+			break
 		}
 	}
 	if found == nil {
-		t.Fatal("no recommendation named proc_num")
+		t.Fatal("no recommendation named the dominant column")
 	}
 	if !strings.Contains(found.Description, "%") {
 		t.Errorf("description does not quote a share: %q", found.Description)
