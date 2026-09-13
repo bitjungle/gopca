@@ -278,11 +278,17 @@ to 11, a site number, a batch identifier. Each parses as a number, so PCA treats
 it as a quantity — and the arithmetic distance between code 3 and code 9 enters
 the analysis as though it meant something.
 
-It can be worse than meaningless. In the aluminium alloy dataset, a processing
-code sits beside 25 element concentrations expressed as weight fractions. Its
-variance is about **7,400 times** the largest element's, so with default
-preprocessing it takes **99.97% of the first component** — one column, holding
-labels, swallowing the entire analysis. Nothing in the output looks wrong.
+It can be worse than meaningless. Codes are often numbered 1, 2, 3 … while the
+measurements beside them are fractions, percentages or ratios — so the code
+varies over a range hundreds or thousands of times wider than anything real in
+the table. Variance is what PCA is built on, so that one column can take almost
+the whole of the first component, leaving the measurements to share what is
+left. **Nothing in the output looks wrong**: the scores plot is perfectly
+ordinary, and the loadings quietly say that one variable explains everything.
+
+The same trap catches anything numeric that is not a measurement — a sample ID,
+a year, a timestamp stored as seconds. If GoCSV's Data Quality Report finds one
+column carrying more than half the variance in your table, it will name it.
 
 **Mark as Category Column** appends `#category`, and the column is then treated
 as a class: held out of the PCA, offered for colouring, and available to the

@@ -143,6 +143,56 @@ func generateQualityIssues(report *DataQualityReport, correlations map[string]ma
 	return issues
 }
 
+// dominantVarianceColumn returns the numeric column accounting for more than
+// half the total variance, with its share, or an empty name if none does.
+//
+// This is the quantity that decides whether one column will run away with the
+// analysis, and it needs no threshold argument beyond "more than everything else
+// combined". PCA works on variance, so a column holding more than half of it
+// becomes the first component almost by itself.
+//
+// The absolute range test elsewhere in this file cannot find such a column,
+// because dominance is relative and that test is not. A category code numbered
+// 1..11 has a range of 10, which is neither large nor small, yet can carry
+// almost all the variance in a table of fractions; meanwhile the same test fires
+// on a trace measurement with a range of 0.0001 that affects nothing.
+//
+// The same shape appears without any category code involved: a sample ID, a year,
+// a timestamp in seconds, or one column recorded in grams beside others in
+// kilograms. What they share is a spread unrelated to the measurements around
+// them, and that is what this measures.
+//
+// Target and category columns are excluded by their type: they are already held
+// out of the analysis, so their variance cannot dominate it.
+func dominantVarianceColumn(report *DataQualityReport) (string, float64) {
+	const dominantShare = 0.5
+
+	total := 0.0
+	type entry struct {
+		name     string
+		variance float64
+	}
+	var columns []entry
+	for _, col := range report.ColumnAnalysis {
+		if col.Type != "numeric" || col.Stats.StdDev == nil {
+			continue
+		}
+		variance := *col.Stats.StdDev * *col.Stats.StdDev
+		columns = append(columns, entry{col.Name, variance})
+		total += variance
+	}
+	if total <= 0 || len(columns) < 2 {
+		return "", 0
+	}
+
+	for _, col := range columns {
+		if col.variance/total > dominantShare {
+			return col.name, col.variance / total * 100
+		}
+	}
+	return "", 0
+}
+
 // describeRowNumbers lists row numbers, abbreviating a long run so the message
 // stays readable when a whole block of the file is affected.
 func describeRowNumbers(rows []int) string {
@@ -200,19 +250,43 @@ func generateRecommendations(report *DataQualityReport) []Recommendation {
 		})
 	}
 
+	// One column carrying most of the variance is worth naming on its own,
+	// whatever the reason -- an identifier, a timestamp, a column in the wrong
+	// unit, a category code stored as an integer. The absolute test below cannot
+	// find any of them, because dominance is relative and that test is not (#909).
+	if name, share := dominantVarianceColumn(report); name != "" {
+		recs = append(recs, Recommendation{
+			Priority: "high",
+			Category: "scaling",
+			Action:   fmt.Sprintf("Check whether '%s' belongs in the analysis", name),
+			Description: fmt.Sprintf(
+				"'%s' accounts for %.2f%% of the total variance across all numeric columns. "+
+					"Without scaling it will dominate every component. If it is a category code "+
+					"rather than a measurement, mark it #category to hold it out.", name, share),
+			Columns: []string{name},
+		})
+	}
+
+	// Columns whose absolute range is extreme. A different situation from the
+	// above -- this catches a table mixing millimetres with kilometres, where no
+	// single column dominates but the units disagree.
+	var oddScale []string
 	for _, col := range report.ColumnAnalysis {
 		if col.Type == "numeric" && col.Stats.Min != nil && col.Stats.Max != nil {
 			rangeVal := *col.Stats.Max - *col.Stats.Min
 			if rangeVal > 1000 || rangeVal < 0.01 {
-				recs = append(recs, Recommendation{
-					Priority:    "high",
-					Category:    "scaling",
-					Action:      "Scale numeric columns",
-					Description: "Columns have varying scales; consider standardization or normalization before PCA",
-				})
-				break
+				oddScale = append(oddScale, col.Name)
 			}
 		}
+	}
+	if len(oddScale) > 0 {
+		recs = append(recs, Recommendation{
+			Priority:    "high",
+			Category:    "scaling",
+			Action:      "Scale numeric columns",
+			Description: "Columns have varying scales; consider standardization or normalization before PCA",
+			Columns:     oddScale,
+		})
 	}
 
 	skewedCols := []string{}

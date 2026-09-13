@@ -124,7 +124,7 @@ between code 3 and code 9 is meaningless.
 The `#category` suffix says the values are labels:
 
 ```csv
-Sample,Feature1,Feature2,proc_num#category
+Sample,Feature1,Feature2,SiteCode#category
 S1,1.2,3.4,10
 S2,2.3,4.5,11
 S3,3.4,5.6,10
