@@ -201,7 +201,7 @@ func (a *App) ExecuteSetRowNames(data *FileData, colIndex int) (*FileData, error
 func (a *App) ExecuteAddRowNumbers(data *FileData) (*FileData, error) {
 	cmd, err := NewAddRowNumbersCommand(a, data)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("add row numbers: %w", err)
 	}
 	return a.executeCommand(cmd, data, "add row numbers")
 }

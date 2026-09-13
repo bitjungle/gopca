@@ -250,11 +250,11 @@ return 'text';
                 },
                 icon: <RowNameMenuIcon />
             },
-            ...(hasRowNames
+            ...(!hasRowNames
                 ? [{
-                    // For files where nothing can identify a row. Sits beside the
-                    // other row-name operations because that is where a user
-                    // looking for row names would look (#923).
+                    // Offered only when the file has none. The command refuses when
+                    // row names already exist, so gating this on hasRowNames would
+                    // hide it in exactly the situation it is for (#923).
                     label: 'Number the Rows',
                     action: async () => {
                         if (fileData) {
@@ -265,9 +265,12 @@ return 'text';
                                 console.error('Error numbering rows:', error);
                             }
                         }
-                    }
-                },
-                {
+                    },
+                    icon: <RowNameMenuIcon />
+                }]
+                : []),
+            ...(hasRowNames
+                ? [{
                     label: 'Move Row Names into Table',
                     action: async () => {
                         if (fileData) {
