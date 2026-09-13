@@ -49,11 +49,21 @@ FEATURES = {
 #    missingness bottleneck, so we keep all seven and drop the ~8% incomplete rows.
 clean = adults.dropna(subset=list(FEATURES)).copy()
 
-# Targets (GoPCA "#target" columns -> used for coloring, not as PCA inputs)
-clean["Gender#target"] = clean["RIAGENDR"].map({1: "Male", 2: "Female"})
+# Columns held out of the PCA and kept for interpretation.
+#
+# Two markers, and the distinction matters (#914). "#target" is for numbers you
+# might want to predict -- age and BMI are outcomes, and either could be the
+# response in a PCR model. "#category" is for labels: gender and the BMI class
+# are groups you colour a plot by, never quantities to regress on.
+#
+# Gender and BMI_class hold text, so they would be treated as categorical
+# whatever their names said. Marking them says so explicitly rather than leaving
+# the reader to infer it -- and it stops "#target" being read as a claim that
+# they are outcomes.
+clean["Gender#category"] = clean["RIAGENDR"].map({1: "Male", 2: "Female"})
 clean["Age#target"] = clean["RIDAGEYR"].astype(int)
 clean["BMI#target"] = (clean["BMXWT"] / (clean["BMXHT"] / 100) ** 2).round(1)
-clean["BMI_class#target"] = pd.cut(
+clean["BMI_class#category"] = pd.cut(
     clean["BMI#target"],
     bins=[0, 18.5, 25, 30, np.inf],
     labels=["Underweight", "Normal", "Overweight", "Obese"],
@@ -63,7 +73,7 @@ clean["BMI_class#target"] = pd.cut(
 # Assemble output: Sample_ID + readable features + targets
 out = clean.rename(columns=FEATURES)
 cols = list(FEATURES.values()) + [
-    "Gender#target", "Age#target", "BMI#target", "BMI_class#target",
+    "Gender#category", "Age#target", "BMI#target", "BMI_class#category",
 ]
 out = out[["SEQN"] + cols].rename(columns={"SEQN": "Sample_ID"})
 out = out.set_index("Sample_ID")

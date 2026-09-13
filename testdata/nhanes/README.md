@@ -56,16 +56,21 @@ Seven raw anthropometric measurements taken for the whole adult population:
 Feature variances differ by ~60× (weight in kg vs. lengths in cm), so
 **standardize / autoscale** the columns before running PCA.
 
-## Targets (metadata for coloring — not PCA inputs)
+## Held out of the PCA (metadata for colouring — not analysis variables)
 
-GoPCA treats `#target` columns as labels rather than analysis variables.
+Four columns are kept out of the analysis and offered for colouring instead. Two
+markers do this, and they say different things:
 
-| Column | Description |
-|--------|-------------|
-| `Gender#target` | Male / Female |
-| `Age#target` | Age in years |
-| `BMI#target` | Body Mass Index (kg/m²) |
-| `BMI_class#target` | WHO class: Underweight / Normal / Overweight / Obese |
+| Column | Marker | Description |
+|--------|--------|-------------|
+| `Gender#category` | category | Male / Female — a label |
+| `BMI_class#category` | category | WHO class: Underweight / Normal / Overweight / Obese — a label |
+| `Age#target` | target | Age in years — a quantity you could predict |
+| `BMI#target` | target | Body Mass Index (kg/m²) — a quantity you could predict |
+
+`#target` marks an outcome: something you might model. `#category` marks a label:
+a group you colour by, never a number to regress on. Both are excluded from the
+PCA, so the components are built from the body measurements alone.
 
 ## Missing-data handling
 
@@ -109,8 +114,8 @@ Standardize the seven features and take two components. The expected structure:
 * **PC2 (~29%) — frame-vs-girth shape:** stature variables (height, leg length,
   arm length) load opposite the girth variables (waist, hip, arm circumference).
 
-Color the scores by `Gender#target` to see the sex difference along the shape
-axis, or by `BMI_class#target` to see separation along the size axis.
+Color the scores by `Gender#category` to see the sex difference along the shape
+axis, or by `BMI_class#category` to see separation along the size axis.
 
 ## Background and further reading
 
