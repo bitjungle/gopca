@@ -150,6 +150,11 @@ about it, and in what GoPCA offers to do with it afterwards.
 | **In regression** | Can be nominated as the response with `--response` | Never a response; can group cross-validation folds with `--cv-group` |
 | **Encoders** | Not offered | Offered to one-hot and ordinal encoding |
 
+**A column carries one marker or the other, never both.** They describe
+alternative roles, so marking a column as a category removes any `#target` it had,
+and marking it as a target removes any `#category`. The undo history says which
+was replaced.
+
 Two questions settle it:
 
 **"Would I ever want to predict this?"** A yield, a density, a concentration you

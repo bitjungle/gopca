@@ -313,6 +313,10 @@ this is what makes one-hot encoding a numeric code possible at all.
 Two questions decide it. **"Would I ever want to predict this?"** — that is a
 target. **"Is the gap between 3 and 9 meaningful?"** — if not, it is a category.
 
+The two are alternatives, so a column carries one or the other. Marking a column
+as a category removes any target flag it had, and the other way round — you do
+not have to clear the old one first.
+
 On a column that already holds text, `#category` changes nothing: text is
 categorical anyway. The marker is for numbers pretending to be measurements.
 
