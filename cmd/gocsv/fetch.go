@@ -47,11 +47,11 @@ var contentTypeToExt = map[string]string{
 	"text/csv":                       ".csv",
 	"text/tab-separated-values":      ".tsv",
 	"application/vnd.openxmlformats-officedocument.spreadsheetml.sheet": ".xlsx",
-	"application/vnd.ms-excel":          ".xls",
-	"application/zip":                   ".zip",
-	"application/x-zip-compressed":      ".zip",
-	"application/x-zip":                 ".zip",
-	"multipart/x-zip":                   ".zip",
+	"application/vnd.ms-excel":     ".xls",
+	"application/zip":              ".zip",
+	"application/x-zip-compressed": ".zip",
+	"application/x-zip":            ".zip",
+	"multipart/x-zip":              ".zip",
 }
 
 // fetchRemoteFile downloads the file at url to a secure temporary file and

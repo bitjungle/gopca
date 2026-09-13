@@ -124,7 +124,13 @@ Two commands, both on the right-click menu of any column header:
 - **Use as Row Names** — promote a different column. Whatever was serving as row names returns to the table, so nothing is lost.
 - **Move Row Names into Table** — put the row names back as an ordinary column and leave the table without any.
 
-> **If no column identifies your samples,** that is a perfectly ordinary situation, and you have two choices. Analyse without row names — GoPCA will number the points — or build an identifier: **Combine Columns** will join a site and a date into something unique, and **Split Column** will pull an identifier out of a code that has one buried in it.
+> **If no column identifies your samples,** that is a perfectly ordinary situation, and you have three choices.
+>
+> **Build one from what you have.** **Combine Columns** will join a site and a date into something unique, and **Split Column** will pull an identifier out of a code that has one buried in it. Prefer this when the pieces are there — a label that says *what* a point is beats one that says only *which*.
+>
+> **Number the rows.** Right-click any column header and choose **Number the Rows**. Every row gets `1`, `2`, `3` …, which is unique by construction, so it satisfies the rule immediately. The numbers are not a column — they go straight into the row-name gutter — so nothing new enters the analysis. Use this when the file genuinely has nothing to build from.
+>
+> **Analyse without row names.** GoPCA numbers the points itself. Nothing is lost except the ability to identify one on sight.
 
 ### What part does each column play?
 

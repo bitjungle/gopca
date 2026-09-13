@@ -27,7 +27,7 @@ import { ColDef, GridReadyEvent, CellValueChangedEvent, GridApi, ColumnApi, Colu
 import 'ag-grid-community/styles/ag-grid.css';
 import 'ag-grid-community/styles/ag-theme-quartz.css';
 import { useTheme } from '@gopca/ui-components';
-import { ExecuteDeleteRows, ExecuteDeleteColumns, ExecuteInsertRow, ExecuteInsertColumn, ExecuteToggleTargetColumn, ExecuteToggleCategoryColumn, ExecuteDuplicateRows, ExecuteSetRowNames, ExecuteMoveRowNamesIntoTable, CanUseAsRowNames, ExecuteReorderColumns } from '../../wailsjs/go/main/App';
+import { ExecuteDeleteRows, ExecuteDeleteColumns, ExecuteInsertRow, ExecuteInsertColumn, ExecuteToggleTargetColumn, ExecuteToggleCategoryColumn, ExecuteAddRowNumbers, ExecuteDuplicateRows, ExecuteSetRowNames, ExecuteMoveRowNamesIntoTable, CanUseAsRowNames, ExecuteReorderColumns } from '../../wailsjs/go/main/App';
 import { RenameDialog } from './RenameDialog';
 import { ConfirmDialog } from '@gopca/ui-components';
 import {
@@ -252,6 +252,22 @@ return 'text';
             },
             ...(hasRowNames
                 ? [{
+                    // For files where nothing can identify a row. Sits beside the
+                    // other row-name operations because that is where a user
+                    // looking for row names would look (#923).
+                    label: 'Number the Rows',
+                    action: async () => {
+                        if (fileData) {
+                            try {
+                                const updatedData = await ExecuteAddRowNumbers(fileData);
+                                onRefresh?.(updatedData);
+                            } catch (error) {
+                                console.error('Error numbering rows:', error);
+                            }
+                        }
+                    }
+                },
+                {
                     label: 'Move Row Names into Table',
                     action: async () => {
                         if (fileData) {
