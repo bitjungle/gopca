@@ -82,7 +82,13 @@ for entry in "${ENTRIES[@]}"; do
     # the answer a property of the files themselves.
     if [ ! -f "$dst" ] || ! gzip -dc "$dst" 2>/dev/null | cmp -s - "$src"; then
         if [ "$CHECK_ONLY" = "1" ]; then
-            echo -e "${RED}✗${NC} ${name}: embedded copy differs from $src"
+            # Missing and stale need different remedies -- one is a dataset that
+            # was never built, the other one that drifted -- so say which.
+            if [ ! -f "$dst" ]; then
+                echo -e "${RED}✗${NC} ${name}: embedded copy $dst is missing"
+            else
+                echo -e "${RED}✗${NC} ${name}: embedded copy differs from $src"
+            fi
             errors=$((errors + 1))
         else
             # -n omits the modification time from the gzip header, so the same
