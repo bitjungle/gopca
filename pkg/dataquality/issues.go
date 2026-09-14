@@ -46,6 +46,7 @@ func generateQualityIssues(report *DataQualityReport, correlations map[string]ma
 			Category:    "structure",
 			Description: fmt.Sprintf("%d row(s) hold far fewer values than the rest of the dataset: %s", len(sparseRows), describeRowNumbers(sparseRows)),
 			Affected:    []string{},
+			Rows:        sparseRows,
 			Impact:      "A stray row is analysed as though it were an observation; check whether it belongs to the row above or should be removed",
 		})
 	}
@@ -101,6 +102,7 @@ func generateQualityIssues(report *DataQualityReport, correlations map[string]ma
 					Category:    "outlier",
 					Description: fmt.Sprintf("Column '%s' has %d outliers (%.1f%%)", col.Name, len(col.Outliers), outlierPct),
 					Affected:    []string{col.Name},
+					Rows:        outlierRowNumbers(col.Outliers),
 					Impact:      "Outliers can disproportionately influence PCA components",
 				})
 			}
@@ -161,6 +163,20 @@ func generateQualityIssues(report *DataQualityReport, correlations map[string]ma
 	}
 
 	return issues
+}
+
+// outlierRowNumbers converts the zero-based RowIndex that detectOutliers
+// records into the one-based numbering QualityIssue.Rows uses.
+//
+// The two halves of the analysis disagree about this: findSparseRows already
+// counts from one. Converting here, at the single point where outliers become
+// a finding, keeps the disagreement from spreading to every consumer (#931).
+func outlierRowNumbers(outliers []OutlierInfo) []int {
+	rows := make([]int, len(outliers))
+	for i, o := range outliers {
+		rows[i] = o.RowIndex + 1
+	}
+	return rows
 }
 
 // dominantVarianceColumn returns the numeric column accounting for more than

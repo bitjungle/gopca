@@ -455,6 +455,43 @@ return 'text';
     const columnDefs = useMemo<ColDef[]>(() => {
         const cols: ColDef[] = [];
 
+        // Position gutter. Always present, whether or not the file has row names.
+        //
+        // Without it a file with no row names has no row identity of any kind,
+        // so every row number the Data Quality Report prints -- "row 41", the
+        // rows behind an outlier count -- names something the user cannot find
+        // (#931). Numbered from 1 to match those messages.
+        //
+        // This is not `Number the Rows`, which writes real row names into the
+        // data as the identifier of last resort. This is display furniture: it
+        // is not editable, it is not part of `data`, and so it is never
+        // exported or analysed. The muted styling keeps the two distinguishable
+        // at a glance.
+        cols.push({
+            field: 'position',
+            headerName: '#',
+            // The row's position in the data, not on screen. node.rowIndex would
+            // renumber when a column is sorted, and the report's row numbers
+            // refer to the file, so the two would silently stop agreeing.
+            valueGetter: (params) => (params.data?.id ?? 0) + 1,
+            editable: false,
+            sortable: false,
+            filter: false,
+            resizable: false,
+            suppressMovable: true,
+            width: 64,
+            minWidth: 48,
+            cellClass: 'position-cell',
+            headerClass: 'position-header',
+            pinned: 'left',
+            lockPinned: true,
+            cellStyle: {
+                color: theme === 'dark' ? '#9ca3af' : '#6b7280',
+                textAlign: 'right',
+                fontVariantNumeric: 'tabular-nums'
+            }
+        });
+
         // Add row name column if present
         if (rowNames && rowNames.length > 0) {
             cols.push({
@@ -780,8 +817,30 @@ return;
                 columnApi.autoSizeAllColumns(false);
                 setHasUserResized(false);
             }
+        },
+        // focusRows scrolls to and selects the rows a quality finding names, so
+        // a finding stops being a sentence and becomes a way to reach the data
+        // it describes (#931).
+        //
+        // `rows` are numbered from 1, matching QualityIssue.Rows and the
+        // position gutter; ag-grid indexes from 0, and that single subtraction
+        // is the only place the two meet.
+        focusRows: (rows: number[]) => {
+            if (!gridApi || !rows || rows.length === 0) {
+                return;
+            }
+            const wanted = new Set(rows.map(row => row - 1));
+            gridApi.deselectAll();
+            gridApi.forEachNode(node => {
+                if (wanted.has(node.data?.id)) {
+                    node.setSelected(true);
+                }
+            });
+            // Scroll to the first, so a finding covering many rows starts at
+            // the top of the run rather than wherever ag-grid happens to be.
+            gridApi.ensureIndexVisible(Math.min(...wanted), 'middle');
         }
-    }), [columnApi]);
+    }), [columnApi, gridApi]);
 
     // Add header right-click handling after grid is ready
     useEffect(() => {

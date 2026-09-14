@@ -32,9 +32,13 @@ interface DataQualityDashboardProps {
     report: dataquality.DataQualityReport | null;
     isOpen: boolean;
     onClose: () => void;
+    // Called with the rows a finding names, numbered from 1. Without it a
+    // row-scoped finding is a sentence the user cannot act on: the report says
+    // "row 41" and nothing on screen says which row that is (#931).
+    onShowRows?: (rows: number[]) => void;
 }
 
-export const DataQualityDashboard: React.FC<DataQualityDashboardProps> = ({ report, isOpen, onClose }) => {
+export const DataQualityDashboard: React.FC<DataQualityDashboardProps> = ({ report, isOpen, onClose, onShowRows }) => {
     const [selectedTab, setSelectedTab] = useState<'overview' | 'columns' | 'issues' | 'recommendations'>('overview');
     const [selectedColumn, setSelectedColumn] = useState<string | null>(null);
 
@@ -248,6 +252,17 @@ export const DataQualityDashboard: React.FC<DataQualityDashboardProps> = ({ repo
                                     <p className="text-xs text-gray-500 dark:text-gray-500 mt-2">
                                         Affected: {issue.affected.join(', ')}
                                     </p>
+                                )}
+                                {onShowRows && issue.rows && issue.rows.length > 0 && (
+                                    <button
+                                        type="button"
+                                        onClick={() => onShowRows(issue.rows ?? [])}
+                                        className="mt-2 text-xs font-medium text-blue-600 dark:text-blue-400 hover:underline focus:outline-none focus:ring-2 focus:ring-blue-500 rounded"
+                                    >
+                                        {issue.rows.length === 1
+                                            ? `Show row ${issue.rows[0]}`
+                                            : `Show ${issue.rows.length} rows in the table`}
+                                    </button>
                                 )}
                             </div>
                         </div>
