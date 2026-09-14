@@ -124,19 +124,33 @@ func generateQualityIssues(report *DataQualityReport, correlations map[string]ma
 
 	issues = append(issues, varianceIssues(report)...)
 
-	// Non-normal distributions
-	nonNormalCount := 0
+	// Skew and heavy tails.
+	//
+	// PCA makes no distributional assumption, so a skewed column is not a
+	// violated precondition. The report used to say "PCA assumes normality",
+	// contradicting docs/intro_to_pca.md and docs/intro_to_data_prep.md, which
+	// both state the opposite and explain the real concern (#929). Normality
+	// matters only for what is built on top of a PCA -- Hotelling's T² limits
+	// and the confidence ellipses GoPCA draws, or inference on eigenvalues.
+	//
+	// What a long tail actually does is give a handful of extreme values
+	// leverage over the components, because a covariance method measures
+	// distance from the mean.
+	//
+	// IsNormal is a skewness and kurtosis heuristic rather than a normality
+	// test, so naming skew and tails also describes what was measured.
+	skewedCount := 0
 	for _, col := range report.ColumnAnalysis {
 		if col.Type == "numeric" && !col.Distribution.IsNormal {
-			nonNormalCount++
+			skewedCount++
 		}
 	}
-	if nonNormalCount > 0 {
+	if skewedCount > 0 {
 		issues = append(issues, QualityIssue{
 			Severity:    "info",
 			Category:    "distribution",
-			Description: fmt.Sprintf("%d numeric columns have non-normal distributions", nonNormalCount),
-			Impact:      "PCA assumes normality; consider data transformations",
+			Description: fmt.Sprintf("%d numeric columns are strongly skewed or heavy-tailed", skewedCount),
+			Impact:      "PCA assumes no particular distribution, but a long tail lets a few extreme values steer a component",
 		})
 	}
 
@@ -300,7 +314,7 @@ func generateRecommendations(report *DataQualityReport) []Recommendation {
 			Priority:    "medium",
 			Category:    "distribution",
 			Action:      "Transform skewed distributions",
-			Description: "Consider log or square root transformations for highly skewed columns",
+			Description: "Box-Cox or Yeo-Johnson fits the exponent to each column rather than guessing it; use Yeo-Johnson where there are zeros or negative values",
 			Columns:     skewedCols,
 		})
 	}
