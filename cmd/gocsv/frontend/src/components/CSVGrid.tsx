@@ -34,6 +34,7 @@ import {
     TargetColumnIcon,
     CategoryColumnIcon,
     TargetColumnMenuIcon,
+    CategoryColumnMenuIcon,
     RowNameMenuIcon,
     PencilIcon,
     ArrowLeftIcon,
@@ -314,7 +315,8 @@ return 'text';
                             console.error('Error toggling category column:', error);
                         }
                     }
-                }
+                },
+                icon: <CategoryColumnMenuIcon />
             },
             {
                 label: 'Rename Column',
