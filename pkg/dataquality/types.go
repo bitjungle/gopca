@@ -142,7 +142,7 @@ type HistogramBin struct {
 type OutlierInfo struct {
 	RowIndex int     `json:"rowIndex"`
 	Value    string  `json:"value"`
-	Method   string  `json:"method"` // "far-out": beyond Tukey's 3*IQR fence
+	Method   string  `json:"method"` // "detached": separated from the data and far outside it
 	Score    float64 `json:"score"`
 }
 

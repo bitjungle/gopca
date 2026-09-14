@@ -464,11 +464,18 @@ You do not need a closed composition. A **subcomposition** — a subset of the p
 
 The reason is that "unusual" is rarely visible one column at a time. A sample can sit comfortably inside the normal range of every single variable and still be nothing like the rest of your data, because what makes it odd is the *combination* — high silicon with low magnesium, where every other alloy pairs them the other way round. No column-by-column rule can see that. GoPCA can, because it measures each sample against the fitted model using **Hotelling's T²** (how far along the components) and **Q-residuals** (how far off them). That is where outlier work belongs.
 
-So the report flags a value only when it falls beyond **three interquartile ranges** past the quartiles — Tukey's "far out" fence, the boundary for an obviously extreme point. You may have met the narrower 1.5 × IQR fence that draws the whiskers on a boxplot; it is too eager here, because on a skewed variable it marks a large part of the upper tail, and a fifth of a column being "unusual" tells you about the variable's shape rather than about any particular sample.
+So a value is flagged only when it is **both separated from the data and far outside it**. Both parts are needed, and each one on its own gives an answer you would reject:
 
-For the same reason the report stays quiet when a large share of a column lies beyond even the wide fence. That is a skewed or zero-heavy distribution, which you will see reported as skew and tail weight in section 3 instead.
+- **Separated.** The gap between the value and the rest of the column must be wider than half the column's whole range — the value stands alone rather than being the last step of a tail. On its own this test flags the *present* values of an element that is absent from most samples, where the only real gap is the one between "none" and "some".
+- **Far outside.** It must also sit beyond three interquartile ranges past the quartiles — Tukey's "far out" fence. On its own this test flags the top of any long tail: on a variable where most values are zero, the fence is dragged down into the populated range and the largest ordinary value clears it by a whisker.
 
-One consequence worth knowing: if more than half a column holds the same repeated value, there is no robust measure of spread to judge "far" against, and nothing is reported for it at all. Silence is not a clean bill of health — it means this particular check had nothing to say. GoPCA will still see such a sample on the model.
+What survives both is the kind of thing you want to know about before you analyse: a sentinel such as `-999` or `100` left in place of a missing reading, a misplaced decimal point, a sensor that dropped out for one sample.
+
+The report also stays quiet when a large share of a column would be flagged. A fifth of a variable cannot be unusual; that is the shape of the variable, and you will see it described as skew and tail weight in section 3 instead.
+
+One consequence worth knowing: if more than half a column holds the same repeated value, there is no robust measure of spread to judge "far" against, and nothing is reported for it at all. **Silence here is not a clean bill of health** — it means this particular check had nothing to say. GoPCA will still see such a sample on the model.
+
+**References:** Tukey (1977), *Exploratory Data Analysis*, Ch. 2, for the far-out fence. Dixon (1950), *Analysis of Extreme Values*, Annals of Mathematical Statistics 21(4), for judging a gap against the range.
 
 When something *is* flagged, what to do about it is a judgement GoCSV cannot make for you.
 

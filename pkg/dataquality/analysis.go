@@ -299,30 +299,53 @@ func analyzeDistribution(data [][]string, rows, colIdx int) DistributionInfo {
 	return dist
 }
 
-// detectOutliers returns the values in a numeric column that lie beyond Tukey's
-// "far out" fence, three interquartile ranges past the quartiles.
+// Constants for detectOutliers.
 //
-// GoCSV is deliberately conservative here, and reports only what is obvious.
-// Deciding which samples are genuinely unusual is multivariate work that
-// belongs to GoPCA, which does it properly on the fitted model with Hotelling's
-// T² and Q-residuals -- a sample can be perfectly ordinary in every column and
-// still sit far off the model, and no column-by-column rule can see that.
+// minGapShare is half, and the half matters. Two gaps of more than half the
+// range cannot both exist, so at exactly this threshold the qualifying gap is
+// unique: there is one answer rather than a choice between near-ties, and
+// removing an outlier cannot shrink the range enough to make its neighbour look
+// detached in turn. A smaller share would reintroduce both problems, so lower
+// it only with a replacement for that guarantee.
+const (
+	farOutMultiplier = 3.0
+	minGapShare      = 0.5
+	minOutlierValues = 4
+)
+
+// detectOutliers returns the values in a numeric column that are obviously
+// outlying, and nothing else.
 //
-// Reference: Tukey (1977), Exploratory Data Analysis, Ch. 2, which separates
-// "outside" values beyond 1.5*IQR from "far out" values beyond 3*IQR. The
-// wider fence is the one that means "obviously extreme"; the narrower one
-// flags a substantial share of any skewed column and was reporting 21% of a
-// composition column as outliers (#933).
+// GoCSV is deliberately conservative. Deciding which samples are genuinely
+// unusual is multivariate work that belongs to GoPCA, which does it on the
+// fitted model with Hotelling's T² and Q-residuals -- a sample can be ordinary
+// in every column and still sit far off the model, and no column-by-column rule
+// can see that. What this is for is catching the plain mistakes first: a
+// sentinel value left in the data, a misplaced decimal point, a sensor glitch.
 //
-// The Z-score rule this used to apply as well has been removed. Mean and
-// standard deviation are not robust: a few extreme values inflate the standard
-// deviation enough to hide themselves, so the rule misses exactly what it is
-// looking for, and on a skewed column it flags the whole upper tail.
+// A value has to satisfy two independent conditions, because each one alone
+// produces nonsense on real data (#933):
+//
+//  1. Detached. The widest gap between consecutive sorted values must span more
+//     than half the column's full range, and the value must be on the short
+//     side of that gap. This is Dixon's ratio of gap to range -- Dixon (1950),
+//     Analysis of Extreme Values, Annals of Mathematical Statistics 21(4).
+//
+//  2. Far from the bulk. It must also lie beyond Tukey's "far out" fence, three
+//     interquartile ranges past the quartiles -- Tukey (1977), Exploratory Data
+//     Analysis, Ch. 2, which separates "outside" values beyond 1.5*IQR from
+//     "far out" ones beyond 3*IQR.
+//
+// Condition 2 alone flags the top of any long tail: on a composition column
+// that was 21% of the values, and on another it picked a value 0.0001 past the
+// fence sitting just above a block of two dozen identical ones. Condition 1
+// alone flags the non-zero minority of a sparse column, where the widest gap is
+// simply the one between "absent" and "present". Requiring both leaves the
+// values that are both separated from the data and far outside it.
 //
 // A column whose middle half is a single repeated value has no robust measure
-// of spread -- IQR is zero and so is the MAD -- and nothing is reported for it.
-// Without a scale there is no meaning to "far", and staying silent is the
-// conservative answer. GoPCA will still see such a sample on the model.
+// of spread -- the IQR is zero -- and nothing is reported for it. Without a
+// scale there is no meaning to "far", and silence is the conservative answer.
 func detectOutliers(data [][]string, rows, colIdx int, stats ColumnStatistics) []OutlierInfo {
 	outliers := []OutlierInfo{}
 
@@ -333,10 +356,11 @@ func detectOutliers(data [][]string, rows, colIdx int, stats ColumnStatistics) [
 		return outliers
 	}
 
-	const farOutMultiplier = 3.0
-	lowerBound := *stats.Q1 - farOutMultiplier*(*stats.IQR)
-	upperBound := *stats.Q3 + farOutMultiplier*(*stats.IQR)
-
+	type sample struct {
+		value float64
+		row   int
+	}
+	samples := make([]sample, 0, rows)
 	for rowIdx := 0; rowIdx < rows && rowIdx < len(data); rowIdx++ {
 		if colIdx >= len(data[rowIdx]) {
 			continue
@@ -349,17 +373,55 @@ func detectOutliers(data [][]string, rows, colIdx int, stats ColumnStatistics) [
 		if err != nil {
 			continue
 		}
+		samples = append(samples, sample{value: num, row: rowIdx})
+	}
+	if len(samples) < minOutlierValues {
+		return outliers
+	}
 
-		if num < lowerBound || num > upperBound {
+	sort.Slice(samples, func(i, j int) bool { return samples[i].value < samples[j].value })
+
+	spread := samples[len(samples)-1].value - samples[0].value
+	if spread <= 0 {
+		return outliers
+	}
+
+	// The widest gap. At a half-range threshold only one gap can ever qualify,
+	// since two would together exceed the range -- so this cannot cascade into
+	// swamping, where removing a true outlier makes ordinary values look
+	// detached in the shrunken range that remains.
+	widest, at := 0.0, 0
+	for i := 1; i < len(samples); i++ {
+		if gap := samples[i].value - samples[i-1].value; gap > widest {
+			widest, at = gap, i
+		}
+	}
+	if widest <= minGapShare*spread {
+		return outliers
+	}
+
+	// The short side of the gap is the candidate group: a minority separated
+	// from the body of the data, not the body separated from a minority.
+	candidates := samples[at:]
+	if len(samples)-at > at {
+		candidates = samples[:at]
+	}
+
+	lowerBound := *stats.Q1 - farOutMultiplier*(*stats.IQR)
+	upperBound := *stats.Q3 + farOutMultiplier*(*stats.IQR)
+
+	for _, c := range candidates {
+		if c.value < lowerBound || c.value > upperBound {
 			outliers = append(outliers, OutlierInfo{
-				RowIndex: rowIdx,
-				Value:    value,
-				Method:   "far-out",
-				Score:    math.Abs(num-*stats.Median) / *stats.IQR,
+				RowIndex: c.row,
+				Value:    strings.TrimSpace(data[c.row][colIdx]),
+				Method:   "detached",
+				Score:    math.Abs(c.value-*stats.Median) / *stats.IQR,
 			})
 		}
 	}
 
+	sort.Slice(outliers, func(i, j int) bool { return outliers[i].RowIndex < outliers[j].RowIndex })
 	return outliers
 }
 
