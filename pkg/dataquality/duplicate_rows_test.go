@@ -111,3 +111,66 @@ func TestDuplicateFindingReadsCorrectlyForOneRow(t *testing.T) {
 		}
 	}
 }
+
+// TestLastColumnStillCounts closes a hole found by cross-checking the shipped
+// function against a brute-force implementation on the real dataset.
+//
+// That check agreed exactly -- 97 rows, no false positives or negatives -- and
+// caught a key built from the first column alone, and a key made unique per
+// row. It did not catch a key built from every column except the last, because
+// the final column of that file never distinguishes a near-pair, so ignoring it
+// changed nothing. None of the other tests here covered it either: they all
+// differ in an earlier column.
+func TestLastColumnStillCounts(t *testing.T) {
+	data := [][]string{
+		{"same", "same", "different"},
+		{"same", "same", "values"},
+	}
+	if got := findDuplicateRows(data, len(data)); len(got) != 0 {
+		t.Errorf("findDuplicateRows = %v, want none: these rows differ in the last "+
+			"column, which the key must still read", got)
+	}
+}
+
+// TestFirstColumnStillCounts is the same hole at the other end, so a key built
+// from the tail of each row fails too.
+func TestFirstColumnStillCounts(t *testing.T) {
+	data := [][]string{
+		{"different", "same", "same"},
+		{"values", "same", "same"},
+	}
+	if got := findDuplicateRows(data, len(data)); len(got) != 0 {
+		t.Errorf("findDuplicateRows = %v, want none: these rows differ in the first "+
+			"column", got)
+	}
+}
+
+// TestDuplicateImpactSaysOriginalsAreNotSelected guards the message that made
+// the finding checkable. Without it a reader compares a highlighted row against
+// the unhighlighted row below, finds them different, and concludes the
+// detection is broken (#936) -- when the row it duplicates is the one above.
+func TestDuplicateImpactSaysOriginalsAreNotSelected(t *testing.T) {
+	report := &DataQualityReport{DataProfile: DataProfile{DuplicateRows: 2}}
+	issue, found := issueOfCategory(generateQualityIssues(report, nil, nil, []int{4, 9}), "duplicate")
+	if !found {
+		t.Fatal("no duplicate issue raised")
+	}
+	for _, want := range []string{"unselected", "unhighlighted"} {
+		if !strings.Contains(issue.Impact, want) {
+			t.Errorf("impact never mentions %q, so a reader cannot tell which copy is "+
+				"selected: %q", want, issue.Impact)
+		}
+	}
+
+	// Duplicates are not always pairs and not always adjacent. In the aluminium
+	// alloy dataset 11 of the 69 repeat groups hold three or more copies -- one
+	// runs to six -- and two groups have an unrelated row sitting between the
+	// copies. Wording that promises a pair, or the original "just above",
+	// misleads in exactly the cases hardest to check by eye (#936).
+	for _, forbidden := range []string{"pair", "just above", "the row above"} {
+		if strings.Contains(strings.ToLower(issue.Impact), forbidden) {
+			t.Errorf("impact promises %q, which is false for a group of three or more "+
+				"or for copies separated by other rows: %q", forbidden, issue.Impact)
+		}
+	}
+}

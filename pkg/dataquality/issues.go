@@ -98,7 +98,7 @@ func generateQualityIssues(report *DataQualityReport, correlations map[string]ma
 			Category:    "duplicate",
 			Description: repeatedRowsPhrase(len(duplicateRows)),
 			Rows:        duplicateRows,
-			Impact:      "Repeated measurements of one sample are legitimate data, so nothing is removed for you. If they are accidental copies they carry extra weight in the analysis: selecting them here lets you check them, and Delete Row acts on the selection",
+			Impact:      "Showing them selects every copy and leaves the first occurrence of each unselected, so a highlighted row repeats an unhighlighted row earlier in the file -- where a row appears several times, all its copies are selected and only the first is not. Repeated measurements of one sample are legitimate data and nothing is removed for you; accidental copies carry extra weight in the analysis, and Delete Row acts on the selection",
 		})
 	}
 

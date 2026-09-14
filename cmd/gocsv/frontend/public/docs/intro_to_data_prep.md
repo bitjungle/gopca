@@ -182,7 +182,9 @@ Whether that matters is a question about your experiment, not about the numbers,
 - **Replicate measurements** of the same sample are legitimate data. Keep them, or collapse them to one row per sample with **Average Replicates**.
 - **Accidental copies** — a file concatenated twice, a row pasted in duplicate — give those samples double weight in every component, and make a cluster look denser than the evidence supports.
 
-The finding names the rows, so you can judge rather than guess. Click **Show rows in the table** and the grid selects the repeats — the second and later occurrence of each, never the first — so deleting exactly that selection leaves one of every distinct row. **Delete Row** acts on the whole selection at once.
+The finding names the rows, so you can judge rather than guess. Click **Show rows in the table** and the grid selects the repeats — the second and later occurrence of each, **never the first** — so deleting exactly that selection leaves one of every distinct row. **Delete Row** acts on the whole selection at once.
+
+> That asymmetry matters when you look at the result. Every highlighted row repeats an **unhighlighted** row earlier in the file — the first occurrence of its group. A row can appear three, four or six times, and then all its copies are highlighted together with only the first left unmarked, so two adjacent highlighted rows may well be copies of the same original. To check one, compare it with the nearest unhighlighted row above it.
 
 ---
 
