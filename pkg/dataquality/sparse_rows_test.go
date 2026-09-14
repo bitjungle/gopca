@@ -82,7 +82,7 @@ func TestFindSparseRowsSkipsNarrowDatasets(t *testing.T) {
 
 func TestSparseRowsSurfaceAsAQualityIssue(t *testing.T) {
 	report := &DataQualityReport{DataProfile: DataProfile{Rows: 100, Columns: 30}}
-	issues := generateQualityIssues(report, nil, []int{42})
+	issues := generateQualityIssues(report, nil, []int{42}, nil)
 
 	var found *QualityIssue
 	for i := range issues {
@@ -113,7 +113,7 @@ func TestDescribeRowNumbersAbbreviatesLongRuns(t *testing.T) {
 
 func TestNoSparseRowsRaisesNoIssue(t *testing.T) {
 	report := &DataQualityReport{DataProfile: DataProfile{Rows: 100, Columns: 30}}
-	for _, issue := range generateQualityIssues(report, nil, nil) {
+	for _, issue := range generateQualityIssues(report, nil, nil, nil) {
 		if issue.Category == "structure" {
 			t.Error("raised a structure issue with no sparse rows")
 		}

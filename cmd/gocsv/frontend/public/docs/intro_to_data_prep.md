@@ -175,6 +175,15 @@ It is worth knowing for one reason: leverage. A column with a long tail has a fe
 
 Read the flag before reaching for one, though, because it is deliberately two-sided. It fires when a column's tails are unusual in *either* direction, so a column whose values are spread evenly across their range — no tail at all — is flagged exactly as a long-tailed one is. Nothing is pulling on a component there, and transforming it would be work without a purpose.
 
+**Repeated rows.** The report also counts rows that repeat a row appearing earlier in the file — identical in *every* column. These are easy to miss by eye, because copies often sit next to each other and differ in nothing at all, so scrolling past them looks like scrolling past ordinary data.
+
+Whether that matters is a question about your experiment, not about the numbers, which is why nothing is removed for you:
+
+- **Replicate measurements** of the same sample are legitimate data. Keep them, or collapse them to one row per sample with **Average Replicates**.
+- **Accidental copies** — a file concatenated twice, a row pasted in duplicate — give those samples double weight in every component, and make a cluster look denser than the evidence supports.
+
+The finding names the rows, so you can judge rather than guess. Click **Show rows in the table** and the grid selects the repeats — the second and later occurrence of each, never the first — so deleting exactly that selection leaves one of every distinct row. **Delete Row** acts on the whole selection at once.
+
 ---
 
 ## 4. Missing values

@@ -47,7 +47,7 @@ func issueOfCategory(issues []QualityIssue, category string) (QualityIssue, bool
 // on 40 looks like a working feature.
 func TestSparseRowIssueCarriesTheRowsItNames(t *testing.T) {
 	report := &DataQualityReport{}
-	issues := generateQualityIssues(report, nil, []int{41})
+	issues := generateQualityIssues(report, nil, []int{41}, nil)
 
 	issue, found := issueOfCategory(issues, "structure")
 	if !found {
@@ -90,7 +90,7 @@ func TestOutlierIssueRowsAreOneBased(t *testing.T) {
 		Outliers: outliers,
 	}}}
 
-	issue, found := issueOfCategory(generateQualityIssues(report, nil, nil), "outlier")
+	issue, found := issueOfCategory(generateQualityIssues(report, nil, nil, nil), "outlier")
 	if !found {
 		t.Fatal("no outlier issue raised for 3 extreme values in 1000")
 	}
@@ -121,7 +121,7 @@ func TestColumnOnlyIssuesCarryNoRows(t *testing.T) {
 	report := &DataQualityReport{ColumnAnalysis: []ColumnAnalysis{
 		{Name: "a", Type: "numeric", Distribution: DistributionInfo{IsNormal: false}},
 	}}
-	issue, found := issueOfCategory(generateQualityIssues(report, nil, nil), "distribution")
+	issue, found := issueOfCategory(generateQualityIssues(report, nil, nil, nil), "distribution")
 	if !found {
 		t.Fatal("no distribution issue raised")
 	}
