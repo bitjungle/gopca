@@ -171,15 +171,21 @@ func TestAnalyzeDistribution_Normal(t *testing.T) {
 // ─── detectOutliers ──────────────────────────────────────────────────────────
 
 func TestDetectOutliers_Clear(t *testing.T) {
-	// 9 values near 5, one extreme outlier well above Z=3
+	// Nine ordinary values and one two orders of magnitude past them.
+	//
+	// Detection no longer estimates spread at all: a value is flagged when it
+	// is at least a hundred times its nearest neighbour, which is the signature
+	// of a mechanical mistake rather than a statement about the distribution
+	// (#933). Here 9999 is over a thousand times the 7 below it, and no other
+	// value is anywhere near such a step.
 	data := [][]string{
-		{"5"}, {"5"}, {"5"}, {"5"}, {"5"},
-		{"5"}, {"5"}, {"5"}, {"5"}, {"9999"},
+		{"5"}, {"6"}, {"5"}, {"7"}, {"6"},
+		{"5"}, {"6"}, {"7"}, {"5"}, {"9999"},
 	}
 	stats := analyzeNumericStats(data, len(data), 0)
 	outliers := detectOutliers(data, len(data), 0, stats)
-	if len(outliers) == 0 {
-		t.Error("expected at least one outlier detected")
+	if len(outliers) != 1 {
+		t.Errorf("got %d outliers, want exactly 1: only 9999 stands a hundredfold clear", len(outliers))
 	}
 	found := false
 	for _, o := range outliers {

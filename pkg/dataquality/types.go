@@ -142,7 +142,7 @@ type HistogramBin struct {
 type OutlierInfo struct {
 	RowIndex int     `json:"rowIndex"`
 	Value    string  `json:"value"`
-	Method   string  `json:"method"` // "iqr" or "zscore"
+	Method   string  `json:"method"` // "magnitude": at least 100x the next distinct value
 	Score    float64 `json:"score"`
 }
 
@@ -152,7 +152,15 @@ type QualityIssue struct {
 	Category    string   `json:"category"` // "missing", "outlier", "duplicate", "correlation", "variance", "distribution", "structure"
 	Description string   `json:"description"`
 	Affected    []string `json:"affected"`
-	Impact      string   `json:"impact"`
+	// Rows lists the rows this finding concerns, numbered from 1 to match both
+	// the text of the descriptions and the position gutter in the grid.
+	//
+	// The convention has to be stated because the analysis is not internally
+	// consistent about it: findSparseRows returns i+1 while detectOutliers
+	// records a zero-based rowIdx, so anything reading both has to normalise
+	// (#931). Empty for findings that concern columns rather than rows.
+	Rows   []int  `json:"rows,omitempty"`
+	Impact string `json:"impact"`
 }
 
 // Recommendation is an actionable suggestion derived from the quality analysis.

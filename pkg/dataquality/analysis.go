@@ -299,24 +299,61 @@ func analyzeDistribution(data [][]string, rows, colIdx int) DistributionInfo {
 	return dist
 }
 
-// detectOutliers returns outliers found in a numeric column using both the IQR
-// method (1.5×IQR fence) and the Z-score method (threshold = 3.0). A row is
-// only reported once even if it triggers both methods.
+// magnitudeJump is how far beyond the rest of a column a value must sit before
+// GoCSV will say anything about it: a hundredfold step up from the next value
+// in, with no gradation between.
+//
+// The number is deliberately far past anything a statistical fence would draw,
+// because the question a fence answers -- is this value far from the others --
+// is not the question that matters here, which is whether it is wrong. On
+// heterogeneous scientific data those come apart completely. An Al-4Cr-1Fe
+// alloy holds 4.11% chromium where most aluminium alloys hold none, so every
+// robust rule flags it; the value is the entire point of the material and the
+// most correct number in the row (#933). No univariate rule can separate that
+// from an error, because the statistics are identical and the difference lives
+// in the alloy's name.
+//
+// A hundredfold step is not a statement about distribution. It is the signature
+// of a mechanical mistake -- a misplaced decimal point, metres recorded where
+// millimetres were meant, a sentinel such as 9999 left in place of a missing
+// reading. Real measurements of the same quantity do not differ by two orders
+// of magnitude from their nearest neighbour.
+const magnitudeJump = 100.0
+
+// minOutlierValues is the smallest column worth examining at all.
+const minOutlierValues = 4
+
+// detectOutliers returns values that are almost certainly mistakes rather than
+// measurements, and deliberately finds nothing else.
+//
+// Judging which samples are genuinely unusual is multivariate work and belongs
+// to GoPCA, which does it on the fitted model with Hotelling's T² and
+// Q-residuals. A sample can be ordinary in every column and still sit far off
+// the model, and it can be extreme in one column and be exactly what it should
+// be. GoCSV's job is narrower: catch the mechanical errors before they reach
+// the analysis, and stay quiet otherwise.
+//
+// The rule is a ratio, not a fence. The largest value -- together with any
+// exact ties, so a repeated sensor glitch is not hidden by its own repetition
+// -- must be at least magnitudeJump times the next distinct value in. The same
+// applies at the bottom for negative extremes. A column whose values run
+// smoothly across several orders of magnitude is never flagged, because each
+// value is close to its neighbour even when it is far from the median.
+//
+// What this gives up is real and worth stating: it will miss errors smaller
+// than a hundredfold. A dew point of 100 recorded where the next highest is 19
+// is plainly a sentinel, and a sensor reading of 309231 among values near 4500
+// is plainly a glitch, yet neither is a hundredfold step and neither is
+// reported. That is the accepted cost of never accusing a correct measurement,
+// and both remain visible in the column statistics and unmissable in a PCA.
 func detectOutliers(data [][]string, rows, colIdx int, stats ColumnStatistics) []OutlierInfo {
 	outliers := []OutlierInfo{}
 
-	if stats.Q1 == nil || stats.Q3 == nil || stats.Mean == nil || stats.StdDev == nil {
-		return outliers
+	type sample struct {
+		value float64
+		row   int
 	}
-
-	iqrPositive := stats.IQR != nil && *stats.IQR > 0
-	var lowerBound, upperBound float64
-	if iqrPositive {
-		lowerBound = *stats.Q1 - 1.5*(*stats.IQR)
-		upperBound = *stats.Q3 + 1.5*(*stats.IQR)
-	}
-	zThreshold := 3.0
-
+	samples := make([]sample, 0, rows)
 	for rowIdx := 0; rowIdx < rows && rowIdx < len(data); rowIdx++ {
 		if colIdx >= len(data[rowIdx]) {
 			continue
@@ -329,30 +366,71 @@ func detectOutliers(data [][]string, rows, colIdx int, stats ColumnStatistics) [
 		if err != nil {
 			continue
 		}
+		samples = append(samples, sample{value: num, row: rowIdx})
+	}
+	if len(samples) < minOutlierValues {
+		return outliers
+	}
 
-		if iqrPositive && (num < lowerBound || num > upperBound) {
-			outliers = append(outliers, OutlierInfo{
-				RowIndex: rowIdx,
-				Value:    value,
-				Method:   "iqr",
-				Score:    math.Abs(num-*stats.Median) / *stats.IQR,
-			})
-			continue
-		}
+	sort.Slice(samples, func(i, j int) bool { return samples[i].value < samples[j].value })
 
-		if *stats.StdDev > 0 {
-			zScore := math.Abs(num-*stats.Mean) / *stats.StdDev
-			if zScore > zThreshold {
-				outliers = append(outliers, OutlierInfo{
-					RowIndex: rowIdx,
-					Value:    value,
-					Method:   "zscore",
-					Score:    zScore,
-				})
+	// The extreme group at one end, and the first value that differs from it.
+	// Ties are taken together: two identical glitches would otherwise compare
+	// against each other and hide the jump.
+	extremeGroup := func(fromTop bool) (group []sample, next float64, ok bool) {
+		if fromTop {
+			last := len(samples) - 1
+			edge := samples[last].value
+			i := last
+			for i >= 0 && samples[i].value == edge {
+				i--
 			}
+			if i < 0 {
+				return nil, 0, false
+			}
+			return samples[i+1:], samples[i].value, true
+		}
+		edge := samples[0].value
+		i := 0
+		for i < len(samples) && samples[i].value == edge {
+			i++
+		}
+		if i >= len(samples) {
+			return nil, 0, false
+		}
+		return samples[:i], samples[i].value, true
+	}
+
+	// Magnitudes, so the test reads the same at either end and for negative
+	// values. A neighbour of zero is no yardstick -- everything is infinitely
+	// larger than nothing, which would make the only measured values in a
+	// mostly-empty column look like errors.
+	jumped := func(edge, next float64) bool {
+		if next == 0 || math.IsNaN(edge) || math.IsNaN(next) {
+			return false
+		}
+		return math.Abs(edge) >= magnitudeJump*math.Abs(next)
+	}
+
+	flag := func(group []sample) {
+		for _, c := range group {
+			outliers = append(outliers, OutlierInfo{
+				RowIndex: c.row,
+				Value:    strings.TrimSpace(data[c.row][colIdx]),
+				Method:   "magnitude",
+				Score:    math.Abs(c.value),
+			})
 		}
 	}
 
+	if group, next, ok := extremeGroup(true); ok && jumped(group[0].value, next) {
+		flag(group)
+	}
+	if group, next, ok := extremeGroup(false); ok && jumped(group[0].value, next) {
+		flag(group)
+	}
+
+	sort.Slice(outliers, func(i, j int) bool { return outliers[i].RowIndex < outliers[j].RowIndex })
 	return outliers
 }
 
@@ -483,9 +561,16 @@ func calculateQualityScore(report *DataQualityReport) float64 {
 		}
 	}
 
+	// Counted the same way the issues list counts them, so the score cannot
+	// disagree with the findings beside it -- the mistake the low-variance test
+	// below already had to be corrected for. Extreme values too numerous to be
+	// outliers say something about the column's shape, which is scored through
+	// the distribution findings rather than twice here (#933).
 	totalOutliers := 0
 	for _, col := range report.ColumnAnalysis {
-		totalOutliers += len(col.Outliers)
+		if hasReportableOutliers(col) {
+			totalOutliers += len(col.Outliers)
+		}
 	}
 	if report.DataProfile.Rows > 0 && report.DataProfile.NumericColumns > 0 {
 		outlierPct := float64(totalOutliers) / float64(report.DataProfile.Rows*report.DataProfile.NumericColumns) * 100
@@ -513,9 +598,8 @@ func calculateColumnQualityScore(analysis ColumnAnalysis) float64 {
 
 	score -= analysis.Stats.MissingPercent * 0.5
 
-	if analysis.Stats.Count > 0 {
-		outlierPct := float64(len(analysis.Outliers)) / float64(analysis.Stats.Count) * 100
-		score -= outlierPct * 0.3
+	if hasReportableOutliers(analysis) {
+		score -= outlierShare(analysis) * 0.3
 	}
 
 	// Low variation, judged the same way the issues list judges it.

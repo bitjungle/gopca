@@ -46,6 +46,7 @@ func generateQualityIssues(report *DataQualityReport, correlations map[string]ma
 			Category:    "structure",
 			Description: fmt.Sprintf("%d row(s) hold far fewer values than the rest of the dataset: %s", len(sparseRows), describeRowNumbers(sparseRows)),
 			Affected:    []string{},
+			Rows:        sparseRows,
 			Impact:      "A stray row is analysed as though it were an observation; check whether it belongs to the row above or should be removed",
 		})
 	}
@@ -93,18 +94,18 @@ func generateQualityIssues(report *DataQualityReport, correlations map[string]ma
 
 	// Outliers
 	for _, col := range report.ColumnAnalysis {
-		if col.Type == "numeric" && len(col.Outliers) > 0 {
-			outlierPct := float64(len(col.Outliers)) / float64(col.Stats.Count) * 100
-			if outlierPct > 10 {
-				issues = append(issues, QualityIssue{
-					Severity:    "warning",
-					Category:    "outlier",
-					Description: fmt.Sprintf("Column '%s' has %d outliers (%.1f%%)", col.Name, len(col.Outliers), outlierPct),
-					Affected:    []string{col.Name},
-					Impact:      "Outliers can disproportionately influence PCA components",
-				})
-			}
+		if !hasReportableOutliers(col) {
+			continue
 		}
+		issues = append(issues, QualityIssue{
+			Severity: "info",
+			Category: "outlier",
+			Description: fmt.Sprintf("Column '%s' has %d value(s) at least 100 times its nearest neighbour (%.1f%%)",
+				col.Name, len(col.Outliers), outlierShare(col)),
+			Affected: []string{col.Name},
+			Rows:     outlierRowNumbers(col.Outliers),
+			Impact:   "A jump this large is usually a misplaced decimal point, a unit mix-up, or a sentinel left in place of a missing reading. Check it against the original record; GoPCA judges which samples are genuinely unusual on the fitted model",
+		})
 	}
 
 	// High pairwise correlations
@@ -161,6 +162,56 @@ func generateQualityIssues(report *DataQualityReport, correlations map[string]ma
 	}
 
 	return issues
+}
+
+// outlierShare returns the flagged values as a percentage of the column's
+// values. Stats.Count is the number of values present, so a column with missing
+// cells is measured against what it actually holds rather than the row count.
+func outlierShare(col ColumnAnalysis) float64 {
+	if col.Stats.Count == 0 {
+		return 0
+	}
+	return float64(len(col.Outliers)) / float64(col.Stats.Count) * 100
+}
+
+// hasReportableOutliers reports whether a column's flagged values are few
+// enough to be mistakes rather than a property of the column.
+//
+// The share is a ceiling, not a floor. It used to be a floor -- the warning
+// appeared only when more than 10% of a column was flagged -- which inverted
+// the meaning: a handful of extreme values in a large column, the case a user
+// can act on, was never reported, while a column where a fifth of the values
+// sat beyond the fence produced a warning about 242 outliers (#933).
+//
+// The absolute alternative exists because the share alone needs a hundred rows
+// before a single value can ever be one percent of the column, which would
+// leave small files unable to report anything at all. Three values standing a
+// hundredfold clear of everything else are worth mentioning whatever the row
+// count.
+func hasReportableOutliers(col ColumnAnalysis) bool {
+	const (
+		maxShare = 1.0
+		maxCount = 3
+	)
+
+	if col.Type != "numeric" || len(col.Outliers) == 0 {
+		return false
+	}
+	return outlierShare(col) <= maxShare || len(col.Outliers) <= maxCount
+}
+
+// outlierRowNumbers converts the zero-based RowIndex that detectOutliers
+// records into the one-based numbering QualityIssue.Rows uses.
+//
+// The two halves of the analysis disagree about this: findSparseRows already
+// counts from one. Converting here, at the single point where outliers become
+// a finding, keeps the disagreement from spreading to every consumer (#931).
+func outlierRowNumbers(outliers []OutlierInfo) []int {
+	rows := make([]int, len(outliers))
+	for i, o := range outliers {
+		rows[i] = o.RowIndex + 1
+	}
+	return rows
 }
 
 // dominantVarianceColumn returns the numeric column accounting for more than
@@ -254,18 +305,23 @@ func generateRecommendations(report *DataQualityReport) []Recommendation {
 		})
 	}
 
+	// Built from the same rule as the issue above, so the two cannot disagree
+	// about which columns have outliers worth mentioning. The previous test was
+	// an absolute count -- more than five flagged values -- which does not scale
+	// with the number of rows and listed most of the numeric columns at high
+	// priority on a dataset of any size (#933).
 	colsWithOutliers := []string{}
 	for _, col := range report.ColumnAnalysis {
-		if len(col.Outliers) > 5 {
+		if hasReportableOutliers(col) {
 			colsWithOutliers = append(colsWithOutliers, col.Name)
 		}
 	}
 	if len(colsWithOutliers) > 0 {
 		recs = append(recs, Recommendation{
-			Priority:    "high",
+			Priority:    "medium",
 			Category:    "outlier",
-			Action:      "Handle outliers",
-			Description: "Consider removing or transforming outliers, or use robust scaling",
+			Action:      "Look at the extreme values",
+			Description: "Check them against the original records before analysing. An extreme value that is correct is data and should be kept; removing it because it is inconvenient changes the result. GoPCA identifies genuinely unusual samples on the fitted model",
 			Columns:     colsWithOutliers,
 		})
 	}

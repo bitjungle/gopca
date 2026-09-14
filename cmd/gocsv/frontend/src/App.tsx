@@ -823,6 +823,13 @@ return;
                 report={dataQualityReport}
                 isOpen={showDataQualityReport}
                 onClose={() => setShowDataQualityReport(false)}
+                onShowRows={(rows) => {
+                    // Close first: the report is a modal over the grid, so
+                    // selecting rows behind it would scroll something the user
+                    // cannot see (#931).
+                    setShowDataQualityReport(false);
+                    gridRef.current?.focusRows(rows);
+                }}
             />
 
             {/* Import Wizard */}
