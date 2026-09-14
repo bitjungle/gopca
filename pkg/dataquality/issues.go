@@ -32,7 +32,7 @@ import (
 
 // generateQualityIssues inspects the analysis report and correlation map and
 // returns a list of detected data quality issues.
-func generateQualityIssues(report *DataQualityReport, correlations map[string]map[string]float64, sparseRows []int) []QualityIssue {
+func generateQualityIssues(report *DataQualityReport, correlations map[string]map[string]float64, sparseRows, duplicateRows []int) []QualityIssue {
 	issues := []QualityIssue{}
 
 	// A row holding almost nothing is usually a stray line rather than a record:
@@ -82,13 +82,23 @@ func generateQualityIssues(report *DataQualityReport, correlations map[string]ma
 		}
 	}
 
-	// Duplicate rows
-	if report.DataProfile.DuplicateRows > 0 {
+	// Duplicate rows.
+	//
+	// Carrying the indices is what makes this worth reporting at all. As a bare
+	// count it was a claim the user could neither check nor act on -- a tester
+	// searched the file by hand, found nothing, and disbelieved the number
+	// (#932). Selecting the rows lets them see the repeats and, since Delete
+	// Row already acts on the selection, remove them if they decide to.
+	//
+	// These are the second and later occurrences, so deleting exactly this set
+	// leaves one of every distinct row.
+	if len(duplicateRows) > 0 {
 		issues = append(issues, QualityIssue{
-			Severity:    "warning",
+			Severity:    "info",
 			Category:    "duplicate",
-			Description: fmt.Sprintf("Found %d duplicate rows", report.DataProfile.DuplicateRows),
-			Impact:      "Duplicate rows can bias PCA results",
+			Description: fmt.Sprintf("%s repeat a row that appears earlier in the file", countedRows(len(duplicateRows))),
+			Rows:        duplicateRows,
+			Impact:      "Repeated measurements of one sample are legitimate data, so nothing is removed for you. If they are accidental copies they carry extra weight in the analysis: selecting them here lets you check them, and Delete Row acts on the selection",
 		})
 	}
 
@@ -162,6 +172,15 @@ func generateQualityIssues(report *DataQualityReport, correlations map[string]ma
 	}
 
 	return issues
+}
+
+// countedRows renders a row count with the noun agreeing, so a single duplicate
+// does not read as "1 rows".
+func countedRows(n int) string {
+	if n == 1 {
+		return "1 row"
+	}
+	return fmt.Sprintf("%d rows", n)
 }
 
 // outlierShare returns the flagged values as a percentage of the column's
@@ -296,12 +315,16 @@ func generateRecommendations(report *DataQualityReport) []Recommendation {
 		})
 	}
 
+	// Worded as a decision rather than an instruction. It told the user to
+	// "Remove duplicate rows" when no removal feature existed and the rows were
+	// not identified, which is an instruction to do the impossible (#932).
 	if report.DataProfile.DuplicateRows > 0 {
 		recs = append(recs, Recommendation{
-			Priority:    "medium",
-			Category:    "duplicate",
-			Action:      "Remove duplicate rows",
-			Description: fmt.Sprintf("Remove %d duplicate rows to avoid biasing the analysis", report.DataProfile.DuplicateRows),
+			Priority: "medium",
+			Category: "duplicate",
+			Action:   "Decide whether the repeated rows are replicates",
+			Description: fmt.Sprintf("%d row(s) repeat an earlier row. Genuine replicate measurements are worth keeping, or averaging with Average Replicates; accidental copies weight those samples twice. The Issues tab will show you which rows they are",
+				report.DataProfile.DuplicateRows),
 		})
 	}
 

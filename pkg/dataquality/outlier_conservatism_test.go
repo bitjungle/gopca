@@ -191,7 +191,7 @@ func TestOutlierIssueExplainsTheLikelyCause(t *testing.T) {
 	col := numericColumnOf(t, "sensor", append(nearHundred(), "50000")...)
 
 	issue, found := issueOfCategory(generateQualityIssues(
-		&DataQualityReport{ColumnAnalysis: []ColumnAnalysis{col}}, nil, nil), "outlier")
+		&DataQualityReport{ColumnAnalysis: []ColumnAnalysis{col}}, nil, nil, nil), "outlier")
 	if !found {
 		t.Fatal("no outlier issue raised")
 	}

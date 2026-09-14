@@ -216,16 +216,25 @@ func TestCountDuplicateRows(t *testing.T) {
 		{"a", "b"}, // duplicate of row 0
 		{"a", "b"}, // another duplicate
 	}
-	got := countDuplicateRows(data, len(data))
-	// rows 2 and 3 are duplicates of row 0 → 2 counted
-	if got != 2 {
-		t.Errorf("expected 2 duplicate rows, got %d", got)
+	// Data rows 3 and 4, numbered from one, repeat data row 1. The first
+	// occurrence is never included: deleting exactly this set leaves one of
+	// every distinct row, which is what makes the finding actionable (#932).
+	got := findDuplicateRows(data, len(data))
+	want := []int{3, 4}
+	if len(got) != len(want) {
+		t.Fatalf("findDuplicateRows = %v, want %v", got, want)
+	}
+	for i := range want {
+		if got[i] != want[i] {
+			t.Errorf("findDuplicateRows = %v, want %v", got, want)
+			break
+		}
 	}
 }
 
 func TestCountDuplicateRows_NoDuplicates(t *testing.T) {
 	data := [][]string{{"1"}, {"2"}, {"3"}}
-	if got := countDuplicateRows(data, len(data)); got != 0 {
+	if got := findDuplicateRows(data, len(data)); len(got) != 0 {
 		t.Errorf("expected 0, got %d", got)
 	}
 }
@@ -314,7 +323,7 @@ func TestGenerateQualityIssues_HighMissing(t *testing.T) {
 	report := &DataQualityReport{
 		DataProfile: DataProfile{MissingPercent: 25},
 	}
-	issues := generateQualityIssues(report, nil, nil)
+	issues := generateQualityIssues(report, nil, nil, nil)
 	found := false
 	for _, iss := range issues {
 		if iss.Category == "missing" && iss.Severity == "error" {
@@ -327,18 +336,43 @@ func TestGenerateQualityIssues_HighMissing(t *testing.T) {
 }
 
 func TestGenerateQualityIssues_Duplicates(t *testing.T) {
+	// Driven by the row indices rather than by DataProfile.DuplicateRows, so
+	// the finding and the rows it offers cannot disagree. The count alone used
+	// to raise the issue, which is how it came to report a number with nothing
+	// behind it (#932).
 	report := &DataQualityReport{
-		DataProfile: DataProfile{DuplicateRows: 5},
+		DataProfile: DataProfile{DuplicateRows: 3},
 	}
-	issues := generateQualityIssues(report, nil, nil)
+	issues := generateQualityIssues(report, nil, nil, []int{4, 7, 9})
+
+	var issue QualityIssue
 	found := false
 	for _, iss := range issues {
 		if iss.Category == "duplicate" {
-			found = true
+			issue, found = iss, true
 		}
 	}
 	if !found {
-		t.Error("expected duplicate issue")
+		t.Fatal("expected duplicate issue")
+	}
+	if len(issue.Rows) != 3 || issue.Rows[0] != 4 || issue.Rows[2] != 9 {
+		t.Errorf("issue.Rows = %v, want [4 7 9]", issue.Rows)
+	}
+	if !strings.Contains(issue.Description, "3 rows") {
+		t.Errorf("description does not report the count: %q", issue.Description)
+	}
+}
+
+func TestGenerateQualityIssues_NoDuplicatesWithoutRows(t *testing.T) {
+	// A count with no rows behind it raises nothing. Without this the test
+	// above would pass against a function that ignored its argument.
+	report := &DataQualityReport{
+		DataProfile: DataProfile{DuplicateRows: 5},
+	}
+	for _, iss := range generateQualityIssues(report, nil, nil, nil) {
+		if iss.Category == "duplicate" {
+			t.Errorf("duplicate issue raised with no rows to show: %q", iss.Description)
+		}
 	}
 }
 

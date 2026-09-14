@@ -41,7 +41,7 @@ func skewedCol(name string) ColumnAnalysis {
 func distributionIssue(t *testing.T, cols ...ColumnAnalysis) (QualityIssue, bool) {
 	t.Helper()
 	report := &DataQualityReport{ColumnAnalysis: cols}
-	for _, issue := range generateQualityIssues(report, nil, nil) {
+	for _, issue := range generateQualityIssues(report, nil, nil, nil) {
 		if issue.Category == "distribution" {
 			return issue, true
 		}

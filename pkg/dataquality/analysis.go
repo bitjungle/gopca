@@ -65,7 +65,8 @@ func AnalyzeDataQuality(in AnalysisInput) (*DataQualityReport, error) {
 	report.DataProfile.MissingPercent = missingStats.MissingPercent
 
 	// Detect duplicate rows
-	report.DataProfile.DuplicateRows = countDuplicateRows(in.Data, in.Rows)
+	duplicateRows := findDuplicateRows(in.Data, in.Rows)
+	report.DataProfile.DuplicateRows = len(duplicateRows)
 
 	// Estimate memory size
 	report.DataProfile.MemorySize = estimateMemorySize(in.Rows, in.Columns)
@@ -82,7 +83,7 @@ func AnalyzeDataQuality(in AnalysisInput) (*DataQualityReport, error) {
 	sparseRows := findSparseRows(in.Data, in.Rows, in.Columns)
 
 	// Generate issues based on analysis
-	report.Issues = generateQualityIssues(report, correlations, sparseRows)
+	report.Issues = generateQualityIssues(report, correlations, sparseRows, duplicateRows)
 
 	// Generate recommendations
 	report.Recommendations = generateRecommendations(report)
@@ -490,17 +491,33 @@ func findSparseRows(data [][]string, rows, columns int) []int {
 	return sparse
 }
 
-// countDuplicateRows returns the number of rows that appear more than once.
-func countDuplicateRows(data [][]string, rows int) int {
-	rowMap := make(map[string]int)
-	duplicates := 0
+// findDuplicateRows returns the 1-based indices of rows that repeat a row
+// already seen earlier in the file.
+//
+// The first occurrence of each is not included, so the result is exactly the
+// set that could be deleted to leave one of every distinct row. That is what
+// makes the finding actionable: the report hands these rows to the grid, and
+// Delete Row already acts on the selection (#932).
+//
+// It used to return only a count, discarding the indices as it went, so the
+// report could say "Found 97 duplicate rows" and then offer the user no way to
+// see which -- a number to be believed or disbelieved rather than acted on.
+//
+// Rows are compared across every column. Two rows carrying the same
+// measurements are the same point in the analysis whatever else distinguishes
+// them, and being identical is not by itself a fault: repeated measurements of
+// one sample are legitimate data, which is why nothing is removed here.
+func findDuplicateRows(data [][]string, rows int) []int {
+	seen := make(map[string]bool)
+	duplicates := []int{}
 
 	for rowIdx := 0; rowIdx < rows && rowIdx < len(data); rowIdx++ {
 		key := strings.Join(data[rowIdx], "|")
-		rowMap[key]++
-		if rowMap[key] >= 2 {
-			duplicates++
+		if seen[key] {
+			duplicates = append(duplicates, rowIdx+1)
+			continue
 		}
+		seen[key] = true
 	}
 
 	return duplicates
