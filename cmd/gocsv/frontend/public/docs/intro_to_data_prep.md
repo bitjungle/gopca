@@ -169,6 +169,12 @@ Two things it flags are worth acting on:
 
 Neither is removed for you. Whether a quiet variable matters is a question about your experiment, not about the numbers.
 
+**And one it flags that usually needs nothing.** The report also counts how many numeric columns are *skewed or have unusual tail weight*. This is information rather than a fault. PCA assumes nothing about the shape of your distributions, so there is no requirement here to satisfy before you can proceed, and a long list of flagged columns is not a problem with your data.
+
+It is worth knowing for one reason: leverage. A column with a long tail has a few values sitting far from the mean, and a covariance method notices distance — so that column can pull a component towards itself for reasons of shape rather than substance. That is the case worth acting on, and section 6 covers the transforms that reduce it.
+
+Read the flag before reaching for one, though, because it is deliberately two-sided. It fires when a column's tails are unusual in *either* direction, so a column whose values are spread evenly across their range — no tail at all — is flagged exactly as a long-tailed one is. Nothing is pulling on a component there, and transforming it would be work without a purpose.
+
 ---
 
 ## 4. Missing values
