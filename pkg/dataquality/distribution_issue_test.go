@@ -24,6 +24,7 @@
 package dataquality
 
 import (
+	"math"
 	"strings"
 	"testing"
 )
@@ -99,6 +100,15 @@ func TestDistributionIssueNamesWhatWasMeasured(t *testing.T) {
 	if !strings.Contains(text, "skew") && !strings.Contains(text, "tail") {
 		t.Errorf("description names neither skew nor tails: %q", issue.Description)
 	}
+	// The heuristic is |excess kurtosis| < 1.0, which fails in both directions,
+	// so the finding cannot be described as a long or heavy tail. See
+	// TestLightTailedColumnIsFlaggedToo for the column that proves it.
+	for _, overclaim := range []string{"heavy-tail", "heavy tail", "long tail", "long-tail"} {
+		if strings.Contains(text, overclaim) {
+			t.Errorf("description claims %q, which |excess kurtosis| < 1.0 does not establish: %q",
+				overclaim, issue.Description)
+		}
+	}
 	if !strings.Contains(issue.Description, "2") {
 		t.Errorf("description does not report the column count: %q", issue.Description)
 	}
@@ -118,5 +128,39 @@ func TestNoDistributionIssueWhenNothingIsSkewed(t *testing.T) {
 	}
 	if issue, found := distributionIssue(t, normal); found {
 		t.Errorf("distribution issue raised for an unskewed column: %q", issue.Description)
+	}
+}
+
+// TestLightTailedColumnIsFlaggedToo is the measurement behind the wording.
+//
+// IsNormal requires |excess kurtosis| < 1.0 on the Fisher definition, so it
+// fails for light tails as well as heavy ones. A uniform column is the clearest
+// case: perfectly symmetric, excess kurtosis about -1.20, and flagged. Any
+// wording that calls the flagged columns heavy-tailed is therefore false for
+// this column, which is why the assertions above forbid it.
+//
+// Without this test the prohibition above looks like a style preference rather
+// than a statement about what the heuristic can establish.
+func TestLightTailedColumnIsFlaggedToo(t *testing.T) {
+	values := make([]float64, 1000)
+	for i := range values {
+		values[i] = float64(i) / 999.0
+	}
+	mean := calculateMean(values)
+	stdDev := calculateStdDev(values, mean)
+	skewness := calculateSkewness(values, mean, stdDev)
+	kurtosis := calculateKurtosis(values, mean, stdDev)
+
+	if kurtosis >= -1.0 {
+		t.Fatalf("uniform excess kurtosis = %.4f, want below -1.0; this test no longer "+
+			"exercises the light-tailed case", kurtosis)
+	}
+	if math.Abs(skewness) >= 0.5 {
+		t.Fatalf("uniform skewness = %.4f, want near zero; the column must be flagged "+
+			"on tail weight alone, not on skew", skewness)
+	}
+
+	if isNormalShape(skewness, kurtosis) {
+		t.Fatal("a uniform column is not flagged, so the heuristic no longer fails on light tails")
 	}
 }

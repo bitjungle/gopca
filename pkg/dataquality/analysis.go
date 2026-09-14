@@ -209,6 +209,19 @@ func analyzeCategoricalStats(data [][]string, rows, colIdx int) ColumnStatistics
 // analyzeDistribution builds a histogram and classifies the distribution shape
 // for a numeric column. Returns an empty DistributionInfo if fewer than 10
 // non-missing values are present.
+// isNormalShape reports whether a column's skewness and excess kurtosis sit
+// close enough to a normal shape that no distribution finding is worth raising.
+//
+// It is a shape heuristic, not a normality test, and nothing downstream should
+// present it as one (#929). Both terms are two-sided: the kurtosis bound is on
+// the Fisher definition where a normal distribution scores 0, so a light-tailed
+// column fails it just as a heavy-tailed one does -- a uniform column scores
+// about -1.20. Any message derived from this function must therefore speak of
+// unusual tail weight rather than of long or heavy tails.
+func isNormalShape(skewness, kurtosis float64) bool {
+	return math.Abs(skewness) < 0.5 && math.Abs(kurtosis) < 1.0
+}
+
 func analyzeDistribution(data [][]string, rows, colIdx int) DistributionInfo {
 	dist := DistributionInfo{}
 
@@ -257,7 +270,7 @@ func analyzeDistribution(data [][]string, rows, colIdx int) DistributionInfo {
 	skewness := calculateSkewness(values, mean, stdDev)
 	kurtosis := calculateKurtosis(values, mean, stdDev)
 
-	dist.IsNormal = math.Abs(skewness) < 0.5 && math.Abs(kurtosis) < 1.0
+	dist.IsNormal = isNormalShape(skewness, kurtosis)
 
 	switch {
 	case dist.IsNormal:

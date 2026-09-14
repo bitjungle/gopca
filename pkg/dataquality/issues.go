@@ -135,10 +135,16 @@ func generateQualityIssues(report *DataQualityReport, correlations map[string]ma
 	//
 	// What a long tail actually does is give a handful of extreme values
 	// leverage over the components, because a covariance method measures
-	// distance from the mean.
+	// distance from the mean. That is the only direction worth acting on, and
+	// the message says so: not every flagged column is a problem.
 	//
 	// IsNormal is a skewness and kurtosis heuristic rather than a normality
-	// test, so naming skew and tails also describes what was measured.
+	// test, so the wording describes what was measured. Note that the kurtosis
+	// term is |excess kurtosis| < 1.0 on the Fisher definition, which fails in
+	// both directions -- a uniform column is symmetric with excess kurtosis
+	// about -1.20 and is flagged. Calling these columns heavy-tailed would
+	// therefore repeat, in miniature, the overclaim this issue exists to
+	// correct: the measurement establishes unusual tail weight, not a long tail.
 	skewedCount := 0
 	for _, col := range report.ColumnAnalysis {
 		if col.Type == "numeric" && !col.Distribution.IsNormal {
@@ -149,8 +155,8 @@ func generateQualityIssues(report *DataQualityReport, correlations map[string]ma
 		issues = append(issues, QualityIssue{
 			Severity:    "info",
 			Category:    "distribution",
-			Description: fmt.Sprintf("%d numeric columns are strongly skewed or heavy-tailed", skewedCount),
-			Impact:      "PCA assumes no particular distribution, but a long tail lets a few extreme values steer a component",
+			Description: fmt.Sprintf("%d numeric columns are skewed or have unusual tail weight", skewedCount),
+			Impact:      "PCA assumes no particular distribution; the case worth acting on is a long tail, where a few extreme values can steer a component",
 		})
 	}
 
@@ -314,7 +320,7 @@ func generateRecommendations(report *DataQualityReport) []Recommendation {
 			Priority:    "medium",
 			Category:    "distribution",
 			Action:      "Transform skewed distributions",
-			Description: "Box-Cox or Yeo-Johnson fits the exponent to each column rather than guessing it; use Yeo-Johnson where there are zeros or negative values",
+			Description: "Box-Cox and Yeo-Johnson fit the exponent to each column rather than guessing it; use Yeo-Johnson where there are zeros or negative values",
 			Columns:     skewedCols,
 		})
 	}
