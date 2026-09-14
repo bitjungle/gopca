@@ -55,191 +55,151 @@ func repeatVals(v string, n int) []string {
 	return out
 }
 
-// TestFenceIsFarOutNotOutside is the substance of the change.
-//
-// Tukey separates "outside" values beyond 1.5*IQR from "far out" values beyond
-// 3*IQR. GoCSV reports only the latter, because the narrower fence flags a
-// large share of any skewed column -- it was calling 21% of a composition
-// column outliers. A value between the two fences must not be reported.
-func TestFenceIsFarOutNotOutside(t *testing.T) {
-	// 1..9 gives Q1=3, Q3=7, IQR=4: outside beyond 13, far out beyond 19.
-	base := []string{"1", "2", "3", "4", "5", "6", "7", "8", "9"}
-
-	outside := numericColumnOf(t, "x", append(append([]string{}, base...), "15")...)
-	if len(outside.Outliers) != 0 {
-		t.Errorf("15 is beyond 1.5*IQR but not 3*IQR and must not be flagged; got %d outliers",
-			len(outside.Outliers))
+// nearHundred returns 200 values spread between 95 and 105.
+func nearHundred() []string {
+	out := make([]string, 0, 200)
+	for i := 0; i < 200; i++ {
+		out = append(out, strconv.Itoa(95+i%11))
 	}
+	return out
+}
 
-	farOut := numericColumnOf(t, "x", append(append([]string{}, base...), "40")...)
-	if len(farOut.Outliers) != 1 {
-		t.Errorf("40 is beyond the far-out fence and must be flagged; got %d outliers",
-			len(farOut.Outliers))
+// TestHundredfoldJumpIsFlagged is the case the check exists for: a value two
+// orders of magnitude past everything else, which is what a misplaced decimal
+// point or a sentinel looks like.
+func TestHundredfoldJumpIsFlagged(t *testing.T) {
+	col := numericColumnOf(t, "sensor", append(nearHundred(), "50000")...)
+	if len(col.Outliers) != 1 {
+		t.Fatalf("got %d outliers, want 1: 50000 is ~476x the next value", len(col.Outliers))
 	}
-	if len(farOut.Outliers) == 1 && farOut.Outliers[0].Method != "detached" {
-		t.Errorf("method = %q, want detached", farOut.Outliers[0].Method)
+	if col.Outliers[0].Value != "50000" || col.Outliers[0].RowIndex != 200 {
+		t.Errorf("flagged %q at row %d, want 50000 at row 200",
+			col.Outliers[0].Value, col.Outliers[0].RowIndex)
+	}
+	if !hasReportableOutliers(col) {
+		t.Errorf("1 in 201 must be reportable")
 	}
 }
 
-// TestNoRobustSpreadReportsNothing pins the deliberate blind spot. A column
-// whose middle half is a single repeated value has no robust scale, so "far"
-// has no meaning and detection stays silent rather than guessing.
-func TestNoRobustSpreadReportsNothing(t *testing.T) {
-	col := numericColumnOf(t, "x", append(repeatVals("5", 9), "9999")...)
+// TestTenfoldJumpIsNotFlagged pins the threshold from below. A value ten times
+// the rest is conspicuous, and might well be an error -- but it is also what a
+// legitimately different sample looks like, so GoCSV says nothing.
+func TestTenfoldJumpIsNotFlagged(t *testing.T) {
+	col := numericColumnOf(t, "sensor", append(nearHundred(), "1000")...)
 	if len(col.Outliers) != 0 {
-		t.Errorf("a column with zero IQR must report nothing; got %d outliers", len(col.Outliers))
+		t.Errorf("a tenfold jump must not be flagged; got %d outliers", len(col.Outliers))
 	}
 }
 
-// TestManyExtremeValuesAreNotReportedAsOutliers is the inverted gate, fixed.
+// TestAlloyingElementIsNotFlagged is the case that drove this rule, kept as a
+// test because it is the one a statistical fence gets wrong every time.
 //
-// The old rule reported a column only when MORE than 10% of it was flagged,
-// so it spoke exactly when its own method had broken down and stayed silent
-// for the handful of extreme values a user can act on. Both halves are
-// asserted here, because fixing one without the other still leaves the report
-// misleading.
-func TestManyExtremeValuesAreNotReportedAsOutliers(t *testing.T) {
-	// A fifth of the column sits far from a tight core: a shape, not outliers.
-	// Q1=1 and Q3=2, so the IQR is real and the far-out fence sits at 5 --
-	// the twenty values of 100 are genuinely beyond it, and there are far too
-	// many of them to be called outliers. This mirrors Zn in the aluminium
-	// alloy dataset, where 19% of the column lies beyond the fence.
-	values := append(repeatVals("1", 60), append(repeatVals("2", 20), repeatVals("100", 20)...)...)
-	many := numericColumnOf(t, "wide", values...)
-	if len(many.Outliers) == 0 {
-		t.Fatal("fixture no longer produces extreme values; the test has gone stale")
+// Rows 570 and 571 of the aluminium alloy dataset are an Al-4Cr-1Fe alloy:
+// 4.11% chromium where most aluminium alloys hold none. Every robust fence
+// flags it, and the value is the defining property of the material and the most
+// correct number in the row. At roughly twelve times the next value it is
+// nowhere near a hundredfold, so the magnitude rule leaves it alone.
+func TestAlloyingElementIsNotFlagged(t *testing.T) {
+	values := repeatVals("0", 900)
+	for _, v := range []string{"0.0005", "0.001", "0.002", "0.003", "0.0035"} {
+		values = append(values, repeatVals(v, 50)...)
 	}
-	if hasReportableOutliers(many) {
-		t.Errorf("%.0f%% of the column is beyond the fence and must not be reported as outliers",
-			outlierShare(many))
-	}
+	values = append(values, "0.0411", "0.0411")
 
-	// Three in a thousand: rare enough to be outliers, and the case that was
-	// silently dropped before.
-	few := numericColumnOf(t, "narrow",
-		append(repeatVals("1", 499), append(repeatVals("2", 498), "900", "901", "902")...)...)
-	if !hasReportableOutliers(few) {
-		t.Errorf("%d extreme values in %d (%.2f%%) must be reported",
-			len(few.Outliers), few.Stats.Count, outlierShare(few))
-	}
-
-	issues := generateQualityIssues(&DataQualityReport{ColumnAnalysis: []ColumnAnalysis{many, few}}, nil, nil)
-	named := []string{}
-	for _, issue := range issues {
-		if issue.Category == "outlier" {
-			named = append(named, issue.Affected...)
-		}
-	}
-	if strings.Join(named, ",") != "narrow" {
-		t.Errorf("outlier issues name %v, want only [narrow]", named)
+	col := numericColumnOf(t, "Cr", values...)
+	if len(col.Outliers) != 0 {
+		t.Errorf("an alloying element at ~12x the next value must not be flagged; got %d outliers",
+			len(col.Outliers))
 	}
 }
 
-// TestOutlierIssueHandsOffToGoPCA keeps the division of labour in the message.
-// GoCSV flags only the obvious; deciding which samples are unusual is
-// multivariate work done on the fitted model.
-func TestOutlierIssueHandsOffToGoPCA(t *testing.T) {
-	few := numericColumnOf(t, "narrow",
-		append(repeatVals("1", 499), append(repeatVals("2", 498), "900", "901", "902")...)...)
+// TestSmoothDecadesAreNotFlagged checks that a column spanning several orders
+// of magnitude is safe. The ratio is measured against the neighbouring value,
+// not the middle of the data, so a value can be far from the median and still
+// be close to its neighbour.
+func TestSmoothDecadesAreNotFlagged(t *testing.T) {
+	col := numericColumnOf(t, "conc",
+		"0.001", "0.003", "0.01", "0.03", "0.1", "0.3", "1", "3", "10", "30", "100", "300", "1000")
+	if len(col.Outliers) != 0 {
+		t.Errorf("a column spanning six decades smoothly must not be flagged; got %d outliers",
+			len(col.Outliers))
+	}
+}
+
+// TestZeroNeighbourIsNotAYardstick guards the sparse-column case. Everything is
+// infinitely larger than nothing, so a column that is mostly zeros would report
+// its only real measurements as errors.
+func TestZeroNeighbourIsNotAYardstick(t *testing.T) {
+	col := numericColumnOf(t, "trace", append(repeatVals("0", 500), repeatVals("0.0001", 20)...)...)
+	if len(col.Outliers) != 0 {
+		t.Errorf("values next to a zero neighbour must not be flagged; got %d outliers",
+			len(col.Outliers))
+	}
+}
+
+// TestRepeatedGlitchIsNotHiddenByItsOwnRepetition checks the tie handling. Two
+// identical extreme readings would otherwise be compared against each other,
+// giving a ratio of one and concealing the jump beneath them.
+func TestRepeatedGlitchIsNotHiddenByItsOwnRepetition(t *testing.T) {
+	col := numericColumnOf(t, "sensor", append(nearHundred(), "50000", "50000")...)
+	if len(col.Outliers) != 2 {
+		t.Errorf("got %d outliers, want 2: identical extremes are taken together", len(col.Outliers))
+	}
+}
+
+// TestNegativeSentinelIsFlagged checks the lower end, where the classic case is
+// a negative sentinel standing in for a missing reading.
+func TestNegativeSentinelIsFlagged(t *testing.T) {
+	col := numericColumnOf(t, "depth", append([]string{"-9999"}, nearHundred()...)...)
+	if len(col.Outliers) != 1 {
+		t.Fatalf("got %d outliers, want 1: -9999 against values near 100", len(col.Outliers))
+	}
+	if col.Outliers[0].Value != "-9999" {
+		t.Errorf("flagged %q, want -9999", col.Outliers[0].Value)
+	}
+}
+
+// TestSmallFileCanStillReport covers the absolute alternative in the reporting
+// gate. One value in forty is 2.5% of the column, so a share ceiling alone
+// would silence every file shorter than a hundred rows.
+func TestSmallFileCanStillReport(t *testing.T) {
+	values := make([]string, 0, 40)
+	for i := 0; i < 39; i++ {
+		values = append(values, strconv.Itoa(100+i%5))
+	}
+	values = append(values, "99999")
+
+	col := numericColumnOf(t, "small", values...)
+	if len(col.Outliers) != 1 {
+		t.Fatalf("got %d outliers, want 1", len(col.Outliers))
+	}
+	if outlierShare(col) <= 1.0 {
+		t.Fatalf("share is %.2f%%, so this no longer tests the absolute alternative",
+			outlierShare(col))
+	}
+	if !hasReportableOutliers(col) {
+		t.Errorf("1 flagged value in a 40-row file must be reportable, share %.2f%%",
+			outlierShare(col))
+	}
+}
+
+// TestOutlierIssueExplainsTheLikelyCause keeps the message useful: a jump this
+// large has a short list of mundane explanations, and the real judgement of
+// which samples are unusual happens in GoPCA.
+func TestOutlierIssueExplainsTheLikelyCause(t *testing.T) {
+	col := numericColumnOf(t, "sensor", append(nearHundred(), "50000")...)
 
 	issue, found := issueOfCategory(generateQualityIssues(
-		&DataQualityReport{ColumnAnalysis: []ColumnAnalysis{few}}, nil, nil), "outlier")
+		&DataQualityReport{ColumnAnalysis: []ColumnAnalysis{col}}, nil, nil), "outlier")
 	if !found {
 		t.Fatal("no outlier issue raised")
 	}
-	if !strings.Contains(issue.Impact, "GoPCA") {
-		t.Errorf("impact does not point at GoPCA for the real assessment: %q", issue.Impact)
+	for _, want := range []string{"decimal", "unit", "sentinel", "GoPCA"} {
+		if !strings.Contains(issue.Impact, want) {
+			t.Errorf("impact does not mention %q: %q", want, issue.Impact)
+		}
 	}
 	if issue.Severity != "info" {
-		t.Errorf("severity = %q, want info: an extreme value is not a defect", issue.Severity)
-	}
-}
-
-// The three tests below are the argument for requiring two conditions. Each
-// shows one of them refusing a case the other would have flagged, so removing
-// either makes a named test fail rather than merely changing a number.
-
-// TestTopOfATailIsNotAnOutlier is condition 1 doing the refusing.
-//
-// Modelled on Ti in the aluminium alloy dataset, where the report picked a
-// value 0.0001 past the far-out fence that sat just above two dozen identical
-// ones and called it an outlier. Zero inflation crushes the IQR, which drags
-// the fence down inside the populated range, so the largest value of a smooth
-// tail clears it while being no more remarkable than its neighbours.
-func TestTopOfATailIsNotAnOutlier(t *testing.T) {
-	// Q1=0, Q3=2, so the fence sits at 8 and the values 9 and 10 are beyond it.
-	// The widest gap anywhere is 1, a tenth of the range: nothing is detached.
-	values := repeatVals("0", 50)
-	for _, v := range []string{"1", "2", "3"} {
-		values = append(values, repeatVals(v, 10)...)
-	}
-	values = append(values, "4", "5", "6", "7", "8", "9", "10")
-
-	col := numericColumnOf(t, "tail", values...)
-	if *col.Stats.Q3+3*(*col.Stats.IQR) >= 10 {
-		t.Fatalf("fixture no longer puts values beyond the fence (Q3=%v IQR=%v); test has gone stale",
-			*col.Stats.Q3, *col.Stats.IQR)
-	}
-	if len(col.Outliers) != 0 {
-		t.Errorf("the top of a continuous tail must not be flagged; got %d outliers", len(col.Outliers))
-	}
-}
-
-// TestAbsentOrPresentIsNotAnOutlier is condition 2 doing the refusing.
-//
-// A column holding two values is detached by construction -- the only gap is
-// the whole range -- so the gap test alone flags the smaller group. On the
-// aluminium alloy dataset that meant the non-zero values of sparse columns like
-// B, Cd and V: the element is simply absent from most alloys, and its presence
-// is a measurement rather than an anomaly.
-func TestAbsentOrPresentIsNotAnOutlier(t *testing.T) {
-	col := numericColumnOf(t, "present", append(repeatVals("0", 400), repeatVals("10", 600)...)...)
-	if len(col.Outliers) != 0 {
-		t.Errorf("a two-valued column must not be flagged; got %d outliers", len(col.Outliers))
-	}
-}
-
-// TestObviouslyWrongValueIsFlagged is the case both conditions agree on, and
-// the reason any of this exists.
-//
-// Modelled on eeg_eye_state, where single sensor readings of 309231 and 715897
-// sit among values of a few thousand, and on met.csv, where a dew point of 100
-// appears where the next largest is 19 -- a sentinel left in the data.
-func TestObviouslyWrongValueIsFlagged(t *testing.T) {
-	values := make([]string, 0, 201)
-	for i := 0; i < 200; i++ {
-		values = append(values, strconv.Itoa(95+i%11))
-	}
-	values = append(values, "50000")
-
-	col := numericColumnOf(t, "sensor", values...)
-	if len(col.Outliers) != 1 {
-		t.Fatalf("got %d outliers, want exactly 1: 50000 among values near 100", len(col.Outliers))
-	}
-	if col.Outliers[0].Value != "50000" {
-		t.Errorf("flagged %q, want 50000", col.Outliers[0].Value)
-	}
-	if col.Outliers[0].RowIndex != 200 {
-		t.Errorf("RowIndex = %d, want 200: the outlier keeps its position in the file",
-			col.Outliers[0].RowIndex)
-	}
-	if !hasReportableOutliers(col) {
-		t.Errorf("1 in 201 (%.2f%%) must be reportable", outlierShare(col))
-	}
-}
-
-// TestGapThresholdKeepsTheQualifyingGapUnique guards the reason the threshold
-// is one half rather than some smaller number that also looks conservative.
-//
-// Two gaps each spanning more than half the range cannot both exist, so at this
-// threshold the widest gap is the only one that can qualify. That gives two
-// properties the behavioural tests above do not pin, because they pass for any
-// threshold between roughly 0.1 and 0.6: the chosen gap is unique rather than
-// an arbitrary pick among near-ties, and removing a true outlier cannot shrink
-// the range enough to make an ordinary neighbour look detached in turn.
-func TestGapThresholdKeepsTheQualifyingGapUnique(t *testing.T) {
-	if minGapShare < 0.5 {
-		t.Errorf("minGapShare = %v; below 0.5 more than one gap can qualify, so the "+
-			"widest is an arbitrary choice and the rule can cascade", minGapShare)
+		t.Errorf("severity = %q, want info", issue.Severity)
 	}
 }

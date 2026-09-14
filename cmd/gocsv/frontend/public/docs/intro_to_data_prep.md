@@ -464,18 +464,17 @@ You do not need a closed composition. A **subcomposition** — a subset of the p
 
 The reason is that "unusual" is rarely visible one column at a time. A sample can sit comfortably inside the normal range of every single variable and still be nothing like the rest of your data, because what makes it odd is the *combination* — high silicon with low magnesium, where every other alloy pairs them the other way round. No column-by-column rule can see that. GoPCA can, because it measures each sample against the fitted model using **Hotelling's T²** (how far along the components) and **Q-residuals** (how far off them). That is where outlier work belongs.
 
-So a value is flagged only when it is **both separated from the data and far outside it**. Both parts are needed, and each one on its own gives an answer you would reject:
+So GoCSV does not try to judge whether a value is unusual at all. It looks for one specific thing: a value at least **a hundred times** the next one in.
 
-- **Separated.** The gap between the value and the rest of the column must be wider than half the column's whole range — the value stands alone rather than being the last step of a tail. On its own this test flags the *present* values of an element that is absent from most samples, where the only real gap is the one between "none" and "some".
-- **Far outside.** It must also sit beyond three interquartile ranges past the quartiles — Tukey's "far out" fence. On its own this test flags the top of any long tail: on a variable where most values are zero, the fence is dragged down into the populated range and the largest ordinary value clears it by a whisker.
+That is not a statement about your distribution, and it is deliberately far past anything a statistical rule would draw. It is the signature of a mechanical mistake — a misplaced decimal point, metres recorded where millimetres were meant, a sentinel such as `9999` or `-999` left in place of a missing reading. Two real measurements of the same quantity do not usually differ by two orders of magnitude from one another.
 
-What survives both is the kind of thing you want to know about before you analyse: a sentinel such as `-999` or `100` left in place of a missing reading, a misplaced decimal point, a sensor that dropped out for one sample.
+**Why not something more sensitive?** Because "far from the other values" and "wrong" are different things, and on real scientific data they come apart completely. An `Al-4Cr-1Fe` alloy contains 4.11% chromium where most aluminium alloys contain none. Every statistical fence flags that value — and it is the defining property of the material and the most correct number in the row. Nothing in the column can tell it apart from an error, because the arithmetic is identical; the difference lives in the alloy's name. A rule sensitive enough to catch small mistakes will accuse your most interesting samples, and it will do so most often exactly where your data is richest.
 
-The report also stays quiet when a large share of a column would be flagged. A fifth of a variable cannot be unusual; that is the shape of the variable, and you will see it described as skew and tail weight in section 3 instead.
+The comparison is with the **neighbouring** value, not with the middle of the data, so a variable spanning several orders of magnitude is safe: each value is close to the next even when it is far from the median. And a value sitting next to zero is never flagged, because everything is infinitely larger than nothing — otherwise the only real measurements in a mostly-empty column would be reported as errors.
 
-One consequence worth knowing: if more than half a column holds the same repeated value, there is no robust measure of spread to judge "far" against, and nothing is reported for it at all. **Silence here is not a clean bill of health** — it means this particular check had nothing to say. GoPCA will still see such a sample on the model.
+**What this gives up, and why that is the right trade.** It will miss mistakes smaller than a hundredfold. A dew point of 100 recorded where the next highest is 19 is plainly a sentinel; a sensor reading of 309231 among values near 4500 is plainly a glitch. Neither is a hundredfold step, so neither is reported. That is the price of never accusing a correct measurement — and both remain visible in the column statistics, and neither would survive a look at a PCA.
 
-**References:** Tukey (1977), *Exploratory Data Analysis*, Ch. 2, for the far-out fence. Dixon (1950), *Analysis of Extreme Values*, Annals of Mathematical Statistics 21(4), for judging a gap against the range.
+So treat silence here as "nothing obviously mechanical", not as "no outliers".
 
 When something *is* flagged, what to do about it is a judgement GoCSV cannot make for you.
 

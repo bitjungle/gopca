@@ -100,11 +100,11 @@ func generateQualityIssues(report *DataQualityReport, correlations map[string]ma
 		issues = append(issues, QualityIssue{
 			Severity: "info",
 			Category: "outlier",
-			Description: fmt.Sprintf("Column '%s' has %d value(s) far outside the rest of the column (%.1f%%)",
+			Description: fmt.Sprintf("Column '%s' has %d value(s) at least 100 times the next largest (%.1f%%)",
 				col.Name, len(col.Outliers), outlierShare(col)),
 			Affected: []string{col.Name},
 			Rows:     outlierRowNumbers(col.Outliers),
-			Impact:   "Worth looking at before you analyse; GoPCA judges which samples are genuinely unusual on the fitted model, using Hotelling's T² and Q-residuals",
+			Impact:   "A jump this large is usually a misplaced decimal point, a unit mix-up, or a sentinel left in place of a missing reading. Check it against the original record; GoPCA judges which samples are genuinely unusual on the fitted model",
 		})
 	}
 
@@ -173,29 +173,30 @@ func outlierShare(col ColumnAnalysis) float64 {
 	return float64(len(col.Outliers)) / float64(col.Stats.Count) * 100
 }
 
-// hasReportableOutliers reports whether a column's extreme values are few
-// enough to be outliers at all.
+// hasReportableOutliers reports whether a column's flagged values are few
+// enough to be mistakes rather than a property of the column.
 //
 // The share is a ceiling, not a floor. It used to be a floor -- the warning
 // appeared only when more than 10% of a column was flagged -- which inverted
-// the meaning: a handful of extreme values in a large column, the case that can
-// visibly pull a component and the one a user can act on, was never reported,
-// while a column where a fifth of the values sat beyond the fence produced a
-// warning about 242 outliers (#933). A fifth of a column is not a set of
-// outliers; it is a distribution the fence does not fit, and that is already
-// reported as skew and tail weight.
+// the meaning: a handful of extreme values in a large column, the case a user
+// can act on, was never reported, while a column where a fifth of the values
+// sat beyond the fence produced a warning about 242 outliers (#933).
 //
-// One percent is generous. Beyond a far-out fence a normal distribution puts
-// roughly two values in a million, so anything approaching one percent is
-// already telling you about the shape of the column rather than about
-// individual samples.
+// The absolute alternative exists because the share alone needs a hundred rows
+// before a single value can ever be one percent of the column, which would
+// leave small files unable to report anything at all. Three values standing a
+// hundredfold clear of everything else are worth mentioning whatever the row
+// count.
 func hasReportableOutliers(col ColumnAnalysis) bool {
-	const maxShare = 1.0
+	const (
+		maxShare = 1.0
+		maxCount = 3
+	)
 
 	if col.Type != "numeric" || len(col.Outliers) == 0 {
 		return false
 	}
-	return outlierShare(col) <= maxShare
+	return outlierShare(col) <= maxShare || len(col.Outliers) <= maxCount
 }
 
 // outlierRowNumbers converts the zero-based RowIndex that detectOutliers

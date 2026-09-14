@@ -299,62 +299,55 @@ func analyzeDistribution(data [][]string, rows, colIdx int) DistributionInfo {
 	return dist
 }
 
-// Constants for detectOutliers.
+// magnitudeJump is how far beyond the rest of a column a value must sit before
+// GoCSV will say anything about it: a hundredfold step up from the next value
+// in, with no gradation between.
 //
-// minGapShare is half, and the half matters. Two gaps of more than half the
-// range cannot both exist, so at exactly this threshold the qualifying gap is
-// unique: there is one answer rather than a choice between near-ties, and
-// removing an outlier cannot shrink the range enough to make its neighbour look
-// detached in turn. A smaller share would reintroduce both problems, so lower
-// it only with a replacement for that guarantee.
-const (
-	farOutMultiplier = 3.0
-	minGapShare      = 0.5
-	minOutlierValues = 4
-)
+// The number is deliberately far past anything a statistical fence would draw,
+// because the question a fence answers -- is this value far from the others --
+// is not the question that matters here, which is whether it is wrong. On
+// heterogeneous scientific data those come apart completely. An Al-4Cr-1Fe
+// alloy holds 4.11% chromium where most aluminium alloys hold none, so every
+// robust rule flags it; the value is the entire point of the material and the
+// most correct number in the row (#933). No univariate rule can separate that
+// from an error, because the statistics are identical and the difference lives
+// in the alloy's name.
+//
+// A hundredfold step is not a statement about distribution. It is the signature
+// of a mechanical mistake -- a misplaced decimal point, metres recorded where
+// millimetres were meant, a sentinel such as 9999 left in place of a missing
+// reading. Real measurements of the same quantity do not differ by two orders
+// of magnitude from their nearest neighbour.
+const magnitudeJump = 100.0
 
-// detectOutliers returns the values in a numeric column that are obviously
-// outlying, and nothing else.
+// minOutlierValues is the smallest column worth examining at all.
+const minOutlierValues = 4
+
+// detectOutliers returns values that are almost certainly mistakes rather than
+// measurements, and deliberately finds nothing else.
 //
-// GoCSV is deliberately conservative. Deciding which samples are genuinely
-// unusual is multivariate work that belongs to GoPCA, which does it on the
-// fitted model with Hotelling's T² and Q-residuals -- a sample can be ordinary
-// in every column and still sit far off the model, and no column-by-column rule
-// can see that. What this is for is catching the plain mistakes first: a
-// sentinel value left in the data, a misplaced decimal point, a sensor glitch.
+// Judging which samples are genuinely unusual is multivariate work and belongs
+// to GoPCA, which does it on the fitted model with Hotelling's T² and
+// Q-residuals. A sample can be ordinary in every column and still sit far off
+// the model, and it can be extreme in one column and be exactly what it should
+// be. GoCSV's job is narrower: catch the mechanical errors before they reach
+// the analysis, and stay quiet otherwise.
 //
-// A value has to satisfy two independent conditions, because each one alone
-// produces nonsense on real data (#933):
+// The rule is a ratio, not a fence. The largest value -- together with any
+// exact ties, so a repeated sensor glitch is not hidden by its own repetition
+// -- must be at least magnitudeJump times the next distinct value in. The same
+// applies at the bottom for negative extremes. A column whose values run
+// smoothly across several orders of magnitude is never flagged, because each
+// value is close to its neighbour even when it is far from the median.
 //
-//  1. Detached. The widest gap between consecutive sorted values must span more
-//     than half the column's full range, and the value must be on the short
-//     side of that gap. This is Dixon's ratio of gap to range -- Dixon (1950),
-//     Analysis of Extreme Values, Annals of Mathematical Statistics 21(4).
-//
-//  2. Far from the bulk. It must also lie beyond Tukey's "far out" fence, three
-//     interquartile ranges past the quartiles -- Tukey (1977), Exploratory Data
-//     Analysis, Ch. 2, which separates "outside" values beyond 1.5*IQR from
-//     "far out" ones beyond 3*IQR.
-//
-// Condition 2 alone flags the top of any long tail: on a composition column
-// that was 21% of the values, and on another it picked a value 0.0001 past the
-// fence sitting just above a block of two dozen identical ones. Condition 1
-// alone flags the non-zero minority of a sparse column, where the widest gap is
-// simply the one between "absent" and "present". Requiring both leaves the
-// values that are both separated from the data and far outside it.
-//
-// A column whose middle half is a single repeated value has no robust measure
-// of spread -- the IQR is zero -- and nothing is reported for it. Without a
-// scale there is no meaning to "far", and silence is the conservative answer.
+// What this gives up is real and worth stating: it will miss errors smaller
+// than a hundredfold. A dew point of 100 recorded where the next highest is 19
+// is plainly a sentinel, and a sensor reading of 309231 among values near 4500
+// is plainly a glitch, yet neither is a hundredfold step and neither is
+// reported. That is the accepted cost of never accusing a correct measurement,
+// and both remain visible in the column statistics and unmissable in a PCA.
 func detectOutliers(data [][]string, rows, colIdx int, stats ColumnStatistics) []OutlierInfo {
 	outliers := []OutlierInfo{}
-
-	if stats.Q1 == nil || stats.Q3 == nil || stats.IQR == nil || stats.Median == nil {
-		return outliers
-	}
-	if *stats.IQR <= 0 {
-		return outliers
-	}
 
 	type sample struct {
 		value float64
@@ -381,44 +374,60 @@ func detectOutliers(data [][]string, rows, colIdx int, stats ColumnStatistics) [
 
 	sort.Slice(samples, func(i, j int) bool { return samples[i].value < samples[j].value })
 
-	spread := samples[len(samples)-1].value - samples[0].value
-	if spread <= 0 {
-		return outliers
-	}
-
-	// The widest gap. At a half-range threshold only one gap can ever qualify,
-	// since two would together exceed the range -- so this cannot cascade into
-	// swamping, where removing a true outlier makes ordinary values look
-	// detached in the shrunken range that remains.
-	widest, at := 0.0, 0
-	for i := 1; i < len(samples); i++ {
-		if gap := samples[i].value - samples[i-1].value; gap > widest {
-			widest, at = gap, i
+	// The extreme group at one end, and the first value that differs from it.
+	// Ties are taken together: two identical glitches would otherwise compare
+	// against each other and hide the jump.
+	extremeGroup := func(fromTop bool) (group []sample, next float64, ok bool) {
+		if fromTop {
+			last := len(samples) - 1
+			edge := samples[last].value
+			i := last
+			for i >= 0 && samples[i].value == edge {
+				i--
+			}
+			if i < 0 {
+				return nil, 0, false
+			}
+			return samples[i+1:], samples[i].value, true
 		}
-	}
-	if widest <= minGapShare*spread {
-		return outliers
+		edge := samples[0].value
+		i := 0
+		for i < len(samples) && samples[i].value == edge {
+			i++
+		}
+		if i >= len(samples) {
+			return nil, 0, false
+		}
+		return samples[:i], samples[i].value, true
 	}
 
-	// The short side of the gap is the candidate group: a minority separated
-	// from the body of the data, not the body separated from a minority.
-	candidates := samples[at:]
-	if len(samples)-at > at {
-		candidates = samples[:at]
+	// Magnitudes, so the test reads the same at either end and for negative
+	// values. A neighbour of zero is no yardstick -- everything is infinitely
+	// larger than nothing, which would make the only measured values in a
+	// mostly-empty column look like errors.
+	jumped := func(edge, next float64) bool {
+		if next == 0 || math.IsNaN(edge) || math.IsNaN(next) {
+			return false
+		}
+		return math.Abs(edge) >= magnitudeJump*math.Abs(next)
 	}
 
-	lowerBound := *stats.Q1 - farOutMultiplier*(*stats.IQR)
-	upperBound := *stats.Q3 + farOutMultiplier*(*stats.IQR)
-
-	for _, c := range candidates {
-		if c.value < lowerBound || c.value > upperBound {
+	flag := func(group []sample) {
+		for _, c := range group {
 			outliers = append(outliers, OutlierInfo{
 				RowIndex: c.row,
 				Value:    strings.TrimSpace(data[c.row][colIdx]),
-				Method:   "detached",
-				Score:    math.Abs(c.value-*stats.Median) / *stats.IQR,
+				Method:   "magnitude",
+				Score:    math.Abs(c.value),
 			})
 		}
+	}
+
+	if group, next, ok := extremeGroup(true); ok && jumped(group[0].value, next) {
+		flag(group)
+	}
+	if group, next, ok := extremeGroup(false); ok && jumped(group[0].value, next) {
+		flag(group)
 	}
 
 	sort.Slice(outliers, func(i, j int) bool { return outliers[i].RowIndex < outliers[j].RowIndex })
