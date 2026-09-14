@@ -24,6 +24,7 @@
 package dataquality
 
 import (
+	"os"
 	"strconv"
 	"strings"
 	"testing"
@@ -201,5 +202,35 @@ func TestOutlierIssueExplainsTheLikelyCause(t *testing.T) {
 	}
 	if issue.Severity != "info" {
 		t.Errorf("severity = %q, want info", issue.Severity)
+	}
+}
+
+// TestOutlierMethodMatchesItsDocumentedValue guards the JSON contract.
+//
+// OutlierInfo.Method is part of the report consumers read, and its documented
+// value drifted from what detectOutliers emitted while the rule was being
+// reworked -- the comment said "detached" after the code had moved on to
+// "magnitude". Nothing compiled differently and nothing failed, because no test
+// compared the two. This one does.
+func TestOutlierMethodMatchesItsDocumentedValue(t *testing.T) {
+	const documented = "magnitude"
+
+	col := numericColumnOf(t, "sensor", append(nearHundred(), "50000")...)
+	if len(col.Outliers) == 0 {
+		t.Fatal("fixture produced no outliers; the test has gone stale")
+	}
+	for _, o := range col.Outliers {
+		if o.Method != documented {
+			t.Errorf("Method = %q, want %q as documented on OutlierInfo", o.Method, documented)
+		}
+	}
+
+	src, err := os.ReadFile("types.go")
+	if err != nil {
+		t.Fatalf("reading types.go: %v", err)
+	}
+	if !strings.Contains(string(src), `"`+documented+`"`) {
+		t.Errorf("types.go no longer documents Method as %q, so the contract has drifted again",
+			documented)
 	}
 }

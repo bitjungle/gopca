@@ -831,14 +831,32 @@ return;
             }
             const wanted = new Set(rows.map(row => row - 1));
             gridApi.deselectAll();
+
+            // Two different indices are in play and mixing them scrolls to the
+            // wrong place while selecting the right rows, which looks like a
+            // working feature. node.data.id is the row's position in the file,
+            // which is what the report's numbers mean and what the gutter
+            // shows. node.rowIndex is its position on screen, which is what
+            // ensureIndexVisible expects, and the two diverge as soon as a
+            // column is sorted or a filter is applied.
+            let firstOnScreen: number | null = null;
             gridApi.forEachNode(node => {
-                if (wanted.has(node.data?.id)) {
-                    node.setSelected(true);
+                if (!wanted.has(node.data?.id)) {
+                    return;
+                }
+                node.setSelected(true);
+                if (node.rowIndex !== null && node.rowIndex !== undefined &&
+                    (firstOnScreen === null || node.rowIndex < firstOnScreen)) {
+                    firstOnScreen = node.rowIndex;
                 }
             });
-            // Scroll to the first, so a finding covering many rows starts at
-            // the top of the run rather than wherever ag-grid happens to be.
-            gridApi.ensureIndexVisible(Math.min(...wanted), 'middle');
+
+            // The topmost selected row as displayed, so a finding covering many
+            // rows starts at the top of the run rather than wherever ag-grid
+            // happens to be. Null when none of them is currently rendered.
+            if (firstOnScreen !== null) {
+                gridApi.ensureIndexVisible(firstOnScreen, 'middle');
+            }
         }
     }), [columnApi, gridApi]);
 

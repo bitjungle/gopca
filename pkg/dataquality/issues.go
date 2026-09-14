@@ -100,7 +100,7 @@ func generateQualityIssues(report *DataQualityReport, correlations map[string]ma
 		issues = append(issues, QualityIssue{
 			Severity: "info",
 			Category: "outlier",
-			Description: fmt.Sprintf("Column '%s' has %d value(s) at least 100 times the next largest (%.1f%%)",
+			Description: fmt.Sprintf("Column '%s' has %d value(s) at least 100 times its nearest neighbour (%.1f%%)",
 				col.Name, len(col.Outliers), outlierShare(col)),
 			Affected: []string{col.Name},
 			Rows:     outlierRowNumbers(col.Outliers),
@@ -164,8 +164,9 @@ func generateQualityIssues(report *DataQualityReport, correlations map[string]ma
 	return issues
 }
 
-// outlierShare returns the percentage of a column's values that lie beyond the
-// far-out fence.
+// outlierShare returns the flagged values as a percentage of the column's
+// values. Stats.Count is the number of values present, so a column with missing
+// cells is measured against what it actually holds rather than the row count.
 func outlierShare(col ColumnAnalysis) float64 {
 	if col.Stats.Count == 0 {
 		return 0

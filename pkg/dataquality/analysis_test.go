@@ -171,13 +171,13 @@ func TestAnalyzeDistribution_Normal(t *testing.T) {
 // ─── detectOutliers ──────────────────────────────────────────────────────────
 
 func TestDetectOutliers_Clear(t *testing.T) {
-	// Nine values with a real spread, and one far beyond the fence.
+	// Nine ordinary values and one two orders of magnitude past them.
 	//
-	// The fixture used to be nine identical 5s, which gave a zero IQR and so
-	// relied on the Z-score rule that has since been removed: a column whose
-	// middle half is one repeated value has no robust measure of spread, and
-	// detection is deliberately silent there (#933). Q1=5, Q3=6.75, so the
-	// far-out fence sits at 12 and only 9999 is beyond it.
+	// Detection no longer estimates spread at all: a value is flagged when it
+	// is at least a hundred times its nearest neighbour, which is the signature
+	// of a mechanical mistake rather than a statement about the distribution
+	// (#933). Here 9999 is over a thousand times the 7 below it, and no other
+	// value is anywhere near such a step.
 	data := [][]string{
 		{"5"}, {"6"}, {"5"}, {"7"}, {"6"},
 		{"5"}, {"6"}, {"7"}, {"5"}, {"9999"},
@@ -185,7 +185,7 @@ func TestDetectOutliers_Clear(t *testing.T) {
 	stats := analyzeNumericStats(data, len(data), 0)
 	outliers := detectOutliers(data, len(data), 0, stats)
 	if len(outliers) != 1 {
-		t.Errorf("got %d outliers, want exactly 1: only 9999 lies beyond the far-out fence", len(outliers))
+		t.Errorf("got %d outliers, want exactly 1: only 9999 stands a hundredfold clear", len(outliers))
 	}
 	found := false
 	for _, o := range outliers {

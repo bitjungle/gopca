@@ -80,7 +80,7 @@ func TestOutlierIssueRowsAreOneBased(t *testing.T) {
 	count := 1000
 	outliers := make([]OutlierInfo, 0, 3)
 	for _, idx := range []int{0, 5, 9} {
-		outliers = append(outliers, OutlierInfo{RowIndex: idx, Method: "detached"})
+		outliers = append(outliers, OutlierInfo{RowIndex: idx, Method: "magnitude"})
 	}
 
 	report := &DataQualityReport{ColumnAnalysis: []ColumnAnalysis{{

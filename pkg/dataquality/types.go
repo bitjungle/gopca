@@ -142,7 +142,7 @@ type HistogramBin struct {
 type OutlierInfo struct {
 	RowIndex int     `json:"rowIndex"`
 	Value    string  `json:"value"`
-	Method   string  `json:"method"` // "detached": separated from the data and far outside it
+	Method   string  `json:"method"` // "magnitude": at least 100x the next distinct value
 	Score    float64 `json:"score"`
 }
 
