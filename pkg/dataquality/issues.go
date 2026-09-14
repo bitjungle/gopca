@@ -124,19 +124,39 @@ func generateQualityIssues(report *DataQualityReport, correlations map[string]ma
 
 	issues = append(issues, varianceIssues(report)...)
 
-	// Non-normal distributions
-	nonNormalCount := 0
+	// Skew and heavy tails.
+	//
+	// PCA makes no distributional assumption, so a skewed column is not a
+	// violated precondition. The report used to say "PCA assumes normality",
+	// contradicting docs/intro_to_pca.md and docs/intro_to_data_prep.md, which
+	// both state the opposite and explain the real concern (#929). Normality
+	// matters only for what is built on top of a PCA -- Hotelling's T² limits
+	// and the confidence ellipses GoPCA draws, or inference on eigenvalues.
+	//
+	// What a long tail actually does is give a handful of extreme values
+	// leverage over the components, because a covariance method measures
+	// distance from the mean. That is the only direction worth acting on, and
+	// the message says so: not every flagged column is a problem.
+	//
+	// IsNormal is a skewness and kurtosis heuristic rather than a normality
+	// test, so the wording describes what was measured. Note that the kurtosis
+	// term is |excess kurtosis| < 1.0 on the Fisher definition, which fails in
+	// both directions -- a uniform column is symmetric with excess kurtosis
+	// about -1.20 and is flagged. Calling these columns heavy-tailed would
+	// therefore repeat, in miniature, the overclaim this issue exists to
+	// correct: the measurement establishes unusual tail weight, not a long tail.
+	skewedCount := 0
 	for _, col := range report.ColumnAnalysis {
 		if col.Type == "numeric" && !col.Distribution.IsNormal {
-			nonNormalCount++
+			skewedCount++
 		}
 	}
-	if nonNormalCount > 0 {
+	if skewedCount > 0 {
 		issues = append(issues, QualityIssue{
 			Severity:    "info",
 			Category:    "distribution",
-			Description: fmt.Sprintf("%d numeric columns have non-normal distributions", nonNormalCount),
-			Impact:      "PCA assumes normality; consider data transformations",
+			Description: fmt.Sprintf("%d numeric columns are skewed or have unusual tail weight", skewedCount),
+			Impact:      "PCA assumes no particular distribution; the case worth acting on is a long tail, where a few extreme values can steer a component",
 		})
 	}
 
@@ -300,7 +320,7 @@ func generateRecommendations(report *DataQualityReport) []Recommendation {
 			Priority:    "medium",
 			Category:    "distribution",
 			Action:      "Transform skewed distributions",
-			Description: "Consider log or square root transformations for highly skewed columns",
+			Description: "Box-Cox and Yeo-Johnson fit the exponent to each column rather than guessing it; use Yeo-Johnson where there are zeros or negative values",
 			Columns:     skewedCols,
 		})
 	}
