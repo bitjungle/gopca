@@ -48,6 +48,17 @@ if ! command -v npx &> /dev/null; then
     exit 1
 fi
 
+# Checked separately from npx: this script also runs a plain Node script, and a
+# minimal environment can carry one without the other. Naming the missing
+# binary beats failing later with "node: command not found" from a step whose
+# purpose is unrelated to it.
+if ! command -v node &> /dev/null; then
+    echo "ERROR: the node binary is not on PATH, and the structural checks"
+    echo "below are plain Node scripts. Install Node.js 24 or later:"
+    echo "https://nodejs.org/"
+    exit 1
+fi
+
 # Locate the Wails CLI, following the same convention as build-desktop.sh.
 if ! command -v wails &> /dev/null; then
     if [ -x "$(go env GOPATH)/bin/wails" ]; then
