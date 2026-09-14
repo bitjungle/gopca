@@ -299,23 +299,43 @@ func analyzeDistribution(data [][]string, rows, colIdx int) DistributionInfo {
 	return dist
 }
 
-// detectOutliers returns outliers found in a numeric column using both the IQR
-// method (1.5×IQR fence) and the Z-score method (threshold = 3.0). A row is
-// only reported once even if it triggers both methods.
+// detectOutliers returns the values in a numeric column that lie beyond Tukey's
+// "far out" fence, three interquartile ranges past the quartiles.
+//
+// GoCSV is deliberately conservative here, and reports only what is obvious.
+// Deciding which samples are genuinely unusual is multivariate work that
+// belongs to GoPCA, which does it properly on the fitted model with Hotelling's
+// T² and Q-residuals -- a sample can be perfectly ordinary in every column and
+// still sit far off the model, and no column-by-column rule can see that.
+//
+// Reference: Tukey (1977), Exploratory Data Analysis, Ch. 2, which separates
+// "outside" values beyond 1.5*IQR from "far out" values beyond 3*IQR. The
+// wider fence is the one that means "obviously extreme"; the narrower one
+// flags a substantial share of any skewed column and was reporting 21% of a
+// composition column as outliers (#933).
+//
+// The Z-score rule this used to apply as well has been removed. Mean and
+// standard deviation are not robust: a few extreme values inflate the standard
+// deviation enough to hide themselves, so the rule misses exactly what it is
+// looking for, and on a skewed column it flags the whole upper tail.
+//
+// A column whose middle half is a single repeated value has no robust measure
+// of spread -- IQR is zero and so is the MAD -- and nothing is reported for it.
+// Without a scale there is no meaning to "far", and staying silent is the
+// conservative answer. GoPCA will still see such a sample on the model.
 func detectOutliers(data [][]string, rows, colIdx int, stats ColumnStatistics) []OutlierInfo {
 	outliers := []OutlierInfo{}
 
-	if stats.Q1 == nil || stats.Q3 == nil || stats.Mean == nil || stats.StdDev == nil {
+	if stats.Q1 == nil || stats.Q3 == nil || stats.IQR == nil || stats.Median == nil {
+		return outliers
+	}
+	if *stats.IQR <= 0 {
 		return outliers
 	}
 
-	iqrPositive := stats.IQR != nil && *stats.IQR > 0
-	var lowerBound, upperBound float64
-	if iqrPositive {
-		lowerBound = *stats.Q1 - 1.5*(*stats.IQR)
-		upperBound = *stats.Q3 + 1.5*(*stats.IQR)
-	}
-	zThreshold := 3.0
+	const farOutMultiplier = 3.0
+	lowerBound := *stats.Q1 - farOutMultiplier*(*stats.IQR)
+	upperBound := *stats.Q3 + farOutMultiplier*(*stats.IQR)
 
 	for rowIdx := 0; rowIdx < rows && rowIdx < len(data); rowIdx++ {
 		if colIdx >= len(data[rowIdx]) {
@@ -330,26 +350,13 @@ func detectOutliers(data [][]string, rows, colIdx int, stats ColumnStatistics) [
 			continue
 		}
 
-		if iqrPositive && (num < lowerBound || num > upperBound) {
+		if num < lowerBound || num > upperBound {
 			outliers = append(outliers, OutlierInfo{
 				RowIndex: rowIdx,
 				Value:    value,
-				Method:   "iqr",
+				Method:   "far-out",
 				Score:    math.Abs(num-*stats.Median) / *stats.IQR,
 			})
-			continue
-		}
-
-		if *stats.StdDev > 0 {
-			zScore := math.Abs(num-*stats.Mean) / *stats.StdDev
-			if zScore > zThreshold {
-				outliers = append(outliers, OutlierInfo{
-					RowIndex: rowIdx,
-					Value:    value,
-					Method:   "zscore",
-					Score:    zScore,
-				})
-			}
 		}
 	}
 
@@ -483,9 +490,16 @@ func calculateQualityScore(report *DataQualityReport) float64 {
 		}
 	}
 
+	// Counted the same way the issues list counts them, so the score cannot
+	// disagree with the findings beside it -- the mistake the low-variance test
+	// below already had to be corrected for. Extreme values too numerous to be
+	// outliers say something about the column's shape, which is scored through
+	// the distribution findings rather than twice here (#933).
 	totalOutliers := 0
 	for _, col := range report.ColumnAnalysis {
-		totalOutliers += len(col.Outliers)
+		if hasReportableOutliers(col) {
+			totalOutliers += len(col.Outliers)
+		}
 	}
 	if report.DataProfile.Rows > 0 && report.DataProfile.NumericColumns > 0 {
 		outlierPct := float64(totalOutliers) / float64(report.DataProfile.Rows*report.DataProfile.NumericColumns) * 100
@@ -513,9 +527,8 @@ func calculateColumnQualityScore(analysis ColumnAnalysis) float64 {
 
 	score -= analysis.Stats.MissingPercent * 0.5
 
-	if analysis.Stats.Count > 0 {
-		outlierPct := float64(len(analysis.Outliers)) / float64(analysis.Stats.Count) * 100
-		score -= outlierPct * 0.3
+	if hasReportableOutliers(analysis) {
+		score -= outlierShare(analysis) * 0.3
 	}
 
 	// Low variation, judged the same way the issues list judges it.

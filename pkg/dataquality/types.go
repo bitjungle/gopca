@@ -142,7 +142,7 @@ type HistogramBin struct {
 type OutlierInfo struct {
 	RowIndex int     `json:"rowIndex"`
 	Value    string  `json:"value"`
-	Method   string  `json:"method"` // "iqr" or "zscore"
+	Method   string  `json:"method"` // "far-out": beyond Tukey's 3*IQR fence
 	Score    float64 `json:"score"`
 }
 

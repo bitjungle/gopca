@@ -171,15 +171,21 @@ func TestAnalyzeDistribution_Normal(t *testing.T) {
 // ─── detectOutliers ──────────────────────────────────────────────────────────
 
 func TestDetectOutliers_Clear(t *testing.T) {
-	// 9 values near 5, one extreme outlier well above Z=3
+	// Nine values with a real spread, and one far beyond the fence.
+	//
+	// The fixture used to be nine identical 5s, which gave a zero IQR and so
+	// relied on the Z-score rule that has since been removed: a column whose
+	// middle half is one repeated value has no robust measure of spread, and
+	// detection is deliberately silent there (#933). Q1=5, Q3=6.75, so the
+	// far-out fence sits at 12 and only 9999 is beyond it.
 	data := [][]string{
-		{"5"}, {"5"}, {"5"}, {"5"}, {"5"},
-		{"5"}, {"5"}, {"5"}, {"5"}, {"9999"},
+		{"5"}, {"6"}, {"5"}, {"7"}, {"6"},
+		{"5"}, {"6"}, {"7"}, {"5"}, {"9999"},
 	}
 	stats := analyzeNumericStats(data, len(data), 0)
 	outliers := detectOutliers(data, len(data), 0, stats)
-	if len(outliers) == 0 {
-		t.Error("expected at least one outlier detected")
+	if len(outliers) != 1 {
+		t.Errorf("got %d outliers, want exactly 1: only 9999 lies beyond the far-out fence", len(outliers))
 	}
 	found := false
 	for _, o := range outliers {

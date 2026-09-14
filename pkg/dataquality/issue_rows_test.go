@@ -75,10 +75,12 @@ func TestSparseRowIssueCarriesTheRowsItNames(t *testing.T) {
 // test the off-by-one is invisible, because a selection one row above the real
 // outlier still looks like a selection.
 func TestOutlierIssueRowsAreOneBased(t *testing.T) {
-	count := 10
+	// A thousand values with three beyond the fence: 0.3%, few enough to be
+	// outliers and so few enough to be reported (#933).
+	count := 1000
 	outliers := make([]OutlierInfo, 0, 3)
 	for _, idx := range []int{0, 5, 9} {
-		outliers = append(outliers, OutlierInfo{RowIndex: idx, Method: "iqr"})
+		outliers = append(outliers, OutlierInfo{RowIndex: idx, Method: "far-out"})
 	}
 
 	report := &DataQualityReport{ColumnAnalysis: []ColumnAnalysis{{
@@ -90,7 +92,7 @@ func TestOutlierIssueRowsAreOneBased(t *testing.T) {
 
 	issue, found := issueOfCategory(generateQualityIssues(report, nil, nil), "outlier")
 	if !found {
-		t.Fatal("no outlier issue raised; 3 outliers in 10 values is above the 10% threshold")
+		t.Fatal("no outlier issue raised for 3 extreme values in 1000")
 	}
 
 	want := []int{1, 6, 10}
