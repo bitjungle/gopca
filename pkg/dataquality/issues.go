@@ -96,7 +96,7 @@ func generateQualityIssues(report *DataQualityReport, correlations map[string]ma
 		issues = append(issues, QualityIssue{
 			Severity:    "info",
 			Category:    "duplicate",
-			Description: fmt.Sprintf("%s repeat a row that appears earlier in the file", countedRows(len(duplicateRows))),
+			Description: repeatedRowsPhrase(len(duplicateRows)),
 			Rows:        duplicateRows,
 			Impact:      "Repeated measurements of one sample are legitimate data, so nothing is removed for you. If they are accidental copies they carry extra weight in the analysis: selecting them here lets you check them, and Delete Row acts on the selection",
 		})
@@ -174,13 +174,14 @@ func generateQualityIssues(report *DataQualityReport, correlations map[string]ma
 	return issues
 }
 
-// countedRows renders a row count with the noun agreeing, so a single duplicate
-// does not read as "1 rows".
-func countedRows(n int) string {
+// repeatedRowsPhrase describes how many rows repeat an earlier one, with both
+// the noun and the verb agreeing. Counting alone is not enough: "1 rows" is
+// obviously wrong, but so is "1 row repeat".
+func repeatedRowsPhrase(n int) string {
 	if n == 1 {
-		return "1 row"
+		return "1 row repeats a row that appears earlier in the file"
 	}
-	return fmt.Sprintf("%d rows", n)
+	return fmt.Sprintf("%d rows repeat a row that appears earlier in the file", n)
 }
 
 // outlierShare returns the flagged values as a percentage of the column's
@@ -323,8 +324,8 @@ func generateRecommendations(report *DataQualityReport) []Recommendation {
 			Priority: "medium",
 			Category: "duplicate",
 			Action:   "Decide whether the repeated rows are replicates",
-			Description: fmt.Sprintf("%d row(s) repeat an earlier row. Genuine replicate measurements are worth keeping, or averaging with Average Replicates; accidental copies weight those samples twice. The Issues tab will show you which rows they are",
-				report.DataProfile.DuplicateRows),
+			Description: fmt.Sprintf("%s. Genuine replicate measurements are worth keeping, or averaging with Average Replicates; accidental copies weight those samples twice. The Issues tab will show you which rows they are",
+				repeatedRowsPhrase(report.DataProfile.DuplicateRows)),
 		})
 	}
 

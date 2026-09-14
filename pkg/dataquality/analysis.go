@@ -491,6 +491,27 @@ func findSparseRows(data [][]string, rows, columns int) []int {
 	return sparse
 }
 
+// rowKey builds a key that two rows share only if they are genuinely identical.
+//
+// Joining the cells with a separator is not enough, because any cell may
+// contain that separator: ["a|b", "c"] and ["a", "b|c"] both join to "a|b|c"
+// and would be taken for copies of each other. That was harmless while the
+// result was a number nobody could act on. It is not harmless now that the
+// rows are selected in the grid and Delete Row acts on the selection (#932),
+// where a false match means offering to delete data that is not duplicated.
+//
+// Prefixing each cell with its length removes the ambiguity whatever the cells
+// contain, since the reader can no longer mistake where one ends.
+func rowKey(row []string) string {
+	var b strings.Builder
+	for _, cell := range row {
+		b.WriteString(strconv.Itoa(len(cell)))
+		b.WriteByte(':')
+		b.WriteString(cell)
+	}
+	return b.String()
+}
+
 // findDuplicateRows returns the 1-based indices of rows that repeat a row
 // already seen earlier in the file.
 //
@@ -512,7 +533,7 @@ func findDuplicateRows(data [][]string, rows int) []int {
 	duplicates := []int{}
 
 	for rowIdx := 0; rowIdx < rows && rowIdx < len(data); rowIdx++ {
-		key := strings.Join(data[rowIdx], "|")
+		key := rowKey(data[rowIdx])
 		if seen[key] {
 			duplicates = append(duplicates, rowIdx+1)
 			continue
