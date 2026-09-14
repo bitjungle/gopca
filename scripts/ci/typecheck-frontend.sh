@@ -8,8 +8,8 @@
 #
 # See LICENSE for the full license terms.
 #
-# Type-checks all three frontends: the shared UI components, GoPCA Desktop and
-# GoCSV.
+# Type-checks all three frontends -- the shared UI components, GoPCA Desktop and
+# GoCSV -- then runs the structural checks tsc cannot make.
 #
 # Why this is a script rather than a handful of workflow steps. The type error
 # that broke `make pca-dev` in #885 passed a completely green pull request, and
@@ -107,5 +107,11 @@ npx --no-install tsc --noEmit -p cmd/gopca-desktop/frontend/tsconfig.json
 echo "==> Type-checking GoCSV frontend"
 npx --no-install tsc --noEmit -p cmd/gocsv/frontend/tsconfig.json
 
+# Structural checks that tsc cannot make. The GoCSV context menu is built in a
+# React callback with no test runner behind it, so a menu entry can be valid
+# TypeScript, pass every Go test, and still render wrong (#923, #927).
+echo "==> Checking GoCSV context menu invariants"
+node scripts/ci/check-menu-invariants.mjs
+
 echo ""
-echo "All frontends type-check cleanly."
+echo "All frontends type-check cleanly, and the menu invariants hold."
