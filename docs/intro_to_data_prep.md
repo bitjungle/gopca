@@ -184,7 +184,7 @@ Whether that matters is a question about your experiment, not about the numbers,
 
 The finding names the rows, so you can judge rather than guess. Click **Show rows in the table** and the grid selects the repeats — the second and later occurrence of each, **never the first** — so deleting exactly that selection leaves one of every distinct row. **Delete Row** acts on the whole selection at once.
 
-> That asymmetry matters when you look at the result. Each highlighted row is a copy of an **unhighlighted** row above it, so to check a pair, compare a selected row with the unselected one it repeats — not with the selected row below, which belongs to a different pair.
+> That asymmetry matters when you look at the result. Every highlighted row repeats an **unhighlighted** row earlier in the file — the first occurrence of its group. A row can appear three, four or six times, and then all its copies are highlighted together with only the first left unmarked, so two adjacent highlighted rows may well be copies of the same original. To check one, compare it with the nearest unhighlighted row above it.
 
 ---
 

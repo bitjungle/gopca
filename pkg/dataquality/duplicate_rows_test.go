@@ -157,8 +157,20 @@ func TestDuplicateImpactSaysOriginalsAreNotSelected(t *testing.T) {
 	}
 	for _, want := range []string{"unselected", "unhighlighted"} {
 		if !strings.Contains(issue.Impact, want) {
-			t.Errorf("impact never mentions %q, so a reader cannot tell which row of a "+
-				"pair is selected: %q", want, issue.Impact)
+			t.Errorf("impact never mentions %q, so a reader cannot tell which copy is "+
+				"selected: %q", want, issue.Impact)
+		}
+	}
+
+	// Duplicates are not always pairs and not always adjacent. In the aluminium
+	// alloy dataset 11 of the 69 repeat groups hold three or more copies -- one
+	// runs to six -- and two groups have an unrelated row sitting between the
+	// copies. Wording that promises a pair, or the original "just above",
+	// misleads in exactly the cases hardest to check by eye (#936).
+	for _, forbidden := range []string{"pair", "just above", "the row above"} {
+		if strings.Contains(strings.ToLower(issue.Impact), forbidden) {
+			t.Errorf("impact promises %q, which is false for a group of three or more "+
+				"or for copies separated by other rows: %q", forbidden, issue.Impact)
 		}
 	}
 }
