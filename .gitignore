@@ -93,3 +93,10 @@ testdata/nhanes/pca_presentation/
 # on demand; nothing reads it back, so committing it would only create a second
 # copy to drift.
 docs/generated/
+
+# testdata/Paprika: the source documents and the workbook built from them are
+# published under CC BY-NC-ND 4.0, whose ND clause makes redistributing a
+# restructured compilation of them doubtful. testdata/Paprika/make_dataset.py
+# rebuilds the workbook from documents obtained directly from the publisher.
+testdata/Paprika/*.docx
+testdata/Paprika/*.xlsx
