@@ -134,6 +134,7 @@ export type { ScatterChartProps, LineChartProps, ChartDataPoint } from './charts
 
 // Plotly Fullscreen Support
 export { PlotlyWithFullscreen, PlotlyFullscreenModal, usePlotlyFullscreen, createFullscreenButton } from './charts/utils/plotlyFullscreen';
+export { sampleLabel } from './charts/utils/sampleLabel';
 
 // Plotly PCA Visualizations
 export {

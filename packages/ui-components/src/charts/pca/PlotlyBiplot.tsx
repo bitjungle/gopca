@@ -37,6 +37,7 @@ import { PLOT_CONFIG, getScaledMarkerSize } from '../config/plotConfig';
 import { PlotlyWithFullscreen } from '../utils/plotlyFullscreen';
 import { getWatermarkDataUrlSync } from '../assets/watermark';
 import { optimizeTraceType } from '../utils/plotlyPerformance';
+import { sampleLabel } from '../utils/sampleLabel';
 
 export interface BiplotData {
   scores: number[][];  // [n_samples][n_components]
@@ -158,7 +159,7 @@ export class PlotlyBiplot {
 
         // Prepare hover text
         const hovertext = scoresX.map((x, i) => {
-          const label = sampleNames?.[i] || `Sample ${i}`;
+          const label = sampleLabel(sampleNames, i);
           const value = groupValues[i];
           const valueStr = value !== null && value !== undefined && !isNaN(value) && isFinite(value)
             ? value.toFixed(2)

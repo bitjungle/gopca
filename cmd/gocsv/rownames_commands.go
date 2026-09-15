@@ -175,10 +175,45 @@ func NewMoveRowNamesIntoTableCommand(app *App, data *FileData) (*MoveRowNamesInt
 }
 
 // Execute moves the row names into column 0.
+//
+// Numeric row names get a #category marker, because they are identifiers and
+// must not become a variable. Row numbers 1..n have variance enormously larger
+// than any real measurement -- on a file of weight fractions they take 100% of
+// PC1 and annihilate every element -- so a user who numbers the rows and then
+// moves them into the table would silently destroy the analysis (#942).
+//
+// The marker is used rather than the in-memory column type because it is the
+// only form that survives export: the hazard is a CSV that is wrong when it is
+// opened somewhere else, and a type held on FileData does not travel with the
+// file. It also says what the values are rather than merely hiding them, and one
+// click on Remove Category Flag reverses it if the user disagrees.
+//
+// Text row names need nothing: they are already categorical.
 func (c *MoveRowNamesIntoTableCommand) Execute(data *FileData) error {
-	c.insertedHeader = uniqueHeader(data.Headers, defaultRowNameHeader(c.prevRowNamesHeader))
+	base := defaultRowNameHeader(c.prevRowNamesHeader)
+	numeric := allNumeric(c.prevRowNames)
+	if numeric {
+		base = stripMarkers(base) + "#category"
+	}
+	c.insertedHeader = uniqueHeader(data.Headers, base)
 	insertColumnAt(data, 0, c.insertedHeader, c.prevRowNames)
-	classifyColumn(data, c.insertedHeader, c.prevRowNames)
+
+	if numeric {
+		// Both maps, for the reason ToggleCategoryColumnCommand documents: a
+		// column categorical in one and absent from the other is half converted,
+		// and the encoders will not see it. classifyColumn is deliberately not
+		// used here -- it reads the values, and the values are numbers.
+		if data.ColumnTypes == nil {
+			data.ColumnTypes = map[string]string{}
+		}
+		data.ColumnTypes[c.insertedHeader] = "categorical"
+		if data.CategoricalColumns == nil {
+			data.CategoricalColumns = map[string][]string{}
+		}
+		data.CategoricalColumns[c.insertedHeader] = append([]string(nil), c.prevRowNames...)
+	} else {
+		classifyColumn(data, c.insertedHeader, c.prevRowNames)
+	}
 
 	data.RowNames = nil
 	data.RowNamesHeader = ""
@@ -277,6 +312,26 @@ func removeColumnAt(data *FileData, index int) {
 		}
 	}
 	data.Columns = len(data.Headers)
+}
+
+// allNumeric reports whether every non-blank value parses as a number.
+//
+// A column has to contain at least one number to qualify, for the reason
+// classifyColumn gives: starting from true and skipping blanks would call an
+// all-empty column numeric, because it never meets a value that fails to parse.
+func allNumeric(values []string) bool {
+	numeric := false
+	for _, value := range values {
+		trimmed := strings.TrimSpace(value)
+		if trimmed == "" {
+			continue
+		}
+		if _, err := strconv.ParseFloat(trimmed, 64); err != nil {
+			return false
+		}
+		numeric = true
+	}
+	return numeric
 }
 
 // classifyColumn records the type of a column newly added to the table.

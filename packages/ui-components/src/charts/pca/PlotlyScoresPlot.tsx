@@ -35,6 +35,7 @@ import {
   Point2D
 } from '../utils/plotlyMath';
 import { optimizeTraceType, getOptimalConfig } from '../utils/plotlyPerformance';
+import { sampleLabel } from '../utils/sampleLabel';
 import { getExportMenuItems } from '../utils/plotlyExport';
 import { getScaledMarkerSize } from '../config/plotConfig';
 
@@ -132,7 +133,7 @@ export class PlotlyScoresPlot extends PlotlyVisualization<ScoresPlotData> {
 
       // Prepare hover text
       const hovertext = groupIndices.map(i => {
-        const label = sampleNames?.[i] || `Sample ${i}`;
+        const label = sampleLabel(sampleNames, i);
         return `<b>${label}</b><br>Group: ${group}<br>PC${pc1 + 1}: ${scores[i][pc1].toFixed(2)}<br>PC${pc2 + 1}: ${scores[i][pc2].toFixed(2)}`;
       });
 
@@ -176,7 +177,7 @@ export class PlotlyScoresPlot extends PlotlyVisualization<ScoresPlotData> {
       smartLabelIndices.forEach(i => {
         labelX.push(scores[i][pc1]);
         labelY.push(scores[i][pc2]);
-        labelText.push(sampleNames?.[i] || `Sample ${i}`);
+        labelText.push(sampleLabel(sampleNames, i));
       });
 
       traces.push({
@@ -253,7 +254,7 @@ export class PlotlyScoresPlot extends PlotlyVisualization<ScoresPlotData> {
 
     // Prepare hover text
     const hovertext = scores.map((score, i) => {
-      const label = sampleNames?.[i] || `Sample ${i}`;
+      const label = sampleLabel(sampleNames, i);
       const value = groupValues[i];
       const valueStr = value !== null && value !== undefined && !isNaN(value) && isFinite(value)
         ? value.toFixed(2)
@@ -304,7 +305,7 @@ export class PlotlyScoresPlot extends PlotlyVisualization<ScoresPlotData> {
       smartLabelIndices.forEach(i => {
         labelX.push(scores[i][pc1]);
         labelY.push(scores[i][pc2]);
-        labelText.push(sampleNames?.[i] || `Sample ${i}`);
+        labelText.push(sampleLabel(sampleNames, i));
       });
 
       traces.push({

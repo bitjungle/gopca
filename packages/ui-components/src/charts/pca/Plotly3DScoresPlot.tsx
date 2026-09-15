@@ -30,6 +30,7 @@ import { getExportMenuItems } from '../utils/plotlyExport';
 import { PLOT_CONFIG, getScaledMarkerSize, getScaledFontSizes } from '../config/plotConfig';
 import { PlotlyWithFullscreen } from '../utils/plotlyFullscreen';
 import { getWatermarkDataUrlSync } from '../assets/watermark';
+import { sampleLabel } from '../utils/sampleLabel';
 
 export interface Scores3DPlotData {
   scores: number[][];
@@ -109,7 +110,7 @@ export class Plotly3DScoresPlot {
 
       // Prepare hover text
       const hovertext = scoresX.map((x, i) => {
-        const label = sampleNames?.[i] || `Sample ${i}`;
+        const label = sampleLabel(sampleNames, i);
         const value = groupValues[i];
         const valueStr = value !== null && value !== undefined && !isNaN(value) && isFinite(value)
           ? value.toFixed(2)
@@ -168,13 +169,13 @@ export class Plotly3DScoresPlot {
 
         // Prepare hover text
         const hovertext = groupIndices.map(i => {
-          const label = sampleNames?.[i] || `Sample ${i}`;
+          const label = sampleLabel(sampleNames, i);
           return `<b>${label}</b><br>Group: ${group}<br>PC${pc1 + 1}: ${scores[i][pc1].toFixed(2)}<br>PC${pc2 + 1}: ${scores[i][pc2].toFixed(2)}<br>PC${pc3 + 1}: ${scores[i][pc3].toFixed(2)}`;
         });
 
         // Prepare text labels if enabled (limit per group)
         const maxLabelsPerGroup = Math.ceil((this.config.maxLabels || 10) / uniqueGroups.length);
-        const groupSampleNames = groupIndices.map(i => sampleNames?.[i] || `Sample ${i}`);
+        const groupSampleNames = groupIndices.map(i => sampleLabel(sampleNames, i));
         const textLabels = this.config.showLabels && sampleNames && groupSampleNames.length > 0
           ? groupSampleNames.map((name, idx) => idx < maxLabelsPerGroup ? name : '')
           : undefined;

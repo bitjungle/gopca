@@ -9,7 +9,10 @@
  */
 
 
-// Structural checks on the GoCSV column context menu.
+// Structural checks the type-checker cannot make.
+//
+// Two unrelated invariants live here because both are properties of the source
+// text rather than of its types, and both have already been broken once.
 //
 // Two defects reached a build in two days, and no existing gate could have gone
 // red for either. #923 gated `Number the Rows` on `hasRowNames`, hiding it in
@@ -30,9 +33,12 @@
 // matching instead of "to the end of the file", and a cross-check that the
 // number of entries found equals the number that exist.
 
-import { readFileSync } from 'node:fs';
+import { readFileSync, readdirSync, statSync } from 'node:fs';
+import { join } from 'node:path';
 
 const FILE = 'cmd/gocsv/frontend/src/components/CSVGrid.tsx';
+
+// --- 1. the GoCSV column context menu ---------------------------------------
 const src = readFileSync(FILE, 'utf8');
 const failures = [];
 
@@ -123,11 +129,60 @@ for (const f of [
     if (f) failures.push(f);
 }
 
+
+// --- 2. one place decides how an unnamed sample is labelled -----------------
+//
+// The fallback used when a file carries no row names was written out at
+// fourteen places and drifted: twelve counted from zero and two from one, so the
+// same sample read as "Sample 5" in one plot and "Sample 6" in another, and the
+// zero-based ones disagreed with GoCSV's own position gutter (#942). It now
+// lives in sampleLabel(), and a copy of the literal anywhere else is how the
+// drift would start again.
+
+const LABEL_HELPER = 'packages/ui-components/src/charts/utils/sampleLabel.ts';
+const LABEL_ROOTS = [
+    'packages/ui-components/src/charts',
+    'cmd/gopca-desktop/frontend/src/components/visualizations',
+];
+
+function sourceFiles(dir) {
+    const out = [];
+    for (const entry of readdirSync(dir)) {
+        const path = join(dir, entry);
+        if (statSync(path).isDirectory()) {
+            out.push(...sourceFiles(path));
+        } else if (/\.tsx?$/.test(entry) && !/\.test\.tsx?$/.test(entry)) {
+            out.push(path);
+        }
+    }
+    return out;
+}
+
+let helperFound = false;
+for (const root of LABEL_ROOTS) {
+    for (const path of sourceFiles(root)) {
+        const text = readFileSync(path, 'utf8');
+        if (path === LABEL_HELPER) {
+            helperFound = true;
+            continue;
+        }
+        if (/`Sample \$\{/.test(text)) {
+            failures.push(
+                `${path} spells out a "Sample \${...}" label; call sampleLabel() so the ` +
+                `numbering cannot drift apart again (#942)`);
+        }
+    }
+}
+if (!helperFound) {
+    failures.push(`${LABEL_HELPER} is missing -- this check has gone stale`);
+}
+
 if (failures.length > 0) {
-    console.error(`\nContext menu checks FAILED in ${FILE}:\n`);
+    console.error('\nFrontend invariant checks FAILED:\n');
     for (const f of failures) console.error(`  - ${f}`);
     console.error('');
     process.exit(1);
 }
 
-console.log(`Context menu invariants hold (${labels.length} entries, all with icons).`);
+console.log(`Frontend invariants hold: ${labels.length} menu entries all with icons, ` +
+            `and one sample-label helper.`);
