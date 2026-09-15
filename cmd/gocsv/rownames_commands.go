@@ -193,9 +193,10 @@ func (c *MoveRowNamesIntoTableCommand) Execute(data *FileData) error {
 	base := defaultRowNameHeader(c.prevRowNamesHeader)
 	numeric := allNumeric(c.prevRowNames)
 	if numeric {
-		base = stripMarkers(base) + "#category"
+		c.insertedHeader = uniqueMarkedHeader(data.Headers, stripMarkers(base), "#category")
+	} else {
+		c.insertedHeader = uniqueHeader(data.Headers, base)
 	}
-	c.insertedHeader = uniqueHeader(data.Headers, base)
 	insertColumnAt(data, 0, c.insertedHeader, c.prevRowNames)
 
 	if numeric {
@@ -258,6 +259,27 @@ func uniqueHeader(taken []string, name string) string {
 	candidate := name
 	for i := 2; inUse[candidate]; i++ {
 		candidate = fmt.Sprintf("%s_%d", name, i)
+	}
+	return candidate
+}
+
+// uniqueMarkedHeader returns a header that ends in marker and collides with
+// nothing in taken, putting the uniqueness suffix before the marker.
+//
+// uniqueHeader appends its suffix at the end, which is fine for a plain name
+// and wrong for a marked one: asked for "Sample_ID#category" against a file that
+// already has that column, it returns "Sample_ID#category_2". A marker is
+// recognised by its suffix, so that header reads back as an ordinary numeric
+// column -- and since the marker is there to survive export, the collision
+// would quietly restore the very hazard it prevents (#942).
+func uniqueMarkedHeader(taken []string, base, marker string) string {
+	inUse := make(map[string]bool, len(taken))
+	for _, header := range taken {
+		inUse[header] = true
+	}
+	candidate := base + marker
+	for i := 2; inUse[candidate]; i++ {
+		candidate = fmt.Sprintf("%s_%d%s", base, i, marker)
 	}
 	return candidate
 }

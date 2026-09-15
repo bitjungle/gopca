@@ -134,3 +134,47 @@ func TestBlankRowNamesAreNotCalledNumeric(t *testing.T) {
 		t.Error("a column containing text was called numeric")
 	}
 }
+
+// TestMarkerSurvivesAHeaderCollision guards the hole review found in the first
+// version of this fix.
+//
+// The marked name was built first and passed to uniqueHeader, which appends its
+// suffix at the end: against a file that already had Sample_ID#category, that
+// produced "Sample_ID#category_2". A marker is recognised by its suffix, so the
+// column read back as an ordinary numeric one on export -- restoring the exact
+// hazard the marker exists to prevent, for anyone whose file happened to carry
+// a similarly named column.
+func TestMarkerSurvivesAHeaderCollision(t *testing.T) {
+	data := &FileData{
+		Headers:        []string{"Sample_ID#category", "a"},
+		Data:           [][]string{{"x", "0.01"}, {"y", "0.02"}},
+		RowNames:       []string{"1", "2"},
+		RowNamesHeader: "Sample_ID",
+		Rows:           2,
+		Columns:        2,
+		ColumnTypes:    map[string]string{},
+	}
+	moveRowNamesIn(t, data)
+
+	got := data.Headers[0]
+	if !strings.HasSuffix(got, "#category") {
+		t.Errorf("inserted header %q does not end in #category, so it would be read "+
+			"back as a numeric column on export", got)
+	}
+	if got == "Sample_ID#category" {
+		t.Errorf("inserted header %q collides with the existing column", got)
+	}
+	if got != "Sample_ID_2#category" {
+		t.Errorf("inserted header = %q, want Sample_ID_2#category", got)
+	}
+}
+
+// TestMarkedHeaderStaysUniqueAcrossSeveralCollisions checks the suffix keeps
+// counting rather than giving up after one attempt.
+func TestMarkedHeaderStaysUniqueAcrossSeveralCollisions(t *testing.T) {
+	taken := []string{"S#category", "S_2#category", "S_3#category"}
+	got := uniqueMarkedHeader(taken, "S", "#category")
+	if got != "S_4#category" {
+		t.Errorf("uniqueMarkedHeader = %q, want S_4#category", got)
+	}
+}
