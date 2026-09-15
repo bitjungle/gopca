@@ -122,7 +122,7 @@ The reason for the rule is worth seeing rather than taking on trust: row names l
 Two commands, both on the right-click menu of any column header:
 
 - **Use as Row Names** — promote a different column. Whatever was serving as row names returns to the table, so nothing is lost.
-- **Move Row Names into Table** — put the row names back as an ordinary column and leave the table without any.
+- **Move Row Names into Table** — put the row names back as an ordinary column and leave the table without any. If those names are numbers, the column arrives marked `#category`, because they are identifiers rather than measurements: a column of `1, 2, 3 …` has variance vastly larger than any real variable and would otherwise take almost the whole first component. Remove the marker from the same menu if you disagree.
 
 > **If no column identifies your samples,** that is a perfectly ordinary situation, and you have three choices.
 >
@@ -130,7 +130,7 @@ Two commands, both on the right-click menu of any column header:
 >
 > **Number the rows.** Right-click any column header and choose **Number the Rows**. Every row gets `1`, `2`, `3` …, which is unique by construction, so it satisfies the rule immediately. The numbers are not a column — they go straight into the row-name gutter — so nothing new enters the analysis. Use this when the file genuinely has nothing to build from.
 >
-> **Analyse without row names.** GoPCA numbers the points itself. Nothing is lost except the ability to identify one on sight.
+> **Analyse without row names.** GoPCA numbers the points itself, from 1, matching the `#` gutter down the left of the GoCSV grid — so the fourth row of your file is `Sample 4` in a scores plot. Nothing is lost except the ability to identify a point by anything more meaningful than its position.
 
 ### What part does each column play?
 
@@ -231,7 +231,7 @@ Three things it will not do quietly:
 - **Where a group disagrees on a text value, the cell is cleared** and the count reported. Picking one of the competing values would assert something about the aggregated sample that no row actually said.
 - **Rows with no group value stop the operation.** A blank is not a group: averaging the unlabelled rows together would invent a sample, and dropping them would lose data. Remove or label them first — Filter Rows does it in one step.
 
-The grouping column becomes the row-name column afterwards, since the rows it identified no longer exist and the group value is what identifies the new one. Those names are unique by construction, which is exactly what row names need to be — and **Move Row Names into Table** puts them back as a column if you want them there.
+The grouping column becomes the row-name column afterwards, since the rows it identified no longer exist and the group value is what identifies the new one. Those names are unique by construction, which is exactly what row names need to be — and **Move Row Names into Table** puts them back as a column if you want them there, marked `#category` if they are numeric, which for a batch or sample number is what they are.
 
 > **The grouping column often has to be made first.** If your replicate structure is buried in a sample ID like `B3_S12_r1`, split it on `_` and group by the batch part.
 
