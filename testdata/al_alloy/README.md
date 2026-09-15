@@ -96,8 +96,10 @@ distinct alloy is the honest default.
 > The repeats concentrate in particular sources rather than being spread through
 > the file. One study — *Influence of chemical composition variation and heat
 > treatment on microstructure and mechanical properties* — contributes 18 rows of
-> which only 3 are distinct. Its six copies of `6063` agree on name, source,
-> condition, processing code and all 25 elements.
+> which only 3 are distinct. Its six copies of `6063` are identical in **all 30
+> columns of the workbook as published** — that is where the repeats were
+> counted, before `Pb` was dropped, so 25 element columns rather than the 24 in
+> the prepared file.
 >
 > A study of composition variation cannot have produced six identical
 > compositions, so what distinguished those runs is absent from this file: it
