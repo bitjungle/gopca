@@ -25,7 +25,7 @@
 
 import React from 'react';
 import Plot from 'react-plotly.js';
-import { useTheme } from '@gopca/ui-components';
+import { useTheme, sampleLabel } from '@gopca/ui-components';
 import { PCAResult } from '../../types';
 
 interface KernelMatrixHeatmapProps {
@@ -67,7 +67,7 @@ export const KernelMatrixHeatmap: React.FC<KernelMatrixHeatmapProps> = ({
   // Create sample labels
   const sampleLabels = rowNames.length > 0
     ? rowNames.slice(0, n)
-    : Array.from({ length: n }, (_, i) => `Sample ${i + 1}`);
+    : Array.from({ length: n }, (_, i) => sampleLabel(undefined, i));
 
   // Create the heatmap trace
   const trace = {

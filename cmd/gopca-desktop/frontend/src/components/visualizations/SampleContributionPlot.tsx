@@ -25,7 +25,7 @@
 
 import React, { useState, useMemo } from 'react';
 import Plot from 'react-plotly.js';
-import { useTheme } from '@gopca/ui-components';
+import { useTheme, sampleLabel } from '@gopca/ui-components';
 import { PCAResult } from '../../types';
 import { usePalette } from '../../contexts/PaletteContext';
 import { getQualitativePalette } from '../../utils/colorPalettes';
@@ -68,7 +68,7 @@ export const SampleContributionPlot: React.FC<SampleContributionPlotProps> = ({
     // Calculate absolute contributions (normalized by eigenvalue)
     const contribData = eigenvectors.map((row, i) => {
       const contribution = Math.abs(row[currentComponent] || 0) * Math.sqrt(eigenvalue);
-      const sampleName = rowNames[i] || `Sample ${i + 1}`;
+      const sampleName = sampleLabel(rowNames, i);
       return {
         index: i,
         name: sampleName,

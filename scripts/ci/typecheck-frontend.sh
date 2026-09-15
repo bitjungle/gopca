@@ -121,8 +121,8 @@ npx --no-install tsc --noEmit -p cmd/gocsv/frontend/tsconfig.json
 # Structural checks that tsc cannot make. The GoCSV context menu is built in a
 # React callback with no test runner behind it, so a menu entry can be valid
 # TypeScript, pass every Go test, and still render wrong (#923, #927).
-echo "==> Checking GoCSV context menu invariants"
-node scripts/ci/check-menu-invariants.mjs
+echo "==> Checking frontend invariants"
+node scripts/ci/check-frontend-invariants.mjs
 
 echo ""
-echo "All frontends type-check cleanly, and the menu invariants hold."
+echo "All frontends type-check cleanly, and the frontend invariants hold."
