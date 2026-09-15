@@ -32,10 +32,10 @@ does not disagree with the source. GoCSV's data quality report flags it.
 ## The prepared file
 
 `al_alloy_data.csv` is the workbook after preparation in GoCSV Desktop, ready
-for PCA. **1057 rows × 29 columns**, of which 24 are element concentrations that
+for PCA. **1057 rows × 30 columns**, of which 24 are element concentrations that
 enter the analysis.
 
-Five things were done to get there, in this order:
+Six things were done to get there, in this order:
 
 **1. Deleted the malformed row.** Data row 41, described above.
 
@@ -117,22 +117,31 @@ distinct alloy is the honest default.
 automatically and offers them for colouring. They cost nothing and they are the
 only route from a point in a scores plot back to a real alloy.
 
+**6. Numbered the rows.** `Sample_ID` runs 1 to 1057 and is the row-name column.
+
+*Why.* No column in the file can identify a row: `Name` holds 420 distinct
+values across 1154 rows, and even all 30 columns together give only 1057
+distinct combinations. Without identifiers a plot labels its points by position,
+and a position is recomputed whenever rows are filtered or sorted — so a point
+cannot be traced back to the row it came from. `Sample_ID` travels with the row
+instead, which is what makes a filtered subset still answerable.
+
 ### What the file contains
 
 | | |
 |---|---|
 | Rows | 1057 |
-| Columns | 29 |
+| Columns | 30 |
 | Numeric, entering the PCA | 24 elements |
-| Held out | `proc_num#category` plus the four text columns |
+| Held out | `Sample_ID` (row names), `proc_num#category`, and the four text columns |
 | Missing values | 15 cells — 10 in `Condition augmented`, 5 in `Condition` |
-| Row names | none; see below |
+| Row names | `Sample_ID`, 1 to 1057 |
 
-**The rows have no identifiers.** No column in the file can serve as one: `Name`
-holds 420 distinct values across 1154 rows, and even all 30 columns together give
-only 1057 distinct rows. GoPCA will therefore label points by position. If you
-want stable labels that survive filtering, use **Number the Rows** in GoCSV
-before exporting.
+**`Sample_ID` is a row-name column, not a variable.** It is the first column on
+export, and GoPCA reads column 0 as row names, so it labels points rather than
+entering the analysis. Do not move it into the table as an ordinary column: a
+column of 1 to 1057 has variance enormously larger than any weight fraction and
+would take essentially all of PC1.
 
 **Recommended preprocessing: mean centering only, no scaling.** All 24 variables
 are weight fractions of the same whole in the same unit. Autoscaling gives a
