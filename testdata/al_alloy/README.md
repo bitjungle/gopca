@@ -37,13 +37,28 @@ enter the analysis.
 
 Five things were done to get there, in this order:
 
-**1. Deleted the malformed row.** Data row 41, described above. 1155 → 1154,
-matching the count the paper states.
+**1. Deleted the malformed row.** Data row 41, described above.
 
-**2. Deleted `Pb`.** `Pb` and `Bi` are identical in every row, so the pair is
-singular and gives one variable double weight in every component. The paper drops
-`Pb` and keeps `Bi`, on the grounds that bismuth has the larger documented effect
-on mechanical properties. 30 → 29 columns.
+*Why delete it rather than leave it.* It is not an observation: every one of the
+26 numeric columns is empty, because the row is the stranded tail of a sentence
+in the row above. Left in place it forces a choice between dropping it during
+the analysis anyway or imputing 26 values for a record that describes nothing —
+and an imputed row sits at the mean of the data, adding a point to the centre
+of every scores plot that corresponds to no alloy. Removing it also brings the
+row count to 1154, which is what the paper describes.
+
+**2. Deleted `Pb`.** `Pb` and `Bi` are identical in every row. 30 → 29 columns.
+
+*Why delete one of them.* Two columns holding one variable is not neutral in a
+covariance method. The pair contributes its variance twice to every component,
+so a machinability additive present in seven alloys out of 1057 gets double the
+say of any element measured once. The pair is also perfectly collinear, which
+makes the covariance matrix singular: the second column adds a zero eigenvalue
+and no information. Keeping both would inflate one chemical story at the expense
+of the rest, for no gain at all.
+
+The paper drops `Pb` and keeps `Bi`, on the grounds that bismuth has the larger
+documented effect on mechanical properties, and this file follows that choice.
 
 > The identity is not a compilation error. Only seven rows carry either element,
 > they are the free-machining alloys **2011** and **6262**, and in those alloys
@@ -61,6 +76,22 @@ the components never saw it, so any grouping by colour is independent agreement.
 
 **4. Removed the 97 repeated rows.** 1154 → 1057 distinct rows. **This is a
 departure from the paper**, which treats all 1154 as instances.
+
+*Why remove them.* An identical row is not an additional observation; it is the
+same point in the feature space a second time. Six copies do not carry six
+alloys' worth of evidence, they put six times the weight on one location. PCA
+finds the directions of greatest variance about the mean, so repeated points
+drag the mean towards themselves and lend their direction more influence than
+the data supports — and any density-based method reads them as a cluster that is
+not there, which is worth noting because the paper's own clustering finds its
+classes by looking for density discontinuities.
+
+The deciding argument is that the repeats cannot be interpreted. A genuine
+replicate measurement and an accidental copy look identical here, and the
+information that would tell them apart is not in the file. Keeping them means
+weighting an arbitrary subset of alloys more heavily than the rest without being
+able to say why those ones. For a dataset meant to demonstrate PCA, one row per
+distinct alloy is the honest default.
 
 > The repeats concentrate in particular sources rather than being spread through
 > the file. One study — *Influence of chemical composition variation and heat
