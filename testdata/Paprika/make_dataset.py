@@ -40,10 +40,11 @@ W = '{http://schemas.openxmlformats.org/wordprocessingml/2006/main}'
 ELEMENTS = ['P', 'Cl', 'S', 'K', 'Ca', 'Cr', 'Mn', 'Fe',
             'Ni', 'Cu', 'Zn', 'Br', 'Rb', 'Sr', 'Ba']
 
-# Five elements are reported in g/kg and ten in mg/kg. Keeping the units in a
-# second header row is how the published table presents them, and it is also
-# what makes this a useful import test: a naive reader takes the units row for
-# a sample and ends up with 68 rows, one of them text in every column.
+# Five elements are reported in g/kg and ten in mg/kg. Table S1 keeps the units
+# inside its header cells ("P ( g kg -1 )"); splitting them onto a row of their
+# own is part of the restructuring this script reproduces, and it is also what
+# makes the workbook a useful import test: a naive reader takes the units row
+# for a sample and ends up with 68 rows, one of them text in every column.
 UNITS = ['(g kg-1)'] * 5 + ['(mg kg-1)'] * 10
 
 # Counts stated in the paper, used below to check the parse rather than to
@@ -63,6 +64,27 @@ META = [
     ('Instrument:', 'Epsilon 5 ED-XRF spectrometer'),
     ('< LoQ', 'Below the limit of quantification'),
 ]
+
+
+# The article PDF is not in the repository and its filename is whatever the
+# person who downloaded it chose, so it is matched by pattern rather than named
+# outright. docs/references/ is local-only, which is why no default path can be
+# assumed to exist.
+PDF_GLOB = 'Fiamegos*.pdf'
+
+
+def find_pdf(folder):
+    """Locate the article PDF, failing with something actionable if unsure."""
+    folder = folder.resolve()
+    matches = sorted(folder.glob(PDF_GLOB)) if folder.is_dir() else []
+    if not matches:
+        sys.exit(f'no file matching {PDF_GLOB!r} in {folder}\n'
+                 f'Pass the article PDF with --pdf.')
+    if len(matches) > 1:
+        listing = '\n  '.join(m.name for m in matches)
+        sys.exit(f'{len(matches)} files match {PDF_GLOB!r} in {folder}:\n  {listing}\n'
+                 f'Pass the one you want with --pdf.')
+    return matches[0]
 
 
 # --- reading Table S1 out of the supplementary .docx -------------------------
@@ -270,28 +292,35 @@ def main():
     ap = argparse.ArgumentParser(description=__doc__.splitlines()[0])
     ap.add_argument('--docx', type=Path,
                     default=here / '1-s2.0-S0956713520304126-mmc1.docx')
-    ap.add_argument('--pdf', type=Path,
-                    default=here / '../../docs/references/Fiamegos et al. - 2021 - '
-                                   'Authentication of PDO paprika powder by  mva of '
-                                   'the elemental fingerprint determined by XRF.pdf')
+    ap.add_argument('--pdf', type=Path, default=None,
+                    help='article PDF; by default the one matching '
+                         f'{PDF_GLOB!r} under docs/references/')
     ap.add_argument('--out', type=Path, default=here / 'paprika.xlsx')
     args = ap.parse_args()
 
-    for path, what in ((args.docx, 'supplementary .docx'), (args.pdf, 'article PDF')):
-        if not path.exists():
-            sys.exit(f'{what} not found at {path}\nSee the module docstring for where '
-                     f'to obtain it, or pass an explicit path.')
+    if not args.docx.exists():
+        sys.exit(f'supplementary .docx not found at {args.docx}\nSee the module '
+                 f'docstring for where to obtain it, or pass --docx.')
+    pdf = args.pdf if args.pdf is not None else find_pdf(here / '../../docs/references')
+    if not pdf.exists():
+        sys.exit(f'article PDF not found at {pdf}')
 
     samples = read_table_s1(args.docx)
-    info = read_table_1(args.pdf)
+    info = read_table_1(pdf)
     check(samples, info)
 
     # The group label is spelled SNVL in Table S1 and SNLV in Table 1, both as
     # published. Neither is corrected here, for the same reason the aluminium
     # alloy file keeps its malformed row: this copy should not disagree with the
     # source. The README records the discrepancy.
+    # The sample-code column is unlabelled because Table S1 leaves it unlabelled,
+    # which also lets GoCSV recognise it as row names -- a blank row-name header
+    # is the case #859 made survive a load. The units cell above it is empty:
+    # the transcription this script reproduces held a single space there, which
+    # has no counterpart in the published table and makes an otherwise blank
+    # cell non-empty for anything reading the sheet.
     data_rows = [[''] + ['CLASS'] + ELEMENTS,
-                 [' '] + [''] + UNITS]
+                 [''] + [''] + UNITS]
     data_rows += [[row[0], row[1]] + row[2:] for row in samples]
 
     info_rows = [INFO_COLUMNS] + info
@@ -302,7 +331,8 @@ def main():
                           ('meta', meta_rows)])
     print(f'wrote {args.out}')
     print(f'  data        {len(data_rows) - 2} samples x {len(ELEMENTS)} elements')
-    print(f'  sample_info {len(info_rows) - 1} samples x {len(INFO_COLUMNS)} fields')
+    print(f'  sample_info {len(info_rows) - 1} samples x '
+          f'{len(INFO_COLUMNS) - 1} descriptive fields')
     print(f'  meta        {len(meta_rows)} rows')
 
 

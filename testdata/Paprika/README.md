@@ -50,7 +50,7 @@ Neither source document is in the repository. Obtain both, then run the script.
 | `make_dataset.py` | yes | this repository |
 | `README.md` | yes | this repository |
 | `1-s2.0-S0956713520304126-mmc1.docx` | no | the article's Appendix A on ScienceDirect |
-| the article PDF | no | the publisher; expected in `docs/references/`, which is local-only |
+| the article PDF | no | the publisher; found by pattern in `docs/references/`, which is local-only, or passed with `--pdf` |
 | `paprika.xlsx` | no | produced by `make_dataset.py` |
 
 ```bash
@@ -70,10 +70,16 @@ stops rather than write a workbook that is quietly wrong.
 | `sample_info` | 67 samples × 6 descriptive fields | Table 1 (article body, page 2) |
 | `meta` | Article link, group definitions, method, instrument, meaning of `< LoQ` | written by this project |
 
-**Modifications made to the published material**, as the licence requires be
-stated: the two tables above are combined into one workbook; the `Median`,
-`Mean`, `STD` and `RSD` summary rows of Table S1 are omitted; the unnamed group
-column of Table S1 is given the header `CLASS`; and the `meta` sheet is added.
+**Modifications made to the published material**, which the licence requires to
+be stated:
+
+* the two tables above are combined into one workbook;
+* the `Median`, `Mean`, `STD` and `RSD` summary rows of Table S1 are omitted;
+* the units, which Table S1 keeps inside its header cells, are moved to a row of
+  their own;
+* the unnamed group column of Table S1 is given the header `CLASS`;
+* the `meta` sheet is added.
+
 No measured value is altered.
 
 ## Purpose
@@ -141,10 +147,11 @@ in the paper; they are available for colouring or grouping.
 
 ## Notes on the data
 
-Four things to know before using the workbook. All are properties of the
-published tables, and the script reproduces them rather than correcting them —
-for the same reason the aluminium alloy file keeps its malformed row: this copy
-should not disagree with its source.
+Five things to know before using the workbook. The first two and the last are
+properties of the published tables, and the script reproduces them rather than
+correcting them — for the same reason the aluminium alloy file keeps its
+malformed row: this copy should not disagree with its source. The other two
+follow from the restructuring listed above.
 
 **The group label is spelled differently in the two published tables.** Table S1
 writes the middle group `SNVL`; Table 1 and the body of the paper write `SNLV`.
@@ -162,6 +169,10 @@ position.** The script reports the count of misaligned rows when it runs.
 `(mg kg-1)` rather than measurements, so it is a second header line and not a
 sample. Importing the sheet without accounting for it produces 68 rows, one of
 which is text in every element column.
+
+**The sample-code column has no header.** Table S1 leaves it unlabelled and the
+workbook keeps it that way, which also lets GoCSV offer the codes as row names —
+they are unique across all 67 samples.
 
 **`Br` carries the only missing values**, eight of them, written as `< LoQ`
 (below the limit of quantification) — seven spelled `< LoQ` and one `<LoQ`
