@@ -1,0 +1,61 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://github.com/bitjungle/gopca/schemas/v1/model-components.schema.json",
+  "title": "PCA Model Components",
+  "description": "Core PCA model components including loadings and variance",
+  "type": "object",
+  "required": [
+    "loadings",
+    "explained_variance",
+    "explained_variance_ratio",
+    "cumulative_variance",
+    "component_labels",
+    "feature_labels"
+  ],
+  "properties": {
+    "loadings": {
+      "$ref": "common.schema.json#/definitions/Matrix",
+      "description": "Loading matrix (components \u00d7 features)"
+    },
+    "explained_variance": {
+      "type": "array",
+      "description": "Variance explained by each component",
+      "items": {
+        "type": "number",
+        "minimum": 0
+      }
+    },
+    "explained_variance_ratio": {
+      "type": "array",
+      "description": "Percentage of total variance explained by each component, 0-100. Named \"ratio\" for historical reasons; note that scikit-learn's explained_variance_ratio_ is a fraction of 1, so a consumer comparing the two must divide by 100.",
+      "items": {
+        "type": "number",
+        "minimum": 0,
+        "maximum": 100
+      }
+    },
+    "cumulative_variance": {
+      "type": "array",
+      "description": "Cumulative percentage of variance explained, 0-100",
+      "items": {
+        "type": "number",
+        "minimum": 0,
+        "maximum": 100
+      }
+    },
+    "component_labels": {
+      "type": "array",
+      "description": "Labels for each principal component",
+      "items": {
+        "type": "string"
+      }
+    },
+    "feature_labels": {
+      "type": "array",
+      "description": "Labels for each feature/variable",
+      "items": {
+        "type": "string"
+      }
+    }
+  }
+}

@@ -38,7 +38,7 @@ For users who prefer a traditional Windows installation or need to install offli
 
 **How to Install:**
 
-1. Download [`GoPCA-Setup-vX.X.X.exe`](https://github.com/bitjungle/GoPCA-Releases/releases/latest) from GitHub Releases
+1. Download [`GoPCA-Setup-vX.X.X.exe`](https://github.com/bitjungle/gopca/releases/latest) from GitHub Releases
 2. Double-click the installer
 3. **If you see a SmartScreen warning** (see [Understanding SmartScreen](#understanding-smartscreen-warnings)):
    - Click "More info"
@@ -74,7 +74,7 @@ The installer will create:
 
 **How to Use:**
 
-1. Download [`gopca-windows-x64.zip`](https://github.com/bitjungle/GoPCA-Releases/releases/latest) from GitHub Releases
+1. Download [`gopca-windows-x64.zip`](https://github.com/bitjungle/gopca/releases/latest) from GitHub Releases
 2. Extract to your preferred location (e.g., `C:\Tools\GoPCA\`)
 3. **If Windows blocks the files**:
    - Right-click the ZIP file
@@ -158,7 +158,7 @@ The [Microsoft Store version](https://apps.microsoft.com/detail/9n8hcxgrjzt5) is
 
 **Option 2: Click "More info" → "Run anyway"**
 
-If you downloaded from the official [GitHub Releases](https://github.com/bitjungle/GoPCA-Releases/releases) page:
+If you downloaded from the official [GitHub Releases](https://github.com/bitjungle/gopca/releases) page:
 
 1. Click "More info" on the SmartScreen dialog
 2. Click "Run anyway"
@@ -252,9 +252,9 @@ If your antivirus blocks GoPCA:
 
 ## Getting Help
 
-- **Documentation**: [https://github.com/bitjungle/GoPCA-Releases/tree/main/docs](https://github.com/bitjungle/GoPCA-Releases/tree/main/docs)
-- **Issues**: [https://github.com/bitjungle/GoPCA-Releases/issues](https://github.com/bitjungle/GoPCA-Releases/issues)
-- **Discussions**: [https://github.com/bitjungle/GoPCA-Releases/issues](https://github.com/bitjungle/GoPCA-Releases/issues)
+- **Documentation**: [https://github.com/bitjungle/gopca/tree/main/docs](https://github.com/bitjungle/gopca/tree/main/docs)
+- **Issues**: [https://github.com/bitjungle/gopca/issues](https://github.com/bitjungle/gopca/issues)
+- **Discussions**: [https://github.com/bitjungle/gopca/issues](https://github.com/bitjungle/gopca/issues)
 
 ---
 

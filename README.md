@@ -5,8 +5,8 @@
 This repository distributes the official binary releases of GoPCA Suite. It is
 the only place these binaries are published by the author.
 
-📥 **[Download the latest release](https://github.com/bitjungle/GoPCA-Releases/releases/latest)**
-&nbsp;•&nbsp; 📖 **[Documentation](https://bitjungle.github.io/GoPCA-Releases/)**
+📥 **[Download the latest release](https://github.com/bitjungle/gopca/releases/latest)**
+&nbsp;•&nbsp; 📖 **[Documentation](https://bitjungle.github.io/gopca/)**
 
 ---
 
@@ -79,7 +79,7 @@ doubt.
 ## Documentation
 
 Full documentation is published at
-**[bitjungle.github.io/GoPCA-Releases](https://bitjungle.github.io/GoPCA-Releases/)**:
+**[bitjungle.github.io/gopca](https://bitjungle.github.io/gopca/)**:
 
 - **[Introduction to PCA](docs/intro_to_pca.md)** — the method, from first principles
 - **[Introduction to Data Preparation](docs/intro_to_data_prep.md)** — getting your data ready
@@ -125,7 +125,7 @@ evaluation — write to **devel@bitjungle.com** describing what you need and why
 ## Problems and questions
 
 Please open an issue in
-**[this repository's issue tracker](https://github.com/bitjungle/GoPCA-Releases/issues)**.
+**[this repository's issue tracker](https://github.com/bitjungle/gopca/issues)**.
 Include your platform, the GoPCA version, and what you expected to happen.
 
 ---

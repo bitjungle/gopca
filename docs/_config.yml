@@ -1,7 +1,7 @@
 # GitHub Pages Configuration
 title: GoPCA Suite - Liberating Your Data from Dimensional Oppression
 description: Professional-grade PCA analysis tools. Data analysis for the people, by the people. No corporate clouds. No surveillance. No masters.
-baseurl: "/GoPCA-Releases"
+baseurl: "/gopca"
 url: "https://bitjungle.github.io"
 
 # Build settings

@@ -8,11 +8,11 @@ The pca CLI (part of the GoPCA Suite) provides powerful PCA analysis capabilitie
 
 ## Installation
 
-Download the latest binary for your platform from the [GitHub Releases](https://github.com/bitjungle/GoPCA-Releases/releases) page:
+Download the latest binary for your platform from the [GitHub Releases](https://github.com/bitjungle/gopca/releases) page:
 
 ```bash
 # Linux/macOS
-wget https://github.com/bitjungle/GoPCA-Releases/releases/latest/download/pca
+wget https://github.com/bitjungle/gopca/releases/latest/download/pca
 chmod +x pca
 
 # Add to PATH (optional)
@@ -664,4 +664,4 @@ pca validate --help
 pca transform --help
 ```
 
-For issues or questions, visit the [GitHub repository](https://github.com/bitjungle/GoPCA-Releases).
+For issues or questions, visit the [GitHub repository](https://github.com/bitjungle/gopca).
