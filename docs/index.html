@@ -1,0 +1,272 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>GoPCA Suite - Learn and Analyse with PCA</title>
+    <meta name="description" content="Professional Principal Component Analysis tools for learning and real-world analysis. Desktop application, CLI, and data preparation. 7 guided tutorials. 100% local processing. Free to use and share.">
+    <meta name="keywords" content="PCA, Principal Component Analysis, data analysis, freeware, privacy, local processing, SSA, Singular Spectrum Analysis, time series analysis, NIR spectroscopy, EEG, chemometrics, tutorials, learning">
+    <meta property="og:title" content="GoPCA Suite">
+    <meta property="og:description" content="Learn PCA and analyse real data — professional tools, 7 guided tutorials, free to use and share">
+    <meta property="og:image" content="https://bitjungle.github.io/gopca/images/GoPCA-icon-1024-black.png">
+    <link rel="icon" type="image/png" href="images/GoPCA-icon-1024-black.png">
+    <link rel="stylesheet" href="assets/style.css">
+</head>
+<body>
+    <div class="noise-overlay"></div>
+    
+    <!-- Hero Section -->
+    <header class="hero">
+        <div class="container">
+            
+            <div class="logo-container">
+                <img src="images/GoPCA-icon-1024-black.png" alt="GoPCA Logo" class="hero-logo glitch-image">
+                <span class="logo-text">GoPCA</span>
+            </div>
+            
+            <h1 class="glitch" data-text="PRINCIPAL COMPONENT ANALYSIS">
+                PRINCIPAL COMPONENT ANALYSIS<br>
+                <span class="subtitle">LEARN AND ANALYSE</span>
+            </h1>
+            
+            <p class="hero-description distressed-text">
+                Learn PCA. Analyse real data. Export publication-ready results.<br>
+                Desktop app and command-line tool.<br>
+                <span class="highlight">LOCAL PROCESSING • FREE BINARIES • NO TELEMETRY</span>
+            </p>
+            
+            <div class="cta-container">
+                <a href="https://github.com/bitjungle/GoPCA-Releases/releases/latest" class="cta-button rough-border">
+                    <span class="button-text">⬇ DOWNLOAD</span>
+                </a>
+                <a href="#quickstart" class="cta-button-secondary">
+                    <span class="button-text">▶ GET STARTED</span>
+                </a>
+            </div>
+        </div>
+    </header>
+
+    <!-- Features Section -->
+    <section class="features" id="features">
+        <div class="container">
+            <h2 class="section-title">
+                <span class="distressed">━━━</span> THREE TOOLS <span class="distressed">━━━</span>
+            </h2>
+            
+            <div class="feature-grid">
+                <!-- GoPCA Desktop -->
+                <div class="feature-card rough-border">
+                    <div class="feature-header">
+                        <span class="feature-icon">⚡</span>
+                        <h3>GoPCA DESKTOP</h3>
+                    </div>
+                    <img src="images/GoPCA_overview.png" alt="GoPCA Desktop" class="feature-image">
+                    <p class="feature-description">
+                        <strong>DESKTOP APPLICATION</strong><br>
+                        Interactive visualizations.
+                        Export publication-ready figures.
+                    </p>
+                    <ul class="feature-list">
+                        <li>◉ Beautiful visualizations</li>
+                        <li>◉ Multiple PCA algorithms (SVD, NIPALS, Kernel, SSA)</li>
+                        <li>◉ Analysis of linear, non-linear and time-series data</li>
+                        <li>◉ 7 guided tutorials with real datasets</li>
+                        <li>◉ Dark and light themes</li>
+                    </ul>
+                </div>
+
+                <!-- pca CLI -->
+                <div class="feature-card rough-border">
+                    <div class="feature-header">
+                        <span class="feature-icon">⚙</span>
+                        <h3>pca CLI</h3>
+                    </div>
+                    <pre class="code-block">
+<span class="comment"># Quick analysis</span>
+$ pca analyze data.csv
+$ pca validate spectra.csv
+$ pca transform model.json
+
+                    </pre>
+                    <p class="feature-description">
+                        <strong>COMMAND-LINE TOOL</strong><br>
+                        Automation-ready tool. 
+                        CSV input format.
+                        JSON output format.
+                    </p>
+                    <ul class="feature-list">
+                        <li>◉ Batch processing capabilities</li>
+                        <li>◉ Pipeline integration</li>
+                        <li>◉ Cross-platform support</li>
+                    </ul>
+                </div>
+
+                <!-- GoCSV Desktop -->
+                <div class="feature-card rough-border">
+                    <div class="feature-header">
+                        <span class="feature-icon">✂</span>
+                        <h3>GoCSV DESKTOP</h3>
+                    </div>
+                    <img src="images/GoCSV_overview.png" alt="GoCSV Desktop" class="feature-image">
+                    <p class="feature-description">
+                        <strong>CSV EDITOR</strong><br>
+                        Prepare data for PCA analysis.
+                        Handle missing values.
+                    </p>
+                    <ul class="feature-list">
+                        <li>◉ Spreadsheet-like editing</li>
+                        <li>◉ Import CSV, Excel, Parquet, or straight from a URL</li>
+                        <li>◉ Data quality validation</li>
+                        <li>◉ Missing value handling</li>
+                        <li>◉ Export PCA-ready CSV</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Quick Start Section -->
+    <section class="quickstart" id="quickstart">
+        <div class="container">
+            <h2 class="section-title">
+                <span class="distressed">━━━</span> QUICK START <span class="distressed">━━━</span>
+            </h2>
+            
+            <div class="steps-container">
+                <div class="step rough-border">
+                    <div class="step-number">01</div>
+                    <h3>DOWNLOAD</h3>
+                    <p>macOS, Windows, and Linux binaries available.</p>
+                    <a href="https://github.com/bitjungle/GoPCA-Releases/releases/latest" class="inline-link">→ Download latest version</a><br>
+                    <a href="https://apps.microsoft.com/detail/9n8hcxgrjzt5" class="inline-link">→ Windows: Microsoft Store (warning-free install)</a>
+                </div>
+                
+                <div class="step rough-border">
+                    <div class="step-number">02</div>
+                    <h3>LOAD DATA</h3>
+                    <p>Import CSV files with numerical data.</p>
+                    <span class="revolution-text">Use GoCSV Desktop for easy import and editing</span>
+                </div>
+                
+                <div class="step rough-border">
+                    <div class="step-number">03</div>
+                    <h3>RUN ANALYSIS</h3>
+                    <p>Configure components and algorithm. View results instantly.</p>
+                    <span class="revolution-text">Execute PCA computation in GoPCA Desktop or pca CLI</span>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Learn and Analyse Section -->
+    <section class="philosophy">
+        <div class="container">
+            <h2 class="section-title">
+                <span class="distressed">━━━</span> LEARN AND ANALYSE <span class="distressed">━━━</span>
+            </h2>
+
+            <div class="manifesto-grid">
+                <div class="manifesto-item">
+                    <h3>⚫ LEARN BY DOING</h3>
+                    <p>Seven real datasets. Seven guided tutorials. From Iris flowers to EEG brain signals — each dataset teaches a specific skill: reading scores and loadings, choosing preprocessing, handling spectroscopic data, unrolling nonlinear structure, analysing time series, monitoring dynamic processes, and working out what the components actually mean.</p>
+                </div>
+
+                <div class="manifesto-item">
+                    <h3>🔴 YOUR DATA, YOUR ANALYSIS</h3>
+                    <p>The same application you use to learn is the one you use professionally. No tutorial mode. No feature limits. Load your own CSV, run the analysis, export your results. GoPCA is ready when you are.</p>
+                </div>
+
+                <div class="manifesto-item">
+                    <h3>⚫ REAL CHALLENGES</h3>
+                    <p>The datasets were chosen because they expose real problems: scale imbalance, outlier domination, multiplicative scatter in spectra, curved manifolds, temporal dynamics, and process monitoring. Not toy examples — real data with real lessons.</p>
+                </div>
+
+                <div class="manifesto-item">
+                    <h3>🔴 BUILT-IN PROGRESSION</h3>
+                    <p>Iris → Wine → Corn → Swiss Roll → CSTR → Eye State → Body Measures. Each tutorial builds on the last. By the end you will have used every major feature of GoPCA and encountered every major challenge that real datasets present.</p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Philosophy Section -->
+    <section class="philosophy">
+        <div class="container">
+            <h2 class="section-title">
+                <span class="distressed">━━━</span> WHY GoPCA? <span class="distressed">━━━</span>
+            </h2>
+            
+            <div class="manifesto-grid">
+                <div class="manifesto-item">
+                    <h3>⚫ LOCAL PROCESSING</h3>
+                    <p>All computations run on your machine. No external dependencies.</p>
+                </div>
+                
+                <div class="manifesto-item">
+                    <h3>🔴 FREE TO SHARE</h3>
+                    <p>Free to use and redistribute, unmodified and at no charge. No licence keys, no accounts, no expiry.</p>
+                </div>
+                
+                <div class="manifesto-item">
+                    <h3>⚫ ACCURATE ALGORITHMS</h3>
+                    <p>SVD, NIPALS, Kernel, and SSA algorithms. Validated against scikit-learn.</p>
+                </div>
+                
+                <div class="manifesto-item">
+                    <h3>🔴 PRIVACY FOCUSED</h3>
+                    <p>No telemetry. No analytics. No data collection.</p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Documentation Section -->
+    <section class="documentation">
+        <div class="container">
+            <h2 class="section-title">
+                <span class="distressed">━━━</span> DOCUMENTATION <span class="distressed">━━━</span>
+            </h2>
+            
+            <div class="doc-links">
+                <a href="https://github.com/bitjungle/GoPCA-Releases/blob/main/docs/intro_to_pca.md" class="doc-link rough-border">
+                    📚 Introduction to PCA
+                </a>
+                <a href="https://github.com/bitjungle/GoPCA-Releases/blob/main/docs/cli_reference.md" class="doc-link rough-border">
+                    ⚙ CLI Reference
+                </a>
+                <a href="https://github.com/bitjungle/GoPCA-Releases/blob/main/docs/intro_to_data_prep.md" class="doc-link rough-border">
+                    ✂ Data Preparation Guide
+                </a>
+            </div>
+        </div>
+    </section>
+
+    <!-- Footer -->
+    <footer class="footer">
+        <div class="container">
+            <div class="footer-content">
+                <div class="ascii-divider">
+═══════════════════════════════════════════════════════════════════════
+                </div>
+                
+                <p class="footer-text">
+                    <span class="revolution-text">Freeware: free binaries • free to use • free to share</span><br>
+                    <span class="small-text">Copyright © 2025-2026 Rune Mathisen</span>
+                </p>
+                
+                <div class="footer-links">
+                    <a href="https://github.com/bitjungle/GoPCA-Releases">GitHub</a>
+                    <span class="separator">•</span>
+                    <a href="https://github.com/bitjungle/GoPCA-Releases/issues">Report Issues</a>
+                    <span class="separator">•</span>
+                    <a href="https://github.com/bitjungle/GoPCA-Releases/issues">Discussions</a>
+                </div>
+                
+                <div class="ascii-divider">
+═══════════════════════════════════════════════════════════════════════
+                </div>
+            </div>
+        </div>
+    </footer>
+</body>
+</html>
