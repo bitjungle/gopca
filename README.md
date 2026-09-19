@@ -98,6 +98,11 @@ GoPCA Suite performs all computation locally:
 This makes GoPCA suitable for use under GDPR, HIPAA, and strict corporate data
 policies.
 
+**You can check this yourself, without the source code.** Block GoPCA at your
+firewall, or disconnect from the network entirely — every feature still works,
+because there is nothing to connect to. See **[PRIVACY.md](PRIVACY.md)** for
+packet-capture and DNS-monitoring instructions, and for the full privacy policy.
+
 ## License
 
 The binaries in this repository are distributed free of charge under the
